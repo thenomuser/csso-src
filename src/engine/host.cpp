@@ -3644,7 +3644,7 @@ void Host_RunFrame( float time )
 //-----------------------------------------------------------------------------
 bool IsLowViolence_Secure()
 {
-#ifndef DEDICATED
+#if 0 //#ifndef DEDICATED
 	if ( !IsX360() && Steam3Client().SteamApps() )
 	{
 		// let Steam determine current violence settings 		
@@ -3744,7 +3744,7 @@ void Host_CheckGore( void )
 	//
 	// If either method says "yes" to low violence, we're in low violence mode.
 	//
-	if ( bLowViolenceRegistry || bLowViolenceSecure )
+	/*if ( bLowViolenceRegistry || bLowViolenceSecure )
 	{
 		g_bLowViolence = true;
 		
@@ -3756,7 +3756,7 @@ void Host_CheckGore( void )
 			violence_agibs.SetValue( 0 );
 		}
 	}
-	else
+	else*/
 	{
 		g_bLowViolence = false;
 	}
