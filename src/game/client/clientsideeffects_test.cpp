@@ -208,6 +208,8 @@ CBulletWhizTimer g_BulletWhiz( "CBulletWhizTimer" );
 //-----------------------------------------------------------------------------
 #define LISTENER_HEIGHT 24
 
+ConVar cl_tracer_whiz_distance( "cl_tracer_whiz_distance", "72" );	// putting TRACER_MAX_HEAR_DIST on a cvar, so KellyT can find a good value
+
 void FX_TracerSound( const Vector &start, const Vector &end, int iTracerType )
 {
 	const char *pszSoundName = NULL;
@@ -220,7 +222,7 @@ void FX_TracerSound( const Vector &start, const Vector &end, int iTracerType )
 	case TRACER_TYPE_DEFAULT:
 		{
 			pszSoundName = "Bullets.DefaultNearmiss";
-			flWhizDist = 24;
+			flWhizDist = cl_tracer_whiz_distance.GetFloat(); // was 24
 
 			Ray_t bullet, listener;
 			bullet.Init( start, end );
@@ -231,7 +233,7 @@ void FX_TracerSound( const Vector &start, const Vector &end, int iTracerType )
 
 			float s, t;
 			IntersectRayWithRay( bullet, listener, s, t );
-			t = clamp( t, 0.f, 1.f );
+			t = clamp( t, 0, 1 );
 			vecListenOrigin.z -= t * LISTENER_HEIGHT;
 		}
 		break;
@@ -298,15 +300,22 @@ void FX_Tracer( Vector& start, Vector& end, int velocity, bool makeWhiz )
 
 	VectorSubtract( end, start, dir );
 	dist = VectorNormalize( dir );
+	int minDist;
+	float flMinWidth;
+	float flMaxWidth;
 
 	// Don't make short tracers.
-	if ( dist >= 256 )
+	minDist = 256;
+	flMinWidth = 0.75;
+	flMaxWidth = 0.9;
+
+	if ( dist >= minDist )
 	{
 		float length = random->RandomFloat( 64.0f, 128.0f );
 		float life = ( dist + length ) / velocity;	//NOTENOTE: We want the tail to finish its run as well
 		
 		//Add it
-		FX_AddDiscreetLine( start, dir, velocity, length, dist, random->RandomFloat( 0.75f, 0.9f ), life, "effects/spark" );
+		FX_AddDiscreetLine( start, dir, velocity, length, dist, random->RandomFloat( flMinWidth, flMaxWidth ), life, "effects/spark" );
 	}
 
 	if( makeWhiz )

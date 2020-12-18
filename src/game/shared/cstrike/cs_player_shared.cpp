@@ -1388,7 +1388,7 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 {
 	int iTracerFreq = 1;
-	C_WeaponCSBase* pWeapon = GetActiveCSWeapon();
+	C_WeaponCSBase *pWeapon = GetActiveCSWeapon();
 
 	if ( pWeapon )
 	{
@@ -1398,7 +1398,7 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		int iUseAttachment = TRACER_DONT_USE_ATTACHMENT;
 		int iAttachment = 1;
 
-		C_CSPlayer* pLocalPlayer = NULL;
+		C_CSPlayer *pLocalPlayer = NULL;
 		bool bUseObserverTarget = false;
 
 		pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -1410,21 +1410,21 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		{
 			bUseObserverTarget = true;
 		}
+		
+		C_BaseViewModel *pViewModel = GetViewModel(WEAPON_VIEWMODEL);
 
-		C_BaseViewModel* pViewModel = GetViewModel( WEAPON_VIEWMODEL );
-
-		if ( pWeapon && pWeapon->GetOwner() && pWeapon->GetOwner()->IsDormant() )
+		if ( pWeapon->GetOwner() && pWeapon->GetOwner()->IsDormant() )
 		{
 			// This is likely a player firing from around a corner, where this client can't see them.
 			// Don't modify the tracer start position, since our local world weapon model position is not reliable.
 		}
-		else if ( pWeapon )
+		else
 		{
 			iAttachment = pWeapon->LookupAttachment( "muzzle_flash" );
 			if ( iAttachment > 0 )
 				pWeapon->GetAttachment( iAttachment, vecStart );
 		}
-		else if ( pViewModel )
+		if ( pViewModel )
 		{
 			iAttachment = pViewModel->LookupAttachment( "1" );
 			pViewModel->GetAttachment( iAttachment, vecStart );
@@ -1438,11 +1438,11 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		CPVSFilter filter( vecStart );
 		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768 );
 
-		int	nBulletNumber = ( pWeapon->GetMaxClip1() - pWeapon->Clip1() ) + 1;
-		iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency;
+		int	nBulletNumber = (pWeapon->GetMaxClip1() - pWeapon->Clip1()) + 1;
+		iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency[pWeapon->m_weaponMode];
 		if ( ( iTracerFreq != 0 ) && ( nBulletNumber % iTracerFreq ) == 0 )
 		{
-			const char* pszTracerEffect = GetTracerType();
+			const char *pszTracerEffect = GetTracerType();
 			if ( pszTracerEffect && pszTracerEffect[0] )
 			{
 				UTIL_ParticleTracer( pszTracerEffect, vecStart, vecEnd, iEntIndex, iUseAttachment, true );
@@ -1453,7 +1453,7 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 			// just do the whiz sound
 			FX_TracerSound( vecStart, vecEnd, TRACER_TYPE_DEFAULT );
 		}
-
+		
 	}
 }
 #endif

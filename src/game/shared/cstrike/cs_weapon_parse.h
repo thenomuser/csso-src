@@ -217,7 +217,7 @@ public:
 	float	m_flIdleInterval;
 
 	// tracer variables
-	int		m_iTracerFrequency;
+	int		m_iTracerFrequency[2];
 	char	m_szTracerEffect[MAX_WEAPON_STRING];
 
 	// heat variables

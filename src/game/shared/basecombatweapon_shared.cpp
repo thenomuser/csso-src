@@ -331,6 +331,14 @@ void CBaseCombatWeapon::Precache( void )
 		Warning( "Error reading weapon data file for: %s\n", GetClassname() );
 	//	Remove( );	//don't remove, this gets released soon!
 	}
+
+	const char *pszTracerName = GetTracerType();
+	if ( pszTracerName && pszTracerName[0] )
+	{
+		PrecacheParticleSystem( pszTracerName );
+	}
+
+	PrecacheParticleSystem( "weapon_tracers" );
 }
 
 //-----------------------------------------------------------------------------
@@ -812,6 +820,10 @@ void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &t
 	}
 
 	const char *pszTracerName = GetTracerType();
+	if ( !pszTracerName )
+	{
+		 pszTracerName = "weapon_tracers";
+	}
 
 	Vector vNewSrc = vecTracerSrc;
 	int iEntIndex = pOwner->entindex();
@@ -819,20 +831,22 @@ void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &t
 	if ( g_pGameRules->IsMultiplayer() )
 	{
 		iEntIndex = entindex();
+#ifdef CLIENT_DLL
+		C_BasePlayer *player = ToBasePlayer( pOwner );
+		if ( player->IsLocalPlayer() )
+		{
+			CBaseEntity *vm = player->GetViewModel();
+			if ( vm )
+			{
+				iEntIndex = vm->entindex();
+			}
+		}
+#endif
 	}
 
 	int iAttachment = GetTracerAttachment();
 
-	switch ( iTracerType )
-	{
-	case TRACER_LINE:
-		UTIL_Tracer( vNewSrc, tr.endpos, iEntIndex, iAttachment, 0.0f, true, pszTracerName );
-		break;
-
-	case TRACER_LINE_AND_WHIZ:
-		UTIL_Tracer( vNewSrc, tr.endpos, iEntIndex, iAttachment, 0.0f, true, pszTracerName );
-		break;
-	}
+	UTIL_ParticleTracer( pszTracerName, vNewSrc, tr.endpos, iEntIndex, iAttachment, true );
 }
 
 void CBaseCombatWeapon::GiveTo( CBaseEntity *pOther )

@@ -425,7 +425,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_fThrowVelocity	= pKeyValuesData->GetFloat( "ThrowVelocity", 0.0f );
 
 	// tracer variables
-	m_iTracerFrequency = pKeyValuesData->GetInt( "TracerFrequency", 0 );
+	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );
+	m_iTracerFrequency[1] = pKeyValuesData->GetInt( "TracerFrequencyAlt", m_iTracerFrequency[0] );
 	const char* pTracerEffect = pKeyValuesData->GetString( "TracerEffect", "" );
 	Q_strncpy( m_szTracerEffect, pTracerEffect, sizeof( m_szTracerEffect ) );
 
