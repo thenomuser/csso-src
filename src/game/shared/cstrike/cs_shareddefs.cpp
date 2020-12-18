@@ -26,8 +26,8 @@ CCSClassInfo g_ClassInfos[] =
 {
 	{ "None", "", "" },
 
-	{ "Phoenix",		"Phoenix",		"models/weapons/arms/t_arms_phoenix.mdl" },
-	{ "Leet Crew",		"Leet",			"models/weapons/arms/t_arms_leet.mdl" },
+	{ "Phoenix",		"Phoenix",		"models/weapons/arms/v_glove_fullfinger.mdl" },
+	{ "Leet Crew",		"Leet",			"models/weapons/arms/v_glove_fingerless.mdl" },
 	{ "Separatist",		"Separatist",	"models/weapons/arms/t_arms_separatist.mdl" },
 	{ "Balkan",			"Balkan",		"models/weapons/arms/t_arms_balkan.mdl" },
 	{ "Professional",	"Professional",	"models/weapons/arms/t_arms_professional.mdl" },
@@ -84,13 +84,13 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 {
 	{ "", "", 0, 0 },
 	// Shattered Web
-	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",	"models/weapons/arms/t_arms_leet.mdl",					"Leet",				CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",	"models/weapons/arms/t_arms_leet.mdl",					"Leet",				CS_CLASS_L337_KREW,				1,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",	"models/weapons/arms/t_arms_leet.mdl",					"Leet",				CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",	"models/weapons/arms/t_arms_leet.mdl",					"Leet_Epic",		CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",	"models/weapons/arms/t_arms_phoenix.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",	"models/weapons/arms/t_arms_phoenix.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",	"models/weapons/arms/t_arms_phoenix.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				1,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet_Epic",		CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
 	{ "models/player/custom_player/legacy/tm_balkan_variantf.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
 	{ "models/player/custom_player/legacy/tm_balkan_varianti.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
 	{ "models/player/custom_player/legacy/tm_balkan_variantg.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
@@ -98,7 +98,7 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_balkan_varianth.mdl",	"models/weapons/arms/t_arms_balkan_v2_varianth.mdl",	"Balkan_Epic",		CS_CLASS_BALKAN,				0,	false	},
 	// Broken Fang
 	{ "models/player/custom_player/legacy/tm_balkan_variantl.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",	"models/weapons/arms/t_arms_phoenix.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	3,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	3,	false	},
 	{ "models/player/custom_player/legacy/tm_professional_varj.mdl","models/weapons/arms/t_arms_professional.mdl",			"Professional_Fem",	CS_CLASS_PROFESSIONAL,			0,	true	},
 	{ "models/player/custom_player/legacy/tm_professional_varh.mdl","models/weapons/arms/t_arms_professional.mdl",			"Professional",		CS_CLASS_PROFESSIONAL,			0,	false	},
 	{ "models/player/custom_player/legacy/tm_balkan_variantk.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
