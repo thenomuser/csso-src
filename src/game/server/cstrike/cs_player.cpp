@@ -1145,7 +1145,7 @@ void CCSPlayer::Spawn()
 			m_iClass = GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass;
 	}
 	// PiMoN: placing it here since the server can change the varriable mid-game
-	else if ( mp_use_official_map_factions.GetBool() && (GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL) )
+	else if ( mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 			m_iClass = CSGameRules()->m_iMapFactionCT;
