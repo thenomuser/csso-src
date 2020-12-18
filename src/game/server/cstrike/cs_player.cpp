@@ -5907,7 +5907,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 	{
 		// if we don't have an agent and also map factions are disabled (or there are no default factions for current map) let the players choose a faction
 		if ( !HasAgentSet( GetTeamNumber() ) && (!mp_use_official_map_factions.GetBool() ||
-			(mp_use_official_map_factions.GetBool() && (GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT == NULL) : (CSGameRules()->m_iMapFactionT == NULL))))
+			(mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT == NULL) : (CSGameRules()->m_iMapFactionT == NULL)))))
 		{
 			// Let people change class (skin) by re-joining the same team
 			if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -5924,7 +5924,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		{
 			if ( HasAgentSet(GetTeamNumber()) )
 				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass );
-			else if ( mp_use_official_map_factions.GetBool() && (GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL) )
+			else if ( mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
 			{
 				if ( GetTeamNumber() == TEAM_CT )
 					HandleCommand_JoinClass( CSGameRules()->m_iMapFactionCT );
