@@ -6569,7 +6569,11 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		awardReasonToken = "#Team_Cash_Award_Win_Defuse_Bomb";
 		break;
 		case TeamCashAward::WIN_BY_HOSTAGE_RESCUE:
-		awardReasonToken = "#Team_Cash_Award_Win_Hostages_Rescue";
+		if ( mp_hostages_rescuetowin.GetInt() == 1 ) 
+			awardReasonToken = "#Team_Cash_Award_Win_Hostage_Rescue";
+		else
+			awardReasonToken = "#Team_Cash_Award_Win_Hostages_Rescue";
+        break;;
 		break;
 		case TeamCashAward::LOSER_BONUS:
 		if ( amount > 0 )
