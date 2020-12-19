@@ -149,7 +149,7 @@ WeaponAliasInfo s_weaponAliasInfo[] =
 	{ WEAPON_KNIFE_SURVIVAL_BOWIE,"knife_survival_bowie" },
 	{ WEAPON_KNIFE_CANIS,		"knife_canis" },
 	{ WEAPON_KNIFE_CORD,		"knife_cord" },
-	{ WEAPON_KNIFE_GYPSY,		"knife_gypsy" },
+	{ WEAPON_KNIFE_GYPSY,		"knife_gypsy_jackknife" },
 	{ WEAPON_KNIFE_OUTDOOR,		"knife_outdoor" },
 	{ WEAPON_KNIFE_SKELETON,	"knife_skeleton" },
 	{ WEAPON_KNIFE_STILETTO,	"knife_stiletto" },

@@ -94,7 +94,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_KNIFE_SURVIVAL_BOWIE,"weapon_knife_survival_bowie" },
 	{ WEAPON_KNIFE_CANIS,		"weapon_knife_canis" },
 	{ WEAPON_KNIFE_CORD,		"weapon_knife_cord" },
-	{ WEAPON_KNIFE_GYPSY,		"weapon_knife_gypsy" },
+	{ WEAPON_KNIFE_GYPSY,		"weapon_knife_gypsy_jackknife" },
 	{ WEAPON_KNIFE_OUTDOOR,		"weapon_knife_outdoor" },
 	{ WEAPON_KNIFE_SKELETON,	"weapon_knife_skeleton" },
 	{ WEAPON_KNIFE_STILETTO,	"weapon_knife_stiletto" },
