@@ -27,14 +27,14 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
+using namespace vgui;
+
 class Agents
 {
 public:
 	const char*		m_szUIName;
 	const char*		m_szImage;
 };
-
-using namespace vgui;
 
 static Agents agentsCT[] =
 {
@@ -147,18 +147,22 @@ void CModOptionsSubAgents::RemapAgentsImage()
 	char texture[256];
 	if ( pImageNameCT != NULL )
 	{
-		Q_snprintf( texture, sizeof( texture ), "vgui/playermodels/%s", pImageNameCT );
+		Q_snprintf( texture, sizeof( texture ), "vgui/agents/%s", pImageNameCT );
 		m_pAgentImageCT->setTexture( texture );
 	}
 	else
 	{
-		m_pAgentImageCT->setTexture( NULL );
+		m_pAgentImageCT->setTexture( "vgui/agents/ct_none" );
 	}
 
 	if ( pImageNameT != NULL )
 	{
-		Q_snprintf( texture, sizeof( texture ), "vgui/playermodels/%s", pImageNameT );
+		Q_snprintf( texture, sizeof( texture ), "vgui/agents/%s", pImageNameT );
 		m_pAgentImageT->setTexture( texture );
+	}
+	else
+	{
+		m_pAgentImageT->setTexture( "vgui/agents/t_none" );
 	}
 }
 

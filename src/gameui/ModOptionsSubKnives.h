@@ -5,8 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#ifndef MODOPTIONSSUBLOADOUT_H
-#define MODOPTIONSSUBLOADOUT_H
+#ifndef MODOPTIONSSUBKNIVES_H
+#define MODOPTIONSSUBKNIVES_H
 #ifdef _WIN32
 #pragma once
 #endif
@@ -14,21 +14,23 @@
 #include <vgui_controls/PropertyPage.h>
 
 class CLabeledCommandComboBox;
+class CBitmapImagePanel;
 
-class CModOptionsSubLoadout;
+class CModOptionsSubKnives;
 
 //-----------------------------------------------------------------------------
 // Purpose: crosshair options property page
 //-----------------------------------------------------------------------------
-class CModOptionsSubLoadout: public vgui::PropertyPage
+class CModOptionsSubKnives: public vgui::PropertyPage
 {
-	DECLARE_CLASS_SIMPLE( CModOptionsSubLoadout, vgui::PropertyPage );
+	DECLARE_CLASS_SIMPLE( CModOptionsSubKnives, vgui::PropertyPage );
 
 public:
-	CModOptionsSubLoadout( vgui::Panel *parent );
-	~CModOptionsSubLoadout();
+	CModOptionsSubKnives( vgui::Panel *parent );
+	~CModOptionsSubKnives();
 
 	MESSAGE_FUNC( OnControlModified, "ControlModified" );
+	MESSAGE_FUNC_PTR( OnTextChanged, "TextChanged", panel );
 
 protected:
 	// Called when page is loaded.  Data should be reloaded from document into controls.
@@ -37,14 +39,12 @@ protected:
 	virtual void OnApplyChanges();
 
 private:
-	CLabeledCommandComboBox *m_pLoadoutM4ComboBox;
-	CLabeledCommandComboBox *m_pLoadoutHKP2000ComboBox;
-	CLabeledCommandComboBox *m_pLoadoutFiveSevenComboBox;
-	CLabeledCommandComboBox *m_pLoadoutTec9ComboBox;
-	CLabeledCommandComboBox *m_pLoadoutMP7CTComboBox;
-	CLabeledCommandComboBox *m_pLoadoutMP7TComboBox;
-	CLabeledCommandComboBox *m_pLoadoutDeagleCTComboBox;
-	CLabeledCommandComboBox *m_pLoadoutDeagleTComboBox;
+	void					RemapKnivesImage();
+	CBitmapImagePanel		*m_pKnifeImageCT;
+	CBitmapImagePanel		*m_pKnifeImageT;
+
+	CLabeledCommandComboBox *m_pLoadoutKnifeCTComboBox;
+	CLabeledCommandComboBox *m_pLoadoutKnifeTComboBox;
 };
 
-#endif // MODOPTIONSSUBLOADOUT_H
+#endif // MODOPTIONSSUBKNIVES_H

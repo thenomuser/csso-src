@@ -34,28 +34,6 @@
 
 using namespace vgui;
 
-static const char *knifeNames[] =
-{
-	{ "#GameUI_Loadout_Knife_Default" },
-	{ "#GameUI_Loadout_Knife_CSS" },
-	{ "#GameUI_Loadout_Knife_Karambit" },
-	{ "#GameUI_Loadout_Knife_Flip" },
-	{ "#GameUI_Loadout_Knife_Bayonet" },
-	{ "#GameUI_Loadout_Knife_M9_Bayonet" },
-	{ "#GameUI_Loadout_Knife_Butterfly" },
-	{ "#GameUI_Loadout_Knife_Gut" },
-	{ "#GameUI_Loadout_Knife_Tactical" },
-	{ "#GameUI_Loadout_Knife_Falchion" },
-	{ "#GameUI_Loadout_Knife_Bowie" },
-	{ "#GameUI_Loadout_Knife_Canis" },
-	{ "#GameUI_Loadout_Knife_Cord" },
-	{ "#GameUI_Loadout_Knife_Navaja" },
-	{ "#GameUI_Loadout_Knife_Outdoor" },
-	{ "#GameUI_Loadout_Knife_Skeleton" },
-	{ "#GameUI_Loadout_Knife_Stiletto" },
-	{ "#GameUI_Loadout_Knife_Ursus" },
-	{ "#GameUI_Loadout_Knife_Widowmaker" },
-};
 
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
@@ -81,19 +59,6 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pLoadoutHKP2000ComboBox = new CLabeledCommandComboBox( this, "HKP2000ComboBox" );
 	m_pLoadoutHKP2000ComboBox->AddItem( "#Cstrike_WPNHUD_HKP2000", "loadout_slot_hkp2000_weapon 0" );
 	m_pLoadoutHKP2000ComboBox->AddItem( "#Cstrike_WPNHUD_USP45", "loadout_slot_hkp2000_weapon 1" );
-
-	m_pLoadoutKnifeCTComboBox = new CLabeledCommandComboBox( this, "KnifeCTComboBox" );
-	m_pLoadoutKnifeTComboBox = new CLabeledCommandComboBox( this, "KnifeTComboBox" );
-
-	int i;
-	char command[64];
-	for ( i = 0; i < ARRAYSIZE( knifeNames ); i++ )
-	{
-		Q_snprintf( command, sizeof( command ), "loadout_slot_knife_weapon_ct %d", i );
-		m_pLoadoutKnifeCTComboBox->AddItem( knifeNames[i], command );
-		Q_snprintf( command, sizeof( command ), "loadout_slot_knife_weapon_t %d", i );
-		m_pLoadoutKnifeTComboBox->AddItem( knifeNames[i], command );
-	}
 
 	m_pLoadoutFiveSevenComboBox = new CLabeledCommandComboBox( this, "FiveSevenComboBox" );
 	m_pLoadoutFiveSevenComboBox->AddItem( "#Cstrike_WPNHUD_FiveSeven", "loadout_slot_fiveseven_weapon 0" );
@@ -121,8 +86,6 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 
 	m_pLoadoutM4ComboBox->AddActionSignalTarget( this );
 	m_pLoadoutHKP2000ComboBox->AddActionSignalTarget( this );
-	m_pLoadoutKnifeCTComboBox->AddActionSignalTarget( this );
-	m_pLoadoutKnifeTComboBox->AddActionSignalTarget( this );
 	m_pLoadoutFiveSevenComboBox->AddActionSignalTarget( this );
 	m_pLoadoutTec9ComboBox->AddActionSignalTarget( this );
 	m_pLoadoutMP7CTComboBox->AddActionSignalTarget( this );
@@ -162,14 +125,6 @@ void CModOptionsSubLoadout::OnResetData()
 	if ( loadout_slot_hkp2000_weapon.IsValid() )
 		m_pLoadoutHKP2000ComboBox->SetInitialItem( loadout_slot_hkp2000_weapon.GetInt() );
 
-	ConVarRef loadout_slot_knife_weapon_ct( "loadout_slot_knife_weapon_ct" );
-	if ( loadout_slot_knife_weapon_ct.IsValid() )
-		m_pLoadoutKnifeCTComboBox->SetInitialItem( loadout_slot_knife_weapon_ct.GetInt() );
-
-	ConVarRef loadout_slot_knife_weapon_t( "loadout_slot_knife_weapon_t" );
-	if ( loadout_slot_knife_weapon_t.IsValid() )
-		m_pLoadoutKnifeTComboBox->SetInitialItem( loadout_slot_knife_weapon_t.GetInt() );
-
 	ConVarRef loadout_slot_fiveseven_weapon( "loadout_slot_fiveseven_weapon" );
 	if ( loadout_slot_fiveseven_weapon.IsValid() )
 		m_pLoadoutFiveSevenComboBox->SetInitialItem( loadout_slot_fiveseven_weapon.GetInt() );
@@ -202,8 +157,6 @@ void CModOptionsSubLoadout::OnApplyChanges()
 {
 	m_pLoadoutM4ComboBox->ApplyChanges();
 	m_pLoadoutHKP2000ComboBox->ApplyChanges();
-	m_pLoadoutKnifeCTComboBox->ApplyChanges();
-	m_pLoadoutKnifeTComboBox->ApplyChanges();
 	m_pLoadoutFiveSevenComboBox->ApplyChanges();
 	m_pLoadoutTec9ComboBox->ApplyChanges();
 	m_pLoadoutMP7CTComboBox->ApplyChanges();
