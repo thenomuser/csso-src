@@ -2181,35 +2181,15 @@ bool CCSPlayer::Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon )
 bool CCSPlayer::ShouldDoLargeFlinch( int nHitGroup, CBaseEntity *pAttacker )
 {
 	if ( FBitSet( GetFlags(), FL_DUCKING ) )
-		return FALSE;
+		return false;
 
 	if ( nHitGroup == HITGROUP_LEFTLEG )
-		return FALSE;
+		return false;
 
 	if ( nHitGroup == HITGROUP_RIGHTLEG )
-		return FALSE;
+		return false;
 
-	CCSPlayer *pPlayer = ToCSPlayer( pAttacker );
-
-	if ( pPlayer == NULL || !pPlayer->IsPlayer() )
-		 pPlayer = NULL;
-
-	if ( pPlayer )
-	{
-		CWeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
-
-		if ( pWeapon )
-		{
-			if ( pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_RIFLE ||
-				 pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_SHOTGUN ||
-				 pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_SNIPER_RIFLE )
-				 return true;
-		}
-		else
-			return false;
-	}
-
-	return false;
+	return true;
 }
 
 bool CCSPlayer::IsArmored( int nHitGroup )
