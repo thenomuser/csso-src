@@ -170,7 +170,7 @@ const char *CIronSightController::GetDotMaterial( void )
 	if ( m_pAttachedWeapon && m_pAttachedWeapon->GetCSWpnData().m_szIronsightDotMaterial != 0 )
 		return m_pAttachedWeapon->GetCSWpnData().m_szIronsightDotMaterial;
 
-	return "models/weapons/shared/scope/scope_dot_green";
+	return NULL;
 }
 
 QAngle CIronSightController::QAngleDiff( QAngle &angTarget, QAngle &angSrc )
@@ -458,15 +458,19 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 
 	dotCoords.x += 0.5f;
 	dotCoords.y += 0.5f;
+
+	if ( !IsErrorMaterial(pMatDot) )
+	{
 #ifdef DEBUG
-	pRenderContext->DrawScreenSpaceRectangle(pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
-		0, 0, ironsight_laser_dot_render_tweak1.GetInt(), ironsight_laser_dot_render_tweak1.GetInt(),
-		ironsight_laser_dot_render_tweak2.GetInt(), ironsight_laser_dot_render_tweak2.GetInt());
+		pRenderContext->DrawScreenSpaceRectangle( pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
+												  0, 0, ironsight_laser_dot_render_tweak1.GetInt(), ironsight_laser_dot_render_tweak1.GetInt(),
+												  ironsight_laser_dot_render_tweak2.GetInt(), ironsight_laser_dot_render_tweak2.GetInt() );
 #else
-	pRenderContext->DrawScreenSpaceRectangle(pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
-		0, 0, 61, 61,
-		64, 64);
+		pRenderContext->DrawScreenSpaceRectangle( pMatDot, (w * dotCoords.x) - (iWidth / 2), (h * dotCoords.y) - (iWidth / 2), iWidth, iWidth,
+												  0, 0, 61, 61,
+												  64, 64 );
 #endif
+	}
 
 	pRenderContext->OverrideDepthEnable(false, true);
 
