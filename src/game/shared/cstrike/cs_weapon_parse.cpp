@@ -450,7 +450,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	if ( (sscanf( srcString, "%f %f %f", &(m_angIronsightPivotAngle.x), &(m_angIronsightPivotAngle.y), &(m_angIronsightPivotAngle.z) ) != 3) )
 		m_angIronsightPivotAngle.Init( 0, 0, 0 );
 
-	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "models/weapons/shared/scope/scope_dot_green" );
+	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "" );
 	Q_strncpy( m_szIronsightDotMaterial, pIronsightDotMaterial, sizeof( m_szIronsightDotMaterial ) );
 
 	// Figure out what team can have this weapon.
