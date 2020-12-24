@@ -286,5 +286,6 @@ const char *KnivesEntitiesStrings[] =
 	"weapon_knife_stiletto",
 	"weapon_knife_ursus",
 	"weapon_knife_widowmaker",
+	"weapon_knife_push",
 };
 CUtlVectorInitialized< const char * > KnivesEntities( KnivesEntitiesStrings, ARRAYSIZE( KnivesEntitiesStrings ) );

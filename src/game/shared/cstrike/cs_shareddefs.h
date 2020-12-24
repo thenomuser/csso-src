@@ -43,7 +43,7 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 #define HOSTAGE_RULE_CAN_PICKUP		1
-#define MAX_KNIVES					18 // any new knives? add them here
+#define MAX_KNIVES					19 // any new knives? add them here
 
 #define MAX_MODEL_STRING_SIZE 256
 
