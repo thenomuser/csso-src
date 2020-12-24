@@ -1394,11 +1394,13 @@ void SlerpBones(
 	{
 		s = 1.0f;		
 	}
-
-	if (seqdesc.flags & STUDIO_WORLD)
+	
+	if ( (seqdesc.flags & STUDIO_WORLD) || (seqdesc.flags & STUDIO_WORLD_AND_RELATIVE) )
 	{
 		WorldSpaceSlerp( pStudioHdr, q1, pos1, seqdesc, sequence, q2, pos2, s, boneMask );
-		return;
+		
+		if (seqdesc.flags & STUDIO_WORLD)
+			return;
 	}
 
 	int			i, j;
@@ -2191,7 +2193,7 @@ void CBoneSetup::AddSequenceLayers(
 
 			if (pLayer->flags & STUDIO_AL_SPLINE)
 			{
-				s = SimpleSpline( s );
+				s = clamp( SimpleSpline( s ), 0, 1 ); // SimpleSpline imprecision can push some float values outside 0..1
 			}
 
 			if ((pLayer->flags & STUDIO_AL_XFADE) && (index > pLayer->tail))
@@ -2211,6 +2213,27 @@ void CBoneSetup::AddSequenceLayers(
 			{
 				layerCycle = (cycle - pLayer->start) / (pLayer->end - pLayer->start);
 			}
+		}
+		else if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iSequence = m_pStudioHdr->iRelativeSeq( sequence, pLayer->iSequence );
+			int iPose = m_pStudioHdr->GetSharedPoseParameter( iSequence, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)m_pStudioHdr)->pPoseParameter( iPose );
+			float s = m_flPoseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = clamp( SimpleSpline( s ), 0, 1 ); // SimpleSpline imprecision can push some float values outside 0..1
+			}
+
+			layerWeight = flWeight * s;			
 		}
 
 		int iSequence = m_pStudioHdr->iRelativeSeq( sequence, pLayer->iSequence );
@@ -2408,15 +2431,30 @@ void CBoneSetup::AccumulatePose(
 	CIKContext *pIKContext
 	)
 {
-	Vector		pos2[MAXSTUDIOBONES];
-	QuaternionAligned	q2[MAXSTUDIOBONES];
+#if _DEBUG
+	VPROF_INCREMENT_COUNTER("AccumulatePose",1);
+#endif
+
+	VPROF( "AccumulatePose" );
 
 	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
 	// This shouldn't be necessary, but the Assert should help us catch whoever is screwing this up
 	flWeight = clamp( flWeight, 0.0f, 1.0f );
 
-	if ( sequence < 0 )
+	if ( sequence < 0 || sequence >= m_pStudioHdr->GetNumSeq() )
+	{
+		AssertMsg( false, "Trying to AccumulatePose with an out-of-range sequence!\n" );
 		return;
+	}
+
+	// This should help re-use the memory for vectors/quaternions
+	// 	Vector		pos2[MAXSTUDIOBONES];
+	// 	Quaternion	q2[MAXSTUDIOBONES];
+	Vector *pos2 = g_VectorPool.Alloc();
+	QuaternionAligned * q2 = ( QuaternionAligned * ) g_QaternionPool.Alloc();
+
+	PREFETCH360( pos2, 0 );
+	PREFETCH360( q2, 0 );
 
 #ifdef CLIENT_DLL
 	// Trigger pose debugger
@@ -2436,13 +2474,14 @@ void CBoneSetup::AccumulatePose(
 		seq_ik.AddSequenceLocks( seqdesc, pos, q );
 	}
 
-	if ((seqdesc.flags & STUDIO_LOCAL) || (seqdesc.flags & STUDIO_ROOTXFORM))
+	if ((seqdesc.flags & STUDIO_LOCAL) || (seqdesc.flags & STUDIO_ROOTXFORM) || (seqdesc.flags & STUDIO_WORLD_AND_RELATIVE))
 	{
 		::InitPose( m_pStudioHdr, pos2, q2, m_boneMask );
 	}
 
 	if (CalcPoseSingle( m_pStudioHdr, pos2, q2, seqdesc, sequence, cycle, m_flPoseParameter, m_boneMask, flTime ))
 	{
+
 		if ( (seqdesc.flags & STUDIO_ROOTXFORM) && seqdesc.rootDriverIndex > 0 )
 		{
 
@@ -2467,7 +2506,7 @@ void CBoneSetup::AccumulatePose(
 			AngleMatrix( RadianEuler(q[0]), pos[0], rootToMove );
 
 			matrix3x4_t rootMoved;
-			ConcatTransforms( rootDriverXform, rootToMove, rootMoved ); // ConcatTransforms_Aligned
+			ConcatTransforms_Aligned( rootDriverXform, rootToMove, rootMoved );
 
 			MatrixAngles( rootMoved, q2[0], pos2[0] );
 		}
@@ -2477,6 +2516,8 @@ void CBoneSetup::AccumulatePose(
 		SlerpBones( m_pStudioHdr, q, pos, seqdesc, sequence, q2, pos2, flWeight, m_boneMask );
 	}
 
+	g_VectorPool.Free( pos2 );
+	g_QaternionPool.Free( q2 );
 
 	if ( pIKContext )
 	{
@@ -3086,7 +3127,7 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 	ikRule.start = ikRule.peak = ikRule.tail = ikRule.end = 0;
 
 
-	mstudioikrule_t *prevRule = NULL;
+	float prevStart = 0.0f;
 
 	// find overall influence
 	for (i = 0; i < 4; i++)
@@ -3100,30 +3141,63 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 			}
 
 			mstudioikrule_t *pRule = panim[i]->pIKRule( iRule );
-			if (pRule == NULL)
-				return false;
-
-			float dt = 0.0;
-			if (prevRule != NULL)
+			if (pRule != NULL)
 			{
-				if (pRule->start - prevRule->start > 0.5)
+				float dt = 0.0f;
+				if (prevStart != 0.0f)
 				{
-					dt = -1.0;
+					if (pRule->start - prevStart > 0.5)
+					{
+						dt = -1.0;
+					}
+					else if (pRule->start - prevStart < -0.5)
+					{
+						dt = 1.0;
+					}
 				}
-				else if (pRule->start - prevRule->start < -0.5)
+				else
 				{
-					dt = 1.0;
+					prevStart = pRule->start;
 				}
+
+				ikRule.start += (pRule->start + dt) * weight[i];
+				ikRule.peak += (pRule->peak + dt) * weight[i];
+				ikRule.tail += (pRule->tail + dt) * weight[i];
+				ikRule.end += (pRule->end + dt) * weight[i];
 			}
 			else
 			{
-				prevRule = pRule;
-			}
+				mstudioikrulezeroframe_t *pZeroFrameRule = panim[i]->pIKRuleZeroFrame( iRule );
+				if (pZeroFrameRule)
+				{
+					float dt = 0.0f;
+					if (prevStart != 0.0f)
+					{
+						if (pZeroFrameRule->start.GetFloat() - prevStart > 0.5)
+						{
+							dt = -1.0;
+						}
+						else if (pZeroFrameRule->start.GetFloat() - prevStart < -0.5)
+						{
+							dt = 1.0;
+						}
+					}
+					else
+					{
+						prevStart = pZeroFrameRule->start.GetFloat();
+					}
 
-			ikRule.start += (pRule->start + dt) * weight[i];
-			ikRule.peak += (pRule->peak + dt) * weight[i];
-			ikRule.tail += (pRule->tail + dt) * weight[i];
-			ikRule.end += (pRule->end + dt) * weight[i];
+					ikRule.start += (pZeroFrameRule->start.GetFloat() + dt) * weight[i];
+					ikRule.peak += (pZeroFrameRule->peak.GetFloat() + dt) * weight[i];
+					ikRule.tail += (pZeroFrameRule->tail.GetFloat() + dt) * weight[i];
+					ikRule.end += (pZeroFrameRule->end.GetFloat() + dt) * weight[i];
+				}
+				else
+				{
+					// Msg("%s %s - IK Stall\n", pStudioHdr->name(), seqdesc.pszLabel() );
+					return false;
+				}
+			}
 		}
 	}
 	if (ikRule.start > 1.0)
@@ -3145,12 +3219,19 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 	if (ikRule.flWeight <= 0.001f)
 	{
 		// go ahead and allow IK_GROUND rules a virtual looping section
-		if ( panim[0]->pIKRule( iRule ) == NULL ) 
-			return false;
-		if ((panim[0]->flags & STUDIO_LOOPING) && panim[0]->pIKRule( iRule )->type == IK_GROUND && ikRule.end - ikRule.start > 0.75 )
+		if ( weight[0] )
 		{
-			ikRule.flWeight = 0.001;
-			flCycle = ikRule.end - 0.001;
+			if ( panim[ 0 ]->pIKRule( iRule ) == NULL )
+				return false;
+			if ( ( panim[ 0 ]->flags & STUDIO_LOOPING ) && panim[ 0 ]->pIKRule( iRule )->type == IK_GROUND && ikRule.end - ikRule.start > 0.75 )
+			{
+				ikRule.flWeight = 0.001;
+				flCycle = ikRule.end - 0.001;
+			}
+			else
+			{
+				return false;
+			}
 		}
 		else
 		{
@@ -3174,19 +3255,38 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 			float w;
 
 			mstudioikrule_t *pRule = panim[i]->pIKRule( iRule );
-			if (pRule == NULL)
-				return false;
+			if (pRule != NULL)
+			{
+				ikRule.chain = pRule->chain;	// FIXME: this is anim local
+				ikRule.bone = pRule->bone;		// FIXME: this is anim local
+				ikRule.type = pRule->type;
+				ikRule.slot = pRule->slot;
 
-			ikRule.chain = pRule->chain;	// FIXME: this is anim local
-			ikRule.bone = pRule->bone;		// FIXME: this is anim local
-			ikRule.type = pRule->type;
-			ikRule.slot = pRule->slot;
-
-			ikRule.height += pRule->height * weight[i];
-			ikRule.floor += pRule->floor * weight[i];
-			ikRule.radius += pRule->radius * weight[i];
-			ikRule.drop += pRule->drop * weight[i];
-			ikRule.top += pRule->top * weight[i];
+				ikRule.height += pRule->height * weight[i];
+				ikRule.floor += pRule->floor * weight[i];
+				ikRule.radius += pRule->radius * weight[i];
+				ikRule.drop += pRule->drop * weight[i];
+				ikRule.top += pRule->top * weight[i];
+			}
+			else
+			{
+				// look to see if there's a zeroframe version of the rule
+				mstudioikrulezeroframe_t *pZeroFrameRule = panim[i]->pIKRuleZeroFrame( iRule );
+				if (pZeroFrameRule)
+				{
+					// zeroframe doesn't contain details, so force a IK_RELEASE
+					ikRule.type = IK_RELEASE;
+					ikRule.chain = pZeroFrameRule->chain;
+					ikRule.slot = pZeroFrameRule->slot;
+					ikRule.bone = -1;
+					// Msg("IK_RELEASE %d %d : %.2f\n", ikRule.chain, ikRule.slot, ikRule.flWeight );
+				}
+				else
+				{
+					// Msg("%s %s - IK Stall\n", pStudioHdr->name(), seqdesc.pszLabel() );
+					return false;
+				}
+			}
 
 			// keep track of tail condition
 			ikRule.release += Studio_IKTail( ikRule, flCycle ) * weight[i];
@@ -5892,6 +5992,62 @@ float Studio_CPS( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int i
 			t += (panim[i]->fps / (panim[i]->numframes - 1)) * weight[i];
 		}
 	}
+
+	// FIXME: add support for more than just start 0 and end 0 pose param layers
+	for (int j = 0; j < seqdesc.numautolayers; j++)
+	{
+		mstudioautolayer_t *pLayer = seqdesc.pAutolayer( j );
+
+		if (pLayer->flags & STUDIO_AL_LOCAL)
+			continue;
+
+		float layerWeight = 0;
+
+		int iSequenceLocal = pStudioHdr->iRelativeSeq( iSequence, pLayer->iSequence );
+
+		if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iPose = pStudioHdr->GetSharedPoseParameter( iSequenceLocal, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)pStudioHdr)->pPoseParameter( iPose );
+			float s = poseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = SimpleSpline( s );
+			}
+
+			layerWeight = seqdesc.weight(0) * s;
+		}
+
+		if ( layerWeight )
+		{
+			mstudioseqdesc_t &seqdescLocal = ((CStudioHdr *)pStudioHdr)->pSeqdesc( iSequenceLocal );
+			Studio_SeqAnims( pStudioHdr, seqdescLocal, iSequenceLocal, poseParameter, panim, weight );
+
+			float flLocalT = 0;
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (weight[i] > 0 && panim[i]->numframes > 1)
+				{
+					flLocalT += (panim[i]->fps / (panim[i]->numframes - 1)) * weight[i];
+				}
+			}
+
+			if ( flLocalT )
+			{
+				t = Lerp( layerWeight, t, flLocalT );
+			}
+		}
+	}
+
 	return t;
 }
 
@@ -6119,6 +6275,80 @@ bool Studio_SeqMovement( const CStudioHdr *pStudioHdr, int iSequence, float flCy
 			}
 		}
 	}
+
+	// FIXME: add support for more than just start 0 and end 0 pose param layers (currently no cycle handling or angular delta)
+	for (int j = 0; j < seqdesc.numautolayers; j++)
+	{
+		mstudioautolayer_t *pLayer = seqdesc.pAutolayer( j );
+
+		if (pLayer->flags & STUDIO_AL_LOCAL)
+			continue;
+
+		float layerWeight = 0;
+
+		int iSequenceLocal = pStudioHdr->iRelativeSeq( iSequence, pLayer->iSequence );
+
+		if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iPose = pStudioHdr->GetSharedPoseParameter( iSequenceLocal, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)pStudioHdr)->pPoseParameter( iPose );
+			float s = poseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = SimpleSpline( s );
+			}
+
+			layerWeight = seqdesc.weight(0) * s;
+		}
+
+		if ( layerWeight )
+		{
+			Vector layerPos;
+			//QAngle layerAngles;
+		
+			layerPos.Init();
+			//layerAngles.Init();
+
+			bool bLayerFound = false;
+
+			mstudioseqdesc_t &seqdescLocal = ((CStudioHdr *)pStudioHdr)->pSeqdesc( iSequenceLocal );
+			Studio_SeqAnims( pStudioHdr, seqdescLocal, iSequenceLocal, poseParameter, panim, weight );
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (weight[i])
+				{
+					Vector localPos;
+					QAngle localAngles;
+
+					localPos.Init();
+					//localAngles.Init();
+
+					if ( Studio_AnimMovement( panim[i], flCycleFrom, flCycleTo, localPos, localAngles ) )
+					{
+						bLayerFound = true;
+						layerPos = layerPos + localPos * weight[i];
+						// FIXME: do angles
+						//layerAngles = layerAngles + localAngles * weight[i];
+					}
+				}
+			}
+
+			if ( bLayerFound )
+			{
+				deltaPos = Lerp( layerWeight, deltaPos, layerPos );
+			}
+		}
+	}
+
 	return found;
 }
 

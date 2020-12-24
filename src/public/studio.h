@@ -68,7 +68,7 @@ Studio models are position independent, so the cache manager can move them.
 ==============================================================================
 */
 
-#define STUDIO_VERSION		48
+#define STUDIO_VERSION		49
 
 #ifndef _XBOX
 #define MAXSTUDIOTRIANGLES	65536	// TODO: tune this
@@ -80,7 +80,7 @@ Studio models are position independent, so the cache manager can move them.
 #define	MAXSTUDIOFLEXVERTS	1000
 #endif
 #define MAXSTUDIOSKINS		32		// total textures
-#define MAXSTUDIOBONES		128		// total bones actually used
+#define MAXSTUDIOBONES		256		// total bones actually used
 #define MAXSTUDIOFLEXDESC	1024	// maximum number of low level flexes (actual morph targets)
 #define MAXSTUDIOFLEXCTRL	96		// maximum number of flexcontrollers (input sliders)
 #define MAXSTUDIOPOSEPARAM	24
@@ -587,6 +587,16 @@ private:
 	mstudioikrule_t(const mstudioikrule_t& vOther);
 };
 
+struct mstudioikrulezeroframe_t
+{
+	short		chain;
+	short		slot;
+	float16		start;	// beginning of influence
+	float16		peak;	// start of full influence
+	float16		tail;	// end of full influence
+	float16		end;	// end of all influence
+};
+
 
 struct mstudioiklock_t
 {
@@ -721,7 +731,10 @@ struct mstudioanimdesc_t
 	int					movementindex;
 	inline mstudiomovement_t * const pMovement( int i ) const { return (mstudiomovement_t *)(((byte *)this) + movementindex) + i; };
 
-	int					unused1[6];			// remove as appropriate (and zero if loading older versions)	
+	int					ikrulezeroframeindex;
+	mstudioikrulezeroframe_t *pIKRuleZeroFrame( int i ) const { if (ikrulezeroframeindex) return (mstudioikrulezeroframe_t *)(((byte *)this) + ikrulezeroframeindex) + i; else return NULL; };
+
+	int					unused1[5];			// remove as appropriate (and zero if loading older versions)	
 
 	int					animblock;
 	int					animindex;	 // non-zero when anim data isn't in sections
@@ -3012,7 +3025,8 @@ inline const mstudioflexcontroller_t *mstudioflexcontrollerui_t::pController( in
 #define STUDIO_ACTIVITY	0x1000		// Has been updated at runtime to activity index
 #define STUDIO_EVENT	0x2000		// Has been updated at runtime to event index
 #define STUDIO_WORLD	0x4000		// sequence blends in worldspace
-#define STUDIO_ROOTXFORM 0x8000	// sequence wants to derive a root re-xform from a given bone
+#define STUDIO_WORLD_AND_RELATIVE 0x8000 // do worldspace blend, then do normal blend on top
+#define STUDIO_ROOTXFORM 0x10000	// sequence wants to derive a root re-xform from a given bone
 // autolayer flags
 //							0x0001
 //							0x0002
@@ -3036,7 +3050,7 @@ inline const mstudioflexcontroller_t *mstudioflexcontrollerui_t::pController( in
 // If we only support the current version, this function should be empty.
 inline bool Studio_ConvertStudioHdrToNewVersion( studiohdr_t *pStudioHdr )
 {
-	COMPILE_TIME_ASSERT( STUDIO_VERSION == 48 ); //  put this to make sure this code is updated upon changing version.
+	COMPILE_TIME_ASSERT( STUDIO_VERSION == 49 ); //  put this to make sure this code is updated upon changing version.
 
 	int version = pStudioHdr->version;
 	if ( version == STUDIO_VERSION )

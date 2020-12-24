@@ -4321,6 +4321,11 @@ int ParseSequence( s_sequence_t *pseq, bool isAppend )
 			pseq->flags |= STUDIO_WORLD;
 			pseq->flags |= STUDIO_POST;
 		}
+		else if (stricmp("worldrelative", token) == 0)
+		{
+			pseq->flags |= STUDIO_WORLD_AND_RELATIVE;
+			pseq->flags |= STUDIO_POST;
+		}
 		else if (stricmp("rootdriver", token) == 0)
 		{
 			pseq->flags |= STUDIO_ROOTXFORM;
