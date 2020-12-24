@@ -152,19 +152,6 @@ FORCEINLINE int C_AnimationLayer::GetOrder() const
 
 inline void C_AnimationLayer::Reset()
 {
-	if ( m_pOwner )
-	{
-		int nFlags = 0;
-		if ( m_flCycle != 0.0f )
-		{
-			nFlags |= ANIMATION_CHANGED;
-		}
-		if ( nFlags )
-		{
-			m_pOwner->InvalidatePhysicsRecursive( nFlags );
-		}
-	}
-
 	m_nSequence = 0;
 	m_flPrevCycle = 0;
 	m_flWeight = 0;
