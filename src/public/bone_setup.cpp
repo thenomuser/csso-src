@@ -2768,6 +2768,8 @@ void debugLine(const Vector& origin, const Vector& dest, int r, int g, int b, bo
 //-----------------------------------------------------------------------------
 bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4_t *pBoneToWorld )
 {
+#ifndef CSTRIKE_DLL
+	// FIXME: something with the CS models breaks this, why?
 	if (pikchain->pLink(0)->kneeDir.LengthSqr() > 0.0)
 	{
 		Vector targetKneeDir, targetKneePos;
@@ -2778,6 +2780,7 @@ bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4_t
 		return Studio_SolveIK( pikchain->pLink( 0 )->bone, pikchain->pLink( 1 )->bone, pikchain->pLink( 2 )->bone, targetFoot, targetKneePos, targetKneeDir, pBoneToWorld );
 	}
 	else
+#endif
 	{
 		return Studio_SolveIK( pikchain->pLink( 0 )->bone, pikchain->pLink( 1 )->bone, pikchain->pLink( 2 )->bone, targetFoot, pBoneToWorld );
 	}
@@ -2812,6 +2815,13 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, matri
 
 	// leg too straight to figure out knee?
 	if (l3 > (l1 + l2) * KNEEMAX_EPSILON)
+	{
+		return false;
+	}
+
+	// If any of the thigh to knee to foot bones are co-positional, then solving ik doesn't make sense. 
+	// We're probably looking at uninitialized bones or something
+	if ( l1 <= 0 || l2 <= 0 || l3 <= 0 )
 	{
 		return false;
 	}
@@ -2876,8 +2886,8 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vecto
 
 	// exaggerate knee targets for legs that are nearly straight
 	// FIXME: should be configurable, and the ikKnee should be from the original animation, not modifed
-	float d = (targetFoot-worldThigh).Length() - min( l1, l2 );
-	d = max( l1 + l2, d );
+	float d = (targetFoot-worldThigh).Length() - MIN( l1, l2 );
+	d = MAX( l1 + l2, d );
 	// FIXME: too short knee directions cause trouble
 	d = d * 100;
 
@@ -2897,7 +2907,7 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vecto
 
 	// too close?
 	// limit distance to about an 80 degree knee bend
-	float minDist = max( fabs(l1 - l2) * 1.15, min( l1, l2 ) * 0.15 );
+	float minDist = MAX( fabs(l1 - l2) * 1.15, MIN( l1, l2 ) * 0.15 );
 	if (ikFoot.Length() < minDist)
 	{
 		// too close to get an accurate vector, just use original vector
