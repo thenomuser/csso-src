@@ -52,11 +52,10 @@ public:
 	
 	CNetworkVar( int, m_nSequence );
 	CNetworkVar( float, m_flCycle );
+	CNetworkVar( float, m_flPlaybackRate );
 	CNetworkVar( float, m_flPrevCycle );
 	CNetworkVar( float, m_flWeight );
 	CNetworkVar( float, m_flWeightDeltaRate );
-	
-	float	m_flPlaybackRate;
 
 	float	m_flBlendIn; // start and end blend frac (0.0 for now blend)
 	float	m_flBlendOut; 

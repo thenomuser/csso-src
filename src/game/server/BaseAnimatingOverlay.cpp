@@ -68,6 +68,7 @@ END_DATADESC()
 BEGIN_SEND_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
 	SendPropInt		(SENDINFO(m_nSequence),		ANIMATION_SEQUENCE_BITS,SPROP_UNSIGNED),
 	SendPropFloat	(SENDINFO(m_flCycle),		ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
+	SendPropFloat	(SENDINFO(m_flPlaybackRate),WEIGHT_BITS,			SPROP_NOSCALE ),
 	SendPropFloat	(SENDINFO(m_flPrevCycle),	ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
 	SendPropFloat	(SENDINFO(m_flWeight),		WEIGHT_BITS,			0,	0.0f,	1.0f),
 	SendPropFloat	(SENDINFO(m_flWeightDeltaRate),WEIGHT_BITS,			SPROP_NOSCALE ),

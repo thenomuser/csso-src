@@ -79,6 +79,12 @@ void RecvProxy_PlaybackRateChanged( const CRecvProxyData *pData, void *pStruct, 
 	pLayer->SetPlaybackRate( pData->m_Value.m_Float );
 }
 
+void RecvProxy_OrderChanged( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	CAnimationLayer *pLayer = (CAnimationLayer *)pStruct;
+	pLayer->SetOrder( pData->m_Value.m_Int );
+}
+
 BEGIN_RECV_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
 	RecvPropInt(	RECVINFO_NAME(m_nSequence, m_nSequence), 0, RecvProxy_SequenceChanged ),
 	RecvPropFloat(	RECVINFO_NAME(m_flCycle, m_flCycle), 0, RecvProxy_CycleChanged ),
@@ -86,7 +92,7 @@ BEGIN_RECV_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
 	RecvPropFloat(	RECVINFO_NAME(m_flPrevCycle, m_flPrevCycle)),
 	RecvPropFloat(	RECVINFO_NAME(m_flWeight, m_flWeight), 0, RecvProxy_WeightChanged ),
 	RecvPropFloat(	RECVINFO_NAME(m_flWeightDeltaRate, m_flWeightDeltaRate), 0, RecvProxy_WeightDeltaRateChanged ),
-	RecvPropInt(	RECVINFO_NAME(m_nOrder, m_nOrder))
+	RecvPropInt(	RECVINFO_NAME(m_nOrder, m_nOrder), 0, RecvProxy_OrderChanged )
 END_RECV_TABLE()
 
 const char *s_m_iv_AnimOverlayNames[C_BaseAnimatingOverlay::MAX_OVERLAYS] =
