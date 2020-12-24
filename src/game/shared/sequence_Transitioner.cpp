@@ -39,7 +39,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];
 
 	if (currentblend->m_flLayerAnimtime && 
-		(currentblend->m_nSequence != nCurSequence || bForceNewSequence ))
+		(currentblend->GetSequence() != nCurSequence || bForceNewSequence ))
 	{
 		mstudioseqdesc_t &seqdesc = hdr->pSeqdesc( nCurSequence );
 		// sequence changed
@@ -50,7 +50,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 		}
 		else
 		{
-			mstudioseqdesc_t &prevseqdesc = hdr->pSeqdesc( currentblend->m_nSequence );
+			mstudioseqdesc_t &prevseqdesc = hdr->pSeqdesc( currentblend->GetSequence() );
 			currentblend->m_flLayerFadeOuttime = MIN( prevseqdesc.fadeouttime, seqdesc.fadeintime );
 			/*
 			// clip blends to time remaining
@@ -69,7 +69,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 
 	}
 
-	currentblend->m_nSequence = -1;
+	currentblend->SetSequence( -1 );
 	currentblend->m_flLayerAnimtime = 0.0;
 	currentblend->m_flLayerFadeOuttime = 0.0;
 }
@@ -97,10 +97,10 @@ void CSequenceTransitioner::UpdateCurrent(
 	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];
 
 	// keep track of current sequence
-	currentblend->m_nSequence = nCurSequence;
+	currentblend->SetSequence( nCurSequence );
 	currentblend->m_flLayerAnimtime = flCurTime;
-	currentblend->m_flCycle = flCurCycle;
-	currentblend->m_flPlaybackRate = flCurPlaybackRate;
+	currentblend->SetCycle( flCurCycle );
+	currentblend->SetPlaybackRate( flCurPlaybackRate );
 
 	// calc blending weights for previous sequences
 	int i;
@@ -110,7 +110,7 @@ void CSequenceTransitioner::UpdateCurrent(
 
 		if (s > 0)
 		{
-			m_animationQueue[i].m_flWeight = s;
+			m_animationQueue[i].SetWeight( s );
 			i++;
 		}
 		else

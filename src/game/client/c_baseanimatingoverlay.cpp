@@ -274,14 +274,14 @@ void C_BaseAnimatingOverlay::GetRenderBounds( Vector& theMins, Vector& theMaxs )
 		int i;
 		for (i = 0; i < m_AnimOverlay.Count(); i++)
 		{
-			if ( m_AnimOverlay[i].m_flWeight > 0.0 && m_AnimOverlay[i].m_nOrder != MAX_OVERLAYS )
+			if ( m_AnimOverlay[i].GetWeight() > 0.0 && m_AnimOverlay[i].GetOrder() != MAX_OVERLAYS )
 			{
-				if ( m_AnimOverlay[i].m_nSequence >= nSequences )
+				if ( m_AnimOverlay[i].GetSequence() >= nSequences )
 				{
 					continue;
 				}
 
-				mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( m_AnimOverlay[i].m_nSequence );
+				mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( m_AnimOverlay[i].GetSequence() );
 				VectorMin( seqdesc.bbmin, theMins, theMins );
 				VectorMax( seqdesc.bbmax, theMaxs, theMaxs );
 			}
@@ -314,24 +314,24 @@ void C_BaseAnimatingOverlay::CheckForLayerChanges( CStudioHdr *hdr, float curren
 		float t2;
 		C_AnimationLayer *pPrev2 = m_iv_AnimOverlay[i].GetHistoryValue( iPrev2, t2 );
 
-		if ( pHead && pPrev1 && pHead->m_nSequence != pPrev1->m_nSequence )
+		if ( pHead && pPrev1 && pHead->GetSequence() != pPrev1->GetSequence() )
 		{
 			bLayersChanged = true;
 	#if 1 // _DEBUG
 			if (/* Q_stristr( hdr->pszName(), r_sequence_debug.GetString()) != NULL || */ r_sequence_debug.GetInt() == entindex())
 			{
-				DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t0, hdr->pSeqdesc( pHead->m_nSequence ).pszLabel(),  (float)pHead->m_flCycle,  (float)pHead->m_flWeight, i );
-				DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t1, hdr->pSeqdesc( pPrev1->m_nSequence ).pszLabel(),  (float)pPrev1->m_flCycle, (float)pPrev1->m_flWeight, i );
+				DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t0, hdr->pSeqdesc( pHead->GetSequence() ).pszLabel(),  (float)pHead->GetCycle(),  (float)pHead->GetWeight(), i );
+				DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t1, hdr->pSeqdesc( pPrev1->GetSequence() ).pszLabel(),  (float)pPrev1->GetCycle(), (float)pPrev1->GetWeight(), i );
 				if (pPrev2)
-					DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t2, hdr->pSeqdesc( pPrev2->m_nSequence ).pszLabel(),  (float)pPrev2->m_flCycle,  (float)pPrev2->m_flWeight, i );
+					DevMsgRT( "(%7.4f : %30s : %5.3f : %4.2f : %1d)\n", t2, hdr->pSeqdesc( pPrev2->GetSequence() ).pszLabel(),  (float)pPrev2->GetCycle(),  (float)pPrev2->GetWeight(), i );
 			}
 	#endif
 
 			if (pPrev1)
 			{
-				pPrev1->m_nSequence = pHead->m_nSequence;
-				pPrev1->m_flCycle = pHead->m_flPrevCycle;
-				pPrev1->m_flWeight = pHead->m_flWeight;
+				pPrev1->SetSequence( pHead->GetSequence() );
+				pPrev1->SetCycle( pHead->GetPrevCycle() );
+				pPrev1->SetWeight( pHead->GetWeight() );
 			}
 
 			if (pPrev2)
@@ -340,18 +340,18 @@ void C_BaseAnimatingOverlay::CheckForLayerChanges( CStudioHdr *hdr, float curren
 				if ( fabs( t0 - t1 ) > 0.001f )
 					num = (t2 - t1) / (t0 - t1);
 
-				pPrev2->m_nSequence = pHead->m_nSequence;
+				pPrev2->SetSequence( pHead->GetSequence() );
 				float flTemp;
-				if (IsSequenceLooping( hdr, pHead->m_nSequence ))
+				if (IsSequenceLooping( hdr, pHead->GetSequence() ))
 				{
-					flTemp = LoopingLerp( num, (float)pHead->m_flPrevCycle, (float)pHead->m_flCycle );
+					flTemp = LoopingLerp( num, (float)pHead->GetPrevCycle(), (float)pHead->GetCycle() );
 				}
 				else
 				{
-					flTemp = Lerp( num, (float)pHead->m_flPrevCycle, (float)pHead->m_flCycle );
+					flTemp = Lerp( num, (float)pHead->GetPrevCycle(), (float)pHead->GetCycle() );
 				}
-				pPrev2->m_flCycle = flTemp;
-				pPrev2->m_flWeight = pHead->m_flWeight;
+				pPrev2->SetCycle( flTemp );
+				pPrev2->SetWeight( pHead->GetWeight() );
 			}
 
 			/*
@@ -361,11 +361,11 @@ void C_BaseAnimatingOverlay::CheckForLayerChanges( CStudioHdr *hdr, float curren
 			}
 			*/
 
-			m_iv_AnimOverlay[i].SetLooping( IsSequenceLooping( hdr, pHead->m_nSequence ) );
+			m_iv_AnimOverlay[i].SetLooping( IsSequenceLooping( hdr, pHead->GetSequence() ) );
 			m_iv_AnimOverlay[i].Interpolate( currentTime );
 
 			// reset event indexes
-			m_flOverlayPrevEventCycle[i] = pHead->m_flPrevCycle - 0.01;
+			m_flOverlayPrevEventCycle[i] = pHead->GetPrevCycle() - 0.01;
 		}
 	}
 
@@ -416,7 +416,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 			continue;
 		}
 
-		if ( m_AnimOverlay[i].m_nSequence >= nSequences )
+		if ( m_AnimOverlay[i].GetSequence() >= nSequences )
 			continue;
 
 		/*
@@ -430,7 +430,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 				);
 		*/
 
-		float fWeight = m_AnimOverlay[i].m_flWeight;
+		float fWeight = m_AnimOverlay[i].GetWeight();
 		if ( fWeight <= 0.0f )
 		{
 #if defined( DEBUG_TF2_OVERLAYS )
@@ -443,8 +443,8 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 		// FIXME: move this to somewhere more reasonable
 		// do a nice spline interpolation of the values
 		// if ( m_AnimOverlay[i].m_nSequence != m_iv_AnimOverlay.GetPrev( i )->nSequence )
-		float fCycle = m_AnimOverlay[ i ].m_flCycle;
-		fCycle = ClampCycle( fCycle, IsSequenceLooping( m_AnimOverlay[i].m_nSequence ) );
+		float fCycle = m_AnimOverlay[ i ].GetCycle();
+		fCycle = ClampCycle( fCycle, IsSequenceLooping( m_AnimOverlay[i].GetSequence() ) );
 
 		if ( !IsFinite( fCycle ) )
 		{
@@ -457,7 +457,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 			fWeight = 1.0f;
 		}
 
-		boneSetup.AccumulatePose( pos, q, m_AnimOverlay[i].m_nSequence, fCycle, fWeight, currentTime, m_pIk );
+		boneSetup.AccumulatePose( pos, q, m_AnimOverlay[i].GetSequence(), fCycle, fWeight, currentTime, m_pIk );
 
 #if defined( DEBUG_TF2_OVERLAYS )
 		engine->Con_NPrintf( 10 + j, "%30s %6.2f : %6.2f : %1d", boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].m_nSequence ).pszLabel(), fCycle, fWeight, i );
@@ -468,7 +468,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 		{
 			if (1)
 			{
-				DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].m_nSequence ).pszLabel(), fCycle, fWeight, i );
+				DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].GetSequence() ).pszLabel(), fCycle, fWeight, i );
 			}
 			else
 			{
@@ -487,14 +487,14 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 
 				if ( pHead && pPrev1 && pPrev2 )
 				{
-					DevMsgRT( "%6.2f : %30s %6.2f (%6.2f:%6.2f:%6.2f) : %6.2f (%6.2f:%6.2f:%6.2f) : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].m_nSequence ).pszLabel(), 
-						fCycle, (float)pPrev2->m_flCycle, (float)pPrev1->m_flCycle, (float)pHead->m_flCycle,
-						fWeight, (float)pPrev2->m_flWeight, (float)pPrev1->m_flWeight, (float)pHead->m_flWeight,
+					DevMsgRT( "%6.2f : %30s %6.2f (%6.2f:%6.2f:%6.2f) : %6.2f (%6.2f:%6.2f:%6.2f) : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].GetSequence() ).pszLabel(), 
+						fCycle, (float)pPrev2->GetCycle(), (float)pPrev1->GetCycle(), (float)pHead->GetCycle(),
+						fWeight, (float)pPrev2->GetWeight(), (float)pPrev1->GetWeight(), (float)pHead->GetWeight(),
 						i );
 				}
 				else
 				{
-					DevMsgRT( "%6.2f : %30s %6.2f : %6.2f : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].m_nSequence ).pszLabel(), fCycle, fWeight, i );
+					DevMsgRT( "%6.2f : %30s %6.2f : %6.2f : %1d\n", currentTime, boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].GetSequence() ).pszLabel(), fCycle, fWeight, i );
 				}
 
 			}
@@ -717,7 +717,7 @@ void C_BaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, 
 					{
 						if ( pLayer->m_nDispatchedDst != ACT_INVALID )
 						{
-							boneSetup.AccumulatePose( pos, q, pLayer->m_nDispatchedDst, pLayer->m_flCycle, pLayer->m_flWeight, currentTime, m_pIk );
+							boneSetup.AccumulatePose( pos, q, pLayer->m_nDispatchedDst, pLayer->GetCycle(), pLayer->GetWeight(), currentTime, m_pIk );
 						}
 					}
 				}
@@ -743,35 +743,35 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 	int j;
 	for (j = 0; j < m_AnimOverlay.Count(); j++)
 	{
-		if ( m_AnimOverlay[j].m_nSequence < 0 || m_AnimOverlay[j].m_nSequence >= nSequences )
+		if ( m_AnimOverlay[j].GetSequence() < 0 || m_AnimOverlay[j].GetSequence() >= nSequences )
 		{
 			continue;
 		}
 
 		// Don't bother with 0-weight layers
-		if ( m_AnimOverlay[j].m_flWeight == 0.0f || m_AnimOverlay[j].m_nOrder == MAX_OVERLAYS )
+		if ( m_AnimOverlay[j].GetWeight() == 0.0f || m_AnimOverlay[j].GetOrder() == MAX_OVERLAYS )
 		{
 			continue;
 		}
 
-		mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( m_AnimOverlay[j].m_nSequence );
+		mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( m_AnimOverlay[j].GetSequence() );
 		if ( seqdesc.numevents == 0 )
 			continue;
 
 		// stalled?
-		if (m_AnimOverlay[j].m_flCycle == m_flOverlayPrevEventCycle[j])
+		if (m_AnimOverlay[j].GetCycle() == m_flOverlayPrevEventCycle[j])
 			continue;
 
-		bool bLoopingSequence = IsSequenceLooping( m_AnimOverlay[j].m_nSequence );
+		bool bLoopingSequence = IsSequenceLooping( m_AnimOverlay[j].GetSequence() );
 
 		bool bLooped = false;
 
 		//in client code, m_flOverlayPrevEventCycle is set to -1 when we first start an overlay, looping or not
 		if ( bLoopingSequence &&
 			m_flOverlayPrevEventCycle[j] > 0.0f &&
-			m_AnimOverlay[j].m_flCycle <= m_flOverlayPrevEventCycle[j] )
+			m_AnimOverlay[j].GetCycle() <= m_flOverlayPrevEventCycle[j] )
 		{
-			if (m_flOverlayPrevEventCycle[j] - m_AnimOverlay[j].m_flCycle > 0.5)
+			if (m_flOverlayPrevEventCycle[j] - m_AnimOverlay[j].GetCycle() > 0.5)
 			{
 				bLooped = true;
 			}
@@ -810,7 +810,7 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 						pevent[i].event,
 						pevent[i].cycle,
 						(float)m_flOverlayPrevEventCycle[j],
-						(float)m_AnimOverlay[j].m_flCycle,
+						(float)m_AnimOverlay[j].GetCycle(),
 						gpGlobals->curtime );
 				}
 					
@@ -832,19 +832,19 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 			else if ( pevent[i].event < 5000 ) //Adrian - Support the old event system
 				continue;
 
-			bool bStartedSequence = ( m_flOverlayPrevEventCycle[j] > m_AnimOverlay[j].m_flCycle || m_flOverlayPrevEventCycle[j] == 0 );
+			bool bStartedSequence = ( m_flOverlayPrevEventCycle[j] > m_AnimOverlay[j].GetCycle() || m_flOverlayPrevEventCycle[j] == 0 );
 
-			if ( ( ( pevent[i].cycle > m_flOverlayPrevEventCycle[j] || bStartedSequence && pevent[i].cycle == 0 ) && pevent[i].cycle <= m_AnimOverlay[j].m_flCycle) )
+			if ( ( ( pevent[i].cycle > m_flOverlayPrevEventCycle[j] || bStartedSequence && pevent[i].cycle == 0 ) && pevent[i].cycle <= m_AnimOverlay[j].GetCycle()) )
 			{
 				if ( watch )
 				{
 					Msg( "%i (seq: %d) FE %i Normal cycle %f, prev %f ev %f (time %.3f)\n",
 						gpGlobals->tickcount,
-						(int)m_AnimOverlay[j].m_nSequence,
+						(int)m_AnimOverlay[j].GetSequence(),
 						(int)pevent[i].event,
 						(float)pevent[i].cycle,
 						(float)m_flOverlayPrevEventCycle[j],
-						(float)m_AnimOverlay[j].m_flCycle,
+						(float)m_AnimOverlay[j].GetCycle(),
 						gpGlobals->curtime );
 				}
 
@@ -852,7 +852,7 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 			}
 		}
 
-		m_flOverlayPrevEventCycle[j] = m_AnimOverlay[j].m_flCycle;
+		m_flOverlayPrevEventCycle[j] = m_AnimOverlay[j].GetCycle();
 	}
 }
 

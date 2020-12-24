@@ -39,22 +39,11 @@ public:
 
 	bool IsActive( void );
 
-	CRangeCheckedVar<int, -1, 65535, 0>	m_nSequence;
-	CRangeCheckedVar<float, -2, 2, 0>	m_flPrevCycle;
-	CRangeCheckedVar<float, -5, 5, 0>	m_flWeight;
-	CRangeCheckedVar<float, -5, 5, 0>	m_flWeightDeltaRate;
-	int		m_nOrder;
-
-	// used for automatic crossfades between sequence changes
-	CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
-	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
-
-	C_BaseAnimatingOverlay	*m_pOwner;
-
 	float GetFadeout( float flCurTime );
 
 	void SetSequence( int nSequence );
 	void SetCycle( float flCycle );
+	void SetPrevCycle( float flCycle );
 	void SetPlaybackRate( float flPlaybackRate );
 	void SetWeight( float flWeight );
 	void SetWeightDeltaRate( float flDelta );
@@ -62,6 +51,7 @@ public:
 	int   GetOrder() const;
 	int   GetSequence() const;
 	float GetCycle() const;
+	float GetPrevCycle() const;
 	float GetPlaybackRate() const;
 	float GetWeight() const;
 	float GetWeightDeltaRate() const;
@@ -80,6 +70,27 @@ public:
 	float   m_flBlendOut;
 
 	bool    m_bClientBlend;
+
+private:
+
+	CRangeCheckedVar<int, -1, 65535, 0>	m_nSequence;
+	CRangeCheckedVar<float, -2, 2, 0>	m_flPrevCycle;
+	CRangeCheckedVar<float, -5, 5, 0>	m_flWeight;
+	CRangeCheckedVar<float, -5, 5, 0>	m_flWeightDeltaRate;
+	int		m_nOrder;
+
+	// used for automatic crossfades between sequence changes
+	CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
+	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
+
+	C_BaseAnimatingOverlay	*m_pOwner;
+
+	friend C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_AnimationLayer& to );
+	friend C_AnimationLayer Lerp( float flPercent, const C_AnimationLayer& from, const C_AnimationLayer& to );
+	friend C_AnimationLayer LoopingLerp_Hermite( float flPercent, C_AnimationLayer& prev, C_AnimationLayer& from, C_AnimationLayer& to );
+	friend C_AnimationLayer Lerp_Hermite( float flPercent, const C_AnimationLayer& prev, const C_AnimationLayer& from, const C_AnimationLayer& to );
+	friend void Lerp_Clamp( C_AnimationLayer &val );
+
 };
 #ifdef CLIENT_DLL
 	#define CAnimationLayer C_AnimationLayer
@@ -110,6 +121,11 @@ inline void C_AnimationLayer::SetWeight( float flWeight )
 	m_flWeight = flWeight;
 }
 
+FORCEINLINE void C_AnimationLayer::SetPrevCycle( float flPrevCycle )
+{
+	m_flPrevCycle = flPrevCycle;
+}
+
 FORCEINLINE void C_AnimationLayer::SetPlaybackRate( float flPlaybackRate )
 {
 	m_flPlaybackRate = flPlaybackRate;
@@ -128,6 +144,11 @@ FORCEINLINE int	C_AnimationLayer::GetSequence( ) const
 FORCEINLINE float C_AnimationLayer::GetCycle( ) const
 {
 	return m_flCycle;
+}
+
+FORCEINLINE float C_AnimationLayer::GetPrevCycle() const
+{
+	return m_flPrevCycle;
 }
 
 FORCEINLINE float C_AnimationLayer::GetPlaybackRate( ) const
@@ -202,7 +223,7 @@ inline C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_
 	Assert( from.GetOwner() == to.GetOwner() );
 
 	C_AnimationLayer output;
-
+	
 	output.m_nSequence = to.m_nSequence;
 	output.m_flCycle = LoopingLerp( flPercent, (float)from.m_flCycle, (float)to.m_flCycle );
 	output.m_flPrevCycle = to.m_flPrevCycle;

@@ -1893,7 +1893,7 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 #if 1 // _DEBUG
 		if (r_sequence_debug.GetInt() == entindex())
 		{
-			DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f  +\n", gpGlobals->curtime, boneSetup.GetStudioHdr()->pSeqdesc( blend->m_nSequence ).pszLabel(), flCycle, (float)blend->m_flWeight );
+			DevMsgRT( "%8.4f : %30s : %5.3f : %4.2f  +\n", gpGlobals->curtime, boneSetup.GetStudioHdr()->pSeqdesc( blend->GetSequence() ).pszLabel(), flCycle, (float)blend->GetWeight() );
 		}
 #endif
 
@@ -5209,8 +5209,8 @@ void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 	{
 		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 	
-		GetSequenceLinearMotion( blend->m_nSequence, &vecDist );
-		flDuration = SequenceDuration( blend->m_nSequence );
+		GetSequenceLinearMotion( blend->GetSequence(), &vecDist );
+		flDuration = SequenceDuration( blend->GetSequence() );
 
 		VectorScale( vecDist, 1.0 / flDuration, tmp );
 
