@@ -31,6 +31,9 @@ void CSequenceTransitioner::CheckForSequenceChange(
 	if (m_animationQueue.Count() == 0)
 	{
 		m_animationQueue.AddToTail();
+#ifdef CLIENT_DLL
+		m_animationQueue[0].SetOwner( NULL );
+#endif
 	}
 
 	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];
@@ -86,6 +89,9 @@ void CSequenceTransitioner::UpdateCurrent(
 	if (m_animationQueue.Count() == 0)
 	{
 		m_animationQueue.AddToTail();
+#ifdef CLIENT_DLL
+		m_animationQueue[0].SetOwner( NULL );
+#endif
 	}
 
 	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];

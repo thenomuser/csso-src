@@ -57,6 +57,12 @@ halflife.res
 studiomdl.pdb
 studiomdl.exe
 studiomdl.lib
+datacache.pdb
+datacache.dll
+datacache.lib
+studiorender.pdb
+studiorender.dll
+studiorender.lib
 
 client.so
 client.so.dbg

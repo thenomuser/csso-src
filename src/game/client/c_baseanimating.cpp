@@ -66,6 +66,16 @@
 static ConVar cl_SetupAllBones( "cl_SetupAllBones", "0" );
 ConVar r_sequence_debug( "r_sequence_debug", "" );
 
+// [mariod] - am comparing two optimisations to remove what seems like unnecessary bonesetup, particularly during input/aiment code
+// method 1. just use stale data in setupbones, by ignoring the condition that enables the path to recalc them
+// method 2. Only allow the invalidation of bonecaches to happen during specific sections of the frame
+// method 1 uses Enable/DisableNewBoneSetupRequest over critical sections (PiMoN: missing from CS:SO)
+// method 2 uses Enable/DisableInvalidateBoneCache
+// method 2 is enabled, method 1 disabled for now, needs more thorough testing, but I can't see issues on CS:GO with this config
+// Have spoken to Yahn about this, and he seems to agree that either the invalidatebonecache calls shouldn't be there,
+// and/or the use of stale data during input code should be fine
+bool C_BaseAnimating::s_bEnableInvalidateBoneCache = true;
+
 // If an NPC is moving faster than this, he should play the running footstep sound
 const float RUN_SPEED_ESTIMATE_SQR = 150.0f * 150.0f;
 
@@ -682,6 +692,14 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_iv_flPoseParameter( "C_BaseAnimating::m_iv_flPoseParameter" ),
 	m_iv_flEncodedController("C_BaseAnimating::m_iv_flEncodedController")
 {
+	m_nCustomBlendingRuleMask = -1;
+
+	ClearAnimLODflags();
+	m_nComputedLODframe = 0;
+	m_flDistanceFromCamera = 0;
+
+	m_bMaintainSequenceTransitions = true;
+
 	m_vecForce.Init();
 	m_nForceBone = -1;
 	
@@ -1151,7 +1169,40 @@ int C_BaseAnimating::LookupBone( const char *szName )
 {
 	Assert( GetModelPtr() );
 
-	return Studio_BoneIndexByName( GetModelPtr(), szName );
+	if( !GetModelPtr() )
+	{
+		return -1;
+	}
+
+	//AssertMsg( !Q_stristr( szName, "ValveBiped" ), "ValveBiped bone names are deprecated!" );
+
+	int ret = Studio_BoneIndexByName( GetModelPtr(), szName );
+
+	if ( ret == -1 )
+	{
+		// Try to fix up some common old bone names to new bone names, until I can go through the code and fix all cases or write a data-driven solution.
+		if ( Q_stristr( szName, "weapon_bone" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
+		}
+		else if ( Q_stristr( szName, "Bip01_Head" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "head_0" );
+		}
+		else if ( Q_stristr( szName, "L_Hand" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_L" );
+		}
+		else if ( Q_stristr( szName, "R_Hand" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
+		}
+
+		//AssertMsg( ret > 0, "Failed to find an alternate bone name!" );
+
+	}
+
+	return ret;
 }
 
 //=========================================================
@@ -1357,6 +1408,19 @@ void C_BaseAnimating::GetPoseParameters( CStudioHdr *pStudioHdr, float poseParam
 #endif
 }
 
+//-----------------------------------------------------------------------------
+
+float C_BaseAnimating::GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart, float flEnd )
+{
+	Assert( GetModelPtr() );
+	return ::GetFirstSequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flStart, flEnd );
+}
+
+float C_BaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault )
+{
+	Assert( GetModelPtr() );
+	return ::GetAnySequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flDefault );
+}
 
 float C_BaseAnimating::ClampCycle( float flCycle, bool isLooping )
 {
@@ -1380,6 +1444,29 @@ float C_BaseAnimating::ClampCycle( float flCycle, bool isLooping )
 void C_BaseAnimating::GetCachedBoneMatrix( int boneIndex, matrix3x4_t &out )
 {
 	MatrixCopy( GetBone( boneIndex ), out );
+}
+
+void C_BaseAnimating::CalcBoneMerge( int boneMask )
+{
+	// For EF_BONEMERGE entities, copy the bone matrices for any bones that have matching names.
+	bool boneMerge = IsEffectActive( EF_BONEMERGE );
+	if ( boneMerge || m_pBoneMergeCache )
+	{
+		if ( boneMerge )
+		{
+			if ( !m_pBoneMergeCache )
+			{
+				m_pBoneMergeCache = new CBoneMergeCache;
+				m_pBoneMergeCache->Init( this );
+			}
+			m_pBoneMergeCache->MergeMatchingBones( boneMask );
+		}
+		else
+		{
+			delete m_pBoneMergeCache;
+			m_pBoneMergeCache = NULL;
+		}
+	}
 }
 
 
@@ -1423,25 +1510,7 @@ void C_BaseAnimating::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quater
 		bFixupSimulatedPositions = !m_pRagdoll->GetRagdoll()->allowStretch;
 	}
 
-	// For EF_BONEMERGE entities, copy the bone matrices for any bones that have matching names.
-	bool boneMerge = IsEffectActive(EF_BONEMERGE);
-	if ( boneMerge || m_pBoneMergeCache )
-	{
-		if ( boneMerge )
-		{
-			if ( !m_pBoneMergeCache )
-			{
-				m_pBoneMergeCache = new CBoneMergeCache;
-				m_pBoneMergeCache->Init( this );
-			}
-			m_pBoneMergeCache->MergeMatchingBones( boneMask );
-		}
-		else
-		{
-			delete m_pBoneMergeCache;
-			m_pBoneMergeCache = NULL;
-		}
-	}
+	CalcBoneMerge( boneMask );
 
 	for (int i = 0; i < hdr->numbones(); ++i) 
 	{
@@ -1758,12 +1827,20 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 {
 	VPROF( "C_BaseAnimating::MaintainSequenceTransitions" );
 
+	if ( !m_bMaintainSequenceTransitions )
+		return;
+
 	if ( !boneSetup.GetStudioHdr() )
 		return;
 
 	if ( prediction->InPrediction() )
 	{
 		m_nPrevNewSequenceParity = m_nNewSequenceParity;
+		return;
+	}
+
+	if ( IsPlayer() )
+	{
 		return;
 	}
 
@@ -1799,7 +1876,7 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 		boneSetup.GetStudioHdr(),
 		GetSequence(),
 		flCycle,
-		m_flPlaybackRate,
+		GetPlaybackRate(),
 		gpGlobals->curtime
 		);
 
@@ -1810,8 +1887,8 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 		C_AnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 
 		float dt = (gpGlobals->curtime - blend->m_flLayerAnimtime);
-		flCycle = blend->m_flCycle + dt * blend->m_flPlaybackRate * GetSequenceCycleRate( boneSetup.GetStudioHdr(), blend->m_nSequence );
-		flCycle = ClampCycle( flCycle, IsSequenceLooping( boneSetup.GetStudioHdr(), blend->m_nSequence ) );
+		flCycle = blend->GetCycle() + dt * blend->GetPlaybackRate() * GetSequenceCycleRate( boneSetup.GetStudioHdr(), blend->GetSequence() );
+		flCycle = ClampCycle( flCycle, IsSequenceLooping( boneSetup.GetStudioHdr(), blend->GetSequence() ) );
 
 #if 1 // _DEBUG
 		if (r_sequence_debug.GetInt() == entindex())
@@ -1820,7 +1897,7 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 		}
 #endif
 
-		boneSetup.AccumulatePose( pos, q, blend->m_nSequence, flCycle, blend->m_flWeight, gpGlobals->curtime, m_pIk );
+		boneSetup.AccumulatePose( pos, q, blend->GetSequence(), flCycle, blend->GetWeight(), gpGlobals->curtime, m_pIk );
 	}
 }
 
@@ -2565,6 +2642,9 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 	}
 
 	//boneMask = BONE_USED_BY_ANYTHING; // HACK HACK - this is a temp fix until we have accessors for bones to find out where problems are.
+
+	// some bones are tagged to always setup, they get OR'd in now
+	boneMask |= BONE_ALWAYS_SETUP;
 	
 	if ( GetSequence() == -1 )
 		 return false;
@@ -2729,7 +2809,16 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			// Let pose debugger know that we are blending
 			g_pPoseDebugger->StartBlending( this, hdr );
 
-			StandardBlendingRules( hdr, pos, q, currentTime, bonesMaskNeedRecalc );
+			int nTempMask = bonesMaskNeedRecalc;
+
+			if ( m_nCustomBlendingRuleMask != -1 )
+			{
+				nTempMask &= m_nCustomBlendingRuleMask;
+			}
+
+			nTempMask |= BONE_ALWAYS_SETUP; // make sure we always set up these bones
+
+			StandardBlendingRules( hdr, pos, q, currentTime, nTempMask );
 
 			CBoneBitList boneComputed;
 			// don't calculate IK on ragdolls
@@ -2741,6 +2830,12 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 
 				CalculateIKLocks( currentTime );
 				m_pIk->SolveDependencies( pos, q, m_BoneAccessor.GetBoneArrayForWrite(), boneComputed );
+
+				if ( IsPlayer() && ( (BONE_USED_BY_VERTEX_LOD0 & boneMask) == BONE_USED_BY_VERTEX_LOD0 ) )
+				{
+					// only do extra bone processing when setting up bones that influence renderable vertices, and not for attachment position requests
+					DoExtraBoneProcessing( hdr, pos, q, m_BoneAccessor.GetBoneArrayForWrite(), boneComputed, m_pIk );
+				}
 			}
 
 			BuildTransformations( hdr, pos, q, parentTransform, bonesMaskNeedRecalc, boneComputed );
@@ -2810,6 +2905,10 @@ C_BaseAnimating* C_BaseAnimating::FindFollowedEntity()
 
 void C_BaseAnimating::InvalidateBoneCache()
 {
+	// mariod - testing
+	if ( !s_bEnableInvalidateBoneCache )
+		return;
+
 	m_iMostRecentModelBoneCounter = g_iModelBoneCounter - 1;
 	m_flLastBoneSetupTime = -FLT_MAX; 
 }
@@ -4513,8 +4612,20 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 	pRagdoll->SetNextClientThink( CLIENT_THINK_ALWAYS );
 
 	pRagdoll->SetModelName( AllocPooledString( pModelName ) );
+	pRagdoll->CopySequenceTransitions(this);
 	pRagdoll->SetModelScale( GetModelScale() );
 	return pRagdoll;
+}
+
+void C_BaseAnimating::CopySequenceTransitions( C_BaseAnimating *pCopyFrom )
+{
+	m_SequenceTransitioner.m_animationQueue.RemoveAll();
+	int count = pCopyFrom->m_SequenceTransitioner.m_animationQueue.Count();
+	m_SequenceTransitioner.m_animationQueue.EnsureCount(count);
+	for ( int i = 0; i < count; i++ )
+	{
+		m_SequenceTransitioner.m_animationQueue[i] = pCopyFrom->m_SequenceTransitioner.m_animationQueue[i];
+	}
 }
 
 C_BaseAnimating *C_BaseAnimating::BecomeRagdollOnClient()
@@ -4879,7 +4990,7 @@ bool C_BaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	HitboxToWorldTransforms( hitboxbones );
 
-	if ( TraceToStudio( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetRenderOrigin(), GetModelScale(), tr ) )
+	if ( TraceToStudioCSHitgroupsPriority( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetRenderOrigin(), GetModelScale(), tr ) )
 	{
 		mstudiobbox_t *pbox = set->pHitbox( tr.hitbox );
 		const mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);

@@ -13,6 +13,7 @@
 #include "baseentity.h"
 #include "entityoutput.h"
 #include "studio.h"
+#include "bone_merge_cache.h"
 #include "datacache/idatacache.h"
 #include "tier0/threadtools.h"
 
@@ -21,6 +22,7 @@ struct animevent_t;
 struct matrix3x4_t;
 class CIKContext;
 class KeyValues;
+class CAnimationLayer;
 FORWARD_DECLARE_HANDLE( memhandle_t );
 
 #define	BCF_NO_ANIMATION_SKIP	( 1 << 0 )	// Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
@@ -105,6 +107,7 @@ public:
 	float	GetLastVisibleCycle( CStudioHdr *pStudioHdr, int iSequence );
 	virtual float	GetSequenceGroundSpeed( CStudioHdr *pStudioHdr, int iSequence );
 	inline float GetSequenceGroundSpeed( int iSequence ) { return GetSequenceGroundSpeed(GetModelPtr(), iSequence); }
+	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
 	void	ResetActivityIndexes ( void );
 	void    ResetEventIndexes ( void );
 	int		SelectWeightedSequence ( Activity activity );
@@ -113,6 +116,8 @@ public:
 	int		SelectHeaviestSequence ( Activity activity );
 	int		LookupActivity( const char *label );
 	int		LookupSequence ( const char *label );
+	float	GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart = 0, float flEnd = 1 );
+	float	GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault );
 	KeyValues *GetSequenceKeyValues( int iSequence );
 
 	float GetSequenceMoveYaw( int iSequence );
@@ -164,8 +169,10 @@ protected:
 	// save off your pose parameters in member variables in your derivation of this function:
 	virtual void	PopulatePoseParameters( void );
 
-
 public:
+	CBoneMergeCache					*m_pBoneMergeCache;
+
+	CBaseAnimating*	FindFollowedEntity();
 
 	int  LookupBone( const char *szName );
 	void GetBonePosition( const char *szName, Vector &origin, QAngle &angles );
@@ -434,18 +441,14 @@ friend class CBlendingCycler;
 //-----------------------------------------------------------------------------
 inline CStudioHdr *CBaseAnimating::GetModelPtr( void ) 
 { 
-	if ( IsDynamicModelLoading() )
-		return NULL;
-
 #ifdef _DEBUG
-	if ( !HushAsserts() )
-	{
-		// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
-		static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
-		AssertOnce( pModelCache->IsFrameLocking() );
-	}
+#ifndef _GAMECONSOLE
+	// Consoles don't need to lock the modeldata cache since it never flushes
+	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
+	static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
+	AssertOnce( pModelCache->IsFrameLocking() );
 #endif
-
+#endif
 	if ( !m_pStudioHdr && GetModel() )
 	{
 		LockStudioHdr();

@@ -346,6 +346,8 @@ public:
 	virtual void					SetDormant( bool bDormant );
 	virtual bool					IsDormant( void );
 
+	virtual void					OnSetDormant( bool bDormant ) {}
+
 	// Tells the entity that it's about to be destroyed due to the client receiving
 	// an uncompressed update that's caused it to destroy all entities & recreate them.
 	virtual void					SetDestroyedOnRecreateEntities( void );
@@ -1054,7 +1056,7 @@ public:
 	// Returns false if the model name is bogus or otherwise can't be loaded
 	bool				SetModel( const char *pModelName );
 
-	void				SetModelPointer( const model_t *pModel );
+	virtual	void		SetModelPointer( const model_t *pModel );
 
 
 	// Access movetype and solid.
@@ -2207,6 +2209,14 @@ inline bool C_BaseEntity::IsEnabledInToolView() const
 #else
 	return false;
 #endif
+}
+
+//-----------------------------------------------------------------------------
+// Client version of UTIL_Remove
+//-----------------------------------------------------------------------------
+inline void UTIL_Remove( C_BaseEntity *pEntity )
+{
+	pEntity->Remove();
 }
 
 //-----------------------------------------------------------------------------

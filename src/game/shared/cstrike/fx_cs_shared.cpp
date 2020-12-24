@@ -178,10 +178,17 @@ void FX_FireBullets(
 	if ( pPlayer && !pPlayer->IsDormant() )
 	{
 		if ( iMode == Primary_Mode )
-			pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
 		else
-			pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_SECONDARY );
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_SECONDARY );
 	}
+
+#ifdef CLIENT_DLL
+	if ( pPlayer && pPlayer->m_bUseNewAnimstate )
+	{
+		pPlayer->ProcessMuzzleFlashEvent();
+	}
+#endif
 
 #ifndef CLIENT_DLL
 	// if this is server code, send the effect over to client as temp entity

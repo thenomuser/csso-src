@@ -124,6 +124,23 @@ bool CBaseCSGrenade::Deploy()
 	return BaseClass::Deploy();
 }
 
+#ifdef CLIENT_DLL
+int CBaseCSGrenade::DrawModel( int flags )
+{
+	//hide the grenade that's in the player's hand while playing grenade throwing animations
+	CCSPlayer *pPlayer = GetPlayerOwner();
+	if ( pPlayer )
+	{
+		if ( !pPlayer->m_bUseNewAnimstate && pPlayer->m_PlayerAnimState && pPlayer->m_PlayerAnimState->ShouldHideGrenadeDuringThrow() )
+		{
+			return 0;
+		}
+	}
+
+	return BaseClass::DrawModel( flags );
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : Returns true on success, false on failure.

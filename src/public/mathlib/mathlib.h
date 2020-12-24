@@ -267,6 +267,21 @@ struct matrix3x4_t
 		Init( xAxis, yAxis, zAxis, vecOrigin );
 	}
 
+	/// modify the origin
+	inline void SetOrigin( Vector const & p )
+	{
+		m_flMatVal[0][3] = p.x;
+		m_flMatVal[1][3] = p.y;
+		m_flMatVal[2][3] = p.z;
+	}
+
+	/// return the origin
+	inline Vector GetOrigin( void ) const
+	{
+		Vector vecRet( m_flMatVal[ 0 ][ 3 ], m_flMatVal[ 1 ][ 3 ], m_flMatVal[ 2 ][ 3 ] );
+		return vecRet;
+	}
+
 	inline void Invalidate( void )
 	{
 		for (int i = 0; i < 3; i++)
@@ -282,6 +297,11 @@ struct matrix3x4_t
 	const float *operator[]( int i ) const	{ Assert(( i >= 0 ) && ( i < 3 )); return m_flMatVal[i]; }
 	float *Base()							{ return &m_flMatVal[0][0]; }
 	const float *Base() const				{ return &m_flMatVal[0][0]; }
+
+	inline Vector TransformVector( const Vector &v0 ) const;
+
+	inline void InverseTR( matrix3x4_t &out ) const;
+	inline matrix3x4_t InverseTR() const;
 
 	float m_flMatVal[3][4];
 };
@@ -584,6 +604,8 @@ void MatrixScaleByZero ( matrix3x4_t &out );
 //void DecomposeRotation( const matrix3x4_t &mat, float *out );
 void ConcatRotations (const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out);
 void ConcatTransforms (const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out);
+// faster version assumes m0, m1, out are 16-byte aligned addresses
+void ConcatTransforms_Aligned( const matrix3x4_t &m0, const matrix3x4_t &m1, matrix3x4_t &out );
 
 // For identical interface w/ VMatrix
 inline void MatrixMultiply ( const matrix3x4_t &in1, const matrix3x4_t &in2, matrix3x4_t &out )
@@ -899,6 +921,15 @@ inline int VectorCompare (const Vector& v1, const Vector& v2)
 inline void VectorTransform (const Vector& in1, const matrix3x4_t &in2, Vector &out)
 {
 	VectorTransform( &in1.x, in2, &out.x );
+}
+
+// MSVC folds the return value nicely and creates no temporaries on the stack,
+//    we need more experiments with different compilers and in different circumstances
+inline const Vector VectorTransform( const Vector& in1, const matrix3x4_t &in2 )
+{
+	Vector out;
+	VectorTransform( in1, in2, out );
+	return out;
 }
 
 inline void VectorITransform (const Vector& in1, const matrix3x4_t &in2, Vector &out)
@@ -1786,10 +1817,18 @@ bool MathLib_SSEEnabled( void );
 bool MathLib_SSE2Enabled( void );
 
 float Approach( float target, float value, float speed );
+Vector Approach( Vector target, Vector value, float speed );
 float ApproachAngle( float target, float value, float speed );
 float AngleDiff( float destAngle, float srcAngle );
 float AngleDistance( float next, float cur );
 float AngleNormalize( float angle );
+
+// return a 0..1 value based on the position of x between edge0 and edge1
+inline float smoothstep_bounds(float edge0, float edge1, float x)
+{
+	x = clamp((x - edge0)/(edge1 - edge0),0,1);
+	return x*x*(3 - 2*x);
+}
 
 // ensure that 0 <= angle <= 360
 float AngleNormalizePositive( float angle );
@@ -2179,6 +2218,31 @@ inline bool AlmostEqual( const Vector &a, const Vector &b, int maxUlps = 10)
 	return AlmostEqual( a.x, b.x, maxUlps ) &&
 		AlmostEqual( a.y, b.y, maxUlps ) &&
 		AlmostEqual( a.z, b.z, maxUlps );
+}
+
+
+inline const matrix3x4_t ConcatTransforms( const matrix3x4_t &in1, const matrix3x4_t &in2 )
+{
+	matrix3x4_t out;
+	ConcatTransforms( in1, in2, out );
+	return out;
+}
+
+inline Vector matrix3x4_t::TransformVector( const Vector &v0 ) const
+{
+	return VectorTransform( v0, *this );
+}
+
+inline void matrix3x4_t::InverseTR( matrix3x4_t &out ) const
+{
+	::MatrixInvert( *this, out );
+}
+
+inline matrix3x4_t matrix3x4_t::InverseTR() const
+{
+	matrix3x4_t out;
+	::MatrixInvert( *this, out );
+	return out;
 }
 
 

@@ -288,10 +288,17 @@ CBaseAnimating::CBaseAnimating()
 	m_fadeMaxDist = 0;
 	m_flFadeScale = 0.0f;
 	m_fBoneCacheFlags = 0;
+
+	if ( m_pBoneMergeCache )
+	{
+		delete m_pBoneMergeCache;
+		m_pBoneMergeCache = NULL;
+	}
 }
 
 CBaseAnimating::~CBaseAnimating()
 {
+	delete m_pBoneMergeCache;
 	Studio_DestroyBoneCache( m_boneCacheHandle );
 	delete m_pIk;
 	UnlockStudioHdr();
@@ -687,6 +694,20 @@ int CBaseAnimating::LookupActivity( const char *label )
 {
 	AssertMsg( GetModelPtr(), "GetModelPtr NULL. %s", STRING(GetEntityName()) ? STRING(GetEntityName()) : "" );
 	return ::LookupActivity( GetModelPtr(), label );
+}
+
+//=========================================================
+//=========================================================
+float CBaseAnimating::GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart, float flEnd )
+{
+	Assert( GetModelPtr() );
+	return ::GetFirstSequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flStart, flEnd );
+}
+
+float CBaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault )
+{
+	Assert( GetModelPtr() );
+	return ::GetAnySequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flDefault );
 }
 
 //=========================================================
@@ -1830,30 +1851,47 @@ void CBaseAnimating::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 		}
 	}
 	
-	CBaseAnimating *pParent = dynamic_cast< CBaseAnimating* >( GetMoveParent() );
-	if ( pParent )
+	if ( GetMoveParent() && IsEffectActive(EF_BONEMERGE) )
 	{
-		// We're doing bone merging, so do special stuff here.
-		CBoneCache *pParentCache = pParent->GetBoneCache();
-		if ( pParentCache )
+		CBaseAnimating *pParent = GetMoveParent()->GetBaseAnimating();
+		if ( pParent )
 		{
-			BuildMatricesWithBoneMerge( 
-				pStudioHdr, 
-				GetAbsAngles(), 
-				adjOrigin, 
-				pos, 
-				q, 
-				pBoneToWorld, 
-				pParent, 
-				pParentCache );
-			
-			RemoveEFlags( EFL_SETTING_UP_BONES );
-			if (ai_setupbones_debug.GetBool())
+			// We're doing bone merging, so do special stuff here.
+			CBoneCache *pParentCache = pParent->GetBoneCache();
+			if ( pParentCache )
 			{
-				DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+
+				if ( !m_pBoneMergeCache )
+				{
+					m_pBoneMergeCache = new CBoneMergeCache;
+					m_pBoneMergeCache->Init( this );
+				}
+
+				m_pBoneMergeCache->BuildMatricesWithBoneMerge( 
+					pStudioHdr, 
+					GetAbsAngles(), 
+					adjOrigin, 
+					pos, 
+					q, 
+					pBoneToWorld, 
+					pParent, 
+					pParentCache,
+					boneMask );
+				
+				RemoveEFlags( EFL_SETTING_UP_BONES );
+				if (ai_setupbones_debug.GetBool())
+				{
+					DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+				}
+				return;
 			}
-			return;
 		}
+	}
+
+	if ( !IsEffectActive(EF_BONEMERGE) )
+	{
+		delete m_pBoneMergeCache;
+		m_pBoneMergeCache = NULL;
 	}
 
 	Studio_BuildMatrices( 
@@ -2690,10 +2728,10 @@ bool CBaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask,
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	pcache->ReadCachedBonePointers( hitboxbones, pStudioHdr->numbones() );
 
-	if ( TraceToStudio( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetAbsOrigin(), GetModelScale(), tr ) )
+	if ( TraceToStudioCSHitgroupsPriority( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetAbsOrigin(), GetModelScale(), tr ) )
 	{
 		mstudiobbox_t *pbox = set->pHitbox( tr.hitbox );
-		mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
+		const mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
 		tr.surface.name = "**studio**";
 		tr.surface.flags = SURF_HITBOX;
 		tr.surface.surfaceProps = physprops->GetSurfaceIndex( pBone->pszSurfaceProp() );
@@ -2800,6 +2838,33 @@ void CBaseAnimating::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity
 	}
 }
 
+CBaseAnimating* CBaseAnimating::FindFollowedEntity()
+{
+	CBaseEntity *follow = GetFollowedEntity();
+
+	if ( !follow )
+		return NULL;
+
+	if ( follow->IsDormant() )
+		return NULL;
+
+	if ( !follow->GetModel() )
+	{
+		Warning( "mod_studio: MOVETYPE_FOLLOW with no model.\n" );
+		return NULL;
+	}
+
+	if ( modelinfo->GetModelType( follow->GetModel() ) != mod_studio )
+	{
+		Warning( "Attached %s (mod_studio) to %s (%d)\n", 
+			modelinfo->GetModelName( GetModel() ), 
+			modelinfo->GetModelName( follow->GetModel() ), 
+			modelinfo->GetModelType( follow->GetModel() ) );
+		return NULL;
+	}
+
+	return assert_cast< CBaseAnimating* >( follow );
+}
 
 //=========================================================
 //=========================================================

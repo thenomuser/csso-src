@@ -71,6 +71,15 @@ struct RagdollInfo_t
 	Quaternion	m_rgBoneQuaternion[MAXSTUDIOBONES];
 };
 
+enum
+{
+	ANIMLODFLAG_DISTANT = 0x01,
+	ANIMLODFLAG_OUTSIDEVIEWFRUSTUM = 0x02,
+	ANIMLODFLAG_INVISIBLELOCALPLAYER = 0x04,
+	ANIMLODFLAG_DORMANT = 0x08,
+	//ANIMLODFLAG_UNUSED			= 0x10,
+	//ANIMLODFLAG_UNUSED			= 0x20,
+};
 
 class CAttachmentData
 {
@@ -138,6 +147,7 @@ public:
 	// base model functionality
 	float		  ClampCycle( float cycle, bool isLooping );
 	virtual void GetPoseParameters( CStudioHdr *pStudioHdr, float poseParameter[MAXSTUDIOPOSEPARAM] );
+	void CalcBoneMerge( int boneMask );
 	virtual void BuildTransformations( CStudioHdr *pStudioHdr, Vector *pos, Quaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed );
 	virtual void ApplyBoneMatrixTransform( matrix3x4_t& transform );
  	virtual int	VPhysicsGetObjectList( IPhysicsObject **pList, int listMax );
@@ -157,6 +167,8 @@ public:
 	//
 	virtual CMouthInfo *GetMouth();
 	virtual void	ControlMouth( CStudioHdr *pStudioHdr );
+
+	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) { Assert( false ); }
 	
 	// override in sub-classes
 	virtual void DoAnimationEvents( CStudioHdr *pStudio );
@@ -183,6 +195,7 @@ public:
 	virtual	void StandardBlendingRules( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], float currentTime, int boneMask );
 	void UnragdollBlend( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime );
 
+	bool m_bMaintainSequenceTransitions; // kill-switch so entities can opt out of automatic transitions
 	void MaintainSequenceTransitions( IBoneSetup &boneSetup, float flCycle, Vector pos[], Quaternion q[] );
 	virtual void AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
 
@@ -208,6 +221,8 @@ public:
 
 	// [menglish] Finds the bone associated with the given hitbox
 	int		GetHitboxBone( int hitboxIndex );
+
+	void	CopySequenceTransitions( C_BaseAnimating *pCopyFrom );
 
 	// Bone attachments
 	virtual void		AttachEntityToBone( C_BaseAnimating* attachTarget, int boneIndexAttached=-1, Vector bonePosition=Vector(0,0,0), QAngle boneAngles=QAngle(0,0,0) );
@@ -324,6 +339,8 @@ public:
 	void							GetBlendedLinearVelocity( Vector *pVec );
 	int								LookupSequence ( const char *label );
 	int								LookupActivity( const char *label );
+	float							GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart = 0, float flEnd = 1 );
+	float							GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault );
 	char const						*GetSequenceName( int iSequence ); 
 	char const						*GetSequenceActivityName( int iSequence );
 	Activity						GetSequenceActivity( int iSequence );
@@ -333,6 +350,7 @@ public:
 	// Clientside animation
 	virtual float					FrameAdvance( float flInterval = 0.0f );
 	virtual float					GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequence );
+	virtual float					GetLayerSequenceCycleRate( C_AnimationLayer *pLayer, int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
 	virtual void					UpdateClientSideAnimation();
 	void							ClientSideAnimationChanged();
 	virtual unsigned int			ComputeClientSideAnimationFlags();
@@ -382,6 +400,8 @@ public:
 	const matrix3x4_t&				GetBone( int iBone ) const;
 	matrix3x4_t&					GetBoneForWrite( int iBone );
 
+	bool							isBoneAvailableForRead( int iBone ) const;
+
 	// Used for debugging. Will produce asserts if someone tries to setup bones or
 	// attachments before it's allowed.
 	// Use the "AutoAllowBoneAccess" class to auto push/pop bone access.
@@ -400,6 +420,8 @@ public:
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();
+	// Enable/Disable Invalidation of Bone Caches
+	static void						EnableInvalidateBoneCache( bool bEnable ) { s_bEnableInvalidateBoneCache = bEnable; };
 
 	// Purpose: My physics object has been updated, react or extract data
 	virtual void					VPhysicsUpdate( IPhysicsObject *pPhysics );
@@ -485,6 +507,27 @@ public:
 	// Object bodygroup
 	int								m_nBody;
 
+	int								m_nCustomBlendingRuleMask;
+
+	unsigned int					m_nAnimLODflags;
+	unsigned int					m_nAnimLODflagsOld;
+
+	// PiMoN: anim lods are making the model stretch in all possible directions across the map, investigate!
+#if 0
+	inline void SetAnimLODflag( unsigned int nNewFlag )		{ m_nAnimLODflags |= (nNewFlag); }
+	inline void UnSetAnimLODflag( unsigned int nNewFlag )	{ m_nAnimLODflags &= (~nNewFlag); }
+	inline bool IsAnimLODflagSet( unsigned int nFlag )		{ return (m_nAnimLODflags & (nFlag)) != 0; }
+	inline void ClearAnimLODflags( void )					{ m_nAnimLODflags = 0; }
+#else
+	inline void SetAnimLODflag( unsigned int nNewFlag )		{ m_nAnimLODflags = 0; }
+	inline void UnSetAnimLODflag( unsigned int nNewFlag )	{ m_nAnimLODflags = 0; }
+	inline bool IsAnimLODflagSet( unsigned int nFlag )		{ return false; }
+	inline void ClearAnimLODflags( void )					{ m_nAnimLODflags = 0; }
+#endif
+
+	int								m_nComputedLODframe;
+	float							m_flDistanceFromCamera;
+
 	// Hitbox set to use (default 0)
 	int								m_nHitboxSet;
 
@@ -511,6 +554,8 @@ protected:
 	C_BaseAnimating *				m_pNextForThreadedBoneSetup;
 	int								m_iPrevBoneMask;
 	int								m_iAccumulatedBoneMask;
+
+	static bool						s_bEnableInvalidateBoneCache;
 
 	CBoneAccessor					m_BoneAccessor;
 	CThreadFastMutex				m_BoneSetupLock;
@@ -593,8 +638,11 @@ protected:
 private:
 	float							m_flOldModelScale;
 	int								m_nOldSequence;
+
+public:
 	CBoneMergeCache					*m_pBoneMergeCache;	// This caches the strcmp lookups that it has to do
-														// when merg
+														// when merging
+private:
 	
 	CUtlVector< matrix3x4_t >		m_CachedBoneData; // never access this directly. Use m_BoneAccessor.
 	memhandle_t						m_hitboxBoneCacheHandle;
@@ -721,6 +769,11 @@ inline const matrix3x4_t& C_BaseAnimating::GetBone( int iBone ) const
 inline matrix3x4_t& C_BaseAnimating::GetBoneForWrite( int iBone )
 {
 	return m_BoneAccessor.GetBoneForWrite( iBone );
+}
+
+inline bool C_BaseAnimating::isBoneAvailableForRead( int iBone ) const
+{
+	return m_BoneAccessor.isBoneAvailableForRead( iBone );
 }
 
 

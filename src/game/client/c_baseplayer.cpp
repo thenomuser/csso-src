@@ -583,6 +583,40 @@ CBaseEntity	*C_BasePlayer::GetObserverTarget() const	// returns players target o
 	}
 }
 
+
+
+void UpdateWorldmodelVisibility( C_BasePlayer *player )
+{
+	for ( int i = 0; i < player->WeaponCount(); i++ )
+	{
+		CBaseCombatWeapon *pWeapon = player->GetWeapon(i);
+		if ( pWeapon )
+		{
+			CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+			if ( pWeaponWorldModel )
+			{
+				pWeaponWorldModel->UpdateVisibility();
+			}
+		}
+	}
+}
+
+// Helper method to fix up visiblity across split screen for view models when observer target or mode changes
+void UpdateViewmodelVisibility( C_BasePlayer *player )
+{
+	// also update world models
+	UpdateWorldmodelVisibility( player );
+
+	// Update view model visibility
+	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
+	{
+		CBaseViewModel *vm = player->GetViewModel( i );
+		if ( !vm )
+			continue;
+		vm->UpdateVisibility();
+	}
+}
+
 // Called from Recv Proxy, mainly to reset tone map scale
 void C_BasePlayer::SetObserverTarget( EHANDLE hObserverTarget )
 {

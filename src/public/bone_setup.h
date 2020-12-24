@@ -290,12 +290,17 @@ public:
 
 	CUtlVectorFixed< CIKTarget, 12 >	m_target;
 
+	void CopyTo( CIKContext* pOther, const unsigned short * iRemapping );
+
+	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
+
+	const int GetBoneMask( void ) { return m_boneMask; }
+
 private:
 
 	CStudioHdr const *m_pStudioHdr;
 
 	bool Estimate( int iSequence, float flCycle, int iTarget, const float poseParameter[], float flWeight = 1.0f ); 
-	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
 
 	// virtual IK rules, filtered and combined from each sequence
 	CUtlVector< CUtlVector< ikcontextikrule_t > > m_ikChainRule;
@@ -438,6 +443,8 @@ void Studio_InvalidateBoneCache( memhandle_t cacheHandle );
 
 // Given a ray, trace for an intersection with this studiomodel.  Get the array of bones from StudioSetupHitboxBones
 bool TraceToStudio( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
+// Given a ray, trace for an intersection with this studiomodel, bullets will hit bodyparts that result in higher damage
+bool TraceToStudioCSHitgroupsPriority( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
 
 void QuaternionSM( float s, const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMA( const Quaternion &p, float s, const Quaternion &q, Quaternion &qt );

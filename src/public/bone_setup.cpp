@@ -24,6 +24,7 @@
 #ifdef CLIENT_DLL
 	#include "posedebugger.h"
 #endif
+#include "mathlib/capsule.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -890,7 +891,7 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	mstudioseqdesc_t &seqdesc, int sequence, int animation,
 	float cycle, int boneMask )
 {
-	int	i, j, k;
+	//int	i, j, k;
 
 	const mstudiobone_t *pbone;
 	const virtualgroup_t *pSeqGroup;
@@ -929,7 +930,7 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	float *pweight = seqdesc.pBoneweight( 0 );
 	pbone = pStudioHdr->pBone( 0 );
 
-	for (i = 0; i < pStudioHdr->numbones(); i++)
+	for (int i = 0; i < pStudioHdr->numbones(); i++)
 	{
 		if (pStudioHdr->boneFlags(i) & boneMask)
 		{
@@ -968,10 +969,10 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	// FIXME: change encoding so that bone -1 is never the case
 	while (panim && panim->bone < 255)
 	{
-		j = pAnimGroup->masterBone[panim->bone];
+		int j = pAnimGroup->masterBone[panim->bone];
 		if ( j >= 0 && ( pStudioHdr->boneFlags(j) & boneMask ) )
 		{
-			k = pSeqGroup->boneMap[j];
+			int k = pSeqGroup->boneMap[j];
 
 			if (k >= 0 && pweight[k] > 0.0f)
 			{
@@ -997,8 +998,8 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 		matrix3x4_t *boneToWorld = g_MatrixPool.Alloc();
 		CBoneBitList boneComputed;
 
-		int i;
-		for (i = 0; i < animdesc.numlocalhierarchy; i++)
+		//int i;
+		for (int i = 0; i < animdesc.numlocalhierarchy; i++)
 		{
 			mstudiolocalhierarchy_t *pHierarchy = animdesc.pHierarchy( i );
 
@@ -1054,7 +1055,7 @@ static void CalcAnimation( const CStudioHdr *pStudioHdr,	Vector *pos, Quaternion
 	mstudiobone_t *pbone = pStudioHdr->pBone( 0 );
 	const mstudiolinearbone_t *pLinearBones = pStudioHdr->pLinearBones();
 
-	int					i;
+//	int					i;
 	int					iFrame;
 	float				s;
 
@@ -1074,7 +1075,7 @@ static void CalcAnimation( const CStudioHdr *pStudioHdr,	Vector *pos, Quaternion
 	{
 		// Msg("zeroframe %s\n", animdesc.pszName() );
 		// pre initialize
-		for (i = 0; i < pStudioHdr->numbones(); i++, pbone++, pweight++)
+		for (int i = 0; i < pStudioHdr->numbones(); i++, pbone++, pweight++)
 		{
 			if (*pweight > 0 && (pStudioHdr->boneFlags(i) & boneMask))
 			{
@@ -1097,7 +1098,7 @@ static void CalcAnimation( const CStudioHdr *pStudioHdr,	Vector *pos, Quaternion
 	}
 
 	// BUGBUG: the sequence, the anim, and the model can have all different bone mappings.
-	for (i = 0; i < pStudioHdr->numbones(); i++, pbone++, pweight++)
+	for (int i = 0; i < pStudioHdr->numbones(); i++, pbone++, pweight++)
 	{
 		if (panim && panim->bone == i)
 		{
@@ -1688,6 +1689,13 @@ void ScaleBones(
 //-----------------------------------------------------------------------------
 void Studio_LocalPoseParameter( const CStudioHdr *pStudioHdr, const float poseParameter[], mstudioseqdesc_t &seqdesc, int iSequence, int iLocalIndex, float &flSetting, int &index )
 {
+	if (!pStudioHdr)
+	{
+		flSetting = 0;
+		index = 0;
+		return;
+	}
+
 	int iPose = pStudioHdr->GetSharedPoseParameter( iSequence, seqdesc.paramindex[iLocalIndex] );
 
 	if (iPose == -1)
@@ -2428,13 +2436,42 @@ void CBoneSetup::AccumulatePose(
 		seq_ik.AddSequenceLocks( seqdesc, pos, q );
 	}
 
-	if (seqdesc.flags & STUDIO_LOCAL)
+	if ((seqdesc.flags & STUDIO_LOCAL) || (seqdesc.flags & STUDIO_ROOTXFORM))
 	{
 		::InitPose( m_pStudioHdr, pos2, q2, m_boneMask );
 	}
 
 	if (CalcPoseSingle( m_pStudioHdr, pos2, q2, seqdesc, sequence, cycle, m_flPoseParameter, m_boneMask, flTime ))
 	{
+		if ( (seqdesc.flags & STUDIO_ROOTXFORM) && seqdesc.rootDriverIndex > 0 )
+		{
+
+			// hack: Remap the driver bone if it's coming in from an included virtual model and the indices might not match
+			// poseparam input is ignored for now
+			int nRemappedDriverBone = seqdesc.rootDriverIndex;
+			virtualmodel_t *pVModel = m_pStudioHdr->GetVirtualModel();
+			if (pVModel)
+			{
+				const virtualgroup_t *pAnimGroup;
+				const studiohdr_t *pAnimStudioHdr;
+				int baseanimation = m_pStudioHdr->iRelativeAnim( sequence, 0 );
+				pAnimGroup = pVModel->pAnimGroup( baseanimation );
+				pAnimStudioHdr = ((CStudioHdr *)m_pStudioHdr)->pAnimStudioHdr( baseanimation );
+				nRemappedDriverBone = pAnimGroup->masterBone[nRemappedDriverBone];
+			}
+
+			matrix3x4_t rootDriverXform;
+			AngleMatrix( RadianEuler(q2[nRemappedDriverBone]), pos2[nRemappedDriverBone], rootDriverXform );
+
+			matrix3x4_t rootToMove;
+			AngleMatrix( RadianEuler(q[0]), pos[0], rootToMove );
+
+			matrix3x4_t rootMoved;
+			ConcatTransforms( rootDriverXform, rootToMove, rootMoved ); // ConcatTransforms_Aligned
+
+			MatrixAngles( rootMoved, q2[0], pos2[0] );
+		}
+
 		// this weight is wrong, the IK rules won't composite at the correct intensity
 		AddLocalLayers( pos2, q2, seqdesc, sequence, cycle, 1.0, flTime, pIKContext );
 		SlerpBones( m_pStudioHdr, q, pos, seqdesc, sequence, q2, pos2, flWeight, m_boneMask );
@@ -3283,7 +3320,7 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 		}
 		else
 		{
-			flCycle = max( 0.0, min( flCycle, 0.9999 ) );
+			flCycle = max( 0.f, min( flCycle, 0.9999f ) );
 		}
 	}
 
@@ -4453,6 +4490,57 @@ void CIKContext::SolveLock(
 	SolveBone( m_pStudioHdr, pchain->pLink( 0 )->bone, boneToWorld, pos, q );
 }
 
+void CIKContext::CopyTo( CIKContext* pOther, const unsigned short * iRemapping  )
+{
+	if ( !pOther )
+		return;
+
+	// replace the ik rules and ik locks on the other ik context, and remap the bone chain indices to match
+
+	pOther->m_ikChainRule.RemoveAll();
+	pOther->m_ikLock.RemoveAll();
+	
+	FOR_EACH_VEC( m_ikChainRule, n )
+	{
+		int nIndex = pOther->m_ikChainRule.AddToTail();
+
+		FOR_EACH_VEC( m_ikChainRule[n], m )
+		{
+			int nIKChainBone = m_ikChainRule[n][m].bone;
+			if ( iRemapping != NULL && m_ikChainRule[ n ][ m ].type != IK_RELEASE )
+			{
+				int nIKChainBoneRemapped = iRemapping[ nIKChainBone ];
+				if ( nIKChainBoneRemapped < 0 || nIKChainBoneRemapped >= MAXSTUDIOBONES )
+					continue;	// don't copy this chain rule at all
+
+				nIKChainBone = nIKChainBoneRemapped;
+			}
+
+			int nSubIndex = pOther->m_ikChainRule[nIndex].AddToTail();
+			pOther->m_ikChainRule[nIndex][nSubIndex] = m_ikChainRule[n][m];
+			pOther->m_ikChainRule[nIndex][nSubIndex].bone = nIKChainBone;	// this can be a remapped bone
+		}
+	}
+
+	FOR_EACH_VEC( m_ikLock, n )
+	{
+		int nIKChainBone = m_ikLock[n].bone;
+		if ( iRemapping != NULL && m_ikLock[ n ].type != IK_RELEASE )
+		{
+			int nIKChainBoneRemapped = iRemapping[ nIKChainBone ];
+			if ( nIKChainBoneRemapped < 0 || nIKChainBoneRemapped >= MAXSTUDIOBONES )
+				continue;	// don't copy this ik lock at all
+
+			nIKChainBone = nIKChainBoneRemapped;
+		}
+
+		int nIndex = pOther->m_ikLock.AddToTail();
+		pOther->m_ikLock[nIndex] = m_ikLock[n];
+		pOther->m_ikLock[ nIndex ].bone = nIKChainBone;	// this can be a remapped bone
+	}
+	
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: run all animations that automatically play and are driven off of poseParameters
@@ -4732,7 +4820,7 @@ void DoQuatInterpBone(
 			// FIXME: a fast acos should be acceptable
 			dot = clamp( dot, -1.f, 1.f );
 			weight[i] = 1 - (2 * acos( dot ) * pProc->pTrigger( i )->inv_tolerance );
-			weight[i] = max( 0, weight[i] );
+			weight[i] = max( 0.f, weight[i] );
 			scale += weight[i];
 		}
 
@@ -5150,12 +5238,49 @@ float Studio_GetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, flo
 
 #pragma warning (disable : 4701)
 
+static int ClipRayToCapsule( const Ray_t &ray, mstudiobbox_t *pbox, matrix3x4_t& matrix, trace_t &tr )
+{
+	Vector vecCapsuleCenters[ 2 ];
+	VectorTransform( pbox->bbmin, matrix, vecCapsuleCenters[0] );
+	VectorTransform( pbox->bbmax, matrix, vecCapsuleCenters[1] );
+
+	CShapeCastResult cast;
+	Assert( tr.fraction >= 0 && tr.fraction <= 1.0f );
+	CastCapsuleRay( cast, ray.m_Start /*+start offset?*/, ray.m_Delta * tr.fraction, vecCapsuleCenters, pbox->flCapsuleRadius );
+	if ( cast.DidHit() )
+	{
+		tr.fraction *= cast.m_flHitTime;
+		if ( cast.m_bStartInSolid )
+		{
+			tr.startsolid = true;
+			// tr.allsolid - not computed yet
+		}
+
+		// tr.contents, dispFlags - not computed yet
+		tr.endpos = cast.m_vHitPoint;
+		tr.plane.normal = cast.m_vHitNormal;
+
+		//extern IVDebugOverlay *debugoverlay;
+		//debugoverlay->AddCapsuleOverlay( vecCapsuleCenters[ 0 ], vecCapsuleCenters[ 1 ], pbox->flCapsuleRadius, 0, 255, 0, 255, 10 );
+		//debugoverlay->AddLineOverlay( ray.m_Start /*+offset?*/, cast.m_vHitPoint, 0, 0, 255, 200, 0.25f, 10 );
+		//debugoverlay->AddLineOverlay( cast.m_vHitPoint, cast.m_vHitPoint + 4 * cast.m_vHitNormal, 0, 255, 0, 200, 0.25f, 10 );
+
+		// plane.dist and others are not computed yet
+		return 0; // hitside is not computed (yet?)
+	}
+	return -1;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
 static int ClipRayToHitbox( const Ray_t &ray, mstudiobbox_t *pbox, matrix3x4_t& matrix, trace_t &tr )
 {
+	if ( pbox->flCapsuleRadius > 0 )
+	{
+		return ClipRayToCapsule( ray, pbox, matrix, tr );
+	}
+
 	const float flProjEpsilon = 0.01f;
 	// scale by current t so hits shorten the ray and increase the likelihood of early outs
 	Vector delta2;
@@ -5437,6 +5562,224 @@ bool TraceToStudio( IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *
 	return false;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool TraceToStudioCSHitgroupsPriority( IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, 
+	matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &tr )
+{
+	if ( !ray.m_IsRay )
+	{
+		return SweepBoxToStudio( pProps, ray, pStudioHdr, set, hitboxbones, fContentsMask, tr );
+	}
+
+	tr.fraction = 1.0;
+	tr.startsolid = false;
+
+	//
+	// We will collect trace results depending on hit group type of hitboxes
+	// and prefer to hit the hitboxes in order of damage.
+	//
+	enum EHitGroupType_t
+	{
+		k_EHitGroupType_Head,
+		k_EHitGroupType_Stomach,
+		k_EHitGroupType_Chest,
+		k_EHitGroupType_Arms,
+		k_EHitGroupType_General,
+		k_EHitGroupType_Legs,
+		k_EHitGroupType_Count
+	};
+
+	struct HitGroupResult_t
+	{
+		trace_t m_trHitGroup;
+		int m_nHitbox; // index of the hitbox hit, -1 if no it
+		int m_nHitSide; // hit side
+	};
+
+	// We'll collect results here, initialize to nothing hit
+	HitGroupResult_t arrHitGroupResults[ k_EHitGroupType_Count ];
+	for ( int j = 0; j < Q_ARRAYSIZE( arrHitGroupResults ); ++ j )
+	{
+		Q_memcpy( &arrHitGroupResults[j].m_trHitGroup, &tr, sizeof( arrHitGroupResults[j].m_trHitGroup ) );
+		arrHitGroupResults[j].m_nHitbox = -1;
+		arrHitGroupResults[j].m_nHitSide = -1;
+	}
+
+	// OPTIMIZE: Partition these?
+	for ( int i = 0; i < set->numhitboxes; i++ )
+	{
+		mstudiobbox_t *pbox = set->pHitbox(i);
+
+		// Filter based on contents mask
+		int fBoneContents = pStudioHdr->pBone( pbox->bone )->contents;
+		if ( ( fBoneContents & fContentsMask ) == 0 )
+			continue;
+
+		// Collect the results into appropriate hitgroup bucket
+		HitGroupResult_t *pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_General ];
+		switch ( pbox->group )
+		{
+		case 1:
+			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Head ];
+			break;
+		case 3:
+			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Stomach ];
+			break;
+		case 2:
+			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Chest ];
+			break;
+		case 4:
+		case 5:
+			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Arms ];
+			break;
+		case 6:
+		case 7:
+			pHitGroupResult = &arrHitGroupResults[ k_EHitGroupType_Legs ];
+			break;
+		}
+		Assert( IsFinite( pHitGroupResult->m_trHitGroup.fraction ) );
+
+		// columns are axes of the bones in world space, translation is in world space
+		matrix3x4_t& matrix = *hitboxbones[pbox->bone];
+
+		// Because we're sending in a matrix with scale data, and because the matrix inversion in the hitbox
+		// code does not handle that case, we pre-scale the bones and ray down here and do our collision checks
+		// in unscaled space.  We can then rescale the results afterwards.
+
+		int side = -1;
+		if ( flScale < 1.0f-FLT_EPSILON || flScale > 1.0f+FLT_EPSILON )
+		{
+			matrix3x4_t matScaled;
+			MatrixCopy( matrix, matScaled );
+
+			matrix3x4_t matOrientation;
+			AngleMatrix(pbox->angOffsetOrientation, matOrientation);
+			MatrixMultiply(matScaled, matOrientation, matScaled);
+
+			float invScale = 1.0f / flScale;
+
+			Vector vecBoneOrigin;
+			MatrixGetColumn( matScaled, 3, vecBoneOrigin );
+
+			// Pre-scale the origin down
+			Vector vecNewOrigin = vecBoneOrigin - vecOrigin;
+			vecNewOrigin *= invScale;
+			vecNewOrigin += vecOrigin;
+			MatrixSetColumn( vecNewOrigin, 3, matScaled );
+
+			// Scale it uniformly
+			VectorScale( matScaled[0], invScale, matScaled[0] );
+			VectorScale( matScaled[1], invScale, matScaled[1] );
+			VectorScale( matScaled[2], invScale, matScaled[2] );
+
+			// Pre-scale our ray as well
+			Vector vecRayStart = ray.m_Start - vecOrigin;
+			vecRayStart *= invScale;
+			vecRayStart += vecOrigin;
+
+			Vector vecRayDelta = ray.m_Delta * invScale;
+
+			Ray_t newRay;
+			newRay.Init( vecRayStart, vecRayStart + vecRayDelta );  
+
+			side = ClipRayToHitbox( newRay, pbox, matScaled, pHitGroupResult->m_trHitGroup );
+		}
+		else
+		{
+
+			matrix3x4_t matCopy;
+			MatrixCopy( matrix, matCopy );
+
+			matrix3x4_t matOrientation;
+			AngleMatrix(pbox->angOffsetOrientation, matOrientation);
+			MatrixMultiply(matCopy, matOrientation, matCopy);
+
+			side = ClipRayToHitbox( ray, pbox, matCopy, pHitGroupResult->m_trHitGroup );
+		}
+		Assert( IsFinite( pHitGroupResult->m_trHitGroup.fraction ) );
+
+		if ( side >= 0 )
+		{
+			pHitGroupResult->m_nHitbox = i;
+			pHitGroupResult->m_nHitSide = side;
+		}
+	}
+
+	//
+	// Now based on bucketing hitbox group results determine which hitbox we will return
+	// and copy the trace results to the output parameter.
+	//
+	int hitbox = -1;
+	int hitside = -1;
+	// CSGO specific hitbox computation - characters' neck hitbox is classified as a headshot, but
+	// it deeply interpenetrates the chest. We don't want players shooting at the middle of the chest
+	// to register a headshot by penetrating into neck through chest or stomach, so if we have a
+	// headshot trace make sure that it doesn't occur by penetrating chest or stomach.
+	if ( arrHitGroupResults[k_EHitGroupType_Head].m_nHitbox >= 0 )
+	{
+		// We have a potential headshot, check if it's penetrating via stomach or chest
+		for ( int j = k_EHitGroupType_Stomach; j <= k_EHitGroupType_Chest; ++ j )
+		{
+			if ( arrHitGroupResults[j].m_trHitGroup.fraction < arrHitGroupResults[k_EHitGroupType_Head].m_trHitGroup.fraction )
+			{
+				// The bullet first hit the stomach/chest hitbox, so ignore the headshot
+				arrHitGroupResults[k_EHitGroupType_Head].m_nHitbox = -1;
+				break;
+			}
+		}
+	}
+	// Now pick the hitbox hit with the highest priority for damage
+	for ( int j = 0; j < Q_ARRAYSIZE( arrHitGroupResults ); ++ j )
+	{
+		if ( arrHitGroupResults[j].m_nHitbox >= 0 )
+		{
+			hitbox = arrHitGroupResults[j].m_nHitbox;
+			hitside = arrHitGroupResults[j].m_nHitSide;
+			Q_memcpy( &tr, &arrHitGroupResults[j].m_trHitGroup, sizeof( arrHitGroupResults[j].m_trHitGroup ) );
+			break;
+		}
+	}
+
+	if ( hitbox >= 0 )
+	{
+		mstudiobbox_t *pbox = set->pHitbox(hitbox);
+		VectorMA( ray.m_Start, tr.fraction, ray.m_Delta, tr.endpos );
+		tr.hitgroup = set->pHitbox(hitbox)->group;
+		tr.hitbox = hitbox;
+		const mstudiobone_t *pBone = pStudioHdr->pBone( pbox->bone );
+		tr.contents = pBone->contents | CONTENTS_HITBOX;
+		tr.physicsbone = pBone->physicsbone;
+		tr.surface.name = "**studio**";
+		tr.surface.flags = SURF_HITBOX;
+		tr.surface.surfaceProps = pProps->GetSurfaceIndex( pBone->pszSurfaceProp() );
+
+		Assert( tr.physicsbone >= 0 );
+		matrix3x4_t& matrix = *hitboxbones[pbox->bone];
+		if ( hitside >= 3 )
+		{
+			hitside -= 3;
+			tr.plane.normal[0] = matrix[0][hitside];
+			tr.plane.normal[1] = matrix[1][hitside];
+			tr.plane.normal[2] = matrix[2][hitside];
+			//tr.plane.dist = DotProduct( tr.plane.normal, Vector(matrix[0][3], matrix[1][3], matrix[2][3] ) ) + pbox->bbmax[hitside];
+		}
+		else
+		{
+			tr.plane.normal[0] = -matrix[0][hitside];
+			tr.plane.normal[1] = -matrix[1][hitside];
+			tr.plane.normal[2] = -matrix[2][hitside];
+			//tr.plane.dist = DotProduct( tr.plane.normal, Vector(matrix[0][3], matrix[1][3], matrix[2][3] ) ) - pbox->bbmin[hitside];
+		}
+		// simpler plane constant equation
+		tr.plane.dist = DotProduct( tr.endpos, tr.plane.normal );
+		tr.plane.type = 3;
+		return true;
+	}
+	return false;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: returns array of animations and weightings for a sequence based on current pose parameters
@@ -5610,9 +5953,9 @@ bool Studio_AnimPosition( mstudioanimdesc_t *panim, float flCycle, Vector &vecPo
 			vecAngle.y = vecAngle.y * (1 - f) + pmove->angle * f;
 			if (iLoops != 0)
 			{
-				mstudiomovement_t *pmove = panim->pMovement( panim->nummovements - 1 );
-				vecPos = vecPos + iLoops * pmove->position; 
-				vecAngle.y = vecAngle.y + iLoops * pmove->angle; 
+				mstudiomovement_t *pmoveAnim = panim->pMovement( panim->nummovements - 1 );
+				vecPos = vecPos + iLoops * pmoveAnim->position; 
+				vecAngle.y = vecAngle.y + iLoops * pmoveAnim->angle; 
 			}
 			return true;
 		}
