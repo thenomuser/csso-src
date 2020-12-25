@@ -375,7 +375,10 @@ void CBaseAnimating::OnRestore()
 	BaseClass::OnRestore();
 
 	if ( m_nSequence != -1 && GetModelPtr() && !IsValidSequence( m_nSequence ) )
+	{
+		InvalidatePhysicsRecursive( SEQUENCE_CHANGED );
 		m_nSequence = 0;
+	}
 
 	m_flEstIkFloor = GetLocalOrigin().z;
 	PopulatePoseParameters();
@@ -950,8 +953,12 @@ bool CBaseAnimating::IsValidSequence( int iSequence )
 //=========================================================
 void CBaseAnimating::SetSequence( int nSequence )
 {
-	Assert( nSequence == 0 || IsDynamicModelLoading() || ( GetModelPtr( ) && ( nSequence < GetModelPtr( )->GetNumSeq() ) && ( GetModelPtr( )->GetNumSeq() < (1 << ANIMATION_SEQUENCE_BITS) ) ) );
+	Assert( GetModelPtr( ) && ( nSequence < GetModelPtr( )->GetNumSeq() ) && ( GetModelPtr( )->GetNumSeq() < (1 << ANIMATION_SEQUENCE_BITS) ) );
+
+	int oldSequence = m_nSequence;
 	m_nSequence = nSequence;
+	if ( oldSequence != m_nSequence )
+		InvalidatePhysicsRecursive( SEQUENCE_CHANGED );
 }
 
 //=========================================================

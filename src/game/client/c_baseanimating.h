@@ -346,6 +346,7 @@ public:
 	Activity						GetSequenceActivity( int iSequence );
 	KeyValues						*GetSequenceKeyValues( int iSequence );
 	virtual void					StudioFrameAdvance(); // advance animation frame to some time in the future
+	void							ExtractBbox( int nSequence, Vector &mins, Vector &maxs );
 
 	// Clientside animation
 	virtual float					FrameAdvance( float flInterval = 0.0f );

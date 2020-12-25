@@ -106,6 +106,7 @@ inline C_AnimationLayer::C_AnimationLayer()
 	Reset();
 }
 
+#ifdef GAME_DLL
 inline void C_AnimationLayer::SetSequence( int nSequence )
 {
 	m_nSequence = nSequence;
@@ -120,6 +121,7 @@ inline void C_AnimationLayer::SetWeight( float flWeight )
 {
 	m_flWeight = flWeight;
 }
+#endif
 
 FORCEINLINE void C_AnimationLayer::SetPrevCycle( float flPrevCycle )
 {
@@ -171,25 +173,6 @@ FORCEINLINE int C_AnimationLayer::GetOrder() const
 	return m_nOrder;
 }
 
-inline void C_AnimationLayer::Reset()
-{
-	m_nSequence = 0;
-	m_flPrevCycle = 0;
-	m_flWeight = 0;
-	m_flPlaybackRate = 0;
-	m_flCycle = 0;
-	m_flLayerAnimtime = 0;
-	m_flLayerFadeOuttime = 0;
-	m_flBlendIn = 0;
-	m_flBlendOut = 0;
-	m_bClientBlend = false;
-}
-
-
-inline void C_AnimationLayer::SetOrder( int order )
-{
-	m_nOrder = order;
-}
 
 inline float C_AnimationLayer::GetFadeout( float flCurTime )
 {

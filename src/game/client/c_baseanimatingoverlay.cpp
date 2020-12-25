@@ -22,6 +22,89 @@ extern ConVar r_sequence_debug;
 
 mstudioevent_t *GetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 
+
+void C_AnimationLayer::SetOwner( C_BaseAnimatingOverlay *pOverlay )
+{
+	m_pOwner = pOverlay;
+}
+
+C_BaseAnimatingOverlay *C_AnimationLayer::GetOwner() const
+{
+	return m_pOwner;
+}
+
+void C_AnimationLayer::Reset()
+{
+	if ( m_pOwner )
+	{
+		int nFlags = 0;
+		if ( m_nSequence != 0 || m_flWeight != 0.0f )
+		{
+			nFlags |= BOUNDS_CHANGED;
+		}
+		if ( m_flCycle != 0.0f )
+		{
+			nFlags |= ANIMATION_CHANGED;
+		}
+		if ( nFlags )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( nFlags );
+		}
+	}
+
+	m_nSequence = 0;
+	m_flPrevCycle = 0;
+	m_flWeight = 0;
+	m_flWeightDeltaRate = 0;
+	m_flPlaybackRate = 0;
+	m_flCycle = 0;
+	m_flLayerAnimtime = 0;
+	m_flLayerFadeOuttime = 0;
+}
+
+void C_AnimationLayer::SetSequence( int nSequence )
+{
+	if ( m_pOwner && m_nSequence != nSequence )
+	{
+		m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+	}
+	m_nSequence = nSequence;
+}
+
+void C_AnimationLayer::SetCycle( float flCycle )
+{
+	if ( m_pOwner && m_flCycle != flCycle )
+	{
+		m_pOwner->InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+	}
+	m_flCycle = flCycle;
+}
+
+void C_AnimationLayer::SetOrder( int order )
+{
+	if ( m_pOwner && ( m_nOrder != order ) )
+	{
+		if ( m_nOrder == C_BaseAnimatingOverlay::MAX_OVERLAYS || order == C_BaseAnimatingOverlay::MAX_OVERLAYS )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+		}
+	}
+	m_nOrder = order;
+}
+
+
+void C_AnimationLayer::SetWeight( float flWeight )
+{
+	if ( m_pOwner && m_flWeight != flWeight )
+	{
+		if ( m_flWeight == 0.0f || flWeight == 0.0f )
+		{
+			m_pOwner->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+		}
+	}
+	m_flWeight = flWeight;
+}
+
 C_BaseAnimatingOverlay::C_BaseAnimatingOverlay()
 {
 	// FIXME: where does this initialization go now?
@@ -117,52 +200,60 @@ const char *s_m_iv_AnimOverlayNames[C_BaseAnimatingOverlay::MAX_OVERLAYS] =
 void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len )
 {
 	C_BaseAnimatingOverlay *pEnt = (C_BaseAnimatingOverlay*)pStruct;
-	CUtlVector < C_AnimationLayer > *pVec = &pEnt->m_AnimOverlay;
-	CUtlVector< CInterpolatedVar< C_AnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
+	CUtlVector < CAnimationLayer > *pVec = &pEnt->m_AnimOverlay;
+	CUtlVector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
 	
 	Assert( (char*)pVec - (char*)pEnt == offsetToUtlVector );
-	Assert( pVec->Count() == pVecIV->Count() );
+	Assert( pVec->Count() == pVecIV->Count() || pVecIV->Count() == 0 );
 	Assert( pVec->Count() <= C_BaseAnimatingOverlay::MAX_OVERLAYS );
 	
 	int diff = len - pVec->Count();
-
-	
-
-	if ( diff == 0 )
-		return;
-
-	// remove all entries
-	for ( int i=0; i < pVec->Count(); i++ )
+	if ( diff != 0 )
 	{
-		pEnt->RemoveVar( &pVec->Element( i ) );
-	}
-
-	// adjust vector sizes
-	if ( diff > 0 )
-	{
-		for ( int i = 0; i < diff; ++i )
+		// remove all entries
+		for ( int i=0; i < pVec->Count(); i++ )
 		{
-			int j = pVec->AddToTail();
-			(*pVec)[j].SetOwner( pEnt );
+			pEnt->RemoveVar( &pVec->Element( i ) );
 		}
-		pVec->AddMultipleToTail( diff );
-		pVecIV->AddMultipleToTail( diff );
-	}
-	else
-	{
-		pVec->RemoveMultiple( len, -diff );
-		pVecIV->RemoveMultiple( len, -diff );
+
+		pEnt->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
+
+		// adjust vector sizes
+		if ( diff > 0 )
+		{
+			for ( int i = 0; i < diff; ++i )
+			{
+				int j = pVec->AddToTail( );
+				(*pVec)[j].SetOwner( pEnt );
+			}
+			pVecIV->AddMultipleToTail( diff );
+		}
+		else
+		{
+			pVec->RemoveMultiple( len, -diff );
+			pVecIV->RemoveMultiple( len, -diff );
+		}
+
+		// Rebind all the variables in the ent's list.
+		for ( int i=0; i < len; i++ )
+		{
+			IInterpolatedVar *pWatcher = &pVecIV->Element( i );
+			pWatcher->SetDebugName( s_m_iv_AnimOverlayNames[i] );
+			pEnt->AddVar( &pVec->Element( i ), pWatcher, LATCH_ANIMATION_VAR, true );
+		}
 	}
 
-	// Rebind all the variables in the ent's list.
-	for ( int i=0; i < len; i++ )
-	{
-		IInterpolatedVar *pWatcher = &pVecIV->Element( i );
-		pWatcher->SetDebugName( s_m_iv_AnimOverlayNames[i] );
-		pEnt->AddVar( &pVec->Element( i ), pWatcher, LATCH_ANIMATION_VAR, true );
-	}
 	// FIXME: need to set historical values of nOrder in pVecIV to MAX_OVERLAY
-	
+
+	// Ensure capacity
+	pVec->EnsureCapacity( len );
+
+	int nNumAllocated = pVec->NumAllocated();
+
+	// This is important to do because EnsureCapacity doesn't actually call the constructors
+	// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
+	// values which will piss off the datatable encoder.
+	UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
 }
 
 
@@ -201,16 +292,6 @@ BEGIN_PREDICTION_DATA( C_BaseAnimatingOverlay )
 
 END_PREDICTION_DATA()
 
-void C_AnimationLayer::SetOwner( C_BaseAnimatingOverlay *pOverlay )
-{
-	m_pOwner = pOverlay;
-}
-
-C_BaseAnimatingOverlay *C_AnimationLayer::GetOwner() const
-{
-	return m_pOwner;
-}
-
 C_AnimationLayer* C_BaseAnimatingOverlay::GetAnimOverlay( int i, bool bUseOrder )
 {
 	Assert( i >= 0 && i < MAX_OVERLAYS );
@@ -245,6 +326,7 @@ void C_BaseAnimatingOverlay::SetNumAnimOverlays( int num )
 	else if ( m_AnimOverlay.Count() > num )
 	{
 		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 	}
 
 	// Ensure capacity

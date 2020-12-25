@@ -4363,7 +4363,7 @@ void C_BaseAnimating::RagdollMoved( void )
 	SetCollisionBounds( mins, maxs );
 
 	// If the ragdoll moves, its render-to-texture shadow is dirty
-	InvalidatePhysicsRecursive( ANIMATION_CHANGED ); 
+	InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 }
 
 
@@ -4473,7 +4473,16 @@ void C_BaseAnimating::PostDataUpdate( DataUpdateType_t updateType )
 	bool bScaleChanged = ( m_flOldModelScale != GetModelScale() );
 	if ( bAnimationChanged || bSequenceChanged || bScaleChanged )
 	{
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+		int nFlags = bAnimationChanged ? ANIMATION_CHANGED : 0;
+		if ( bSequenceChanged )
+		{
+			nFlags |= BOUNDS_CHANGED | SEQUENCE_CHANGED;
+		}
+		if ( bScaleChanged )
+		{
+			nFlags |= BOUNDS_CHANGED;
+		}
+		InvalidatePhysicsRecursive( nFlags );
 
 		if ( IsViewModel() )
 		{
@@ -4777,7 +4786,7 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 	// If there's a significant change, make sure the shadow updates
 	if ( modelchanged || (GetSequence() != m_nPrevSequence))
 	{
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED ); 
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED | SEQUENCE_CHANGED );
 		m_nPrevSequence = GetSequence();
 	}
 
@@ -5067,12 +5076,23 @@ void C_BaseAnimating::SetSequence( int nSequence )
 		*/
 
 		m_nSequence = nSequence; 
-		InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED | SEQUENCE_CHANGED );
 		if ( m_bClientSideAnimation )
 		{
 			ClientSideAnimationChanged();
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Extracts the bounding box
+//-----------------------------------------------------------------------------
+void C_BaseAnimating::ExtractBbox( int nSequence, Vector &mins, Vector &maxs )
+{
+	CStudioHdr *pStudioHdr = GetModelPtr();
+	Assert( pStudioHdr );
+
+	::ExtractBbox( pStudioHdr, nSequence, mins, maxs );
 }
 
 
@@ -5913,6 +5933,7 @@ void C_BaseAnimating::SetModelScale( float scale, float change_duration /*= 0.0f
 	{
 		m_flModelScale = scale;
 		RefreshCollisionBounds();
+		InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 		
 		if ( HasDataObjectType( MODELSCALE ) )
 		{
