@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -12,12 +12,15 @@
 #include "bone_setup.h"
 #include "ai_basenpc.h"
 #include "npcevent.h"
-#ifdef CSTRIKE_DLL
-#include "cs_player.h"
-#endif
 
 #include "saverestore_utlvector.h"
 #include "dt_utlvector_send.h"
+
+#include "datacache/imdlcache.h"
+
+#include "toolframework/itoolframework.h"
+
+#include "cs_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -97,34 +100,41 @@ CAnimationLayer::CAnimationLayer( )
 	Init( NULL );
 }
 
+// 7LS - using '=' operator on a NetworkVar will call the Set(x) fn, which does a comparison of 'x' against the current value to determine if the network state
+// needs to change. If the var is a float, and the memory contains NaN's the comp will always fail, so the var will never be set to x 
+// Calling SetDirect will always assign the var and flag the network state as changed, since it avoids the compare.
+// This should probably be done everywhere float NetworkVar's are initialized if memory is not guaranteed to have been prepared appropriately.
 
 void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 {
 	m_pOwnerEntity = pOverlay;
 	m_fFlags = 0;
-	m_flWeight = 0;
-	m_flWeightDeltaRate = 0;
-	m_flCycle = 0;
-	m_flPrevCycle = 0;
+	// 7LS OLD, m_flWeight = 0;
+	m_flWeight = 0.0f;
+	m_flWeightDeltaRate = 0.0f;
+	// 7LS OLD, m_flCycle = 0;
+	m_flCycle = 0.0f;
+	// 7LS OLD, m_flPrevCycle = 0;
+	m_flPrevCycle = 0.0f;
 	m_bSequenceFinished = false;
 	m_nActivity = ACT_INVALID;
 	m_nSequence = 0;
 	m_nPriority = 0;
 	m_nOrder.Set( CBaseAnimatingOverlay::MAX_OVERLAYS );
-
-	m_flBlendIn = 0.0;
-	m_flBlendOut = 0.0;
-
 	m_flKillRate = 100.0;
 	m_flKillDelay = 0.0;
-	m_flPlaybackRate = 1.0;
-	m_flLastEventCheck = 0.0;
+	m_flPlaybackRate = 1.0f;
 	m_flLastAccess = gpGlobals->curtime;
 	m_flLayerAnimtime = 0;
 	m_flLayerFadeOuttime = 0;
+	m_bLooping	= false;
+	m_flBlendIn = 0.0f;
+	m_flBlendOut = 0.0f;
+	m_flLastEventCheck = 0.0f;
 	m_pDispatchedStudioHdr = NULL;
 	m_nDispatchedSrc = ACT_INVALID;
 	m_nDispatchedDst = ACT_INVALID;
+
 }
 
 
@@ -136,7 +146,7 @@ void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 
 void CAnimationLayer::StudioFrameAdvance( float flInterval, CBaseAnimating *pOwner )
 {
-	float flCycleRate = pOwner->GetSequenceCycleRate( m_nSequence );
+	float flCycleRate = pOwner->GetLayerSequenceCycleRate( this, m_nSequence );
 
 	m_flPrevCycle = m_flCycle;
 	m_flCycle += flInterval * flCycleRate * m_flPlaybackRate;
@@ -145,7 +155,7 @@ void CAnimationLayer::StudioFrameAdvance( float flInterval, CBaseAnimating *pOwn
 	{
 		if (m_bLooping)
 		{
-			m_flCycle -= (int)(m_flCycle);
+			m_flCycle -= (int)m_flCycle;
 		}
 		else
 		{
@@ -158,7 +168,7 @@ void CAnimationLayer::StudioFrameAdvance( float flInterval, CBaseAnimating *pOwn
 
 		if (m_bLooping)
 		{
-			m_flCycle -= (int)(m_flCycle);
+			m_flCycle -= (int)m_flCycle;
 		}
 		else
 		{
@@ -208,7 +218,6 @@ void CAnimationLayer::MarkActive( void )
 { 
 	m_flLastAccess = gpGlobals->curtime;
 }
-
 
 //------------------------------------------------------------------------------
 ConVar debug_dispatch_server_dump( "debug_dispatch_server_dump", "0" );
@@ -307,14 +316,12 @@ void CBaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, V
 	}
 }
 
-//------------------------------------------------------------------------------
-
 void CBaseAnimatingOverlay::VerifyOrder( void )
 {
 #ifdef _DEBUG
 	int i, j;
 	// test sorting of the layers
-	int layer[MAX_OVERLAYS];
+	int layer[MAX_OVERLAYS] = {};
 	int maxOrder = -1;
 	for (i = 0; i < MAX_OVERLAYS; i++)
 	{
@@ -404,13 +411,13 @@ void CBaseAnimatingOverlay::StudioFrameAdvance ()
 				if (pLayer->m_flKillDelay > 0)
 				{
 					pLayer->m_flKillDelay -= flAdvance;
-					pLayer->m_flKillDelay = clamp( 	pLayer->m_flKillDelay, 0.0f, 1.0f );
+					pLayer->m_flKillDelay = clamp( 	pLayer->m_flKillDelay, 0.0, 1.0 );
 				}
 				else if (pLayer->m_flWeight != 0.0f)
 				{
 					// give it at least one frame advance cycle to propagate 0.0 to client
 					pLayer->m_flWeight -= pLayer->m_flKillRate * flAdvance;
-					pLayer->m_flWeight = clamp( (float) pLayer->m_flWeight, 0.0f, 1.0f );
+					pLayer->m_flWeight = clamp( 	pLayer->m_flWeight.Get(), 0.0, 1.0 );
 				}
 				else
 				{
@@ -477,7 +484,7 @@ void CBaseAnimatingOverlay::DispatchAnimEvents ( CBaseAnimating *eventHandler )
 
 	for ( int i = 0; i < m_AnimOverlay.Count(); i++ )
 	{
-		if (m_AnimOverlay[ i ].IsActive())
+		if (m_AnimOverlay[ i ].IsActive() && !m_AnimOverlay[ i ].NoEvents() )
 		{
 			m_AnimOverlay[ i ].DispatchAnimEvents( eventHandler, this );
 		}
@@ -501,7 +508,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		return;
 	}
 
-	if ( m_nSequence >= pstudiohdr->GetNumSeq() )
+	if ( m_nSequence < 0 || m_nSequence >= pstudiohdr->GetNumSeq() )
 		return;
 	
 	// don't fire if here are no events
@@ -522,7 +529,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		if (flEnd >= flLastVisibleCycle || flEnd < 0.0) 
 		{
 			m_bSequenceFinished = true;
-			flEnd = 1.0f;
+			flEnd = 1.01f;
 		}
 	}
 	m_flLastEventCheck = flEnd;
@@ -550,14 +557,13 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 			event.eventtime = pOwner->m_flAnimTime + (flCycle - m_flCycle) / flCycleRate + pOwner->GetAnimTimeInterval();
 		}
 
-		// Msg( "dispatch %d (%d : %.2f)\n", index - 1, event.event, event.eventtime );
 		eventHandler->HandleAnimEvent( &event );
 	}
 }
 
 
 
-void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], int boneMask )
+void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], QuaternionAligned q[], int boneMask )
 {
 	if(!pStudioHdr)
 	{
@@ -595,17 +601,6 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Q
 			layer[pLayer.m_nOrder] = i;
 		}
 	}
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
-	{
-		if (layer[i] >= 0 && layer[i] < m_AnimOverlay.Count())
-		{
-			CAnimationLayer &pLayer = m_AnimOverlay[layer[i]];
-			// UNDONE: Is it correct to use overlay weight for IK too?
-			boneSetup.AccumulatePose( pos, q, pLayer.m_nSequence, pLayer.m_flCycle, pLayer.m_flWeight, gpGlobals->curtime, m_pIk );
-		}
-	}
-
-	
 
 	// check if this is a player with a valid weapon
 	// look for weapon, pull layer animations from it if/when they exist
@@ -798,6 +793,7 @@ int CBaseAnimatingOverlay::AddGesture( Activity activity, bool autokill /*= true
 		return FindGestureLayer( activity );
 	}
 
+	MDLCACHE_CRITICAL_SECTION();
 	int seq = SelectWeightedSequence( activity );
 	if ( seq <= 0 )
 	{
@@ -1129,7 +1125,7 @@ void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle )
 
 	if (!m_AnimOverlay[iLayer].m_bLooping)
 	{
-		flCycle = clamp( flCycle, 0.0f, 1.0f );
+		flCycle = clamp( flCycle, 0.0, 1.0 );
 	}
 	m_AnimOverlay[iLayer].m_flCycle = flCycle;
 	m_AnimOverlay[iLayer].MarkActive( );
@@ -1146,31 +1142,12 @@ void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle, float flPr
 
 	if (!m_AnimOverlay[iLayer].m_bLooping)
 	{
-		flCycle = clamp( flCycle, 0.0f, 1.0f );
-		flPrevCycle = clamp( flPrevCycle, 0.0f, 1.0f );
+		flCycle = clamp( flCycle, 0.0, 1.0 );
+		flPrevCycle = clamp( flPrevCycle, 0.0, 1.0 );
 	}
 	m_AnimOverlay[iLayer].m_flCycle = flCycle;
 	m_AnimOverlay[iLayer].m_flPrevCycle = flPrevCycle;
 	m_AnimOverlay[iLayer].m_flLastEventCheck = flPrevCycle;
-	m_AnimOverlay[iLayer].MarkActive( );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle, float flPrevCycle, float flLastEventCheck )
-{
-	if (!IsValidLayer( iLayer ))
-		return;
-
-	if (!m_AnimOverlay[iLayer].m_bLooping)
-	{
-		flCycle = clamp( flCycle, 0.0f, 1.0f );
-		flPrevCycle = clamp( flPrevCycle, 0.0f, 1.0f );
-	}
-	m_AnimOverlay[iLayer].m_flCycle = flCycle;
-	m_AnimOverlay[iLayer].m_flPrevCycle = flPrevCycle;
-	m_AnimOverlay[iLayer].m_flLastEventCheck = flLastEventCheck;
 	m_AnimOverlay[iLayer].MarkActive( );
 }
 
@@ -1295,6 +1272,23 @@ void CBaseAnimatingOverlay::SetLayerNoRestore( int iLayer, bool bNoRestore )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBaseAnimatingOverlay::SetLayerNoEvents( int iLayer, bool bNoEvents )
+{
+	if (!IsValidLayer( iLayer ))
+		return;
+
+	if (bNoEvents)
+	{
+		m_AnimOverlay[iLayer].m_fFlags |= ANIM_LAYER_NOEVENTS;
+	}
+	else
+	{
+		m_AnimOverlay[iLayer].m_fFlags &= ~ANIM_LAYER_NOEVENTS;
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1437,5 +1431,3 @@ bool CBaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudi
 
 	return (pLayer->m_nDispatchedDst != ACT_INVALID );
 }
-
-//-----------------------------------------------------------------------------

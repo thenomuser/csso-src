@@ -40,6 +40,17 @@ CBasePlayer *GetDebugPlayer( void )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Draw a capsule
+//-----------------------------------------------------------------------------
+void NDebugOverlay::Capsule(const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration)
+{
+	if ( debugoverlay )
+	{
+		debugoverlay->AddCapsuleOverlay( vStart, vEnd, flRadius, r, g, b, a, flDuration );
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Draw a box with no orientation
 //-----------------------------------------------------------------------------
 void NDebugOverlay::Box(const Vector &origin, const Vector &mins, const Vector &maxs, int r, int g, int b, int a, float flDuration)

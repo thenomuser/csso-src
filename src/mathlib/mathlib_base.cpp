@@ -1872,10 +1872,7 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	if ( !HushAsserts() )
-	{
-		Assert( pos.IsValid() );
-	}
+	Assert( pos.IsValid() );
 
 	QuaternionMatrix( q, matrix );
 
@@ -1884,13 +1881,25 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 	matrix[2][3] = pos.z;
 }
 
+void QuaternionMatrix( const Quaternion &q, const Vector &pos, const Vector &vScale, matrix3x4_t& mat )
+{
+	Assert( pos.IsValid() );
+	Assert( q.IsValid() );
+	Assert( vScale.IsValid() );
+
+	QuaternionMatrix( q, mat );
+
+	mat[ 0 ][ 0 ] *= vScale.x; mat[ 1 ][ 0 ] *= vScale.x; mat[ 2 ][ 0 ] *= vScale.x;
+	mat[ 0 ][ 1 ] *= vScale.y; mat[ 1 ][ 1 ] *= vScale.y; mat[ 2 ][ 1 ] *= vScale.y;
+	mat[ 0 ][ 2 ] *= vScale.z; mat[ 1 ][ 2 ] *= vScale.z; mat[ 2 ][ 2 ] *= vScale.z;
+	mat[ 0 ][ 3 ] = pos.x; mat[ 1 ][ 3 ] = pos.y; mat[ 2 ][ 3 ] = pos.z;
+}
+
+
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
 	Assert( s_bMathlibInitialized );
-	if ( !HushAsserts() )
-	{
-		Assert( q.IsValid() );
-	}
+	Assert( q.IsValid() );
 
 #ifdef _VPROF_MATHLIB
 	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );

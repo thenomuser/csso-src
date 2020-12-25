@@ -1,16 +1,17 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
 // $NoKeywords: $
 //
-//=============================================================================//
+//===========================================================================//
 
 #ifndef C_BASEANIMATINGOVERLAY_H
 #define C_BASEANIMATINGOVERLAY_H
 #pragma once
 
 #include "c_baseanimating.h"
+#include "toolframework/itoolframework.h"
 
 // For shared code.
 #define CBaseAnimatingOverlay C_BaseAnimatingOverlay
@@ -18,22 +19,37 @@
 
 class C_BaseAnimatingOverlay : public C_BaseAnimating
 {
-public:
 	DECLARE_CLASS( C_BaseAnimatingOverlay, C_BaseAnimating );
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
 	DECLARE_INTERPOLATION();
 
+	// Inherited from C_BaseAnimating
+public:
+	virtual C_BaseAnimatingOverlay *GetBaseAnimatingOverlay() { return this; }
+
+	virtual void	AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
+	virtual void	DoAnimationEvents( CStudioHdr *pStudioHdr );
+	virtual void	GetRenderBounds( Vector& theMins, Vector& theMaxs );
+	virtual CStudioHdr *OnNewModel();
+
+	virtual bool	Interpolate( float flCurrentTime );
+
+
+public:
+	enum
+	{
+		MAX_OVERLAYS = 15,
+	};
 
 	C_BaseAnimatingOverlay();
+	CAnimationLayer* GetAnimOverlay( int i, bool bUseOrder = true );
+	void			SetNumAnimOverlays( int num );	// This makes sure there is space for this # of layers.
+	int				GetNumAnimOverlays() const;
+	void			SetOverlayPrevEventCycle( int nSlot, float flValue );
 
-	virtual CStudioHdr *OnNewModel();
-	
-	C_AnimationLayer* GetAnimOverlay( int i, bool bUseOrder = true );
-	void SetNumAnimOverlays( int num );	// This makes sure there is space for this # of layers.
-	int GetNumAnimOverlays() const;
-
-	virtual void	GetRenderBounds( Vector& theMins, Vector& theMaxs );
+	void			CheckInterpChanges( void );
+	void			CheckForLayerPhysicsInvalidate( void );
 
 	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence );
 	void AccumulateDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
@@ -45,29 +61,24 @@ public:
 	virtual void	NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight ) {};
 	virtual void	NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle ) {};
 
-	void			CheckForLayerChanges( CStudioHdr *hdr, float currentTime );
+private:
+	void CheckForLayerChanges( CStudioHdr *hdr, float currentTime );
 
-	virtual C_BaseAnimatingOverlay *GetBaseAnimatingOverlay() { return this; }
-
-	// model specific
-	virtual void	AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
-	virtual void DoAnimationEvents( CStudioHdr *pStudioHdr );
-
-	enum
-	{
-		MAX_OVERLAYS = 15,
-	};
-
-	CUtlVector < C_AnimationLayer >	m_AnimOverlay;
-
-	CUtlVector < CInterpolatedVar< C_AnimationLayer > >	m_iv_AnimOverlay;
+	CUtlVector < CAnimationLayer >	m_AnimOverlay;
+	CUtlVector < CInterpolatedVar< CAnimationLayer > >	m_iv_AnimOverlay;
 
 	float m_flOverlayPrevEventCycle[ MAX_OVERLAYS ];
 
-private:
 	C_BaseAnimatingOverlay( const C_BaseAnimatingOverlay & ); // not defined, not accessible
+
+	friend void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len );
 };
 
+
+inline void C_BaseAnimatingOverlay::SetOverlayPrevEventCycle( int nSlot, float flValue )
+{
+	m_flOverlayPrevEventCycle[nSlot] = flValue;
+}
 
 EXTERN_RECV_TABLE(DT_BaseAnimatingOverlay);
 

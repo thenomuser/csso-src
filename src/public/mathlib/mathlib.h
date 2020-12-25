@@ -629,6 +629,7 @@ void QuaternionAdd( const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t &matrix );
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t &matrix );
+void QuaternionMatrix( const Quaternion &q, const Vector &pos, const Vector &vScale, matrix3x4_t& mat );
 void QuaternionAngles( const Quaternion &q, QAngle &angles );
 void AngleQuaternion( const QAngle& angles, Quaternion &qt );
 void QuaternionAngles( const Quaternion &q, RadianEuler &angles );
