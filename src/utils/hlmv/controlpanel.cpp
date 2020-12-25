@@ -1353,6 +1353,46 @@ void ControlPanel::SetupRenderWindow( mxTab* pTab )
 }
 
 //-----------------------------------------------------------------------------
+// Updates control sizes for the window dealing with sequence control
+//-----------------------------------------------------------------------------
+
+void ControlPanel::updateSequenceSizes( int tabWidth )
+{
+	int extraWidth = (tabWidth - 640);
+	int extraPoseParamWidth = 0;
+	if ( extraWidth > 200 )
+	{
+		extraPoseParamWidth = extraWidth - 200;
+		extraWidth = 200;
+	}
+	if ( extraWidth < 0 )
+	{
+		extraWidth = 0;
+	}
+
+	extraPoseParamWidth = clamp( extraPoseParamWidth, 0, 200 );
+
+	for ( int i = 0; i < MAX_SEQUENCES; i++ )
+	{
+		cSequence[i]->setBounds( 5, 5 + i * 22, 200 + extraWidth, 22 + 500 );	// mxChoice adds 500 internally for the dropdown in constructor, not in setBounds
+		slSequence[i]->setBounds( 208 + extraWidth, 5 + i * 22, 80, 18 );
+		rbFrameSelection[i]->setBounds( 300 + extraWidth, 5 + i * 22, 35, 22 );
+	}
+
+	laGroundSpeed->setBounds( 208 + extraWidth, 5, 80, 18 );
+
+	for ( int i = 0; i < NUM_POSEPARAMETERS; i++ )
+	{
+		int x, y;
+		x = 334;
+		y = 2 + (i % 8) * 17;
+		cPoseParameter[i]->setBounds( 520 + extraWidth, y, 96 + extraPoseParamWidth, 22 + 500 );	// mxChoice adds 500 internally for the dropdown in constructor, not in setBounds
+		slPoseParameter[i]->setBounds( x + extraWidth, y, 140, 16 );
+		lePoseParameter[i]->setBounds(  x + 146 + extraWidth, y, 40, 16 );
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Sets up the window dealing with sequence control
 //-----------------------------------------------------------------------------
 
@@ -1845,6 +1885,7 @@ ControlPanel::handleEvent (mxEvent *event)
 	if ( event->event == mxEvent::Size )
 	{
 		tab->setBounds( 0, 0, event->width, max( 0, event->height - 20 ) );
+		updateSequenceSizes( event->width );
 		return 1;
 	}
 	
@@ -2412,7 +2453,7 @@ ControlPanel::handleEvent (mxEvent *event)
 				{
 					slPoseParameter[index]->setRange( flMin, flMax, 1000 );
 					slPoseParameter[index]->setValue( g_pStudioModel->GetPoseParameter( poseparam ) );
-					lePoseParameter[index]->setLabel( "%.1f", g_pStudioModel->GetPoseParameter( poseparam ) );
+					lePoseParameter[index]->setLabel( "%.2f", g_pStudioModel->GetPoseParameter( poseparam ) );
 				}
 			}
 			else if (event->action >= IDC_POSEPARAMETER_SCALE && event->action < IDC_POSEPARAMETER_SCALE + NUM_POSEPARAMETERS)
@@ -2421,7 +2462,7 @@ ControlPanel::handleEvent (mxEvent *event)
 				int poseparam = cPoseParameter[index]->getSelectedIndex();
 
 				setBlend( poseparam, ((mxSlider *) event->widget)->getValue() );
-				lePoseParameter[index]->setLabel( "%.1f", ((mxSlider *) event->widget)->getValue() );
+				lePoseParameter[index]->setLabel( "%.2f", ((mxSlider *) event->widget)->getValue() );
 			}
 		}
 		break;
@@ -2839,7 +2880,7 @@ ControlPanel::updatePoseParameters( )
 			if (fabs( temp - value ) > 0.1)
 			{
 				slPoseParameter[i]->setValue( value );
-				lePoseParameter[i]->setLabel( "%.1f", value );
+				lePoseParameter[i]->setLabel( "%.2f", value );
 			}
 		}
 	}
@@ -3099,7 +3140,7 @@ void ControlPanel::initSequenceChoices()
 			mxToolTip::add (slPoseParameter[i], hdr->pPoseParameter(i).pszName() );
 			slPoseParameter[i]->setVisible( true );
 			lePoseParameter[i]->setVisible( true );
-			lePoseParameter[i]->setLabel( "%.1f", 0.0 );
+			lePoseParameter[i]->setLabel( "%.2f", 0.0 );
 		}
 		else
 		{

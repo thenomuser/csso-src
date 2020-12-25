@@ -401,6 +401,7 @@ public:
 	void setShowOriginAxis( bool b );
 	void setOriginAxisLength( float originAxisLength );
 
+	void updateSequenceSizes( int tabWidth );
 	void initSequenceChoices();
 	void setSequence( int index );
 	void showActivityModifiers( int sequence );
