@@ -111,7 +111,7 @@ private:
 };
 
 
-abstract_class CGameRules : public CAutoGameSystemPerFrame
+abstract_class CGameRules : public CMemZeroOnNew, public CAutoGameSystemPerFrame
 {
 public:
 	DECLARE_CLASS_GAMEROOT( CGameRules, CAutoGameSystemPerFrame );
