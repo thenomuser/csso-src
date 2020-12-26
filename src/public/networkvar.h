@@ -227,6 +227,13 @@ public:
 		NetworkVarConstruct( m_Value );
 	}
 
+	FORCEINLINE const Type& SetDirect( const Type &val )
+	{
+		NetworkStateChanged();
+		m_Value = val;
+		return m_Value;
+	}
+
 	template< class C >
 	const Type& operator=( const C &val ) 
 	{ 
