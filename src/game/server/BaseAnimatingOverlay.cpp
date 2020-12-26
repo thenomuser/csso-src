@@ -1424,10 +1424,5 @@ bool CBaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudi
 			pLayer->m_nDispatchedDst = ACT_INVALID;
 		}
 	}
-
-	// PiMoN: for testing
-	Warning( "CBaseAnimatingOverlay::UpdateDispatchLayer: m_nDispatchedSrc is [%d]\n", pLayer->m_nDispatchedSrc );
-	Warning( "CBaseAnimatingOverlay::UpdateDispatchLayer: m_nDispatchedDst is [%d]\n", pLayer->m_nDispatchedDst );
-
 	return (pLayer->m_nDispatchedDst != ACT_INVALID );
 }
