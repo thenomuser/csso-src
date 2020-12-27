@@ -3454,17 +3454,26 @@ void C_CSPlayer::FireEvent( const Vector& origin, const QAngle& angles, int even
 	}
 	else if ( event == AE_CL_EJECT_MAG )
 	{
-		DropPhysicsMag( options );
-
-		// hack: in first-person, the player isn't playing their third-person gun animations, so the events on the third-person gun model don't fire.
-		// This means the event is fired from the player, and the player only fires ONE mag drop event. So while the elite model drops two data-driven mags
-		// in third person, we need to help it out a little bit in first-person. So here's some one-off code to drop another physics mag only for the elite,
-		// and only in first-person.
-
-		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
-		if ( pWeapon && pWeapon->IsA(WEAPON_ELITE) )
+		CAnimationLayer *pWeaponLayer = GetAnimOverlay( ANIMATION_LAYER_WEAPON_ACTION );
+		if ( pWeaponLayer && pWeaponLayer->m_nDispatchedDst != ACT_INVALID )
 		{
-			DropPhysicsMag( "mag_eject2" );
+			// let the weapon drop the mag
+		}
+		else
+		{
+			DropPhysicsMag( options );
+
+			// hack: in first-person, the player isn't playing their third-person gun animations, so the events on the third-person gun model don't fire.
+			// This means the event is fired from the player, and the player only fires ONE mag drop event. So while the elite model drops two data-driven mags
+			// in third person, we need to help it out a little bit in first-person. So here's some one-off code to drop another physics mag only for the elite,
+			// and only in first-person.
+
+			CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+			if ( pWeapon && pWeapon->IsA(WEAPON_ELITE) )
+			{
+				DropPhysicsMag( "mag_eject2" );
+			}
+
 		}
 		return;
 	}
