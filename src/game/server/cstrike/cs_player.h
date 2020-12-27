@@ -389,7 +389,7 @@ public:
 	void MakeVIP( bool isVIP );
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
-	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
+	void DoAnimStateEvent( PlayerAnimEvent_t evt );
 
 	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity );
 	virtual void StopReplayMode();

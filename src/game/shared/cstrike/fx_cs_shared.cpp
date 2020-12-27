@@ -323,13 +323,13 @@ void FX_PlantBomb( int iPlayerIndex, const Vector &vOrigin, PlantBombOption_t op
 		{
 		case PLANTBOMB_PLANT:
 			{
-				pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
+				pPlayer->DoAnimStateEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
 			}
 			break;
 
 		case PLANTBOMB_ABORT:
 			{
-				pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_CLEAR_FIRING );
+				pPlayer->DoAnimStateEvent( PLAYERANIMEVENT_CLEAR_FIRING );
 			}
 			break;
 		}

@@ -398,8 +398,6 @@ public:
 	// Global/static methods
 	virtual void ThirdPersonSwitch( bool bThirdperson );
 
-	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
-
 public:
 
 	IPlayerAnimState *m_PlayerAnimState;

@@ -8369,6 +8369,11 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 	return pent;
 }
 
+void CCSPlayer::DoAnimStateEvent( PlayerAnimEvent_t evt )
+{
+	m_PlayerAnimState->DoAnimationEvent( evt );
+}
+
 void CCSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 {
 	if ( m_bUseNewAnimstate )
