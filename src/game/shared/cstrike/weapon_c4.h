@@ -87,7 +87,7 @@
 		CNetworkVar( float, m_flTimerLength );
 
 		// Info for defusing.
-		CHandle<CCSPlayer> m_pBombDefuser;
+		CNetworkVar( CHandle<CCSPlayer>, m_pBombDefuser );
 		float			m_fLastDefuseTime;
 		bool			m_bStartDefuse;
 		int				m_iBombSiteIndex;
