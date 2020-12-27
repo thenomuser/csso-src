@@ -675,7 +675,24 @@ void CBaseCombatWeapon::Spawn( void )
 	m_iNumEmptyAttacks = 0;
 	m_iPrimaryReserveAmmoCount = 0;		// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
 	m_iSecondaryReserveAmmoCount = 0;	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
+
+#ifndef CLIENT_DLL
+	m_flLastTimeInAir = 0;
+#endif
 }
+
+#ifndef CLIENT_DLL
+void CBaseCombatWeapon::PhysicsSimulate( void )
+{
+	BaseClass::PhysicsSimulate();
+
+	// remember the last time we were flying through the air
+	if ( GetOwner() == NULL && !(GetFlags() & FL_ONGROUND) )
+	{
+		m_flLastTimeInAir = gpGlobals->curtime;
+	}
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: get this game's encryption key for decoding weapon kv files

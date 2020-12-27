@@ -3452,6 +3452,18 @@ bool CCSPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*
 				m_nPreferredGrenadeDrop = pCSWeapon->GetCSWeaponID();
 			}
 		}
+
+		MDLCACHE_CRITICAL_SECTION();
+		// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
+		if ( (gpGlobals->curtime - pWeapon->m_flLastTimeInAir) < 0.1f )
+		{
+			// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
+			DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
+		}
+		else
+		{
+			DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
+		}
 	}
 
 	return bBaseClassSwitch;

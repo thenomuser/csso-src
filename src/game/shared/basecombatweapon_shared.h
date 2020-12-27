@@ -645,6 +645,11 @@ protected:
 
 public:
 
+#ifndef CLIENT_DLL
+	float					m_flLastTimeInAir;
+	virtual void			PhysicsSimulate( void );
+#endif
+
 	// Networked fields
 	CNetworkVar( int, m_nViewModelIndex );
 
