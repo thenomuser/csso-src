@@ -579,10 +579,18 @@ public:
 	unsigned int					m_nAnimLODflags;
 	unsigned int					m_nAnimLODflagsOld;
 
+	// PiMoN: anim lods are making the model stretch in all possible directions across the map, investigate!
+#if 0
 	inline void SetAnimLODflag( unsigned int nNewFlag )		{ m_nAnimLODflags |= (nNewFlag); }
 	inline void UnSetAnimLODflag( unsigned int nNewFlag )	{ m_nAnimLODflags &= (~nNewFlag); }
 	inline bool IsAnimLODflagSet( unsigned int nFlag )		{ return (m_nAnimLODflags & (nFlag)) != 0; }
 	inline void ClearAnimLODflags( void )					{ m_nAnimLODflags = 0; }
+#else
+	inline void SetAnimLODflag( unsigned int nNewFlag )		{ m_nAnimLODflags = 0; }
+	inline void UnSetAnimLODflag( unsigned int nNewFlag )	{ m_nAnimLODflags = 0; }
+	inline bool IsAnimLODflagSet( unsigned int nFlag )		{ return false; }
+	inline void ClearAnimLODflags( void )					{ m_nAnimLODflags = 0; }
+#endif
 
 	int								m_nComputedLODframe;
 	float							m_flDistanceFromCamera;
