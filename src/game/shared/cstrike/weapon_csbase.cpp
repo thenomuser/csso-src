@@ -1276,19 +1276,19 @@ void CWeaponCSBase::Precache( void )
 
 	PrecacheModel( GetCSWpnData().m_szMagModel );
 
-	if ( GetTracerType() != 0 )
+	if ( GetTracerType()[0] != 0 )
 		PrecacheParticleSystem( GetTracerType() );
 	
-	if ( GetCSWpnData().m_szMuzzleFlash1stPerson != 0 )
+	if ( GetCSWpnData().m_szMuzzleFlash1stPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPerson );
-	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt != 0 )
+	if ( GetCSWpnData().m_szMuzzleFlash1stPersonAlt[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash1stPersonAlt );
-	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson != 0 )
+	if ( GetCSWpnData().m_szMuzzleFlash3rdPerson[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPerson );
-	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt != 0 )
+	if ( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szMuzzleFlash3rdPersonAlt );
 
-	if ( GetCSWpnData().m_szHeatEffect != 0 )
+	if ( GetCSWpnData().m_szHeatEffect[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szHeatEffect );
 
 	PrecacheScriptSound( "Default.ClipEmpty_Pistol" );
