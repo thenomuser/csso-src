@@ -882,11 +882,8 @@ inline float C_BaseAnimating::GetCycle() const
 inline CStudioHdr *C_BaseAnimating::GetModelPtr() const
 { 
 #ifdef _DEBUG
-#ifndef _GAMECONSOLE
-	// Consoles don't need to lock the modeldata cache since it never flushes
-	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
+	static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
 	AssertOnce( pModelCache->IsFrameLocking() );
-#endif
 #endif
 	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
 	if ( !m_pStudioHdr && GetModel() )

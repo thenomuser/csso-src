@@ -492,12 +492,9 @@ friend class CBlendingCycler;
 inline CStudioHdr *CBaseAnimating::GetModelPtr( void ) 
 { 
 #ifdef _DEBUG
-#ifndef _GAMECONSOLE
-	// Consoles don't need to lock the modeldata cache since it never flushes
 	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
-	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
+	static IDataCacheSection *pModelCache = datacache->FindSection( "ModelData" );
 	AssertOnce( pModelCache->IsFrameLocking() );
-#endif
 #endif
 	if ( !m_pStudioHdr && GetModel() )
 	{

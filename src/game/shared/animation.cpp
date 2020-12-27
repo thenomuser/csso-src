@@ -248,7 +248,7 @@ bool DebugValidateActivityIndexes( CStudioHdr *pstudiohdr )
 
 			for ( int index = 0; index < (int)seqdesc.numevents; index++ )
 			{
-				mstudioevent_t *pevent = (mstudioevent_for_client_server_t*)seqdesc.pEvent( index );
+				mstudioevent_t *pevent = (mstudioevent_t*)seqdesc.pEvent( index );
 
 				if ( !pevent )
 					continue;
@@ -259,8 +259,8 @@ bool DebugValidateActivityIndexes( CStudioHdr *pstudiohdr )
 
 					int iEventIndex = EventList_IndexForName( pEventName );
 
-					AssertMsg1( iEventIndex == pevent->event_newsystem, "Client and server sequence event index numbers differ for %s", pstudiohdr->pszName() );
-					bGood = bGood && iEventIndex == pevent->event_newsystem;
+					AssertMsg1( iEventIndex == pevent->event, "Client and server sequence event index numbers differ for %s", pstudiohdr->pszName() );
+					bGood = bGood && iEventIndex == pevent->event;
 				}
 			}
 		}

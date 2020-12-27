@@ -16,8 +16,11 @@
 
 class CBaseAnimatingOverlay;
 class IBoneSetup;
-
+#ifndef DEBUG
 class CAnimationLayer : public CMemZeroOnNew
+#else
+class CAnimationLayer
+#endif
 {
 public:	
 	DECLARE_CLASS_NOBASE( CAnimationLayer );

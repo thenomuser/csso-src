@@ -31,6 +31,8 @@
 #endif
 
 
+// PiMoN: for some reason throws an error when compiling, temporary fix is to just not use it in debug
+#ifndef DEBUG
 // network vars use memcmp when fields are set.  To ensure proper behavior your
 // object's memory should be initialized to zero.  This happens for entities automatically
 // use this for other classes.
@@ -67,7 +69,7 @@ public:
 		}
 	}
 };
-
+#endif
 
 inline int InternalCheckDeclareClass( const char *pClassName, const char *pClassNameMatch, void *pTestPtr, void *pBasePtr )
 {
