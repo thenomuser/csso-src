@@ -1273,8 +1273,12 @@ void CWeaponCSBase::Precache( void )
 		 PrecacheModel( GetCSWpnData().m_szShieldViewModel );
 	}
 #endif
+	
+	if ( GetCSWpnData().m_szMagModel[0] != 0 )
+		PrecacheModel( GetCSWpnData().m_szMagModel );
 
-	PrecacheModel( GetCSWpnData().m_szMagModel );
+	if ( GetCSWpnData().m_szAddonModel[0] != 0 )
+		PrecacheModel( GetCSWpnData().m_szAddonModel );
 
 	if ( GetTracerType()[0] != 0 )
 		PrecacheParticleSystem( GetTracerType() );
