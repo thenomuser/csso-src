@@ -4203,6 +4203,10 @@ int ParseSequence( s_sequence_t *pseq, bool isAppend )
 			UnGetToken( );
 			Option_Activity( pseq );
 		}
+		else if ( (stricmp("activitymodifier", token ) == 0) || (stricmp("actmod", token ) == 0) )
+		{
+			Option_ActivityModifier( pseq );
+		}
 
 		else if (stricmp("snap", token ) == 0)
 		{
