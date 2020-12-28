@@ -242,6 +242,10 @@ public:
 	float	m_flIronsightPivotForward;
 	char	m_szIronsightDotMaterial[MAX_WEAPON_STRING];
 
+	// buymenu
+	char	m_szBuyMenuAnim[MAX_WEAPON_STRING];
+	char	m_szBuyMenuAnimT[MAX_WEAPON_STRING];
+
 	struct RecoilOffset
 	{
 		float	fAngle;

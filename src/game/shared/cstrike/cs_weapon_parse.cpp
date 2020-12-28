@@ -453,6 +453,12 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "" );
 	Q_strncpy( m_szIronsightDotMaterial, pIronsightDotMaterial, sizeof( m_szIronsightDotMaterial ) );
 
+	// buymenu
+	const char* pBuyMenuAnim = pKeyValuesData->GetString( "BuyMenuAnim", "" );
+	Q_strncpy( m_szBuyMenuAnim, pBuyMenuAnim, sizeof( m_szBuyMenuAnim ) );
+	const char* pBuyMenuAnimT = pKeyValuesData->GetString( "BuyMenuAnimT", pBuyMenuAnim );
+	Q_strncpy( m_szBuyMenuAnimT, pBuyMenuAnimT, sizeof( m_szBuyMenuAnimT ) );
+
 	// Figure out what team can have this weapon.
 	m_iTeam = TEAM_UNASSIGNED;
 	const char *pTeam = pKeyValuesData->GetString( "Team", NULL );

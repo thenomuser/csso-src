@@ -1267,6 +1267,10 @@ void CWeaponCSBase::Precache( void )
 {
 	BaseClass::Precache();
 
+	// need to precache UI models for buymenu or they won't appear
+	PrecacheModel( "models/weapons/w_eq_armor_helmet.mdl" );
+	PrecacheModel( "models/weapons/w_eq_armor.mdl" );
+
 #ifdef CS_SHIELD_ENABLED
 	if ( GetCSWpnData().m_bCanUseWithShield )
 	{
