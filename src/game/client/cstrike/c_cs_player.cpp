@@ -1469,8 +1469,22 @@ void C_CSPlayer::CreateAddonModel( int i )
 	pAddon->m_iAddon = i;
 	pAddon->m_iAttachmentPoint = iAttachment;
 	pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
-	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
-	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	
+	int iBone = pEnt->LookupBone( "weapon_holster_center" );
+	if ( iBone > -1 )
+	{
+		Vector bonePos;
+		QAngle boneAng;
+		pEnt->GetBonePosition( iBone, bonePos, boneAng );
+		pEnt->SetLocalOrigin( -bonePos );
+		pEnt->SetLocalAngles( boneAng );
+	}
+	else
+	{
+		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
+		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	}
+
 	pEnt->SetModelScale( iScale );
 	if ( addonType == ADDON_C4 )
 		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() ? 1 : 0 );
