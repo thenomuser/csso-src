@@ -3830,9 +3830,8 @@ ConVar snd_music_selection(
 			
 			extern ConVar mp_do_warmup_period;
 
-            if ( ( UTIL_HumansInGame( true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) ) || !mp_do_warmup_period.GetBool() )
+            if ( UTIL_HumansInGame( true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) )
             {
-				extern ConVar mp_warmup_pausetimer;
 				mp_warmup_pausetimer.SetValue( 0 ); // Timer is unpausable within 5 seconds of its end.
 
 				if (GetWarmupPeriodEndTime() <= gpGlobals->curtime)
