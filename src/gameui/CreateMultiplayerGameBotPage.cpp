@@ -258,7 +258,7 @@ void CCreateMultiplayerGameBotPage::OnApplyChanges()
 	UpdateValue( m_pSavedData, "bot_chatter", chatterArg[ m_chatterCombo->GetActiveItem() ] );
 
 	// set bot_quota_mode
-	UpdateValue( m_pSavedData, "bot_quota_mode", chatterArg[ m_quotaModeCombo->GetActiveItem() ] );
+	UpdateValue( m_pSavedData, "bot_quota_mode", quotaModeArg[ m_quotaModeCombo->GetActiveItem() ] );
 
 	// set bot_prefix
 	#define BUF_LENGTH 256
