@@ -315,6 +315,7 @@ MDLViewer::MDLViewer ()
 	menuOptions->add ("Ground Color...", IDC_OPTIONS_COLORGROUND);
 	menuOptions->add ("Light Color...", IDC_OPTIONS_COLORLIGHT);
 	menuOptions->add ("Ambient Color...", IDC_OPTIONS_COLORAMBIENT);
+	menuOptions->add ("Reset Lighting", IDC_OPTIONS_RESETLIGHTING);
 	menuOptions->addSeparator ();
 	menuOptions->add ("Center View", IDC_OPTIONS_CENTERVIEW);
 	menuOptions->add ("Viewmodel Mode", IDC_OPTIONS_VIEWMODEL);
@@ -802,6 +803,14 @@ MDLViewer::handleEvent (mxEvent *event)
 				col[1] = (float) g / 255.0f;
 				col[2] = (float) b / 255.0f;
 			}
+		}
+		break;
+
+		case IDC_OPTIONS_RESETLIGHTING:
+		{
+			g_viewerSettings.lightrot[0] = 0.0f;
+			g_viewerSettings.lightrot[1] = 180.0f; // light should aim at models front
+			g_viewerSettings.lightrot[2] = 0.0f;
 		}
 		break;
 
