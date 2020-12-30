@@ -52,6 +52,7 @@ void InitViewerSettings ( const char *subkey )
 	}
 
 	g_viewerSettings.showOrbitCircle = false;
+	g_viewerSettings.allowOrbitYaw = false;
 
 	strcpy( g_viewerSettings.registrysubkey, subkey );
 
