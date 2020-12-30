@@ -31,6 +31,7 @@ CDownloadListGenerator &DownloadListGenerator()
 }
 
 ConVar	sv_logdownloadlist( "sv_logdownloadlist", IsX360() ? "0" : "1" );
+ConVar	sv_enablemodelbounds( "sv_enablemodelbounds", "0", FCVAR_ARCHIVE, "If non-zero, model bounds will be restricted for player, weapon, etc models" );
 
 extern int GetSvPureMode();
 
@@ -327,6 +328,10 @@ void CDownloadListGenerator::ForceSimpleMaterial( const char *relativePathFileNa
 //-----------------------------------------------------------------------------
 void CDownloadListGenerator::ForceModelBounds( const char *relativePathFileName, const Vector &mins, const Vector &maxs )
 {
+	if ( !sv_enablemodelbounds.GetBool() )
+		// forcing model bounds is disabled
+		return;
+
 	if ( IsX360() )
 	{
 		// not supporting
