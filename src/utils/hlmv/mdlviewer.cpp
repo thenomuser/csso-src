@@ -329,7 +329,12 @@ MDLViewer::MDLViewer ()
 
 	menuView->addSeparator ();
 	menuView->add ("Show Activities", IDC_VIEW_ACTIVITIES);
-	menuView->add ("Show hidden", IDC_VIEW_HIDDEN );
+	menuView->add ("Show hidden", IDC_VIEW_HIDDEN);
+	menuView->add ("Sort sequences", IDC_VIEW_SORT_SEQUENCES);
+	menuView->add ("Show orbit circle", IDC_VIEW_ORBIT_CIRCLE);
+	menuView->setChecked( IDC_VIEW_ORBIT_CIRCLE, false );
+	menuView->add ("Enable orbit yaw", IDC_VIEW_ORBIT_YAW);
+	menuView->setChecked( IDC_VIEW_ORBIT_YAW, false );
 
 #ifdef WIN32
 	menuHelp->add ("Goto Homepage...", IDC_HELP_GOTOHOMEPAGE);
@@ -914,6 +919,23 @@ MDLViewer::handleEvent (mxEvent *event)
 			menuView->setChecked( event->action, g_viewerSettings.showHidden );
 			d_cpl->initSequenceChoices();
 			d_cpl->resetControlPanel();
+			break;
+
+		case IDC_VIEW_SORT_SEQUENCES:
+			g_viewerSettings.sortSequences = !g_viewerSettings.sortSequences;
+			menuView->setChecked( event->action, g_viewerSettings.sortSequences );
+			d_cpl->initSequenceChoices();
+			d_cpl->resetControlPanel();
+			break;
+
+		case IDC_VIEW_ORBIT_CIRCLE:
+			g_viewerSettings.showOrbitCircle = !g_viewerSettings.showOrbitCircle;
+			menuView->setChecked( event->action, g_viewerSettings.showOrbitCircle );
+			break;
+
+		case IDC_VIEW_ORBIT_YAW:
+			g_viewerSettings.allowOrbitYaw = !g_viewerSettings.allowOrbitYaw;
+			menuView->setChecked( event->action, g_viewerSettings.allowOrbitYaw );
 			break;
 
 #ifdef WIN32

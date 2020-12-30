@@ -84,6 +84,8 @@ struct ViewerSettings
 	bool showTexture;
 	bool showMovement;
 	bool showShadow;
+	bool showOrbitCircle;
+	bool allowOrbitYaw;
 	int texture;
 	int skin;
 	int materialIndex;
@@ -131,6 +133,7 @@ struct ViewerSettings
 
 	bool showHidden;
 	bool showActivities;
+	bool sortSequences;
 
 	bool faceposerToolsDriveMouth;
 

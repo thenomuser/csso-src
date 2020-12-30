@@ -3051,7 +3051,7 @@ void ControlPanel::CreateSortedSequenceList( CStudioHdr* hdr, int *pSequence )
 		pKeyValues->deleteThis();
 	}
 
-	if ( !CommandLine()->CheckParm( "-nosort" ) )
+	if ( g_viewerSettings.sortSequences )
 	{
 		qsort( pSort, nSequenceCount, sizeof(SortInfo_t), SortSequenceFunc );
 	}
