@@ -57,6 +57,8 @@ static Agents agentsCT[] =
 	{ "#GameUI_Loadout_Agent_CT_16",	"ctm_swat_variantf"			},
 	{ "#GameUI_Loadout_Agent_CT_17",	"ctm_st6_variantl"			},
 	{ "#GameUI_Loadout_Agent_CT_18",	"ctm_swat_variante"			},
+	{ "#GameUI_Loadout_Agent_CT_19",	"ctm_sas_old"				},
+	{ "#GameUI_Loadout_Agent_CT_20",	"ctm_fbi_old"				},
 };
 static Agents agentsT[] =
 {
@@ -85,6 +87,8 @@ static Agents agentsT[] =
 	{ "#GameUI_Loadout_Agent_T_22",		"tm_professional_varf2"		},
 	{ "#GameUI_Loadout_Agent_T_23",		"tm_professional_varf3"		},
 	{ "#GameUI_Loadout_Agent_T_24",		"tm_professional_varf4"		},
+	{ "#GameUI_Loadout_Agent_T_25",		"tm_leet_old"				},
+	{ "#GameUI_Loadout_Agent_T_26",		"tm_phoenix_old"			},
 };
 
 //-----------------------------------------------------------------------------
