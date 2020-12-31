@@ -343,8 +343,8 @@ public:
 
 const CCSClassInfo* GetCSClassInfo( int i );
 
-#define MAX_AGENTS_CT 18
-#define MAX_AGENTS_T 24
+#define MAX_AGENTS_CT 20
+#define MAX_AGENTS_T 26
 
 class CCSAgentInfo
 {

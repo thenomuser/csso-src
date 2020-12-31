@@ -392,7 +392,7 @@ MatSysWindow::handleEvent (mxEvent *event)
 
 		float d = sqrt( ( float )( (event->x - w()/2) * (event->x - w()/2) + (event->y - h()/2) * (event->y - h()/2) ) );
 
-		if (d < r)
+		if (d < r || !g_viewerSettings.allowOrbitYaw)
 			g_viewerSettings.rotating = false;
 		else
 			g_viewerSettings.rotating = true;
@@ -574,7 +574,7 @@ void DrawBackground()
 
 void DrawHelpers()
 {
-	if (g_viewerSettings.mousedown)
+	if (g_viewerSettings.mousedown && g_viewerSettings.showOrbitCircle)
 	{
 		CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 		pRenderContext->Bind( g_materialBones );

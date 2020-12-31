@@ -791,6 +791,7 @@ void CBaseCombatWeapon::Precache( void )
 	//	Remove( );	//don't remove, this gets released soon!
 	}
 
+#if USE_TRACERS
 	const char *pszTracerName = GetTracerType();
 	if ( pszTracerName && pszTracerName[0] )
 	{
@@ -798,6 +799,7 @@ void CBaseCombatWeapon::Precache( void )
 	}
 
 	PrecacheParticleSystem( "weapon_tracers" );
+#endif
 }
 
 //-----------------------------------------------------------------------------

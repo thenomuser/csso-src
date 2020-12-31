@@ -72,6 +72,9 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 	{ "models/player/custom_player/legacy/ctm_swat_variantf.mdl",	"models/weapons/arms/ct_arms_swat_leader.mdl",	"SWAT_Fem",		CS_CLASS_SWAT,			1,	true	},
 	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",	"models/weapons/arms/ct_arms_st6_v2.mdl",		"ST6",			CS_CLASS_SEAL_TEAM_6,	5,	false	},
 	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",	"models/weapons/arms/ct_arms_swat_leader.mdl",	"SWAT_Epic",	CS_CLASS_SWAT,			0,	true	},
+	// what?
+	{ "models/player/ctm_sas_old.mdl",								"models/weapons/arms/ct_arms_sas_old.mdl",		"SAS",			CS_CLASS_SAS,			0, false	},
+	{ "models/player/ctm_fbi_old.mdl",								"models/weapons/arms/ct_arms_fbi_old.mdl",		"FBI",			CS_CLASS_FBI,			0, false	},
 };
 
 const CCSAgentInfo* GetCSAgentInfoCT( int i )
@@ -84,31 +87,34 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 {
 	{ "", "", 0, 0 },
 	// Shattered Web
-	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				1,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",	"models/weapons/arms/v_glove_fingerless.mdl",			"Leet_Epic",		CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantf.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_varianti.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantg.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantj.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantj.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_varianth.mdl",	"models/weapons/arms/t_arms_balkan_v2_varianth.mdl",	"Balkan_Epic",		CS_CLASS_BALKAN,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantg.mdl",		"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianth.mdl",		"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				1,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_varianti.mdl",		"models/weapons/arms/v_glove_fingerless.mdl",			"Leet",				CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_variantf.mdl",		"models/weapons/arms/v_glove_fingerless.mdl",			"Leet_Epic",		CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianth.mdl",		"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantf.mdl",		"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_variantg.mdl",		"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantf.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_varianti.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantg.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantj.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantj.mdl",	"Balkan",			CS_CLASS_BALKAN,				0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_varianth.mdl",		"models/weapons/arms/t_arms_balkan_v2_varianth.mdl",	"Balkan_Epic",		CS_CLASS_BALKAN,				0,	false	},
 	// Broken Fang
-	{ "models/player/custom_player/legacy/tm_balkan_variantl.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	3,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varj.mdl","models/weapons/arms/t_arms_professional.mdl",			"Professional_Fem",	CS_CLASS_PROFESSIONAL,			0,	true	},
-	{ "models/player/custom_player/legacy/tm_professional_varh.mdl","models/weapons/arms/v_glove_fullfinger.mdl",			"Professional",		CS_CLASS_PROFESSIONAL,			0,	false	},
-	{ "models/player/custom_player/legacy/tm_balkan_variantk.mdl",	"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varg.mdl","models/weapons/arms/v_glove_fullfinger.mdl",			"Professional_Fem",	CS_CLASS_PROFESSIONAL,			0,	true	},
-	{ "models/player/custom_player/legacy/tm_professional_vari.mdl","models/weapons/arms/t_arms_professional.mdl",			"Professional",		CS_CLASS_PROFESSIONAL,			0,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf.mdl","models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf1.mdl","models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			1,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf2.mdl","models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl","models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
-	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl","models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantl.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantf.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_varianti.mdl",		"models/weapons/arms/v_glove_fullfinger.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	3,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varj.mdl",	"models/weapons/arms/t_arms_professional.mdl",			"Professional_Fem",	CS_CLASS_PROFESSIONAL,			0,	true	},
+	{ "models/player/custom_player/legacy/tm_professional_varh.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Professional",		CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_balkan_variantk.mdl",		"models/weapons/arms/t_arms_balkan_v2_variantg.mdl",	"Balkan",			CS_CLASS_BALKAN,				1,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varg.mdl",	"models/weapons/arms/v_glove_fullfinger.mdl",			"Professional_Fem",	CS_CLASS_PROFESSIONAL,			0,	true	},
+	{ "models/player/custom_player/legacy/tm_professional_vari.mdl",	"models/weapons/arms/t_arms_professional.mdl",			"Professional",		CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf.mdl",	"models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf1.mdl",	"models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			1,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf2.mdl",	"models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",	"models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
+	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",	"models/weapons/arms/t_arms_professional_watch.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			0,	false	},
+	// what?
+	{ "models/player/tm_leet_old.mdl",									"models/weapons/arms/t_arms_leet_old.mdl",				"Leet",				CS_CLASS_L337_KREW,				0,	false	},
+	{ "models/player/tm_phoenix_old.mdl",								"models/weapons/arms/t_arms_phoenix_old.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
 };
 
 const CCSAgentInfo* GetCSAgentInfoT( int i )

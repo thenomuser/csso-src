@@ -315,6 +315,7 @@ MDLViewer::MDLViewer ()
 	menuOptions->add ("Ground Color...", IDC_OPTIONS_COLORGROUND);
 	menuOptions->add ("Light Color...", IDC_OPTIONS_COLORLIGHT);
 	menuOptions->add ("Ambient Color...", IDC_OPTIONS_COLORAMBIENT);
+	menuOptions->add ("Reset Lighting", IDC_OPTIONS_RESETLIGHTING);
 	menuOptions->addSeparator ();
 	menuOptions->add ("Center View", IDC_OPTIONS_CENTERVIEW);
 	menuOptions->add ("Viewmodel Mode", IDC_OPTIONS_VIEWMODEL);
@@ -329,7 +330,12 @@ MDLViewer::MDLViewer ()
 
 	menuView->addSeparator ();
 	menuView->add ("Show Activities", IDC_VIEW_ACTIVITIES);
-	menuView->add ("Show hidden", IDC_VIEW_HIDDEN );
+	menuView->add ("Show hidden", IDC_VIEW_HIDDEN);
+	menuView->add ("Sort sequences", IDC_VIEW_SORT_SEQUENCES);
+	menuView->add ("Show orbit circle", IDC_VIEW_ORBIT_CIRCLE);
+	menuView->setChecked( IDC_VIEW_ORBIT_CIRCLE, false );
+	menuView->add ("Enable orbit yaw", IDC_VIEW_ORBIT_YAW);
+	menuView->setChecked( IDC_VIEW_ORBIT_YAW, false );
 
 #ifdef WIN32
 	menuHelp->add ("Goto Homepage...", IDC_HELP_GOTOHOMEPAGE);
@@ -800,6 +806,14 @@ MDLViewer::handleEvent (mxEvent *event)
 		}
 		break;
 
+		case IDC_OPTIONS_RESETLIGHTING:
+		{
+			g_viewerSettings.lightrot[0] = 0.0f;
+			g_viewerSettings.lightrot[1] = 180.0f; // light should aim at models front
+			g_viewerSettings.lightrot[2] = 0.0f;
+		}
+		break;
+
 		case IDC_OPTIONS_CENTERVIEW:
 			d_cpl->centerView ();
 			if ( g_bHlmvMaster )
@@ -914,6 +928,23 @@ MDLViewer::handleEvent (mxEvent *event)
 			menuView->setChecked( event->action, g_viewerSettings.showHidden );
 			d_cpl->initSequenceChoices();
 			d_cpl->resetControlPanel();
+			break;
+
+		case IDC_VIEW_SORT_SEQUENCES:
+			g_viewerSettings.sortSequences = !g_viewerSettings.sortSequences;
+			menuView->setChecked( event->action, g_viewerSettings.sortSequences );
+			d_cpl->initSequenceChoices();
+			d_cpl->resetControlPanel();
+			break;
+
+		case IDC_VIEW_ORBIT_CIRCLE:
+			g_viewerSettings.showOrbitCircle = !g_viewerSettings.showOrbitCircle;
+			menuView->setChecked( event->action, g_viewerSettings.showOrbitCircle );
+			break;
+
+		case IDC_VIEW_ORBIT_YAW:
+			g_viewerSettings.allowOrbitYaw = !g_viewerSettings.allowOrbitYaw;
+			menuView->setChecked( event->action, g_viewerSettings.allowOrbitYaw );
 			break;
 
 #ifdef WIN32

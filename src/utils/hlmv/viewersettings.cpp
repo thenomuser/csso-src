@@ -47,7 +47,12 @@ void InitViewerSettings ( const char *subkey )
 	// Some values should survive.  This is a crappy way to do settings in general.  Sigh.
 	{
 		g_viewerSettings.faceposerToolsDriveMouth = save.faceposerToolsDriveMouth;
+
+		g_viewerSettings.sortSequences = save.sortSequences;
 	}
+
+	g_viewerSettings.showOrbitCircle = false;
+	g_viewerSettings.allowOrbitYaw = false;
 
 	strcpy( g_viewerSettings.registrysubkey, subkey );
 

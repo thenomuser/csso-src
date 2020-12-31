@@ -1069,8 +1069,10 @@ void CCSPlayer::FireBullet(
 #endif
 
 #ifdef CLIENT_DLL
+#if USE_TRACERS
 		// create the tracer
 		CreateWeaponTracer( vecSrc, tr.endpos );
+#endif
 #endif
 
 		// add damage to entity that we hit
@@ -1400,6 +1402,7 @@ void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCust
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
 
+#if USE_TRACERS
 void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 {
 	int iTracerFreq = 1;
@@ -1476,6 +1479,7 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		
 	}
 }
+#endif
 #endif
 
 void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity )
