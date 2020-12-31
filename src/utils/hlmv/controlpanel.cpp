@@ -1012,26 +1012,22 @@ bool CBoneControlWindow::SerializeQC( CUtlBuffer& buf )
 	{
 		buf.Printf("\n");
 
-		float flInvScale = 1.0f;// / 1.07f;
-
 		for ( i = 0 ; i < g_pStudioModel->m_HitboxSets.Count(); i++ )
 		{
-			buf.Printf( "\n$hboxset \"%s\"\n\n", g_pStudioModel->m_HitboxSets[ i ].m_Name.String() );
+			buf.Printf( "\n$hboxset \"%s\"\n\n", g_pStudioModel->m_HitboxSets[ i ].m_Name.Get() );
 
 			HitboxList_t &list = g_pStudioModel->m_HitboxSets[ i ].m_Hitboxes;
 			for ( unsigned short j = list.Head(); j != list.InvalidIndex(); j = list.Next(j) )
 			{
 				mstudiobbox_t &hitbox = list[j].m_BBox;
-				const mstudiobone_t* pBone = hdr->pBone( hitbox.bone );
-				buf.Printf( "$hbox %d \"%s\"\t  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f %7.2f", 
+				mstudiobone_t* pBone = hdr->pBone( hitbox.bone );
+				buf.Printf( "$hbox %d \"%s\"\t  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f", 
 					hitbox.group, pBone->pszName(), 
-					hitbox.bbmin.x * flInvScale, hitbox.bbmin.y * flInvScale, hitbox.bbmin.z * flInvScale,
-					hitbox.bbmax.x * flInvScale, hitbox.bbmax.y * flInvScale, hitbox.bbmax.z * flInvScale,
-					hitbox.angOffsetOrientation.x, hitbox.angOffsetOrientation.y, hitbox.angOffsetOrientation.z,
-					hitbox.flCapsuleRadius );
+					hitbox.bbmin.x, hitbox.bbmin.y, hitbox.bbmin.z,
+					hitbox.bbmax.x, hitbox.bbmax.y, hitbox.bbmax.z );
 				if ( !list[j].m_Name.IsEmpty() )
 				{
-					buf.Printf( " \"%s\"", list[j].m_Name.String() );
+					buf.Printf( " \"%s\"", list[j].m_Name.Get() );
 				}
 				buf.Printf( "\n" );
 			}

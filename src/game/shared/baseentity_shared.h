@@ -52,9 +52,7 @@ enum InvalidatePhysicsBits_t
 	POSITION_CHANGED	= 0x1,
 	ANGLES_CHANGED		= 0x2,
 	VELOCITY_CHANGED	= 0x4,
-	ANIMATION_CHANGED	= 0x8,		// Means cycle has changed, or any other event which would cause render-to-texture shadows to need to be rerendeded
-	BOUNDS_CHANGED		= 0x10,		// Means render bounds have changed, so shadow decal projection is required, etc.
-	SEQUENCE_CHANGED	= 0x20,		// Means sequence has changed, only interesting when surrounding bounds depends on sequence																				
+	ANIMATION_CHANGED	= 0x8,
 };
 
 

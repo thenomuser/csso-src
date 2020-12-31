@@ -65,8 +65,5 @@ void DrawScreenSpaceRectangle( IMaterial *pMaterial,
 	int nYDice = 1,
 	float fDepth = 0.0 );								// what Z value to put in the verts
 
-// Render a capsule ( a pill-shaped hemisphere-capped cylinder )
-void RenderCapsule( const Vector &vStart, const Vector &vEnd, const float &flRadius, Color c, IMaterial *pMaterial );
-
 #endif // RENDERUTILS_H
 

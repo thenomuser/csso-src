@@ -267,7 +267,6 @@ public:
 	virtual float			GetTimeSinceLastInjury( int team = TEAM_ANY ) const;		// return time since we were hurt by a member of the given team
 	RelativeDamagedDirection_t GetLastInjuryRelativeDirection( void ) { return m_nRelativeDirectionOfLastInjury; }
 
-	uint32					GetLastDamageTypeFlags( void ) const { return m_uiLastDamageTypeFlags; }
 
 	virtual void			OnPlayerKilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info ) {}
 
@@ -483,8 +482,6 @@ protected:
 
 public:
 	static int					GetInteractionID();	// Returns the next interaction #
-	
-	float		GetTimeOfLastInjury( void ) const { return m_flTimeOfLastInjury; };
 
 protected:
 	// Visibility-related stuff
@@ -542,8 +539,6 @@ protected:
 
 	CNetworkVar( float, m_flTimeOfLastInjury );
 	CNetworkVar( RelativeDamagedDirection_t, m_nRelativeDirectionOfLastInjury );
-
-	uint32 m_uiLastDamageTypeFlags;
 
 	// last known navigation area of player - NULL if unknown
 	CNavArea *m_lastNavArea;

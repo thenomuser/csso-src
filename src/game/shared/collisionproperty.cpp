@@ -18,8 +18,6 @@
 #include "c_baseanimating.h"
 #include "recvproxy.h"
 
-#include "engine/ivdebugoverlay.h"
-
 #else
 
 #include "baseentity.h"
@@ -409,11 +407,6 @@ CCollisionProperty::CCollisionProperty()
 CCollisionProperty::~CCollisionProperty()
 {
 	DestroyPartitionHandle();
-}
-
-inline const Vector&	CCollisionProperty::GetCollisionOrigin_Inline() const
-{
-	return GetOuter()->GetAbsOrigin();
 }
 
 
@@ -1017,61 +1010,6 @@ bool CCollisionProperty::ComputeHitboxSurroundingBox( Vector *pVecWorldMins, Vec
 	return false;
 }
 
-
-//-----------------------------------------------------------------------------
-// Computes the surrounding collision bounds based on the current sequence box
-//-----------------------------------------------------------------------------
-void CCollisionProperty::ComputeOBBBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
-{
-	bool bUseVPhysics = false;
-	if ( ( GetSolid() == SOLID_VPHYSICS ) && ( GetOuter()->GetMoveType() == MOVETYPE_VPHYSICS ) )
-	{
-		// UNDONE: This may not be necessary any more.
-		IPhysicsObject *pPhysics = GetOuter()->VPhysicsGetObject();
-		bUseVPhysics = pPhysics && pPhysics->IsAsleep();
-	}
-	ComputeCollisionSurroundingBox( bUseVPhysics, pVecWorldMins, pVecWorldMaxs );
-}
-
-
-//-----------------------------------------------------------------------------
-// Computes the surrounding collision bounds from the current sequence box
-//-----------------------------------------------------------------------------
-void CCollisionProperty::ComputeRotationExpandedSequenceBounds( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
-{
-	CBaseAnimating *pAnim = GetOuter()->GetBaseAnimating();
-	if ( !pAnim )
-	{
-		ComputeOBBBounds( pVecWorldMins, pVecWorldMaxs );
-		return;
-	}
-
-	Vector mins, maxs;
-	pAnim->ExtractBbox( pAnim->GetSequence(), mins, maxs );
-
-	float flRadius = MAX( MAX( FloatMakePositive( mins.x ), FloatMakePositive( maxs.x ) ),
-					      MAX( FloatMakePositive( mins.y ), FloatMakePositive( maxs.y ) ) );
-	mins.x = mins.y = -flRadius;
-	maxs.x = maxs.y = flRadius;
-
-	// Add bloat to account for gesture sequences
-	Vector vecBloat( 6, 6, 0 );
-	mins -= vecBloat;
-	maxs += vecBloat;
-	ASSERT_COORD( m_vecSurroundingMins );
-	ASSERT_COORD( m_vecSurroundingMaxs );
-	// NOTE: This is necessary because the server doesn't know how to blend
-	// animations together. Therefore, we have to just pick a box that can
-	// surround all of our potential sequences. This should be something we
-	// should be able to compute @ tool time instead, however.
-	VectorMin( mins, m_vecSurroundingMins, mins );
-	VectorMax( maxs, m_vecSurroundingMaxs, maxs );
-
-	VectorAdd( mins, GetCollisionOrigin_Inline(), *pVecWorldMins );
-	VectorAdd( maxs, GetCollisionOrigin_Inline(), *pVecWorldMaxs );
-}
-
-
 //-----------------------------------------------------------------------------
 // Expand trigger bounds..
 //-----------------------------------------------------------------------------
@@ -1147,9 +1085,6 @@ void CCollisionProperty::ComputeCollisionSurroundingBox( bool bUseVPhysics, Vect
 //-----------------------------------------------------------------------------
 // Computes the surrounding collision bounds based on whatever algorithm we want...
 //-----------------------------------------------------------------------------
-#ifdef CLIENT_DLL
-static ConVar cl_show_bounds_errors( "cl_show_bounds_errors", "0" );
-#endif
 void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
 {
 	if (( GetSolid() == SOLID_CUSTOM ) && (m_nSurroundType != USE_GAME_CODE ))
@@ -1164,17 +1099,22 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 	switch( m_nSurroundType )
 	{
 	case USE_OBB_COLLISION_BOUNDS:
-		Assert( GetSolid() != SOLID_CUSTOM );
-		ComputeOBBBounds( pVecWorldMins, pVecWorldMaxs );
+		{
+			Assert( GetSolid() != SOLID_CUSTOM );
+			bool bUseVPhysics = false;
+			if ( ( GetSolid() == SOLID_VPHYSICS ) && ( GetOuter()->GetMoveType() == MOVETYPE_VPHYSICS ) )
+			{
+				// UNDONE: This may not be necessary any more.
+				IPhysicsObject *pPhysics = GetOuter()->VPhysicsGetObject();
+				bUseVPhysics = pPhysics && pPhysics->IsAsleep();
+			}
+			ComputeCollisionSurroundingBox( bUseVPhysics, pVecWorldMins, pVecWorldMaxs );
+		}
 		break;
 
 	case USE_BEST_COLLISION_BOUNDS:
 		Assert( GetSolid() != SOLID_CUSTOM );
 		ComputeCollisionSurroundingBox( (GetSolid() == SOLID_VPHYSICS), pVecWorldMins, pVecWorldMaxs );
-		break;
-
-	case USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS:
-		ComputeRotationExpandedSequenceBounds( pVecWorldMins, pVecWorldMaxs );
 		break;
 
 	case USE_COLLISION_BOUNDS_NEVER_VPHYSICS:
@@ -1203,56 +1143,25 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 		return;
 	}
 
-//#ifdef DEBUG
-#ifdef CLIENT_DLL
-	if ( cl_show_bounds_errors.GetBool() && ( m_nSurroundType == USE_ROTATION_EXPANDED_SEQUENCE_BOUNDS ) )
-	{ 
-		// For debugging purposes, make sure the bounds actually does surround the thing.
-		// Otherwise the optimization we were using isn't really all that great, is it?
-		Vector vecTestMins, vecTestMaxs;
-		if ( GetOuter()->GetBaseAnimating() )
-		{
-			GetOuter()->GetBaseAnimating()->InvalidateBoneCache();
-		}
-		ComputeHitboxSurroundingBox( &vecTestMins, &vecTestMaxs );
-		
-		Assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
-		Assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
+#ifdef DEBUG
+	/*
+	// For debugging purposes, make sure the bounds actually does surround the thing.
+	// Otherwise the optimization we were using isn't really all that great, is it?
+	Vector vecTestMins, vecTestMaxs;
+	ComputeCollisionSurroundingBox( (GetSolid() == SOLID_VPHYSICS), &vecTestMins, &vecTestMaxs );
 
-		if ( vecTestMins.x < pVecWorldMins->x || vecTestMins.y < pVecWorldMins->y || vecTestMins.z < pVecWorldMins->z ||
-			 vecTestMaxs.x > pVecWorldMaxs->x || vecTestMaxs.y > pVecWorldMaxs->y || vecTestMaxs.z > pVecWorldMaxs->z )
-		{
-			const char *pSeqName = "<unknown seq>";
-			C_BaseAnimating *pAnim = GetOuter()->GetBaseAnimating();
-			if ( pAnim )
-			{
-				int nSequence = pAnim->GetSequence();
-				pSeqName = pAnim->GetSequenceName( nSequence );
-			}
-
-			Warning( "*** Bounds problem, index %d Eng %s, Seqeuence %s ", GetOuter()->entindex(), GetOuter()->GetClassname(), pSeqName );
-			Vector vecDelta = *pVecWorldMins - vecTestMins;
-			Vector vecDelta2 = vecTestMaxs - *pVecWorldMaxs;
-			if ( vecDelta.x > 0.0f || vecDelta2.x > 0.0f || vecDelta.y > 0.0f || vecDelta2.y > 0.0f )
-			{
-				Msg( "Outside X/Y by %.2f ", MAX( MAX( vecDelta.x, vecDelta2.x ), MAX( vecDelta.y, vecDelta2.y ) ) );
-			}
-			if ( vecDelta.z > 0.0f || vecDelta2.z > 0.0f )
-			{
-				Msg( "Outside Z by (below) %.2f, (above) %.2f ", MAX( vecDelta.z, 0.0f ), MAX( vecDelta2.z, 0.0f ) );
-			}
-			Msg( "\n" );
-
-			char pTemp[MAX_PATH];
-			Q_snprintf( pTemp, sizeof(pTemp), "%s [seq: %s]", GetOuter()->GetClassname(), pSeqName ); 
-
-			debugoverlay->AddBoxOverlay( vec3_origin, vecTestMins, vecTestMaxs, vec3_angle, 255, 0, 0, 0, 2 );
-			debugoverlay->AddBoxOverlay( vec3_origin, *pVecWorldMins, *pVecWorldMaxs, vec3_angle, 0, 0, 255, 0, 2 );
-			debugoverlay->AddTextOverlay( ( vecTestMins + vecTestMaxs ) * 0.5f, 2, "%s", pTemp );
-		}
+	// Now that we have the basics, let's expand for hitboxes if appropriate
+	Vector vecWorldHitboxMins, vecWorldHitboxMaxs;
+	if ( ComputeHitboxSurroundingBox( &vecWorldHitboxMins, &vecWorldHitboxMaxs ) )
+	{
+		VectorMin( vecWorldHitboxMaxs, vecTestMins, vecTestMins );
+		VectorMax( vecWorldHitboxMaxs, vecTestMaxs, vecTestMaxs );
 	}
+
+	Assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
+	Assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
+	*/
 #endif
-//#endif
 }
 
 

@@ -8359,6 +8359,14 @@ bool CBasePlayer::ShouldSavePhysics()
 	return false;
 }
 
+void CBasePlayer::RefreshCollisionBounds( void )
+{
+	BaseClass::RefreshCollisionBounds();
+
+	InitVCollision( GetAbsOrigin(), GetAbsVelocity() );
+	SetViewOffset( VEC_VIEW_SCALED( this ) );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------

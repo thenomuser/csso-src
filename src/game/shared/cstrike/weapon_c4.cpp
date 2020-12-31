@@ -38,7 +38,7 @@
 
 
 #define BLINK_INTERVAL 2.0
-#define PLANTED_C4_MODEL "models/weapons/w_c4_dropped.mdl"
+#define PLANTED_C4_MODEL "models/weapons/w_c4_planted.mdl"
 #define HEIST_MODE_C4_TIME 25
 
 int g_sModelIndexC4Glow = -1;
@@ -77,7 +77,6 @@ extern ConVar mp_c4_cannot_be_defused;
 		SendPropFloat( SENDINFO(m_flDefuseLength), 0, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO(m_flDefuseCountDown), 0, SPROP_NOSCALE ),
 		SendPropBool( SENDINFO(m_bBombDefused) ),
-		SendPropEHandle( SENDINFO(m_pBombDefuser) ),
 	END_SEND_TABLE()
 
 	
@@ -144,7 +143,6 @@ END_PREDICTION_DATA()
 		//g_sModelIndexC4Glow = PrecacheModel( "sprites/ledglow.vmt" );
 		PrecacheModel( PLANTED_C4_MODEL );
 		PrecacheVGuiScreen( "c4_panel" );
-		PrecacheModel( "models/weapons/w_eq_multimeter.mdl" );
 
 		engine->ForceModelBounds( PLANTED_C4_MODEL, Vector( -7, -13, -5 ), Vector( 9, 12, 11 ) );
 
@@ -338,16 +336,6 @@ END_PREDICTION_DATA()
 			return;
 		}
 
-		// network the defuser handle
-		if ( m_bStartDefuse )
-		{
-			SetBodygroup( FindBodygroupByName( "defusing" ), 1 );
-		}
-		else
-		{
-			SetBodygroup( FindBodygroupByName( "defusing" ), 0 );
-		}
-
 		//Bomb is dead, don't think anymore
 		if( !m_bBombTicking )
 		{
@@ -379,7 +367,7 @@ END_PREDICTION_DATA()
 				CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
 				if ( pPlayer && pPlayer->IsAlive() )
 				{
-					if ( !pCT && pPlayer->GetTeamNumber() == TEAM_CT && pCT != m_pBombDefuser->Get() )
+					if ( !pCT && pPlayer->GetTeamNumber() == TEAM_CT && pCT != m_pBombDefuser )
 					{
 						if ( (GetAbsOrigin() - pPlayer->GetAbsOrigin()).AsVector2D().IsLengthLessThan( 1200.0 ) )
 							pCT = pPlayer;
@@ -413,11 +401,11 @@ END_PREDICTION_DATA()
 		if (m_flC4Blow <= gpGlobals->curtime)
 		{
 			// kick off the person trying to defuse the bomb
-			if ( m_pBombDefuser->Get() )
+			if ( m_pBombDefuser )
 			{
-				m_pBombDefuser->Get()->m_bIsDefusing = false;
-				m_pBombDefuser->Get()->SetProgressBarTime( 0 );
-				m_pBombDefuser->Get()->OnCanceledDefuse();
+				m_pBombDefuser->m_bIsDefusing = false;
+				m_pBombDefuser->SetProgressBarTime( 0 );
+				m_pBombDefuser->OnCanceledDefuse();
 				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
 			}
@@ -466,43 +454,43 @@ END_PREDICTION_DATA()
 		}
 
 		//if the defusing process has started
-		if ( m_bStartDefuse && (m_pBombDefuser->Get() != NULL) && mp_c4_cannot_be_defused.GetBool() == false )
+		if ( m_bStartDefuse && (m_pBombDefuser != NULL) && mp_c4_cannot_be_defused.GetBool() == false )
 		{
 			//if the defusing process has not ended yet
 			if ( m_flDefuseCountDown > gpGlobals->curtime)
 			{
-				int iOnGround = FBitSet( m_pBombDefuser->Get()->GetFlags(), FL_ONGROUND );
+				int iOnGround = FBitSet( m_pBombDefuser->GetFlags(), FL_ONGROUND );
 
-				const CUserCmd *pCmd = m_pBombDefuser->Get()->GetLastUserCommand();
+				const CUserCmd *pCmd = m_pBombDefuser->GetLastUserCommand();
 				bool bPlayerStoppedHoldingUse = !(pCmd->buttons & IN_USE) && (gpGlobals->curtime > m_fLastDefuseTime + C4_DEFUSE_LOCKIN_PERIOD);
 
 				CConfigurationForHighPriorityUseEntity_t cfgUseEntity;
-				bool bPlayerUseIsValidNow = m_pBombDefuser->Get()->GetUseConfigurationForHighPriorityUseEntity( this, cfgUseEntity ) &&
-					( cfgUseEntity.m_pEntity == this ) && cfgUseEntity.UseByPlayerNow( m_pBombDefuser->Get(), cfgUseEntity.k_EPlayerUseType_Progress );
+				bool bPlayerUseIsValidNow = m_pBombDefuser->GetUseConfigurationForHighPriorityUseEntity( this, cfgUseEntity ) &&
+					( cfgUseEntity.m_pEntity == this ) && cfgUseEntity.UseByPlayerNow( m_pBombDefuser, cfgUseEntity.k_EPlayerUseType_Progress );
 
 				//if the bomb defuser has stopped defusing the bomb
 				if ( bPlayerStoppedHoldingUse || !bPlayerUseIsValidNow || !iOnGround )
 				{
-					if ( !iOnGround && m_pBombDefuser->Get()->IsAlive() )
-						ClientPrint( m_pBombDefuser->Get(), HUD_PRINTCENTER, "#C4_Defuse_Must_Be_On_Ground" );
+					if ( !iOnGround && m_pBombDefuser->IsAlive() )
+						ClientPrint( m_pBombDefuser, HUD_PRINTCENTER, "#C4_Defuse_Must_Be_On_Ground");
 
 					// release the player from being frozen
-					m_pBombDefuser->Get()->m_bIsDefusing = false;
+					m_pBombDefuser->m_bIsDefusing = false;
 
 #ifndef CLIENT_DLL
 					// tell the bots someone has aborted defusing
 					IGameEvent * event = gameeventmanager->CreateEvent( "bomb_abortdefuse" );
 					if( event )
 					{
-						event->SetInt( "userid", m_pBombDefuser->Get()->GetUserID() );
+						event->SetInt("userid", m_pBombDefuser->GetUserID() );
 						event->SetInt( "priority", 6 );
 						gameeventmanager->FireEvent( event );
 					}
 #endif
 
 					//cancel the progress bar
-					m_pBombDefuser->Get()->SetProgressBarTime( 0 );
-					m_pBombDefuser->Get()->OnCanceledDefuse();
+					m_pBombDefuser->SetProgressBarTime( 0 );
+                    m_pBombDefuser->OnCanceledDefuse();
 					m_pBombDefuser = NULL;
 					m_bStartDefuse = false;
 					m_flDefuseCountDown = 0;
@@ -513,23 +501,23 @@ END_PREDICTION_DATA()
 			}
 
 			//if the defuse process has ended, kill the c4
-			if ( !m_pBombDefuser->Get()->IsDead() )
+			if ( !m_pBombDefuser->IsDead() )
 			{
                 //=============================================================================
                 // HPE_BEGIN
                 // [dwenger] Stats update for bomb defusing
                 //=============================================================================
-				CCS_GameStats.Event_BombDefused( m_pBombDefuser->Get() );
+                CCS_GameStats.Event_BombDefused( m_pBombDefuser );
                 //=============================================================================
                 // HPE_END
                 //=============================================================================
 
-				m_pBombDefuser->Get()->AddAccountAward( PlayerCashAward::BOMB_DEFUSED );
+				m_pBombDefuser->AddAccountAward( PlayerCashAward::BOMB_DEFUSED );
 
 				IGameEvent * event = gameeventmanager->CreateEvent( "bomb_defused" );
 				if( event )
 				{
-					event->SetInt("userid", m_pBombDefuser->Get()->GetUserID() );
+					event->SetInt("userid", m_pBombDefuser->GetUserID() );
 					event->SetInt("site", m_iBombSiteIndex );
 					event->SetInt( "priority", 9 );
 					gameeventmanager->FireEvent( event );
@@ -538,27 +526,27 @@ END_PREDICTION_DATA()
                     // HPE_BEGIN
                     // [dwenger] Server-side processing for defusing bombs
                     //=============================================================================
-                    m_pBombDefuser->Get()->AwardAchievement(CSWinBombDefuse);
+                    m_pBombDefuser->AwardAchievement(CSWinBombDefuse);
 
                     float   timeToDetonation = (m_flC4Blow - gpGlobals->curtime);
 
 					if ((timeToDetonation > 0.0f) && (timeToDetonation <= AchievementConsts::BombDefuseCloseCall_MaxTimeRemaining))
                     {
                         // Give achievement for defusing with < 1 second before detonation
-                        m_pBombDefuser->Get()->AwardAchievement(CSBombDefuseCloseCall);
+                        m_pBombDefuser->AwardAchievement(CSBombDefuseCloseCall);
                     }
 
-                    if ((timeToDetonation > 0.0f) && (m_pBombDefuser->Get()->HasDefuser()) && (timeToDetonation < AchievementConsts::BombDefuseNeededKit_MaxTime))
+                    if ((timeToDetonation > 0.0f) && (m_pBombDefuser->HasDefuser()) && (timeToDetonation < AchievementConsts::BombDefuseNeededKit_MaxTime))
                     {
                         // Give achievement for defusing with a defuse kit when not having the kit would have taken too long
-                        m_pBombDefuser->Get()->AwardAchievement(CSDefuseAndNeededKit);
+                        m_pBombDefuser->AwardAchievement(CSDefuseAndNeededKit);
                     }
 
                     // [dwenger] Added for fun-fact support
-                    if ( m_pBombDefuser->Get()->PickedUpDefuser() )
+                    if ( m_pBombDefuser->PickedUpDefuser() )
                     {
                         // Defuser kit was picked up, so set the fun fact
-                        m_pBombDefuser->Get()->SetDefusedWithPickedUpKit(true);
+                        m_pBombDefuser->SetDefusedWithPickedUpKit(true);
                     }
 
                     //=============================================================================
@@ -567,7 +555,7 @@ END_PREDICTION_DATA()
 				}
 
 			
-				Vector soundPosition = m_pBombDefuser->Get()->GetAbsOrigin() + Vector( 0, 0, 5 );
+				Vector soundPosition = m_pBombDefuser->GetAbsOrigin() + Vector( 0, 0, 5 );
 				CPASAttenuationFilter filter( soundPosition );
 
 				EmitSound( filter, entindex(), "c4.disarmfinish" );
@@ -576,7 +564,7 @@ END_PREDICTION_DATA()
 				m_bBombTicking = false;
 
 				// release the player from being frozen
-				m_pBombDefuser->Get()->m_bIsDefusing = false;
+				m_pBombDefuser->m_bIsDefusing = false;
 
 				CSGameRules()->m_bBombDefused = true;
 				//=============================================================================
@@ -587,20 +575,20 @@ END_PREDICTION_DATA()
 
 				if(CSGameRules()->CheckWinConditions() && !roundWasAlreadyWon)
 				{
-					m_pBombDefuser->Get()->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
+					m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
 				}				 
 				//=============================================================================
 				// HPE_END
 				//=============================================================================
 
 				// give the defuser credit for defusing the bomb
-				m_pBombDefuser->Get()->IncrementFragCount( 3 );
+				m_pBombDefuser->IncrementFragCount( 3 );
 
 				CSGameRules()->m_bBombDropped = false;
 				CSGameRules()->m_bBombPlanted = false;
 				
 				// Clear their progress bar.
-				m_pBombDefuser->Get()->SetProgressBarTime( 0 );
+				m_pBombDefuser->SetProgressBarTime( 0 );
 
 				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
@@ -619,14 +607,14 @@ END_PREDICTION_DATA()
 			IGameEvent * event = gameeventmanager->CreateEvent( "bomb_abortdefuse" );
 			if ( event )
 			{
-				event->SetInt( "userid", m_pBombDefuser->Get()->GetUserID() );
+				event->SetInt("userid", m_pBombDefuser->GetUserID() );
 				event->SetInt( "priority", 6 );
 				gameeventmanager->FireEvent( event );
 			}
 #endif
 
 			// release the player from being frozen
-			m_pBombDefuser->Get()->m_bIsDefusing = false;
+			m_pBombDefuser->m_bIsDefusing = false;
 			m_bStartDefuse = false;
 			m_pBombDefuser = NULL;
 		}
@@ -770,7 +758,7 @@ END_PREDICTION_DATA()
 
 		if ( m_bStartDefuse )
 		{
-			if ( player != m_pBombDefuser->Get() )
+			if ( player != m_pBombDefuser )
 			{
 				if ( player->m_iNextTimeCheck < gpGlobals->curtime )
 				{
@@ -1191,7 +1179,8 @@ void CC4::PrimaryAttack()
 				pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
 			}
 #endif
-			//FX_PlantBomb( pPlayer->entindex(), pPlayer->Weapon_ShootPosition(), PLANTBOMB_PLANT );
+
+			FX_PlantBomb( pPlayer->entindex(), pPlayer->Weapon_ShootPosition(), PLANTBOMB_PLANT );
 		}
 		else
 		{

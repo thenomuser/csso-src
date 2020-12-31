@@ -1515,17 +1515,6 @@ inline bool operator!=( const Vector& v, float const* f )
 	return false;
 }
 
-// return a vector perpendicular to another, with smooth variation. The difference between this and
-// something like VectorVectors is that there are now discontinuities. _unlike_ VectorVectors,
-// you won't get an "u
-void VectorPerpendicularToVector( Vector const &in, Vector *pvecOut );
-
-inline const Vector VectorPerpendicularToVector( const Vector &in )
-{
-	Vector out;
-	VectorPerpendicularToVector( in, &out );
-	return out;
-}
 
 //-----------------------------------------------------------------------------
 // AngularImpulse

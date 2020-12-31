@@ -531,18 +531,6 @@ void VectorMatrix( const Vector &forward, matrix3x4_t& matrix)
 	MatrixSetColumn( up, 2, matrix );
 }
 
-void VectorPerpendicularToVector( Vector const &in, Vector *pvecOut )
-{
-	float flY = in.y * in.y;
-	pvecOut->x = RemapVal( flY, 0, 1, in.z, 1 );
-	pvecOut->y = 0;
-	pvecOut->z = -in.x;
-	pvecOut->NormalizeInPlace();
-	float flDot = DotProduct( *pvecOut, in );
-	*pvecOut -= flDot * in;
-	pvecOut->NormalizeInPlace();
-}
-
 
 void VectorAngles( const float *forward, float *angles )
 {
@@ -1872,7 +1860,10 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	Assert( pos.IsValid() );
+	if ( !HushAsserts() )
+	{
+		Assert( pos.IsValid() );
+	}
 
 	QuaternionMatrix( q, matrix );
 
@@ -1881,25 +1872,13 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 	matrix[2][3] = pos.z;
 }
 
-void QuaternionMatrix( const Quaternion &q, const Vector &pos, const Vector &vScale, matrix3x4_t& mat )
-{
-	Assert( pos.IsValid() );
-	Assert( q.IsValid() );
-	Assert( vScale.IsValid() );
-
-	QuaternionMatrix( q, mat );
-
-	mat[ 0 ][ 0 ] *= vScale.x; mat[ 1 ][ 0 ] *= vScale.x; mat[ 2 ][ 0 ] *= vScale.x;
-	mat[ 0 ][ 1 ] *= vScale.y; mat[ 1 ][ 1 ] *= vScale.y; mat[ 2 ][ 1 ] *= vScale.y;
-	mat[ 0 ][ 2 ] *= vScale.z; mat[ 1 ][ 2 ] *= vScale.z; mat[ 2 ][ 2 ] *= vScale.z;
-	mat[ 0 ][ 3 ] = pos.x; mat[ 1 ][ 3 ] = pos.y; mat[ 2 ][ 3 ] = pos.z;
-}
-
-
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
 	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
+	if ( !HushAsserts() )
+	{
+		Assert( q.IsValid() );
+	}
 
 #ifdef _VPROF_MATHLIB
 	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );
@@ -3460,21 +3439,6 @@ float Approach( float target, float value, float speed )
 	else if ( delta < -speed )
 		value -= speed;
 	else 
-		value = target;
-
-	return value;
-}
-
-Vector Approach( Vector target, Vector value, float speed )
-{
-	Vector diff = (target - value);
-	float delta = diff.Length();
-
-	if ( delta > speed )
-		value += diff.Normalized() * speed;
-	else if ( delta < -speed )
-		value -= diff.Normalized() * speed;
-	else
 		value = target;
 
 	return value;

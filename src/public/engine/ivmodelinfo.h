@@ -186,8 +186,6 @@ public:
 	// Poked by engine host system
 	virtual void					OnLevelChange() = 0;
 
-	virtual KeyValues				*GetModelKeyValues( const model_t *pModel ) = 0;
-
 	virtual int						GetModelClientSideIndex( const char *name ) const = 0;
 
 	// Returns index of model by name, dynamically registered if not already known.

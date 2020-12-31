@@ -1,4 +1,4 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
+//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -91,11 +91,11 @@ CBasePlayerAnimState::CBasePlayerAnimState()
 	m_pOuter = NULL;
 	m_eCurrentMainSequenceActivity = ACT_IDLE;
 	m_flLastAnimationStateClearTime = 0.0f;
-	
+	/*
 	m_bInFootPlantIdleTurn = false;
 	m_flFootPlantIdleTurnCycle = 0.0f;
 	m_bFootPlantIdleNeedToLiftFeet = false;
-
+	*/
 	m_flPoseParamTargetDampenedScaleIdeal = 0.0f;
 }
 
@@ -344,9 +344,9 @@ void CBasePlayerAnimState::UpdateAimSequenceLayers(
 
 	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer );
 
-	pLayer->SetSequence( iAimSequence );
-	pLayer->SetCycle( flCycle );
-	pLayer->SetWeight( clamp( flWeightScale, 0.0f, 1.0f ) );
+	pLayer->m_nSequence = iAimSequence;
+	pLayer->m_flCycle = flCycle;
+	pLayer->m_flWeight = clamp( flWeightScale, 0.0f, 1.0f );
 
 	pLayer->SetOrder( iFirstLayer );	// should already be set
 
@@ -367,19 +367,19 @@ void CBasePlayerAnimState::OptimizeLayerWeights( int iFirstLayer, int nLayers )
 	for ( i=1; i < nLayers; i++ )
 	{
 		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer+i );
-		if ( pLayer->IsActive() && pLayer->GetWeight() > 0.0f )
+		if ( pLayer->IsActive() && pLayer->m_flWeight > 0.0f )
 		{
-			totalWeight += pLayer->GetWeight();
+			totalWeight += pLayer->m_flWeight;
 		}
 	}
 
 	// Set the idle layer's weight to be 1 minus the sum of other layer weights
 	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer );
-	if ( pLayer->IsActive() && pLayer->GetWeight() > 0.0f )
+	if ( pLayer->IsActive() && pLayer->m_flWeight > 0.0f )
 	{
 		float flWeight = 1.0f - totalWeight;
 		flWeight = MAX( flWeight, 0.0f );
-		pLayer->SetWeight( flWeight );
+		pLayer->m_flWeight = flWeight;
 	}
 
 	// This part is just an optimization. Since we have the walk/run animations weighted on top of 
@@ -391,7 +391,7 @@ void CBasePlayerAnimState::OptimizeLayerWeights( int iFirstLayer, int nLayers )
 	for ( i=0; i < nLayers; i++ )
 	{
 		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iFirstLayer+i );
-		if ( pLayer->IsActive() && pLayer->GetWeight() > 0.99 )
+		if ( pLayer->IsActive() && pLayer->m_flWeight > 0.99 )
 			iLastOne = i;
 	}
 
@@ -751,31 +751,31 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 			bool bIsMoving;
 			CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( MAIN_IDLE_SEQUENCE_LAYER );
 			
-			pLayer->SetWeight( 1 - CalcMovementPlaybackRate( &bIsMoving ) );
+			pLayer->m_flWeight = 1 - CalcMovementPlaybackRate( &bIsMoving );
 			if ( !bIsMoving )
 			{
-				pLayer->SetWeight( 1 );
+				pLayer->m_flWeight = 1;
 			}
 
 			if ( ShouldChangeSequences() )
 			{
 				// Whenever this layer stops blending, we can choose a new idle sequence to blend to, so he 
 				// doesn't always use the same idle.
-				if ( pLayer->GetWeight() < 0.02f || m_iCurrent8WayIdleSequence == -1 )
+				if ( pLayer->m_flWeight < 0.02f || m_iCurrent8WayIdleSequence == -1 )
 				{
 					m_iCurrent8WayIdleSequence = m_pOuter->SelectWeightedSequence( ACT_IDLE );
 					m_iCurrent8WayCrouchIdleSequence = m_pOuter->SelectWeightedSequence( ACT_CROUCHIDLE );
 				}
 
 				if ( m_eCurrentMainSequenceActivity == ACT_CROUCHIDLE || m_eCurrentMainSequenceActivity == ACT_RUN_CROUCH )
-					pLayer->SetSequence( m_iCurrent8WayCrouchIdleSequence );
+					pLayer->m_nSequence = m_iCurrent8WayCrouchIdleSequence;
 				else
-					pLayer->SetSequence( m_iCurrent8WayIdleSequence );
+					pLayer->m_nSequence = m_iCurrent8WayIdleSequence;
 			}
 			
-			pLayer->SetPlaybackRate( 1 );
-			pLayer->SetCycle( pLayer->GetCycle() + m_pOuter->GetSequenceCycleRate( pStudioHdr, pLayer->GetSequence() ) * gpGlobals->frametime );
-			pLayer->SetCycle( fmod( pLayer->GetCycle(), 1 ) );
+			pLayer->m_flPlaybackRate = 1;
+			pLayer->m_flCycle = pLayer->m_flCycle + m_pOuter->GetSequenceCycleRate( pStudioHdr, pLayer->m_nSequence ) * gpGlobals->frametime;
+			pLayer->m_flCycle = fmod( pLayer->m_flCycle, 1 );
 			pLayer->SetOrder( MAIN_IDLE_SEQUENCE_LAYER );
 #endif
 #endif
@@ -895,7 +895,7 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 		m_bCurrentFeetYawInitialized = true;
 		m_flGoalFeetYaw = m_flCurrentFeetYaw = m_flEyeYaw;
 		m_flLastTurnTime = 0.0f;
-		m_bInFootPlantIdleTurn = false;
+		//m_bInFootPlantIdleTurn = false;
 	}
 	else if ( bIsMoving || m_bForceAimYaw )
 	{
@@ -917,12 +917,12 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 				m_flGoalFeetYaw += 180;
 			}
 		}
-		m_bInFootPlantIdleTurn = false;
+		//m_bInFootPlantIdleTurn = false;
 	}
 	else if ( (gpGlobals->curtime - m_flLastTurnTime) > mp_facefronttime.GetFloat() && m_flGoalFeetYaw != m_flEyeYaw )
 	{
 		// player didn't move & turn for quite some time
-		if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
+		/*if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
 		{
 			m_bInFootPlantIdleTurn = true;
 			if ( m_flFootPlantIdleTurnCycle >= 1 )
@@ -930,7 +930,7 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 		}
 
 		float flDiff = AngleNormalize(m_flGoalFeetYaw - m_flEyeYaw);
-		m_bFootPlantIdleNeedToLiftFeet = (fabs(flDiff) > m_AnimConfig.m_flIdleFootPlantFootLiftDelta);
+		m_bFootPlantIdleNeedToLiftFeet = (fabs(flDiff) > m_AnimConfig.m_flIdleFootPlantFootLiftDelta);*/
 
 		m_flGoalFeetYaw = m_flEyeYaw;
 	}
@@ -941,21 +941,21 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 
 		if ( fabs(flDiff) > m_AnimConfig.m_flMaxBodyYawDegrees )
 		{
-			if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
+			/*if ( vel.Length2D() <= FOOTPLANT_MINIMUM_SPEED )
 			{
 				m_bInFootPlantIdleTurn = true;
 				if ( m_flFootPlantIdleTurnCycle >= 1 )
 					m_flFootPlantIdleTurnCycle = 0;
 			}
 
-			m_bFootPlantIdleNeedToLiftFeet = true;
+			m_bFootPlantIdleNeedToLiftFeet = true;*/
 
 			if ( flDiff  > 0 )
-				m_flGoalFeetYaw -= m_AnimConfig.m_flMaxBodyYawDegreesCorrectionAmount;
+				m_flGoalFeetYaw -= m_AnimConfig.m_flMaxBodyYawDegrees;
 			else
-				m_flGoalFeetYaw += m_AnimConfig.m_flMaxBodyYawDegreesCorrectionAmount;
+				m_flGoalFeetYaw += m_AnimConfig.m_flMaxBodyYawDegrees;
 		}
-
+		/*
 		// If current yaw is significantly different from goal, abort idle foot ik to avoid intersecting the legs
 		if ( m_bInFootPlantIdleTurn )
 		{
@@ -965,7 +965,7 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 				m_bInFootPlantIdleTurn = false;
 				m_flFootPlantIdleTurnCycle = 0;
 			}
-		}
+		}*/
 	}
 
 	m_flGoalFeetYaw = AngleNormalize( m_flGoalFeetYaw );
@@ -1134,8 +1134,8 @@ void CBasePlayerAnimState::DebugShowAnimState( int iStartLine )
 		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( MAIN_IDLE_SEQUENCE_LAYER );
 
 		AnimStatePrintf( iLine++, "idle: %s, weight: %.2f\n",
-			GetSequenceName( m_pOuter->GetModelPtr(), pLayer->GetSequence() ), 
-			(float)pLayer->GetWeight() );
+			GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ), 
+			(float)pLayer->m_flWeight );
 	}
 
 	for ( int i=0; i < m_pOuter->GetNumAnimOverlays()-1; i++ )
@@ -1143,20 +1143,20 @@ void CBasePlayerAnimState::DebugShowAnimState( int iStartLine )
 		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( AIMSEQUENCE_LAYER + i );
 #ifdef CLIENT_DLL
 		AnimStatePrintf( iLine++, "%s(%d), weight: %.2f, cycle: %.2f, order (%d), aim (%d)", 
-			!pLayer->IsActive() ? "-- ": (pLayer->GetSequence() == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->GetSequence() ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->GetSequence() ) ), 
-			!pLayer->IsActive() ? 0 : (int)pLayer->GetSequence(), 
-			!pLayer->IsActive() ? 0 : (float)pLayer->GetWeight(), 
-			!pLayer->IsActive() ? 0 : (float)pLayer->GetCycle(), 
-			!pLayer->IsActive() ? 0 : (int)pLayer->GetOrder(),
+			!pLayer->IsActive() ? "-- ": (pLayer->m_nSequence == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
+			!pLayer->IsActive() ? 0 : (int)pLayer->m_nSequence, 
+			!pLayer->IsActive() ? 0 : (float)pLayer->m_flWeight, 
+			!pLayer->IsActive() ? 0 : (float)pLayer->m_flCycle, 
+			!pLayer->IsActive() ? 0 : (int)pLayer->m_nOrder,
 			i
 			);
 #else
 		AnimStatePrintf( iLine++, "%s(%d), flags (%d), weight: %.2f, cycle: %.2f, order (%d), aim (%d)", 
-			!pLayer->IsActive() ? "-- " : ( pLayer->GetSequence() == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->GetSequence() ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->GetSequence() ) ), 
-			!pLayer->IsActive() ? 0 : (int)pLayer->GetSequence(), 
+			!pLayer->IsActive() ? "-- " : ( pLayer->m_nSequence == 0 ? "-- " : (showanimstate_activities.GetBool()) ? GetSequenceActivityName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) : GetSequenceName( m_pOuter->GetModelPtr(), pLayer->m_nSequence ) ), 
+			!pLayer->IsActive() ? 0 : (int)pLayer->m_nSequence, 
 			!pLayer->IsActive() ? 0 : (int)pLayer->m_fFlags,// Doesn't exist on client
-			!pLayer->IsActive() ? 0 : (float)pLayer->GetWeight(), 
-			!pLayer->IsActive() ? 0 : (float)pLayer->GetCycle(), 
+			!pLayer->IsActive() ? 0 : (float)pLayer->m_flWeight, 
+			!pLayer->IsActive() ? 0 : (float)pLayer->m_flCycle, 
 			!pLayer->IsActive() ? 0 : (int)pLayer->m_nOrder,
 			i
 			);

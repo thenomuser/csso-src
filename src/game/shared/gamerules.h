@@ -110,11 +110,8 @@ private:
 	static CGameRulesProxy *s_pGameRulesProxy;
 };
 
-#ifndef DEBUG
-abstract_class CGameRules : public CMemZeroOnNew, public CAutoGameSystemPerFrame
-#else
+
 abstract_class CGameRules : public CAutoGameSystemPerFrame
-#endif
 {
 public:
 	DECLARE_CLASS_GAMEROOT( CGameRules, CAutoGameSystemPerFrame );

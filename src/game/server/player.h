@@ -640,6 +640,7 @@ public:
 	bool					TouchedPhysics( void );
 	Vector					GetSmoothedVelocity( void );
 
+	virtual	void			RefreshCollisionBounds( void );
 	virtual void			InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
 	virtual void			VPhysicsDestroyObject();
 	void					SetVCollisionState( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, int collisionState );
@@ -774,7 +775,6 @@ public:
 
 	surfacedata_t *GetSurfaceData( void ) { return m_pSurfaceData; }
 	void SetLadderNormal( Vector vecLadderNormal ) { m_vecLadderNormal = vecLadderNormal; }
-	const Vector &GetLadderNormal( void ) const { return m_vecLadderNormal; }
 
 	// Here so that derived classes can use the expresser
 	virtual CAI_Expresser *GetExpresser() { return NULL; };
