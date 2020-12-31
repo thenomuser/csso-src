@@ -7376,13 +7376,12 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 		return;
 	}
 
-	const char *classname = commandInfo->m_classname;
-	if ( Q_strncmp( classname, "weapon_", 7 ) == 0 )
-	{
-		const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, classname + 7 ) );
-		if ( loadoutWeapon != NULL )
-			classname = loadoutWeapon;
-	}
+	char classname[64];
+	Q_strcpy( classname, commandInfo->m_classname );
+
+	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, commandInfo->m_command ) );
+	if ( loadoutWeapon != NULL )
+		Q_snprintf( classname, sizeof( classname ), "weapon_%s", loadoutWeapon );
 
 	CBaseCombatWeapon *pPrimary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 	CBaseCombatWeapon *pSecondary = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
