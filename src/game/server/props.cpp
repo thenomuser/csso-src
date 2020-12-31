@@ -3293,8 +3293,6 @@ static CBreakableProp *BreakModelCreate_Prop( CBaseEntity *pOwner, breakmodel_t 
 			if ( pOwnerFlame )
 			{
 				pEntity->Ignite( pOwnerFlame->GetRemainingLife(), false );
-				pEntity->IgniteNumHitboxFires( pOwnerFlame->GetNumHitboxFires() );
-				pEntity->IgniteHitboxFireScale( pOwnerFlame->GetHitboxFireScale() );
 			}
 			else
 			{

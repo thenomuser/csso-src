@@ -508,7 +508,7 @@ bool CBaseFlex::HandleStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoSce
 		float seq_duration = SequenceDuration( info->m_nSequence );
 		float flCycle = dt / seq_duration;
 		flCycle = flCycle - (int)flCycle; // loop
-		SetLayerCycle( info->m_iLayer, flCycle, flCycle, 0.f );
+		SetLayerCycle( info->m_iLayer, flCycle, flCycle );
 
 		SetLayerPlaybackRate( info->m_iLayer, 0.0 );
 	}

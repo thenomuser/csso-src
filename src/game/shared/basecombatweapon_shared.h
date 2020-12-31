@@ -18,9 +18,11 @@
 #include "baseviewmodel_shared.h"
 #include "weapon_proficiency.h"
 #include "utlmap.h"
+#include "npcevent.h"
 
 #if defined( CLIENT_DLL )
 #define CBaseCombatWeapon C_BaseCombatWeapon
+#define CBaseWeaponWorldModel C_BaseWeaponWorldModel
 #endif
 
 // Hacky
@@ -167,6 +169,73 @@ private:
 
 private:
 	bool							m_bActive;
+
+};
+
+enum WeaponHoldsPlayerAnimCapability_t
+{
+	WEAPON_PLAYER_ANIMS_UNKNOWN = 0,
+	WEAPON_PLAYER_ANIMS_AVAILABLE,
+	WEAPON_PLAYER_ANIMS_NOT_AVAILABLE
+};
+
+class CBaseWeaponWorldModel : public CBaseAnimatingOverlay
+{
+	DECLARE_CLASS( CBaseWeaponWorldModel, CBaseAnimatingOverlay );
+	DECLARE_NETWORKCLASS();
+	DECLARE_PREDICTABLE();
+
+#ifndef CLIENT_DLL
+	DECLARE_DATADESC();
+#endif
+
+public:
+	CBaseWeaponWorldModel();
+	~CBaseWeaponWorldModel();
+	void SetOwningWeapon( CBaseCombatWeapon *pWeaponParent );
+	void ShowWorldModel( bool bVisible );
+	bool HoldsPlayerAnimations( void );
+
+#ifdef CLIENT_DLL
+	virtual void	FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
+	virtual bool	ShouldDraw( void ) OVERRIDE;
+	virtual void	OnDataChanged( DataUpdateType_t updateType );
+
+	float * GetRenderClipPlane( void );
+	virtual int DrawModel( int flags );
+
+	virtual bool SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime );
+
+	virtual bool IsFollowingEntity() { return true; } // weapon world models are ALWAYS carried by players
+
+#else
+	virtual void HandleAnimEvent( animevent_t *pEvent );
+	virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo ) OVERRIDE;
+	virtual int	UpdateTransmitState() OVERRIDE;
+#endif
+
+	virtual bool	IsWeaponWorldModel( void ) const { return true; };
+
+	void ValidateParent( void );
+
+	int GetLeftHandAttachBoneIndex();
+	int GetRightHandAttachBoneIndex();
+	int GetMuzzleAttachIndex();
+	int GetMuzzleBoneIndex();
+	void ResetCachedBoneIndices();
+
+	bool HasDormantOwner( void );
+
+	typedef CHandle<CBaseCombatWeapon> CBaseCombatWeaponHandle;
+	CNetworkVar( CBaseCombatWeaponHandle, m_hCombatWeaponParent );
+
+private:
+	WeaponHoldsPlayerAnimCapability_t m_nHoldsPlayerAnims;
+	
+	int m_nLeftHandAttachBoneIndex;
+	int m_nRightHandAttachBoneIndex;
+	int m_nMuzzleAttachIndex;
+	int m_nMuzzleBoneIndex;
 
 };
 
@@ -429,6 +498,8 @@ public:
 // Server Only Methods
 #if !defined( CLIENT_DLL )
 
+	CBaseWeaponWorldModel*	CreateWeaponWorldModel( void );
+
 	DECLARE_DATADESC();
 	virtual void			FallInit( void );						// prepare to fall to the ground
 	virtual void			FallThink( void );						// make the weapon fall to the ground after spawning
@@ -478,6 +549,8 @@ public:
 
 // Client only methods
 #else
+
+	virtual void			UpdateVisibility( void );
 
 	virtual void			BoneMergeFastCullBloat( Vector &localMins, Vector &localMaxs, const Vector &thisEntityMins, const Vector &thisEntityMaxs  ) const;
 
@@ -572,6 +645,11 @@ protected:
 
 public:
 
+#ifndef CLIENT_DLL
+	float					m_flLastTimeInAir;
+	virtual void			PhysicsSimulate( void );
+#endif
+
 	// Networked fields
 	CNetworkVar( int, m_nViewModelIndex );
 
@@ -588,6 +666,15 @@ public:
 	CNetworkVar( int, m_iWorldModelIndex );
 
 	CNetworkVar( int, m_iNumEmptyAttacks );
+
+	typedef CHandle<CBaseWeaponWorldModel> CBaseWeaponWorldModelHandle;
+	CNetworkVar( CBaseWeaponWorldModelHandle, m_hWeaponWorldModel );
+
+	CBaseWeaponWorldModel* GetWeaponWorldModel( void ) { return m_hWeaponWorldModel->Get(); }
+
+#ifndef CLIENT_DLL
+	void ShowWeaponWorldModel( bool bVisible );
+#endif
 
 	// Sounds
 	float					m_flNextEmptySoundTime;				// delay on empty sound playing

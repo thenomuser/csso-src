@@ -95,7 +95,8 @@ enum OverlayType_t
 	OVERLAY_LINE,
 	OVERLAY_TRIANGLE,
 	OVERLAY_SWEPT_BOX,
-	OVERLAY_BOX2
+	OVERLAY_BOX2,
+	OVERLAY_CAPSULE
 };
 
 struct OverlayBase_t
@@ -238,6 +239,21 @@ struct OverlaySweptBox_t : public OverlayBase_t
 	int				g;
 	int				b;
 	int				a;
+};
+
+
+struct OverlayCapsule_t : public OverlayBase_t
+{
+	OverlayCapsule_t() { m_Type = OVERLAY_CAPSULE; }
+
+	Vector			start;
+	Vector			end;
+	float			flRadius;
+	int				r;
+	int				g;
+	int				b;
+	int				a;
+	bool			m_bWireframe;
 };
 
 
@@ -661,6 +677,30 @@ void AddBoxOverlay2( const Vector& origin, const Vector& mins, const Vector& max
 	s_pOverlays = new_overlay;
 }
 
+void AddCapsuleOverlay( const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration)
+{
+	if ( cl.IsPaused() )
+		return;
+
+	AUTO_LOCK( s_OverlayMutex );
+	OverlayCapsule_t *new_overlay = new OverlayCapsule_t;
+
+	new_overlay->start = vStart;
+	new_overlay->end = vEnd;
+	
+	new_overlay->flRadius = flRadius;
+
+	new_overlay->r = r;
+	new_overlay->g = g;
+	new_overlay->b = b;
+	new_overlay->a = a;
+
+	new_overlay->SetEndTime( flDuration );
+
+	new_overlay->m_pNextOverlay = s_pOverlays;
+	s_pOverlays = new_overlay;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Add new overlay sphere
 // Input  : Position of sphere
@@ -925,6 +965,15 @@ void DrawOverlay( OverlayBase_t *pOverlay )
 		}
 		break;
 
+	case OVERLAY_CAPSULE:
+		{
+			OverlayCapsule_t *pCapsule = static_cast<OverlayCapsule_t*>(pOverlay);
+			RenderCapsule( pCapsule->start, pCapsule->end, pCapsule->flRadius,
+				Color( pCapsule->r, pCapsule->g, pCapsule->b, pCapsule->a ), 
+				( pCapsule->m_bWireframe ? g_pMaterialWireframeVertexColor : g_pMaterialAmbientCube ) );
+		}
+		break;
+
 	default:
 		Assert(0);
 	}
@@ -975,6 +1024,13 @@ void DestroyOverlay( OverlayBase_t *pOverlay )
 		{
 			OverlayTriangle_t *pTriangle = static_cast<OverlayTriangle_t*>(pOverlay);
 			delete pTriangle;
+		}
+		break;
+
+	case OVERLAY_CAPSULE:
+		{
+			OverlayCapsule_t *pCapsule = static_cast<OverlayCapsule_t*>(pOverlay);
+			delete pCapsule;
 		}
 		break;
 
@@ -1298,6 +1354,11 @@ public:
 	void PurgeTextOverlays()
 	{
 		CDebugOverlay::PurgeTextOverlays();
+	}
+
+	void AddCapsuleOverlay( const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration )
+	{
+		CDebugOverlay::AddCapsuleOverlay( vStart, vEnd, flRadius, r, g, b, a, flDuration );
 	}
 };
 

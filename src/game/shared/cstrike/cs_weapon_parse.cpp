@@ -453,6 +453,12 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "" );
 	Q_strncpy( m_szIronsightDotMaterial, pIronsightDotMaterial, sizeof( m_szIronsightDotMaterial ) );
 
+	// buymenu
+	const char* pBuyMenuAnim = pKeyValuesData->GetString( "BuyMenuAnim", "" );
+	Q_strncpy( m_szBuyMenuAnim, pBuyMenuAnim, sizeof( m_szBuyMenuAnim ) );
+	const char* pBuyMenuAnimT = pKeyValuesData->GetString( "BuyMenuAnimT", pBuyMenuAnim );
+	Q_strncpy( m_szBuyMenuAnimT, pBuyMenuAnimT, sizeof( m_szBuyMenuAnimT ) );
+
 	// Figure out what team can have this weapon.
 	m_iTeam = TEAM_UNASSIGNED;
 	const char *pTeam = pKeyValuesData->GetString( "Team", NULL );
@@ -523,11 +529,11 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 //	engine->ForceExactFile( UTIL_VarArgs("scripts/%s.ctx", szWeaponName ) );
 
 	// Model bounds are rounded to the nearest integer, then extended by 1
-	engine->ForceModelBounds( szWorldModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );
+	/*engine->ForceModelBounds( szWorldModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );
 	if ( m_szAddonModel[0] )
 	{
 		engine->ForceModelBounds( m_szAddonModel, Vector( -5, -5, -6 ), Vector( 13, 5, 7 ) );
-	}/*
+	}
 	if ( m_szSilencerModel[0] )
 	{
 		engine->ForceModelBounds( m_szSilencerModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );

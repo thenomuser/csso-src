@@ -67,8 +67,7 @@ public:
 
 
 public:
-	char m_ModelName[128];
-	char m_AnimName[128];
+	char m_WeaponName[128];
 	int m_ViewXPos;
 	int m_ViewYPos;
 	int m_ViewZPos;

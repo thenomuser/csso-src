@@ -142,7 +142,7 @@ public:
 
 	virtual CStudioHdr *OnNewModel( void );
 
-	virtual void	StandardBlendingRules( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime, int boneMask );
+	virtual void	StandardBlendingRules( CStudioHdr *hdr, Vector pos[], QuaternionAligned q[], float currentTime, int boneMask );
 
 	virtual void OnThreadedDrawSetup();
 

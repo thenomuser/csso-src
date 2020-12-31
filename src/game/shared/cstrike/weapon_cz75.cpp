@@ -173,12 +173,12 @@ void CWeaponCZ75::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChar
 				{
 					vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), 1 );
 					//world model
-					/*CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+					CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
 					if ( pWorldModel )
 					{
 						pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), 1 );
 					}
-					else*/
+					else
 					{
 						SetBodygroup( FindBodygroupByName( "front_mag" ), 1 );
 					}
@@ -198,12 +198,12 @@ void CWeaponCZ75::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChar
 				{
 					vm->SetBodygroup( vm->FindBodygroupByName( "front_mag" ), iGroupNum );
 					//world model
-					/*CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+					CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
 					if ( pWorldModel )
 					{
 						pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "front_mag" ), iGroupNum );
 					}
-					else*/
+					else
 					{
 						SetBodygroup( FindBodygroupByName( "front_mag" ), iGroupNum );
 					}
