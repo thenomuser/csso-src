@@ -349,6 +349,7 @@ public:
 	void				 UpdateIronSightController( void );
 	CIronSightController *m_IronSightController;
 	CNetworkVar( int, m_iIronSightMode );
+	CNetworkVar( bool, m_bIronsightInitiallized );
 #endif //IRONSIGHT
 };
 
