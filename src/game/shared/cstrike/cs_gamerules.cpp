@@ -6572,7 +6572,6 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 			awardReasonToken = "#Team_Cash_Award_Win_Hostage_Rescue";
 		else
 			awardReasonToken = "#Team_Cash_Award_Win_Hostages_Rescue";
-        break;;
 		break;
 		case TeamCashAward::LOSER_BONUS:
 		if ( amount > 0 )
