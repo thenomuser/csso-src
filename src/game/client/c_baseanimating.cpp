@@ -6052,9 +6052,16 @@ void C_BaseAnimating::SetBody( int iBody )
 
 void C_BaseAnimating::SetBodygroup( int iGroup, int iValue )
 {
-	Assert( GetModelPtr() );
+	// PiMoN: I dont know how and why, but when creating C_CSPlayer
+	// addon models, it sometimes tries to SetBodygroup on an invalid
+	// bodygroup id (-1) which results in a crash. Putting this check
+	// to prevent it because I dont even know how SetBodygroup() is called
+	if ( iGroup > -1 )
+	{
+		Assert( GetModelPtr() );
 
-	::SetBodygroup( GetModelPtr( ), m_nBody, iGroup, iValue );
+		::SetBodygroup( GetModelPtr(), m_nBody, iGroup, iValue );
+	}
 }
 
 int C_BaseAnimating::GetBodygroup( int iGroup )
