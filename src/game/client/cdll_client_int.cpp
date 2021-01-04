@@ -337,7 +337,7 @@ static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display num
 static ConVar s_cl_team("cl_team", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default team when joining a game");
 static ConVar s_cl_class("cl_class", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default class when joining a game");
 
-static ConVar mod_version( "mod_version", "0.5", 0 );
+static ConVar mod_version( "mod_version", "0.6", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 
 // Discord RPC
 static ConVar cl_discord_appid("cl_discord_appid", "731229035065245739", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
