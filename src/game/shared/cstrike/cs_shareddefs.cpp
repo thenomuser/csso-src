@@ -108,8 +108,8 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",	"ST6",			CS_CLASS_SEAL_TEAM_6,	false	},
 	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",	"SWAT_Epic",	CS_CLASS_SWAT,			true	},
 	// what?
-	{ "models/player/custom_player/legacy/ctm_sas_old.mdl",			"models/weapons/arms/ct_arms_sas_old.mdl",		"SAS",			CS_CLASS_SAS,			0, false	},
-	{ "models/player/custom_player/legacy/ctm_fbi_old.mdl",			"models/weapons/arms/ct_arms_fbi_old.mdl",		"FBI",			CS_CLASS_FBI,			0, false	},
+	{ "models/player/ctm_sas_old.mdl",								"SAS",			CS_CLASS_SAS,			false	},
+	{ "models/player/ctm_fbi_old.mdl",								"FBI",			CS_CLASS_FBI,			false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoCT( int i )
@@ -148,8 +148,8 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",	"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	// what?
-	{ "models/player/custom_player/legacy/tm_leet_old.mdl",				"models/weapons/arms/t_arms_leet_old.mdl",				"Leet",				CS_CLASS_L337_KREW,				0,	false	},
-	{ "models/player/custom_player/legacy/tm_phoenix_old.mdl",			"models/weapons/arms/t_arms_phoenix_old.mdl",			"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	0,	false	},
+	{ "models/player/tm_leet_old.mdl",									"Leet",				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/tm_phoenix_old.mdl",								"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	}
 };
 
 const CCSAgentInfo* GetCSAgentInfoT( int i )

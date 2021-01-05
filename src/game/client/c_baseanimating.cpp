@@ -5287,16 +5287,10 @@ int C_BaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSequ
 
 void C_BaseAnimating::SetBodygroup( int iGroup, int iValue )
 {
-// PiMoN: I dont know how and why, but when creating C_CSPlayer
-	// addon models, it sometimes tries to SetBodygroup on an invalid
-	// bodygroup id (-1) which results in a crash. Putting this check
-	// to prevent it because I dont even know how SetBodygroup() is called
-	if ( iGroup > -1 )
-	{
-		Assert( GetModelPtr() );
-
-		::SetBodygroup( GetModelPtr(), m_nBody, iGroup, iValue );
-	}
+	// SetBodygroup is not supported on pending dynamic models. Wait for it to load!
+	// XXX TODO we could buffer up the group and value if we really needed to. -henryg
+	Assert( GetModelPtr() );
+	::SetBodygroup( GetModelPtr( ), m_nBody, iGroup, iValue );
 }
 
 int C_BaseAnimating::GetBodygroup( int iGroup )
