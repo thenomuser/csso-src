@@ -1442,11 +1442,11 @@ inline void CInterpolatedVarArrayBase<Type, IS_ARRAY>::_Interpolate_Hermite(
 		// Note that QAngle has a specialization that will do quaternion interpolation here...
 		if ( m_bLooping[ i ] )
 		{
-			out[ i ] = LoopingLerp_Hermite( frac, prev->GetValue()[i], start->GetValue()[i], end->GetValue()[i] );
+			out[i] = LoopingLerp( frac, start->GetValue()[i], end->GetValue()[i] );
 		}
 		else
 		{
-			out[ i ] = Lerp_Hermite( frac, prev->GetValue()[i], start->GetValue()[i], end->GetValue()[i] );
+			out[i] = Lerp( frac, start->GetValue()[i], end->GetValue()[i] );
 		}
 
 		// Clamp the output from interpolation. There are edge cases where something like m_flCycle

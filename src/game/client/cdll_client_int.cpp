@@ -337,7 +337,7 @@ static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display num
 static ConVar s_cl_team("cl_team", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default team when joining a game");
 static ConVar s_cl_class("cl_class", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default class when joining a game");
 
-static ConVar mod_version( "mod_version", "0.6", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+static ConVar mod_version( "mod_version", "0.5", 0 );
 
 // Discord RPC
 static ConVar cl_discord_appid("cl_discord_appid", "731229035065245739", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
@@ -2219,6 +2219,9 @@ void OnRenderStart()
 	g_pPortalRender->UpdatePortalPixelVisibility(); //updating this one or two lines before querying again just isn't cutting it. Update as soon as it's cheap to do so.
 #endif
 
+	// [mariod] - testing, see note in c_baseanimating.cpp
+	C_BaseAnimating::EnableInvalidateBoneCache( true );
+
 	::partition->SuppressLists( PARTITION_ALL_CLIENT_EDICTS, true );
 	C_BaseEntity::SetAbsQueriesValid( false );
 
@@ -2334,6 +2337,9 @@ void OnRenderEnd()
 {
 	// Disallow access to bones (access is enabled in CViewRender::SetUpView).
 	C_BaseAnimating::PopBoneAccess( "CViewRender::SetUpView->OnRenderEnd" );
+
+	// [mariod] - testing, see note in c_baseanimating.cpp
+	C_BaseAnimating::EnableInvalidateBoneCache( false );
 
 	UpdatePVSNotifiers();
 

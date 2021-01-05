@@ -1273,13 +1273,17 @@ void CWeaponCSBase::Precache( void )
 {
 	BaseClass::Precache();
 
+	// need to precache UI models for buymenu or they won't appear
+	PrecacheModel( "models/weapons/w_eq_armor_helmet.mdl" );
+	PrecacheModel( "models/weapons/w_eq_armor.mdl" );
+
 #ifdef CS_SHIELD_ENABLED
 	if ( GetCSWpnData().m_bCanUseWithShield )
 	{
 		 PrecacheModel( GetCSWpnData().m_szShieldViewModel );
 	}
 #endif
-
+	
 	if ( GetCSWpnData().m_szMagModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szMagModel );
 
@@ -2357,43 +2361,6 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 				}
 
-				return;
-			}
-			else if ( nEvent == AE_CL_BODYGROUP_SET_VALUE )
-			{
-				CCSPlayer *pCSPlayer = GetPlayerOwner();
-				if ( pCSPlayer && pCSPlayer->GetActiveCSWeapon() )
-				{
-					if ( CBaseViewModel *vm = pCSPlayer->GetViewModel( m_nViewModelIndex ) )
-					{
-						char szBodygroupName[256];
-						int value = 0;
-
-						char token[256];
-
-						const char *p = pEvent->options;
-
-						// Bodygroup Name
-						p = nexttoken( token, p, ' ' );
-						if ( token )
-						{
-							Q_strncpy( szBodygroupName, token, sizeof( szBodygroupName ) );
-						}
-
-						// Get the desired value
-						p = nexttoken( token, p, ' ' );
-						if ( token )
-						{
-							value = atoi( token );
-						}
-
-						int index = vm->FindBodygroupByName( szBodygroupName );
-						if ( index >= 0 )
-						{
-							vm->SetBodygroup( index, value );
-						}
-					}
-				}
 				return;
 			}
 		}

@@ -258,7 +258,15 @@ void CWeaponUSP::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChara
 				}
 
 				//world model
-				SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+				if ( pWorldModel )
+				{
+					pWorldModel->SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				}
+				else
+				{
+					SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				}
 				break;
 			}
 			case AE_CL_HIDE_SILENCER:
@@ -270,7 +278,15 @@ void CWeaponUSP::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChara
 				}
 
 				//world model
-				SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
+				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+				if ( pWorldModel )
+				{
+					pWorldModel->SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
+				}
+				else
+				{
+					SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
+				}
 				break;
 			}
 		}

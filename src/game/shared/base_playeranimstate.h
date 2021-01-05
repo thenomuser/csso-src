@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,7 +27,7 @@
 // animation at low playback rate).
 #define MOVING_MINIMUM_SPEED 0.5f
 
-//#define FOOTPLANT_MINIMUM_SPEED 0.1f
+#define FOOTPLANT_MINIMUM_SPEED 0.1f
 
 #define MAIN_IDLE_SEQUENCE_LAYER 0	// For 8-way blended models, this layer blends an idle on top of the run/walk animation to simulate a 9-way blend.
 									// For 9-way blended models, we don't use this layer.
@@ -46,11 +46,11 @@ public:
 	// This tells how far the upper body can rotate left and right. If he begins to rotate
 	// past this, it'll turn his feet to face his upper body.
 	float	m_flMaxBodyYawDegrees;
-	
+
 	float	m_flMaxBodyYawDegreesCorrectionAmount;
-	//float	m_flIdleFootPlantMaxYaw;
-	//float	m_flIdleFootPlantFootLiftDelta;
-	
+	float	m_flIdleFootPlantMaxYaw;
+	float	m_flIdleFootPlantFootLiftDelta;
+
 	// How do the legs animate?
 	LegAnimType_t m_LegAnimType;
 
@@ -235,11 +235,11 @@ protected:
 	QAngle				m_angRender;
 
 	Vector2D			m_vLastMovePose;
-	/*
+
 	bool				m_bInFootPlantIdleTurn;
 	float				m_flFootPlantIdleTurnCycle;
 	bool				m_bFootPlantIdleNeedToLiftFeet;
-	*/
+
 	float				m_flPoseParamTargetDampenedScaleIdeal;
 
 private:

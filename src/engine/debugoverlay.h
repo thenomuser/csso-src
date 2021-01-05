@@ -33,6 +33,7 @@ namespace CDebugOverlay
 	void AddScreenTextOverlay(float flXPos, float flYPos, int line_offset, float flDuration, int r, int g, int b, int a, const char *text);
 	void AddTextOverlay(const Vector& textPos, float duration, float alpha, const char *text) ;
 	void Draw3DOverlays(void);
+	void AddCapsuleOverlay(const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration);
 #endif
 }
 

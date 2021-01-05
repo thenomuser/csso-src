@@ -402,6 +402,8 @@ static void WriteBoneInfo( studiohdr_t *phdr )
 			pbbox[i].group				= set->hitbox[i].group;
 			VectorCopy( set->hitbox[i].bmin, pbbox[i].bbmin );
 			VectorCopy( set->hitbox[i].bmax, pbbox[i].bbmax );
+			VectorCopy( set->hitbox[i].angOffsetOrientation, pbbox[i].angOffsetOrientation );
+			pbbox[i].flCapsuleRadius = set->hitbox[i].flCapsuleRadius;
 			pbbox[i].szhitboxnameindex = 0;
 			AddToStringTable( &(pbbox[i]), &(pbbox[i].szhitboxnameindex), set->hitbox[i].hitboxname );	
 		}
@@ -460,6 +462,7 @@ static void WriteSequenceInfo( studiohdr_t *phdr )
 	mstudioseqdesc_t	*pbaseseqdesc;
 	mstudioevent_t		*pevent;
 	byte				*ptransition;
+	mstudioanimtag_t	*panimtag;
 
 	// write models to disk with this flag set false. This will force
 	// the sequences to be indexed by activity whenever the g_model is loaded
@@ -845,6 +848,48 @@ static void WriteSequenceInfo( studiohdr_t *phdr )
 		pseqdesc->cycleposeindex = g_sequence[i].cycleposeindex;
 
 		WriteSeqKeyValues( pseqdesc, &g_sequence[i].KeyValue );
+
+		// Write activity modifiers
+		mstudioactivitymodifier_t *pactivitymodifier	= (mstudioactivitymodifier_t *)pData;
+		pseqdesc->numactivitymodifiers		= g_sequence[i].numactivitymodifiers;
+		pseqdesc->activitymodifierindex		= (pData - pSequenceStart);
+		pData += pseqdesc->numactivitymodifiers * sizeof( mstudioactivitymodifier_t );
+		ALIGN4( pData );
+
+		for (j = 0; j < pseqdesc->numactivitymodifiers; j++)
+		{
+			AddToStringTable( &pactivitymodifier[j], &pactivitymodifier[j].sznameindex, g_sequence[i].activitymodifier[j].name );			
+		}
+
+		// save animtags
+		panimtag				= (mstudioanimtag_t *)pData;
+		pseqdesc->numanimtags	= g_sequence[i].numanimtags;
+		pseqdesc->animtagindex	= (pData - pSequenceStart);
+		pData += pseqdesc->numanimtags * sizeof( mstudioanimtag_t );
+		for (j = 0; j < g_sequence[i].numanimtags; j++)
+		{
+			panimtag[j].cycle = g_sequence[i].animtags[j].cycle;
+			AddToStringTable( &panimtag[j], &panimtag[j].sztagindex, g_sequence[i].animtags[j].tagname );
+		}
+
+		if ( g_sequence[i].flags & STUDIO_ROOTXFORM )
+		{
+			int bone = findGlobalBone( g_sequence[i].rootDriverBoneName );
+			if (bone != -1)
+			{
+				pseqdesc->rootDriverIndex = bone;
+			}
+			else
+			{
+				MdlError("unable to find bone %s\n", token );
+			}
+		}
+		else
+		{
+			pseqdesc->rootDriverIndex = 0;
+		}
+		
+		ALIGN4( pData );
 	}
 
 	if (bErrors)

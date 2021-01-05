@@ -156,6 +156,21 @@ void DispatchEffect( const char *pName, const CEffectData &data );
 
 #endif
 
+Vector CCSPlayer::Weapon_ShootPosition()
+{
+	Vector vecPos = BaseClass::Weapon_ShootPosition();
+
+	// fail out to un-altered position
+	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
+		return vecPos;
+
+	// warning: the modify eye position call will query and set up bones
+	// on the game server it is called when giving weapon items or firing bullets
+	m_PlayerAnimStateCSGO->ModifyEyePosition( vecPos );
+
+	return vecPos;
+}
+
 bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
 	if ( CSGameRules() )
@@ -547,18 +562,6 @@ void CCSPlayer::RemoveCarriedHostage( void )
 		m_hViewModel.Set( HOSTAGE_VIEWMODEL, 0 );
 	}
 #endif
-}
-
-bool CCSPlayer::IsBotOrControllingBot()
-{
-	if ( IsBot() )
-		return true;
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	if ( IsControllingBot() )
-		return true;
-#endif
-
-	return false;
 }
 
 void CCSPlayer::GetBulletTypeParameters(
@@ -1425,21 +1428,26 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 		{
 			bUseObserverTarget = true;
 		}
-		
+
+		C_BaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
 		C_BaseViewModel *pViewModel = GetViewModel(WEAPON_VIEWMODEL);
 
-		if ( pWeapon->GetOwner() && pWeapon->GetOwner()->IsDormant() )
+		CBaseWeaponWorldModel *pWeaponWorldModel = NULL;
+		if ( pActiveWeapon && (!pViewModel || this->ShouldDraw()) )
+			pWeaponWorldModel = pActiveWeapon->GetWeaponWorldModel();
+
+		if ( pWeaponWorldModel && pWeaponWorldModel->HasDormantOwner() )
 		{
 			// This is likely a player firing from around a corner, where this client can't see them.
 			// Don't modify the tracer start position, since our local world weapon model position is not reliable.
 		}
-		else
+		else if (pWeaponWorldModel)
 		{
-			iAttachment = pWeapon->LookupAttachment( "muzzle_flash" );
+			iAttachment = pWeaponWorldModel->LookupAttachment( "muzzle_flash" );
 			if ( iAttachment > 0 )
-				pWeapon->GetAttachment( iAttachment, vecStart );
+				pWeaponWorldModel->GetAttachment( iAttachment, vecStart );
 		}
-		if ( pViewModel )
+		else if ( pViewModel )
 		{
 			iAttachment = pViewModel->LookupAttachment( "1" );
 			pViewModel->GetAttachment( iAttachment, vecStart );
@@ -1828,6 +1836,78 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	}
 
 	return AcquireResult::Allowed;
+}
+
+bool CCSPlayer::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence )
+{
+	if ( !pWeaponStudioHdr || !pLayer )
+	{
+		if ( pLayer )
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		return false;
+	}	
+
+	if ( pLayer->m_pDispatchedStudioHdr != pWeaponStudioHdr || pLayer->m_nDispatchedSrc != iSequence || pLayer->m_nDispatchedDst >= pWeaponStudioHdr->GetNumSeq() )
+	{
+		pLayer->m_pDispatchedStudioHdr = pWeaponStudioHdr;
+		pLayer->m_nDispatchedSrc = iSequence;
+		if ( pWeaponStudioHdr )
+		{
+			const char *pszSeqName = GetSequenceName( iSequence );
+			
+#ifdef DEBUG
+			if ( V_stristr( pszSeqName, "default" ) )
+			{
+				AssertMsg( false, "Warning: weapon is attempting to play its default sequence as a dispatched anim.\n" );
+			}
+#endif
+
+			// check if the weapon has a CT or T specific version of this sequence (denoted by a _t or ct suffix)
+			if ( GetTeamNumber() == TEAM_TERRORIST )
+			{
+				char pszLayerNameT[128];
+				V_sprintf_safe( pszLayerNameT, "%s_t", pszSeqName );
+				int nTeamSpecificSequenceIndex = pWeaponStudioHdr->LookupSequence( pszLayerNameT );
+				if ( nTeamSpecificSequenceIndex > 0 )
+				{
+					pLayer->m_nDispatchedDst = nTeamSpecificSequenceIndex;
+					return true;
+				}
+			}
+
+			pLayer->m_nDispatchedDst = pWeaponStudioHdr->LookupSequence( pszSeqName );
+		}
+		else
+		{
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		}
+	}
+	return (pLayer->m_nDispatchedDst > 0 );
+}
+
+bool CCSPlayer::UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence )
+{
+	CBaseCombatWeapon *pWeapon = GetActiveWeapon();
+	if ( pWeapon )
+	{
+		CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+		if ( pWeaponWorldModel )
+		{
+			return UpdateDispatchLayer( pLayer, pWeaponWorldModel->GetModelPtr(), iSequence );
+		}
+	}
+	return UpdateDispatchLayer( pLayer, NULL, iSequence );
+}
+
+float CCSPlayer::GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence ) 
+{ 
+	UpdateLayerWeaponDispatch( pLayer, iSequence );
+	if ( pLayer->m_nDispatchedDst != ACT_INVALID )
+	{
+		// weapon world model overrides rate
+		return GetSequenceCycleRate( pLayer->m_pDispatchedStudioHdr, pLayer->m_nDispatchedDst );
+	}
+	return BaseClass::GetLayerSequenceCycleRate( pLayer, iSequence );
 }
 
 //--------------------------------------------------------------------------------------------------------------

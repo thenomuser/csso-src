@@ -31,6 +31,45 @@
 #endif
 
 
+// PiMoN: for some reason throws an error when compiling, temporary fix is to just not use it in debug
+#ifndef DEBUG
+// network vars use memcmp when fields are set.  To ensure proper behavior your
+// object's memory should be initialized to zero.  This happens for entities automatically
+// use this for other classes.
+class CMemZeroOnNew
+{
+public:
+	void *operator new( size_t nSize )
+	{
+		void *pMem = MemAlloc_Alloc( nSize );
+		V_memset( pMem, 0, nSize );
+		return pMem;
+	}
+
+	void* operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+	{
+		void *pMem = MemAlloc_Alloc( nSize, pFileName, nLine );
+		V_memset( pMem, 0, nSize );
+		return pMem;
+	}
+
+	void operator delete(void *pData)
+	{
+		if ( pData )
+		{
+			g_pMemAlloc->Free(pData);
+		}
+	}
+
+	void operator delete( void* pData, int nBlockUse, const char *pFileName, int nLine )
+	{
+		if ( pData )
+		{
+			g_pMemAlloc->Free(pData, pFileName, nLine );
+		}
+	}
+};
+#endif
 
 inline int InternalCheckDeclareClass( const char *pClassName, const char *pClassNameMatch, void *pTestPtr, void *pBasePtr )
 {
@@ -188,6 +227,13 @@ public:
 	inline CNetworkVarBase()
 	{
 		NetworkVarConstruct( m_Value );
+	}
+
+	FORCEINLINE const Type& SetDirect( const Type &val )
+	{
+		NetworkStateChanged();
+		m_Value = val;
+		return m_Value;
 	}
 
 	template< class C >

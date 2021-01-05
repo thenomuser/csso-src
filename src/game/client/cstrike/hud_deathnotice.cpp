@@ -517,20 +517,6 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	if ( pKiller && pVictim )
 		thrusmoke = LineGoesThroughSmoke( pKiller->GetAbsOrigin(), pVictim->GetAbsOrigin(), 1.0f );
 
-	// no thrusmoke icon for grenades
-	if ( thrusmoke )
-	{
-		char pWeaponName[64];
-		V_sprintf_safe( pWeaponName, "weapon_%s", killedwith );
-		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponName );
-		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
-		{
-			CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
-			if ( pWeaponInfo )
-				thrusmoke = (pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE);
-		}
-	}
-
 	char fullkilledwith[128];
 	if ( killedwith && *killedwith )
 	{

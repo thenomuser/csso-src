@@ -75,6 +75,8 @@ public:
 
 	virtual void	RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper *moveHelper );
 
+	float			GetSavedTime() const;
+
 // Internal
 protected:
 	virtual void	SetupMove( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper *pHelper, CMoveData *move );
@@ -142,6 +144,8 @@ private:
 	int				m_nIncomingPacketNumber;
 
 #endif
+	CGlobalVarsBase	m_SavedVars;
+
 	float			m_flIdealPitch;
 
 };

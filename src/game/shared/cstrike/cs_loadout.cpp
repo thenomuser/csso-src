@@ -1,11 +1,6 @@
 #include "cbase.h"
 #include "cs_loadout.h"
 #include "cs_shareddefs.h"
-#ifdef CLIENT_DLL
-#include "c_cs_player.h"
-#else
-#include "cs_player.h"
-#endif
 
 CCSLoadout*	g_pCSLoadout = NULL;
 CCSLoadout::CCSLoadout() : CAutoGameSystemPerFrame("CCSLoadout")
@@ -58,7 +53,11 @@ LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( CBasePlayer* pPlayer, const char* w
 	}
 	return slot;
 }
-const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot )
+#ifdef CLIENT_DLL
+const char* CCSLoadout::GetWeaponFromSlot( LoadoutSlot_t slot )
+#else
+const char* CCSLoadout::GetWeaponFromSlot( const edict_t *edict, LoadoutSlot_t slot )
+#endif
 {
 	for ( int i = 0; i < ARRAYSIZE( WeaponLoadout ); i++ )
 	{
@@ -70,59 +69,11 @@ const char* CCSLoadout::GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t s
 			if (convar.IsValid())
 				value = convar.GetInt();
 #else
-			value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), WeaponLoadout[i].m_szCommand ) );
+			value = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict ), WeaponLoadout[i].m_szCommand ) );
 #endif
 			return (value > 0) ? WeaponLoadout[i].m_szSecondWeapon : WeaponLoadout[i].m_szFirstWeapon;
 		}
 	}
 
 	return NULL;
-}
-
-bool CCSLoadout::HasGlovesSet( CCSPlayer* pPlayer, int team )
-{
-	if ( !pPlayer )
-		return false;
-
-	if ( pPlayer->IsBotOrControllingBot() )
-		return false;
-
-	int value = 0;
-	switch ( team )
-	{
-		case TEAM_CT:
-			value = pPlayer->m_iLoadoutSlotGlovesCT;
-			break;
-		case TEAM_TERRORIST:
-			value = pPlayer->m_iLoadoutSlotGlovesT;
-			break;
-		default:
-			break;
-	}
-
-	return (value > 0) ? true : false;
-}
-
-int CCSLoadout::GetGlovesForPlayer( CCSPlayer* pPlayer, int team )
-{
-	if ( !pPlayer )
-		return 0;
-
-	if ( pPlayer->IsBotOrControllingBot() )
-		return 0;
-
-	int value = 0;
-	switch ( team )
-	{
-		case TEAM_CT:
-			value = pPlayer->m_iLoadoutSlotGlovesCT;
-			break;
-		case TEAM_TERRORIST:
-			value = pPlayer->m_iLoadoutSlotGlovesT;
-			break;
-		default:
-			break;
-	}
-
-	return value;
 }

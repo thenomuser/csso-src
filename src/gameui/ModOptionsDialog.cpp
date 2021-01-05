@@ -25,7 +25,6 @@
 #include "ModOptionsSubLoadout.h"
 #include "ModOptionsSubKnives.h"
 #include "ModOptionsSubAgents.h"
-#include "ModOptionsSubGloves.h"
 #include "ModInfo.h"
 
 using namespace vgui;
@@ -49,7 +48,6 @@ CModOptionsDialog::CModOptionsDialog(vgui::Panel *parent) : PropertyDialog(paren
 	AddPage(new CModOptionsSubLoadout(this), "#GameUI_Loadout");
 	AddPage(new CModOptionsSubKnives(this), "#GameUI_Knives");
 	AddPage(new CModOptionsSubAgents(this), "#GameUI_Agents");
-	AddPage(new CModOptionsSubGloves(this), "#GameUI_Gloves");
 
 	SetApplyButtonVisible(true);
 	GetPropertySheet()->SetTabWidth(84);

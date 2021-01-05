@@ -17,6 +17,7 @@
 #include "cs_autobuy.h"
 #include "utldict.h"
 #include "cs_player_shared.h"
+#include "csgo_playeranimstate.h"
 
 
 
@@ -304,6 +305,8 @@ public:
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
 	
 	virtual void		CreateViewModel( int viewmodelindex = WEAPON_VIEWMODEL );
+	virtual void		CreateHandsViewModel( int index = HANDS_VIEWMODEL, int parentindex = WEAPON_VIEWMODEL );
+	void				SetHandsViewModel();
 	virtual void		ShowViewPortPanel( const char * name, bool bShow = true, KeyValues *data = NULL );
 
 	// This passes the event to the client's and server's CPlayerAnimState.
@@ -315,6 +318,9 @@ public:
 	virtual CBaseEntity* FindNextObserverTarget( bool bReverse );
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
+
+	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
+
 // In shared code.
 public:
 
@@ -383,7 +389,7 @@ public:
 	void MakeVIP( bool isVIP );
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
-	IPlayerAnimState *GetPlayerAnimState() { return m_PlayerAnimState; }
+	void DoAnimStateEvent( PlayerAnimEvent_t evt );
 
 	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity );
 	virtual void StopReplayMode();
@@ -439,8 +445,6 @@ public:
 	bool	HasAgentSet( int team );
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
-
-	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
 
@@ -660,6 +664,7 @@ public:
 
 	void				SetDeathPose( const int &iDeathPose ) { m_iDeathPose = iDeathPose; }
 	void				SetDeathPoseFrame( const int &iDeathPoseFrame ) { m_iDeathFrame = iDeathPoseFrame; }
+	void				SetDeathPoseYaw( const float &flDeathPoseYaw ) { m_flDeathYaw = flDeathPoseYaw; }
 
 	virtual void		IncrementFragCount( int nCount );
 	virtual void		IncrementDeathCount( int nCount );
@@ -670,20 +675,13 @@ public:
 private:
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
+	float m_flDeathYaw;
 
-//=============================================================================
-// HPE_BEGIN:
-// [menglish] Freeze cam function and variable declarations
-//=============================================================================
-	 
+// [menglish] Freeze cam function and variable declarations	 
 	bool m_bAbortFreezeCam;
 
 protected:
 	void AttemptToExitFreezeCam( void );
-	 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 public:
 
@@ -783,6 +781,11 @@ public:
 	CNetworkVar( bool, m_bKilledByTaser );
 	int m_iBombSiteIndex;
 
+	bool m_bUseNewAnimstate;
+	virtual void SetModel( const char *szModelName );
+
+	virtual Vector Weapon_ShootPosition();
+
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run?  Used for state transitioning after a player lands from a jump etc.
 
 	bool IsInBuyZone();
@@ -818,6 +821,9 @@ public:
 	CNetworkVar( float, m_flProgressBarStartTime );
 	CNetworkVar( int, m_iProgressBarDuration );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+
+	CNetworkVar( float, m_flLowerBodyYawTarget );
+	CNetworkVar( bool, m_bStrafing );
 	
 	// Tracks our ragdoll entity.
 	CNetworkHandle( CBaseEntity, m_hRagdoll );	// networked entity handle 
@@ -838,8 +844,6 @@ public:
 	int m_iLoadoutSlotKnifeWeaponT;
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
-	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
-	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;
@@ -905,6 +909,7 @@ protected:
 private:
 
 	IPlayerAnimState *m_PlayerAnimState;
+	CCSGOPlayerAnimState *m_PlayerAnimStateCSGO;
 
 	// Aiming heuristics code
 	float						m_flIdleTime;		//Amount of time we've been motionless
@@ -939,6 +944,9 @@ private:
 
 	Vector m_storedSpawnPosition;
 	QAngle m_storedSpawnAngle;
+
+public:
+	CNetworkVar( float, m_flThirdpersonRecoil );
 
 // AutoBuy functions.
 public:
@@ -1214,6 +1222,12 @@ public:
 	PreControlData	m_PreControlData;
 
 #endif // #if CS_CONTROLLABLE_BOTS_ENABLED
+
+private:
+	// override for weapon driving animations
+	bool UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence );
+public:
+	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence );
 
 };
 

@@ -492,20 +492,6 @@ ConVar loadout_slot_agent_t(
 	"Which agent to use for Ts.",
 	true, 0, true, MAX_AGENTS_T );
 
-ConVar loadout_slot_gloves_ct(
-	"loadout_slot_gloves_ct",
-	"0",
-	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for CTs.",
-	true, 0, true, MAX_GLOVES );
-
-ConVar loadout_slot_gloves_t(
-	"loadout_slot_gloves_t",
-	"0",
-	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for Ts.",
-	true, 0, true, MAX_GLOVES );
-
 #ifdef CLIENT_DLL
 ConVar snd_music_selection(
     "snd_music_selection",
@@ -564,6 +550,7 @@ ConVar snd_music_selection(
 		"trigger_soundscape",
 		"viewmodel",
 		"predicted_viewmodel",
+		"hands_viewmodel",
 		"worldspawn",
 		"point_devshot_camera",
 		"chicken",
@@ -3234,6 +3221,13 @@ ConVar snd_music_selection(
 
 			if ( !pPlayer )
 				continue;
+
+			if ( pPlayer->m_bNeedToChangeAgent )
+			{
+				pPlayer->m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), "loadout_slot_agent_ct" ) );
+				pPlayer->m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pPlayer->edict() ), "loadout_slot_agent_t" ) );
+				pPlayer->m_bNeedToChangeAgent = false;
+			}
 
 			pPlayer->m_iNumSpawns	= 0;
 			pPlayer->m_bTeamChanged	= false;
@@ -6383,18 +6377,11 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 	int m_iNewAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_ct" ) );
 	int m_iNewAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_t" ) );
-	// change the agent in the next round if needed
+
+	// change the agent in the next round
 	if ( ( m_iNewAgentCT != pCSPlayer->m_iLoadoutSlotAgentCT ) || ( m_iNewAgentT != pCSPlayer->m_iLoadoutSlotAgentT ) )
 	{
 		pCSPlayer->m_bNeedToChangeAgent = true;
-	}
-
-	int m_iNewGloveCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_ct" ) );
-	int m_iNewGloveT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_t" ) );
-	// change the gloves in the next round if needed
-	if ( ( m_iNewGloveCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGloveT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
-	{
-		pCSPlayer->m_bNeedToChangeGloves = true;
 	}
 }
 

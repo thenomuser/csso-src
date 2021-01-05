@@ -67,7 +67,7 @@ public:
 	virtual const char *GetParticleEffectName();
 	virtual const char *GetImpactParticleEffectName();
 	virtual float		GetFlameLifetime() const;
-	virtual bool		CanHarm( CBaseEntity *pEnt ) const;
+	virtual bool		CanHarm( CBaseEntity *pEnt ) const { return true; }
 	virtual float		GetFlameSpreadDelay() { return 0.0f; }
 
 	int GetInfernoType() const		{ return m_nInfernoType; }
