@@ -27,9 +27,8 @@ enum LoadoutSlot_t
 	SLOT_DEAGLE_T,
 };
 
-class CLoadout
+struct CLoadout
 {
-public:
 	LoadoutSlot_t	m_iLoadoutSlot;
 	const char*		m_szCommand;
 	const char*		m_szFirstWeapon;
