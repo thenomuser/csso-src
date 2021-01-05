@@ -19,6 +19,7 @@
 #include "cs_shareddefs.h"
 #include "smokegrenade_projectile.h"
 #include "improv_locomotor.h"
+#include "cs_player.h"
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
@@ -818,6 +819,25 @@ void CInferno::MarkCoveredAreaAsDamaging()
 			area->MarkAsDamaging( 1.0f );
 		}
 	}
+}
+
+extern ConVar friendlyfire;
+bool CInferno::CanHarm( CBaseEntity *pEnt ) const
+{
+	CCSPlayer* pPlayer = dynamic_cast<CCSPlayer*>(pEnt);
+
+	if ( !pPlayer )
+		return true;
+
+	if ( !GetOwnerEntity() )
+		return true;
+
+	// dont damage teammates
+	if ( !friendlyfire.GetBool() && pPlayer->GetTeamNumber() == GetOwnerEntity()->GetTeamNumber() )
+		return false;
+
+	return true;
+
 }
 
 //------------------------------------------------------------------------------------------

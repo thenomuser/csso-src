@@ -171,7 +171,7 @@ public:
 	virtual IRagdoll* GetRepresentativeRagdoll() const;
 
 	// override the initial bone position for ragdolls
-	virtual void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
+	virtual bool GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
 
 	// Returns eye vectors
 	void			EyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
@@ -366,7 +366,6 @@ public:
 	surfacedata_t *GetSurfaceData( void ) { return m_pSurfaceData; }
 
 	void SetLadderNormal( Vector vecLadderNormal ) { m_vecLadderNormal = vecLadderNormal; }
-	const Vector &GetLadderNormal( void ) const { return m_vecLadderNormal; }
 
 	// Hints
 	virtual CHintSystem		*Hints( void ) { return NULL; }

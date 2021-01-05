@@ -41,8 +41,6 @@ public:
 	virtual void AddScreenTextOverlay(float flXPos, float flYPos,float flDuration, int r, int g, int b, int a, const char *text) = 0;
 	virtual void AddSweptBoxOverlay(const Vector& start, const Vector& end, const Vector& mins, const Vector& max, const QAngle & angles, int r, int g, int b, int a, float flDuration) = 0;
 	virtual void AddGridOverlay(const Vector& origin) = 0;
-	virtual void AddCoordFrameOverlay(const matrix3x4_t& frame, float flScale, int vColorTable[3][3] = NULL) = 0;
-
 	virtual int ScreenPosition(const Vector& point, Vector& screen) = 0;
 	virtual int ScreenPosition(float flXPos, float flYPos, Vector& screen) = 0;
 
@@ -56,8 +54,6 @@ public:
 
 	virtual void AddLineOverlayAlpha(const Vector& origin, const Vector& dest, int r, int g, int b, int a, bool noDepthTest, float duration) = 0;
 	virtual void AddBoxOverlay2( const Vector& origin, const Vector& mins, const Vector& max, QAngle const& orientation, const Color& faceColor, const Color& edgeColor, float duration ) = 0;
-
-	virtual void AddCapsuleOverlay( const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration ) = 0;
 
 private:
 	inline void AddTextOverlay(const Vector& origin, int line_offset, float duration, int r, int g, int b, int a, PRINTF_FORMAT_STRING const char *format, ...) {} /* catch improper use of bad interface. Needed because '0' duration can be resolved by compiler to NULL format string (i.e., compiles but calls wrong function) */

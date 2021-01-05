@@ -179,8 +179,7 @@ void MoveToState::OnUpdate( CCSBot *me )
 							const Vector *bombPos = me->GetGameState()->GetBombPosition();
 							if (bombPos && !me->IsReloading())
 							{
-								const float defuseRange = 100.0f;		// 50
-								if ((*bombPos - me->EyePosition()).IsLengthLessThan( defuseRange ))
+								if ((*bombPos - me->EyePosition()).IsLengthLessThan( 72 ) && ( me->EyePosition().AsVector2D().DistTo( bombPos->AsVector2D() ) < 48 ))
 								{
 									// make sure we can see the bomb
 									if (me->IsVisible( *bombPos ))

@@ -42,8 +42,6 @@ $Project "mathlib"
 		$File	"vector.cpp"
 		$File	"vmatrix.cpp"
 		$File	"almostequal.cpp"
-		$File	"sphere.cpp"
-		$File	"capsule.cpp"
 	}
 
 
@@ -73,8 +71,6 @@ $Project "mathlib"
 		$File	"$SRCDIR\public\mathlib\vector4d.h"
 		$File	"$SRCDIR\public\mathlib\vmatrix.h"
 		$File	"$SRCDIR\public\mathlib\vplane.h"
-		$File	"$SRCDIR\public\mathlib\sphere.h"
-		$File	"$SRCDIR\public\mathlib\capsule.h"
 	}
 
 	$Folder	"Header Files"

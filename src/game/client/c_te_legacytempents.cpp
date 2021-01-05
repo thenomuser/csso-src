@@ -66,7 +66,7 @@ CLIENTEFFECT_REGISTER_END()
 #endif
 
 //Whether or not to eject brass from weapons
-extern ConVar cl_ejectbrass;
+ConVar cl_ejectbrass( "cl_ejectbrass", "1" );
 
 ConVar func_break_max_pieces( "func_break_max_pieces", "15", FCVAR_ARCHIVE | FCVAR_REPLICATED );
 

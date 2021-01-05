@@ -126,13 +126,6 @@ void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 {
 	BaseClass::OnDataChanged(updateType);
 
-	// let the world model know we're updating, in case it wants to as well
-	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
-	if ( pWeaponWorldModel )
-	{
-		pWeaponWorldModel->OnDataChanged( updateType );
-	}
-
 	CHandle< C_BaseCombatWeapon > handle = this;
 
 	// If it's being carried by the *local* player, on the first update,
@@ -403,27 +396,57 @@ bool C_BaseCombatWeapon::GetShootPosition( Vector &vOrigin, QAngle &vAngles )
 //-----------------------------------------------------------------------------
 bool C_BaseCombatWeapon::ShouldDraw( void )
 {
+	if ( m_iWorldModelIndex == 0 )
+		return false;
+
+	// FIXME: All weapons with owners are set to transmit in CBaseCombatWeapon::UpdateTransmitState,
+	// even if they have EF_NODRAW set, so we have to check this here. Ideally they would never
+	// transmit except for the weapons owned by the local player.
 	if ( IsEffectActive( EF_NODRAW ) )
 		return false;
 
+	C_BaseCombatCharacter *pOwner = GetOwner();
+
 	// weapon has no owner, always draw it
-	if ( !GetOwner() && !IsViewModel() )
-	{
+	if ( !pOwner )
 		return true;
-	}
-	else
+
+	bool bIsActive = ( m_iState == WEAPON_IS_ACTIVE );
+
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+
+	 // carried by local player?
+	if ( pOwner == pLocalPlayer )
 	{
-		CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
-		if ( pWeaponWorldModel )
+		// Only ever show the active weapon
+		if ( !bIsActive )
+			return false;
+
+		if ( !pOwner->ShouldDraw() )
 		{
-			return false; // the weapon world model will render in our place if it exists
+			// Our owner is invisible.
+			// This also tests whether the player is zoomed in, in which case you don't want to draw the weapon.
+			return false;
 		}
-		else
-		{
-			// render only if equipped. The holstered model will render for weapons that aren't equipped
-			return ( GetOwner() && GetOwner()->GetActiveWeapon() == this );
-		}
+
+		// 3rd person mode?
+		if ( !ShouldDrawLocalPlayerViewModel() )
+			return true;
+
+		// don't draw active weapon if not in some kind of 3rd person mode, the viewmodel will do that
+		return false;
 	}
+
+	// If it's a player, then only show active weapons
+	if ( pOwner->IsPlayer() )
+	{
+		// Show it if it's active...
+		return bIsActive;
+	}
+
+	// FIXME: We may want to only show active weapons on NPCs
+	// These are carried by AIs; always show them
+	return true;
 }
 
 //-----------------------------------------------------------------------------

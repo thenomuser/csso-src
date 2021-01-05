@@ -75,43 +75,27 @@ void CMolotovGrenade::UpdateParticles( void )
 
 	if ( pCSWeapon->GetCSWeaponID() == WEAPON_MOLOTOV )
 	{
-		bool bIsFirstOrThirdpersonMolotovVisible = pCSWeapon->IsWeaponVisible();
-
-		CBaseAnimating *pWeaponBaseAnimating = pCSWeapon->GetBaseAnimating();
-
-		CBaseWeaponWorldModel *pWeaponWorldModel = pCSWeapon->GetWeaponWorldModel();
-		if ( pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() )
-		{
-			pWeaponBaseAnimating = pWeaponWorldModel->GetBaseAnimating();
-			bIsFirstOrThirdpersonMolotovVisible = true;
-		}
-
 		if ( m_molotovParticleEffect.IsValid() )
 		{
 			//		m_molotovParticleEffect->SetDormant( pPlayer->GetPlayerAnimState()->ShouldHideWeapon() ); // ShouldHideWeapon is a Terror Codebase function, not CStrike15
-			m_molotovParticleEffect->SetDormant( bIsFirstOrThirdpersonMolotovVisible ); // Is the weapon Hidden?
+			m_molotovParticleEffect->SetDormant( !pCSWeapon->IsVisible() ); // Is the weapon Hidden?
 		}
 
-		if ( bIsFirstOrThirdpersonMolotovVisible )
+		if ( m_bPinPulled )
 		{
-			if ( m_bPinPulled )
+			if ( !m_molotovParticleEffect() )
 			{
-				if ( !m_molotovParticleEffect() )
+				// TEST: [mlowrance] This is to test for attachment.
+				int iAttachment = pCSWeapon->LookupAttachment( "Wick" );
+
+				if ( iAttachment >= 0 )
 				{
-					// TEST: [mlowrance] This is to test for attachment.
-					int iAttachment = -1;
-					if ( pWeaponBaseAnimating )
-						iAttachment = pWeaponBaseAnimating->LookupAttachment( "Wick" );
+					// FIXME: Precache 'Wick' attachment index
+					m_molotovParticleEffect = pCSWeapon->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
+					EmitSound( "Molotov.IdleLoop" );
+					SetLoopingSoundPlaying( true );
 
-					if ( iAttachment >= 0 )
-					{
-						// FIXME: Precache 'Wick' attachment index
-						m_molotovParticleEffect = pWeaponBaseAnimating->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
-						EmitSound( "Molotov.IdleLoop" );
-						SetLoopingSoundPlaying( true );
-
-						//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 1\n" );
-					}
+					//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 1\n" );
 				}
 			}
 		}

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -39,7 +39,7 @@ inline float LoopingLerp( float flPercent, float flFrom, float flTo )
 }
 
 template <class T>
-inline T Lerp_Hermite( const T& /*current*/, float t, const T& p0, const T& p1, const T& p2 )
+inline T Lerp_Hermite( float t, const T& p0, const T& p1, const T& p2 )
 {
 	T d1 = p1 - p0;
 	T d2 = p2 - p1;
@@ -101,20 +101,20 @@ inline void Lerp_Clamp( CRangeCheckedVar<T,minValue,maxValue,startValue> &val )
 
 
 template<> 
-inline QAngle Lerp_Hermite<QAngle>( const QAngle &/*current*/, float t, const QAngle& p0, const QAngle& p1, const QAngle& p2 )
+inline QAngle Lerp_Hermite<QAngle>( float t, const QAngle& p0, const QAngle& p1, const QAngle& p2 )
 {
 	// Can't do hermite with QAngles, get discontinuities, just do a regular interpolation
 	return Lerp( t, p1, p2 );
 }
 
 template <class T>
-inline T LoopingLerp_Hermite( T current, float t, T p0, T p1, T p2  )
+inline T LoopingLerp_Hermite( float t, T p0, T p1, T p2  )
 {
-	return Lerp_Hermite( current, t, p0, p1, p2 );
+	return Lerp_Hermite( t, p0, p1, p2 );
 }
 
 template <>
-inline float LoopingLerp_Hermite( float /*current*/, float t, float p0, float p1, float p2 )
+inline float LoopingLerp_Hermite( float t, float p0, float p1, float p2 )
 {
 	if ( fabs( p1 - p0 ) > 0.5f )
 	{
@@ -147,7 +147,7 @@ inline float LoopingLerp_Hermite( float /*current*/, float t, float p0, float p1
 		}
 	}
 		
-	float s = Lerp_Hermite( /*current*/ 0.0f, t, p0, p1, p2 );
+	float s = Lerp_Hermite( t, p0, p1, p2 );
 
 	s = s - (int)(s);
 	if (s < 0.0f)
@@ -158,11 +158,6 @@ inline float LoopingLerp_Hermite( float /*current*/, float t, float p0, float p1
 	return s;
 }
 
-template< int minValue, int maxValue, int startValue >
-inline CRangeCheckedVar<float, minValue, maxValue, startValue> LoopingLerp_Hermite( CRangeCheckedVar<float, minValue, maxValue, startValue> current, float t, CRangeCheckedVar<float, minValue, maxValue, startValue> p0, CRangeCheckedVar<float, minValue, maxValue, startValue> p1, CRangeCheckedVar<float, minValue, maxValue, startValue> p2 )
-{
-	return LoopingLerp_Hermite( (float)current, t, (float)p0, (float)p1, (float)p2 );
-}
 
 // NOTE: C_AnimationLayer has its own versions of these functions in animationlayer.h.
 

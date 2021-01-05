@@ -3510,18 +3510,6 @@ bool BoneHasAnimation( const char *pName )
 	return false;
 }
 
-bool BoneShouldAlwaysSetup( char const *pname )
-{
-	for ( int k = 0; k < g_BoneAlwaysSetup.Count(); k++ )
-	{
-		if ( !stricmp( g_BoneAlwaysSetup[k].bonename, pname ) )
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 bool BoneHasAttachments( char const *pname )
 {
 	for (int k = 0; k < g_numattachments; k++)
@@ -3620,64 +3608,18 @@ void CollapseBones( void )
 		if ( g_bonetable[k].bDontCollapse )
 			continue;
 
-		int sBoneFlags = g_bonetable[k].flags;
-
-		char szBoneReport[512] = "";
-		V_strcat_safe( szBoneReport, " [" );
-		V_strcat_safe( szBoneReport, g_bonetable[k].name );
-		
-		if( sBoneFlags & BONE_USED_BY_ANYTHING )
+		if ( (g_bonetable[k].flags != 0 || g_bonetable[k].bPreDefined) && !BoneShouldCollapse( g_bonetable[k].name ) )
 		{
-			V_strcat_safe( szBoneReport, "]\t\tflags: " );
-
-			if( sBoneFlags & BONE_USED_BY_ATTACHMENT )
-				V_strcat_safe( szBoneReport, "attachments, " );
-
-			if( sBoneFlags & BONE_USED_BY_HITBOX )
-				V_strcat_safe( szBoneReport, "hitboxes, " );
-
-			if( sBoneFlags & BONE_USED_BY_BONE_MERGE )
-				V_strcat_safe( szBoneReport, "bonemerges, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD0 )
-				V_strcat_safe( szBoneReport, "lod0, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD1 )
-				V_strcat_safe( szBoneReport, "lod1, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD2 )
-				V_strcat_safe( szBoneReport, "lod2, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD3 )
-				V_strcat_safe( szBoneReport, "lod3, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD4 )
-				V_strcat_safe( szBoneReport, "lod4, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD5 )
-				V_strcat_safe( szBoneReport, "lod5, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD6 )
-				V_strcat_safe( szBoneReport, "lod6, " );
-
-			if( sBoneFlags & BONE_USED_BY_VERTEX_LOD7 )
-				V_strcat_safe( szBoneReport, "lod7, " );
-
-			if( sBoneFlags & BONE_ALWAYS_SETUP )
-				V_strcat_safe( szBoneReport, "alwayssetup, " );
-		}
-		else
-		{
-			V_strcat_safe( szBoneReport, "] is unused." );
-		}
-		
-		// if it's being used by something other than a vertex, collapse it.
-		if ( ((g_bonetable[k].flags & BONE_USED_BY_VERTEX_MASK) != 0) || !BoneShouldCollapse( g_bonetable[k].name ) )
-		{
+			// printf("skipping %s : %d\n", g_bonetable[k].name, g_bonetable[k].flags );
 			continue;
 		}
 
 		count++;
+
+		if( !g_quiet && g_verbose )
+		{
+			printf("collapsing %s\n", g_bonetable[k].name );
+		}
 
 		g_numbones--;
 		int m = g_bonetable[k].parent;
@@ -3699,7 +3641,7 @@ void CollapseBones( void )
 
 	if( !g_quiet && count)
 	{
-		Msg("Collapsed %d bones\n", count );
+		printf("Collapsed %d bones\n", count );
 	}
 }
 
@@ -4129,25 +4071,6 @@ void TagUsedBones( )
 		{
 			UpdateBonerefRecursive( psource, k, psource->boneflags[k] );
 		}
-
-		// Tag all bones marked as being used by alwayssetup
-		// NOTE these are intentionally added without respect to parents, 
-		// because they are intended to be used on data-driving bones that are aren't 
-		// necessarily moving vertices or part of a hierarchy. They are NOT guaranteed 
-		// to be positioned correctly relative to their parents!!!
-		int nBoneAlwaysSetupCount = g_BoneAlwaysSetup.Count();
-		for ( k = 0; k < nBoneAlwaysSetupCount; ++k )
-		{
-			for ( j = 0; j < psource->numbones; j++ )
-			{
-				if ( stricmp( g_BoneAlwaysSetup[k].bonename, psource->localBone[j].name ) )
-					continue;
-
-				psource->boneflags[j] |= BONE_ALWAYS_SETUP;
-			}
-		}
-
-		// don't add more flags here! Add them up above the UpdateBonerefRecursive call, so they get propagated up their parents!
 	}
 
 	// tag all eyeball bones
@@ -4268,30 +4191,6 @@ int BuildGlobalBonetable( )
 		g_bonetable[k].bDontCollapse = true;
 		g_bonetable[k].srcRealign = g_importbone[i].srcRealign;
 		g_bonetable[k].bPreAligned = true;
-	}
-
-	// ensure bonemerged bones are tagged
-	for ( i = 0; i < g_numbones; i++ )
-	{
-		for ( k = 0; k < g_BoneMerge.Count(); k++ )
-		{
-			if ( !(g_bonetable[i].flags & BONE_USED_BY_BONE_MERGE) && !stricmp( g_BoneMerge[k].bonename, g_bonetable[i].name ) )
-			{
-				g_bonetable[i].flags |= BONE_USED_BY_BONE_MERGE;
-			}
-		}
-	}
-
-	// ensure alwayssetup bones are tagged
-	for ( i = 0; i < g_numbones; i++ )
-	{
-		for ( k = 0; k < g_BoneAlwaysSetup.Count(); k++ )
-		{
-			if ( !(g_bonetable[i].flags & BONE_ALWAYS_SETUP) && !stricmp( g_BoneAlwaysSetup[k].bonename, g_bonetable[i].name ) )
-			{
-				g_bonetable[i].flags |= BONE_ALWAYS_SETUP;
-			}
-		}
 	}
 
 	TagUsedImportedBones();

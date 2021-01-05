@@ -59,10 +59,6 @@ public:
 	bool IsLoopingSoundPlaying( void ) { return m_bLoopingSoundPlaying; }
 	void SetLoopingSoundPlaying( bool bPlaying ) { m_bLoopingSoundPlaying = bPlaying; }
 
-#ifdef CLIENT_DLL
-	virtual int		DrawModel( int flags ) OVERRIDE;
-#endif
-
 	bool			IsThrownUnderhand( void ) { return (m_flThrowStrength <= GRENADE_UNDERHAND_THRESHOLD); }
 	float			GetThrownStrength( void ) { return m_flThrowStrength; }
 	float			ApproachThrownStrength( void );

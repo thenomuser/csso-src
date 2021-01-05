@@ -29,9 +29,8 @@
 
 using namespace vgui;
 
-class Agents
+struct Agents
 {
-public:
 	const char*		m_szUIName;
 	const char*		m_szImage;
 };
