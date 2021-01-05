@@ -311,6 +311,8 @@ public:
 	CNetworkVar( bool, m_bKilledByTaser );
 	CNetworkVar( int, m_iMoveState );		// Is the player trying to run or walk or idle?  Tells us what the player is "trying" to do.
 
+	const PlayerViewmodelArmConfig *m_pViewmodelArmConfig;
+
 	bool IsInHostageRescueZone( void );
 
 	// This is a combination of the ADDON_ flags in cs_shareddefs.h.

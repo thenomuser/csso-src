@@ -933,6 +933,7 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "item_pickup" );
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
+	ListenForGameEvent( "player_spawn" );
 
 	m_bPlayingHostageCarrySound = false;
 
@@ -1508,6 +1509,22 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			filter.AddRecipient( this );
 			PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
 		}
+	}
+	else if ( Q_strcmp( "player_spawn", name ) == 0 )
+	{
+		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
+		{
+			// we've just spawned, so reset our entity id stuff
+			m_iIDEntIndex = 0;
+			m_delayTargetIDTimer.Reset();
+			m_iOldIDEntIndex = 0;
+			m_holdTargetIDTimer.Reset();
+
+			UpdateAddonModels();
+
+			m_pViewmodelArmConfig = NULL;
+		}
+
 	}
 }
 
@@ -2117,6 +2134,32 @@ void C_CSPlayer::UpdateClientSideAnimation()
 	if ( m_bKilledByTaser )
 	{
 		HandleTaserAnimation();
+	}
+
+	// We only update the view model for the local player.
+	if ( IsLocalPlayer() )
+	{
+		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+		if ( pWeapon )
+		{
+			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			if ( pViewModel )
+			{
+				pViewModel->UpdateAllViewmodelAddons();
+			}
+		}
+		else
+		{
+			//We have a null weapon so remove the add ons for all the view models for this player.
+			for ( int i=0; i<MAX_VIEWMODELS; ++i )
+			{
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				if ( pViewModel )
+				{
+					pViewModel->RemoveViewmodelArmModels();
+				}
+			}
+		}
 	}
 }
 

@@ -304,8 +304,6 @@ public:
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
 	
 	virtual void		CreateViewModel( int viewmodelindex = WEAPON_VIEWMODEL );
-	virtual void		CreateHandsViewModel( int index = HANDS_VIEWMODEL, int parentindex = WEAPON_VIEWMODEL );
-	void				SetHandsViewModel();
 	virtual void		ShowViewPortPanel( const char * name, bool bShow = true, KeyValues *data = NULL );
 
 	// This passes the event to the client's and server's CPlayerAnimState.

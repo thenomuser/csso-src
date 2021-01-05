@@ -24,7 +24,7 @@ class CVGuiScreen;
 #if defined( CLIENT_DLL )
 #define CBaseViewModel C_BaseViewModel
 #define CBaseCombatWeapon C_BaseCombatWeapon
-#define CHandsViewModel C_HandsViewModel
+class C_ViewmodelAttachmentModel;
 #endif
 
 #define VIEWMODEL_INDEX_BITS 2
@@ -173,6 +173,13 @@ public:
 	// (inherited from C_BaseAnimating)
 	virtual void			FormatViewModelAttachment( int nAttachment, matrix3x4_t &attachmentToWorld );
 	virtual bool			IsViewModel() const;
+
+	void					UpdateAllViewmodelAddons( void );
+
+#if defined ( CLIENT_DLL )
+	C_ViewmodelAttachmentModel *AddViewmodelArmModel( const char *pszModel, int nSkintoneIndex = -1 );
+	void					RemoveViewmodelArmModels( void );
+#endif
 	
 	CBaseCombatWeapon		*GetWeapon() const { return m_hWeapon.Get(); }
 
@@ -223,6 +230,9 @@ public:
 	float					m_fCycleOffset;
 
 private:
+#ifdef CLIENT_DLL
+	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
+#endif
 
 	typedef CHandle< CBaseCombatWeapon > CBaseCombatWeaponHandle;
 	CNetworkVar( CBaseCombatWeaponHandle, m_hWeapon );
@@ -232,18 +242,17 @@ private:
 	CUtlVector<ScreenHandle_t>	m_hScreens;
 };
 
-class CHandsViewModel : public CBaseViewModel
-{
-	DECLARE_CLASS( CHandsViewModel, CBaseViewModel );
-
-public:
-	DECLARE_NETWORKCLASS();
-
 #ifdef CLIENT_DLL
-
-	virtual int		InternalDrawModel( int flags );
-
-#endif
+// PiMoN: this has to be C_BaseAnimating, but if it is, then it
+// just acts like an ordinary model (obviously), its not affected
+// by viewmodel FOV and viewmodel renders on top of it, investigate
+class C_ViewmodelAttachmentModel: public CBaseViewModel
+{
+	DECLARE_CLASS( C_ViewmodelAttachmentModel, CBaseViewModel );
+public:
+	bool InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup );
+	virtual int InternalDrawModel( int flags );
 };
+#endif
 
 #endif // BASEVIEWMODEL_SHARED_H

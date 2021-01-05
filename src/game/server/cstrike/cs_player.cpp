@@ -745,10 +745,6 @@ void CCSPlayer::Precache()
 		{
 			PrecacheModel( GetCSAgentInfoCT( i )->m_szModel );
 		}
-		if ( !engine->IsModelPrecached( GetCSAgentInfoCT( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSAgentInfoCT( i )->m_szArmsModel );
-		}
 	}
 	for ( i=0; i<MAX_AGENTS_T+1; ++i )
 	{
@@ -756,18 +752,18 @@ void CCSPlayer::Precache()
 		{
 			PrecacheModel( GetCSAgentInfoT( i )->m_szModel );
 		}
-		if ( !engine->IsModelPrecached( GetCSAgentInfoT( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSAgentInfoT( i )->m_szArmsModel );
-		}
 	}
 
-	for ( i=0; i<LAST_CT_CLASS+1; ++i )
+	for ( i=0; i<ARRAYSIZE( s_playerViewmodelArmConfigs ); ++i )
 	{
-		if ( !engine->IsModelPrecached( GetCSClassInfo( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSClassInfo( i )->m_szArmsModel );
-		}
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel );
 	}
 
 #ifdef CS_SHIELD_ENABLED
@@ -1312,8 +1308,7 @@ void CCSPlayer::Spawn()
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
 
-	CreateHandsViewModel();
-	SetHandsViewModel();
+	//SetHandsViewModel();
 
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
@@ -8835,75 +8830,6 @@ void CCSPlayer::CreateViewModel( int index /*=0*/ )
 		DispatchSpawn( vm );
 		vm->FollowEntity( this, false );
 		m_hViewModel.Set( index, vm );
-	}
-}
-
-void CCSPlayer::CreateHandsViewModel( int index, int parentindex )
-{
-	Assert( index >= 0 && index < MAX_VIEWMODELS );
-
-	if ( GetViewModel( index ) )
-		return;
-
-	CHandsViewModel *vm = (CHandsViewModel*)CreateEntityByName( "hands_viewmodel" );
-	if ( vm )
-	{
-		vm->SetParent( GetViewModel( parentindex ) );
-		vm->SetAbsOrigin( GetAbsOrigin() );
-		vm->CollisionProp()->MarkPartitionHandleDirty();
-		vm->SetOwner( this );
-		vm->SetIndex( index );
-		DispatchSpawn( vm );
-		vm->FollowEntity( GetViewModel( parentindex ), true );
-		m_hViewModel.Set( index, vm );
-	}
-}
-
-void CCSPlayer::SetHandsViewModel()
-{
-	if ( HasAgentSet( GetTeamNumber() ) )
-	{
-		if ( GetTeamNumber() == TEAM_CT )
-		{
-			GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_szArmsModel );
-			GetViewModel( HANDS_VIEWMODEL )->m_nSkin = GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iArmsSkin;
-		}
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-		{
-			GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_szArmsModel );
-			GetViewModel( HANDS_VIEWMODEL )->m_nSkin = GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iArmsSkin;
-		}
-	}
-	else
-	{
-		GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSClassInfo( m_iClass )->m_szArmsModel );
-
-		switch ( m_iClass )
-		{
-			case CS_CLASS_L337_KREW:
-			{
-				if ( m_iSkin == 0 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 1;
-				else
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-			case CS_CLASS_PHOENIX_CONNNECTION:
-			{
-				if ( m_iSkin == 1 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 3;
-				else if ( m_iSkin == 2 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 2;
-				else
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-			default:
-			{
-				GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-		}
 	}
 }
 

@@ -550,7 +550,6 @@ ConVar snd_music_selection(
 		"trigger_soundscape",
 		"viewmodel",
 		"predicted_viewmodel",
-		"hands_viewmodel",
 		"worldspawn",
 		"point_devshot_camera",
 		"chicken",
