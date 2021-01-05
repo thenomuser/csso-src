@@ -888,6 +888,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
 
+	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesT ) ),
+
 END_RECV_TABLE()
 
 

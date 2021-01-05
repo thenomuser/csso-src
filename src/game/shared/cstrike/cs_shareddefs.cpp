@@ -49,6 +49,26 @@ const CCSClassInfo* GetCSClassInfo( int i )
 	return &g_ClassInfos[i];
 }
 
+static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
+{
+	{ NULL, NULL },
+
+	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound.mdl",				/*"models/weapons/w_models/arms/w_glove_bloodhound.mdl"*/				NULL	},
+	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_brokenfang.mdl",	/*"models/weapons/w_models/arms/w_glove_bloodhound_brokenfang.mdl"*/	NULL	},
+	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_hydra.mdl",			/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+	{ "models/weapons/v_models/arms/glove_handwrap_leathery/v_glove_handwrap_leathery.mdl",	/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+	{ "models/weapons/v_models/arms/glove_motorcycle/v_glove_motorcycle.mdl",				/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+	{ "models/weapons/v_models/arms/glove_slick/v_glove_slick.mdl",							/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+	{ "models/weapons/v_models/arms/glove_specialist/v_glove_specialist.mdl",				/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+	{ "models/weapons/v_models/arms/glove_sporty/v_glove_sporty.mdl",						/*"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"*/			NULL	},
+};
+
+const PlayerGloves* GetGlovesInfo( int i )
+{
+	Assert( i >= 0 && i < ARRAYSIZE( s_playerGloves ) );
+	return &s_playerGloves[i];
+}
+
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel )
 {
 	if ( szPlayerModel != NULL )

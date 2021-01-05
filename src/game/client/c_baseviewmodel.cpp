@@ -26,6 +26,7 @@
 	#include "weapon_basecsgrenade.h"
 	#include "cs_shareddefs.h"
 	#include "c_cs_player.h"
+	#include "cs_loadout.h"
 #endif
 
 #if defined( REPLAY_ENABLED )
@@ -46,6 +47,9 @@
 #endif
 
 extern ConVar r_drawviewmodel;
+
+extern ConVar loadout_slot_gloves_ct;
+extern ConVar loadout_slot_gloves_t;
 
 #ifdef TF_CLIENT_DLL
 	ConVar cl_flipviewmodels( "cl_flipviewmodels", "0", FCVAR_USERINFO | FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED, "Flip view models." );
@@ -444,6 +448,24 @@ int C_BaseViewModel::DrawModel( int flags )
 		}
 	}
 
+	if ( flags )
+	{
+		FOR_EACH_VEC( m_vecViewmodelArmModels, i )
+		{
+			if ( m_vecViewmodelArmModels[i] )
+			{
+
+				if ( m_vecViewmodelArmModels[i]->GetMoveParent() != this )
+				{
+					m_vecViewmodelArmModels[i]->SetEFlags( EF_BONEMERGE );
+					m_vecViewmodelArmModels[i]->SetParent( this );
+				}
+
+				m_vecViewmodelArmModels[i]->DrawModel( flags );
+			}
+		}
+	}
+
 #ifdef TF_CLIENT_DLL
 	CTFWeaponBase* pTFWeapon = dynamic_cast<CTFWeaponBase*>( pWeapon );
 	if ( ( flags & STUDIO_RENDER ) && pTFWeapon && pTFWeapon->m_viewmodelStatTrakAddon )
@@ -640,12 +662,26 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
 		}
 	}
+
+	if ( pPlayer->m_bNeedToChangeGloves )
+		RemoveViewmodelArmModels();
 	
 	// add gloves and sleeves
 	if ( m_vecViewmodelArmModels.Count() == 0 )
 	{
-		AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
-		AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			if ( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride[0] != NULL )
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride );
+			else
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
+		else
+		{
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
 	}
 }
 
@@ -669,7 +705,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 		pEnt->UpdatePartitionListEntry();
 		pEnt->CollisionProp()->MarkPartitionHandleDirty();
 		pEnt->UpdateVisibility();
-		pEnt->RemoveEffects( EF_NODRAW );
+		RemoveEffects( EF_NODRAW );
 		return pEnt;
 	}	
 

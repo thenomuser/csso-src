@@ -345,6 +345,8 @@ public:
 	CNetworkVar( float, m_flVelocityModifier );
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
+	CNetworkVar( bool, m_bNeedToChangeGloves );
+
 	bool		m_bDetected;
 
 	EHANDLE	m_hRagdoll;
@@ -474,6 +476,9 @@ private:
 	CNetworkVar( bool, m_bIsHoldingLookAtWeapon );
 
 public:
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
+
 	float m_flThirdpersonRecoil;
 
 	// taser items	
@@ -486,6 +491,8 @@ public:
 
 	virtual bool	GetAttachment( int number, Vector &origin );
 	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
+
+	bool	IsBotOrControllingBot();
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	bool IsControllingBot()							const { return m_bIsControllingBot; }

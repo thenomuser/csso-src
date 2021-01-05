@@ -432,6 +432,10 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
 #endif
 
+	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
+
 
 END_SEND_TABLE()
 
@@ -592,7 +596,8 @@ CCSPlayer::CCSPlayer()
 
 	m_nPreferredGrenadeDrop = 0;
 
-	m_bNeedToChangeAgent = false;
+	m_bNeedToChangeAgent = true;
+	m_bNeedToChangeGloves = true;
 }
 
 
@@ -764,6 +769,14 @@ void CCSPlayer::Precache()
 
 		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel ) )
 			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel );
+	}
+
+	for ( i=0; i<MAX_GLOVES+1; ++i)
+	{
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szViewModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szViewModel );
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szWorldModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szWorldModel );
 	}
 
 #ifdef CS_SHIELD_ENABLED
@@ -1121,8 +1134,18 @@ void CCSPlayer::Spawn()
 {
 	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
 	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_t" ) );
-	m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
-	m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+	if ( m_bNeedToChangeAgent )
+	{
+		m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
+		m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+		m_bNeedToChangeAgent = false;
+	}
+	if ( m_bNeedToChangeGloves )
+	{
+		m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
+		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
+		m_bNeedToChangeGloves = false;
+	}
 
 	m_RateLimitLastCommandTimes.Purge();
 
@@ -1308,8 +1331,6 @@ void CCSPlayer::Spawn()
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
 
-	//SetHandsViewModel();
-
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
 	else
@@ -1372,7 +1393,7 @@ void CCSPlayer::GiveDefaultItems()
 		else
 		{
 			char weapon[32];
-			Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( edict(), SLOT_HKP2000 ) );
+			Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
 			GiveNamedItem( weapon );
 		}
 	}
@@ -4431,7 +4452,7 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 
 BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 {
-	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, item ) );
+	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, item ) );
 	if ( loadoutItem != NULL )
 		item = loadoutItem;
 
@@ -7374,7 +7395,7 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 	char classname[64];
 	Q_strcpy( classname, commandInfo->m_classname );
 
-	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, commandInfo->m_command ) );
+	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, commandInfo->m_command ) );
 	if ( loadoutWeapon != NULL )
 		Q_snprintf( classname, sizeof( classname ), "weapon_%s", loadoutWeapon );
 
@@ -10228,18 +10249,6 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 	return pNearestBot;
 }
 #endif // CS_CONTROLLABLE_BOTS_ENABLED
-
-bool CCSPlayer::IsBotOrControllingBot()
-{
-	if ( IsBot() )
-		return true;
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	if ( IsControllingBot() )
-		return true;
-#endif
-
-	return false;
-}
 
 bool CCSPlayer::HasAgentSet( int team )
 {

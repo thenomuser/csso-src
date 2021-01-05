@@ -440,6 +440,8 @@ public:
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
 
+	CNetworkVar( bool, m_bNeedToChangeGloves );
+
 	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
 
 	// Add money to this player's account.
@@ -836,6 +838,8 @@ public:
 	int m_iLoadoutSlotKnifeWeaponT;
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;

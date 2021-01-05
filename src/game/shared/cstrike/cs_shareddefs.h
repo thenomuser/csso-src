@@ -213,6 +213,15 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 //--------------
 #define DMG_HEADSHOT		(DMG_LASTGENERICFLAG<<1)
 
+#define MAX_GLOVES 8
+struct PlayerGloves
+{
+	const char*	szViewModel;
+	const char*	szWorldModel;
+};
+
+const PlayerGloves* GetGlovesInfo( int i );
+
 enum PlayerViewmodelSkinTone
 {
 	BARE_ARM_133 = 0,

@@ -51,11 +51,10 @@ public:
 	// get the loadout slot of the weapon
 	LoadoutSlot_t	GetSlotFromWeapon( CBasePlayer* pPlayer, const char* weaponName );
 	// get the weapon from a client's slot
-#ifdef CLIENT_DLL
-	const char*		GetWeaponFromSlot( LoadoutSlot_t slot );
-#else
-	const char*		GetWeaponFromSlot( const edict_t *edict, LoadoutSlot_t slot );
-#endif
+	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
+	
+	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
+	int				GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
 };
 
 
