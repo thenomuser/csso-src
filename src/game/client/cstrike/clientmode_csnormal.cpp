@@ -45,6 +45,7 @@
 #include "prediction.h"
 #include "datacache/imdlcache.h"
 #include "cs_shareddefs.h"
+#include "cs_loadout.h"
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Needed to retrieve achievement text
@@ -80,6 +81,7 @@ CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
 
 // This is a temporary entity used to render the player's model while drawing the buy menu.
 CHandle<C_BaseAnimating> g_BuyMenuImagePlayer;	// player
+CHandle<C_BaseAnimating> g_BuyMenuImageGloves;	// gloves
 CHandle<C_BaseAnimating> g_BuyMenuImageWeapon;	// weapon
 
 STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
@@ -1096,6 +1098,8 @@ void UpdateBuyMenuImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
 
+	bool bCreateGloves = false;
+
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, modelinfo->GetModelName( pLocalPlayer->GetModel() ) );
 	if ( recreatePlayer )
@@ -1107,6 +1111,12 @@ void UpdateBuyMenuImageEntity(
 		pPlayerModel->InitializeAsClientEntity( modelinfo->GetModelName( pLocalPlayer->GetModel() ), RENDER_GROUP_OPAQUE_ENTITY );
 		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
+
+		if ( pPlayerModel->FindBodygroupByName( "gloves" ) > -1 )
+		{
+			if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
+				bCreateGloves = true;
+		}
 
 		g_BuyMenuImagePlayer = pPlayerModel;
 	}
@@ -1130,6 +1140,32 @@ void UpdateBuyMenuImageEntity(
 			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
 		g_BuyMenuImageWeapon = pWeaponModel;
 	}
+
+	C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
+
+	if ( bCreateGloves )
+	{
+		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szWorldModel;
+
+		// Does the entity even exist yet?
+		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
+		{
+			if ( pGlovesModel )
+				pGlovesModel->Remove();
+
+			pGlovesModel = new C_BaseAnimating;
+			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
+			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
+			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
+
+			g_BuyMenuImageGloves = pGlovesModel;
+		}
+
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
+	}
+	else if ( pGlovesModel )
+		pGlovesModel->Remove();
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -1210,6 +1246,10 @@ void UpdateBuyMenuImageEntity(
 	if ( pWeaponModel )
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
+	}
+	if ( pGlovesModel )
+	{
+		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
 
 	modelrender->SuppressEngineLighting( false );
