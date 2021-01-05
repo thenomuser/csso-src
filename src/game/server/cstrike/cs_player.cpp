@@ -3592,7 +3592,24 @@ void CCSPlayer::SetShieldDrawnState( bool bState )
 
 bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool bThrowForward )
 {
+	Vector vTossPos = WorldSpaceCenter();
+	if (bThrowForward)
+	{
+		Vector vForward;
+		AngleVectors(EyeAngles(), &vForward, NULL, NULL);
+		vTossPos = vTossPos + vForward * 100;
+	}
+	return CSWeaponDrop( pWeapon, vTossPos, bDropShield );
+}
+
+bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield )
+{
 	bool bSuccess = false;
+
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
+
+	if ( pWeapon )
+		pWeapon->ShowWeaponWorldModel( false );
 
 	if ( HasShield() && bDropShield == true )
 	{
@@ -3602,28 +3619,22 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 
 	if ( pWeapon )
 	{
-		Vector vForward;
 
-		AngleVectors( EyeAngles(), &vForward, NULL, NULL );
-		//GetVectors( &vForward, NULL, NULL );
-		Vector vTossPos = WorldSpaceCenter();
-
-		if( bThrowForward )
-			vTossPos = vTossPos + vForward * 64;
-
-		Weapon_Drop( pWeapon, &vTossPos, NULL );
+		Weapon_Drop( pWeapon, &targetPos, NULL );
 
 		pWeapon->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
 		pWeapon->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
 
-		CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
-
 		if( pCSWeapon )
 		{
+			//pCSWeapon->SetModel( pCSWeapon->GetWorldDroppedModel() ); // TODO: implement this later
 			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
 
+			// set silencer bodygroup
+			pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
+
 			//Find out the index of the ammo type
-			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
+			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
 
 			//If it has an ammo type, find out how much the player has
 			if( iAmmoIndex != -1 )
@@ -3634,7 +3645,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				{
 					for ( int i=0; i<MAX_WEAPONS; ++i )
 					{
-						CBaseCombatWeapon *pOtherWeapon = GetWeapon(i);
+						CBaseCombatWeapon *pOtherWeapon = GetWeapon( i );
 						if ( pOtherWeapon && pOtherWeapon != pWeapon && pOtherWeapon->GetPrimaryAmmoType() == iAmmoIndex )
 						{
 							bAmmoTypeInUse = true;
@@ -3646,14 +3657,18 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				if ( !bAmmoTypeInUse )
 				{
 					int iAmmoToDrop = GetAmmoCount( iAmmoIndex );
+					
+					// only add 1 ammo to dropped grenades
+					if( pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
+						iAmmoToDrop = 0;
 
-					//Add this much to the dropped weapon
-					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
+//					//Add this much to the dropped weapon
+//					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
 
 					//Remove all ammo of this type from the player
 					SetAmmoCount( 0, iAmmoIndex );
 				}
-			}*/
+			}
 		}
 
 		//=========================================
@@ -3663,9 +3678,8 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 		int iWeaponBoneIndex = -1;
 
 		MDLCACHE_CRITICAL_SECTION();
-		CStudioHdr *hdr = pWeapon->GetModelPtr();
-		// If I have a hand, set the weapon position to my hand bone position.
-		if ( hdr && hdr->numbones() > 0 )
+
+		if ( !m_bUseNewAnimstate )
 		{
 			// Assume bone zero is the root
 			for ( iWeaponBoneIndex = 0; iWeaponBoneIndex < hdr->numbones(); ++iWeaponBoneIndex )
@@ -3735,157 +3749,11 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				pWeaponPhys->AddVelocity( &vecAdd, &angImp );
 			}
 		}
-
+		
 		bSuccess = true;
 	}
-
-	return bSuccess;
-}
-
-bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield )
-{
-	bool bSuccess = false;
-
-	if ( HasShield() && bDropShield == true )
-	{
-		DropShield();
-		return true;
-	}
-
-	if ( pWeapon )
-	{
-		Vector vForward;
-
-		AngleVectors( EyeAngles(), &vForward, NULL, NULL );
-		//GetVectors( &vForward, NULL, NULL );
-
-		Weapon_Drop( pWeapon, &targetPos, NULL );
-
-		pWeapon->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
-		pWeapon->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
-
-		CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >(pWeapon);
-
-		if ( pCSWeapon )
-		{
-			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
-
-			//Find out the index of the ammo type
-			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
-
-			//If it has an ammo type, find out how much the player has
-			if ( iAmmoIndex != -1 )
-			{
-				// Check to make sure we don't have other weapons using this ammo type
-				bool bAmmoTypeInUse = false;
-				if ( IsAlive() && GetHealth() > 0 )
-				{
-					for ( int i = 0; i<MAX_WEAPONS; ++i )
-					{
-						CBaseCombatWeapon *pOtherWeapon = GetWeapon( i );
-						if ( pOtherWeapon && pOtherWeapon != pWeapon && pOtherWeapon->GetPrimaryAmmoType() == iAmmoIndex )
-						{
-							bAmmoTypeInUse = true;
-							break;
-						}
-					}
-				}
-
-				if ( !bAmmoTypeInUse )
-				{
-					int iAmmoToDrop = GetAmmoCount( iAmmoIndex );
-
-					//Add this much to the dropped weapon
-					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
-
-					//Remove all ammo of this type from the player
-					SetAmmoCount( 0, iAmmoIndex );
-				}
-			}*/
-		}
-
-		//=========================================
-		// Teleport the weapon to the player's hand
-		//=========================================
-		int iBIndex = -1;
-		int iWeaponBoneIndex = -1;
-
-		MDLCACHE_CRITICAL_SECTION();
-		CStudioHdr *hdr = pWeapon->GetModelPtr();
-		// If I have a hand, set the weapon position to my hand bone position.
-		if ( hdr && hdr->numbones() > 0 )
-		{
-			// Assume bone zero is the root
-			for ( iWeaponBoneIndex = 0; iWeaponBoneIndex < hdr->numbones(); ++iWeaponBoneIndex )
-			{
-				iBIndex = LookupBone( hdr->pBone( iWeaponBoneIndex )->pszName() );
-				// Found one!
-				if ( iBIndex != -1 )
-				{
-					break;
-				}
-			}
-
-			if ( iWeaponBoneIndex == hdr->numbones() )
-				return true;
-
-			if ( iBIndex == -1 )
-			{
-				iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
-			}
-		}
-		else
-		{
-			iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
-		}
-
-		if ( iBIndex != -1 )
-		{
-			Vector origin;
-			QAngle angles;
-			matrix3x4_t transform;
-
-			// Get the transform for the weapon bonetoworldspace in the NPC
-			GetBoneTransform( iBIndex, transform );
-
-			// find offset of root bone from origin in local space
-			// Make sure we're detached from hierarchy before doing this!!!
-			pWeapon->StopFollowingEntity();
-			pWeapon->SetAbsOrigin( Vector( 0, 0, 0 ) );
-			pWeapon->SetAbsAngles( QAngle( 0, 0, 0 ) );
-			pWeapon->InvalidateBoneCache();
-			matrix3x4_t rootLocal;
-			pWeapon->GetBoneTransform( iWeaponBoneIndex, rootLocal );
-
-			// invert it
-			matrix3x4_t rootInvLocal;
-			MatrixInvert( rootLocal, rootInvLocal );
-
-			matrix3x4_t weaponMatrix;
-			ConcatTransforms( transform, rootInvLocal, weaponMatrix );
-			MatrixAngles( weaponMatrix, angles, origin );
-
-			pWeapon->Teleport( &origin, &angles, NULL );
-
-			//Have to teleport the physics object as well
-
-			IPhysicsObject *pWeaponPhys = pWeapon->VPhysicsGetObject();
-
-			if ( pWeaponPhys )
-			{
-				Vector vPos;
-				QAngle vAngles;
-				pWeaponPhys->GetPosition( &vPos, &vAngles );
-				pWeaponPhys->SetPosition( vPos, angles, true );
-
-				AngularImpulse	angImp( 0, 0, 0 );
-				Vector vecAdd = GetAbsVelocity();
-				pWeaponPhys->AddVelocity( &vecAdd, &angImp );
-			}
-		}
-
-		bSuccess = true;
-	}
+	
+	UpdateAddonBits();
 
 	return bSuccess;
 }
