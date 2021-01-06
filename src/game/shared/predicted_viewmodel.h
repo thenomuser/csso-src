@@ -39,6 +39,9 @@ public:
 	virtual void ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector& origin, QAngle& angles );
 
 	virtual void CalcViewModelView( CBasePlayer *owner, const Vector& eyePosition, const QAngle& eyeAngles );
+#if IRONSIGHT
+	void CalcIronsightView( const Vector& eyePosition, const QAngle& eyeAngles );
+#endif
 
 #if defined( CLIENT_DLL )
 	BobState_t	&GetBobState() { return m_BobState; }

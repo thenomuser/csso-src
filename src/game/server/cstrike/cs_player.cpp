@@ -440,6 +440,10 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
 #endif
 
+	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
+
 
 END_SEND_TABLE()
 
@@ -605,7 +609,8 @@ CCSPlayer::CCSPlayer()
 
 	m_nPreferredGrenadeDrop = 0;
 
-	m_bNeedToChangeAgent = false;
+	m_bNeedToChangeAgent = true;
+	m_bNeedToChangeGloves = true;
 }
 
 
@@ -757,10 +762,6 @@ void CCSPlayer::Precache()
 		{
 			PrecacheModel( GetCSAgentInfoCT( i )->m_szModel );
 		}
-		if ( !engine->IsModelPrecached( GetCSAgentInfoCT( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSAgentInfoCT( i )->m_szArmsModel );
-		}
 	}
 	for ( i=0; i<MAX_AGENTS_T+1; ++i )
 	{
@@ -768,18 +769,26 @@ void CCSPlayer::Precache()
 		{
 			PrecacheModel( GetCSAgentInfoT( i )->m_szModel );
 		}
-		if ( !engine->IsModelPrecached( GetCSAgentInfoT( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSAgentInfoT( i )->m_szArmsModel );
-		}
 	}
 
-	for ( i=0; i<LAST_CT_CLASS+1; ++i )
+	for ( i=0; i<ARRAYSIZE( s_playerViewmodelArmConfigs ); ++i )
 	{
-		if ( !engine->IsModelPrecached( GetCSClassInfo( i )->m_szArmsModel ) )
-		{
-			PrecacheModel( GetCSClassInfo( i )->m_szArmsModel );
-		}
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedGloveModel );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModelGloveOverride );
+
+		if ( !engine->IsModelPrecached( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel ) )
+			PrecacheModel( s_playerViewmodelArmConfigs[i].szAssociatedSleeveModel );
+	}
+
+	for ( i=0; i<MAX_GLOVES+1; ++i)
+	{
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szViewModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szViewModel );
+		if ( !engine->IsModelPrecached( GetGlovesInfo( i )->szWorldModel ) )
+			PrecacheModel( GetGlovesInfo( i )->szWorldModel );
 	}
 
 #ifdef CS_SHIELD_ENABLED
@@ -1137,8 +1146,19 @@ void CCSPlayer::Spawn()
 {
 	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
 	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_t" ) );
-	m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
-	m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+	
+	if ( m_bNeedToChangeAgent )
+	{
+		m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
+		m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
+		m_bNeedToChangeAgent = false;
+	}
+	if ( m_bNeedToChangeGloves )
+	{
+		m_iLoadoutSlotGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_ct" ) );
+		m_iLoadoutSlotGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_gloves_t" ) );
+		m_bNeedToChangeGloves = false;
+	}
 
 	m_RateLimitLastCommandTimes.Purge();
 
@@ -1331,10 +1351,7 @@ void CCSPlayer::Spawn()
 		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH], true );
 		DoAnimationEvent( PLAYERANIMEVENT_DEPLOY ); // re-deploy default weapon when spawning
 	}
-
-	CreateHandsViewModel();
-	SetHandsViewModel();
-
+	
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
 	else
@@ -1397,7 +1414,7 @@ void CCSPlayer::GiveDefaultItems()
 		else
 		{
 			char weapon[32];
-			Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( edict(), SLOT_HKP2000 ) );
+			Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
 			GiveNamedItem( weapon );
 		}
 	}
@@ -3689,7 +3706,8 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
 
 			// set silencer bodygroup
-			pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
+			if ( pCSWeapon->FindBodygroupByName( "silencer" ) > -1 )
+				pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
 
 			//Find out the index of the ammo type
 			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
@@ -4452,7 +4470,7 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 
 BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 {
-	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, item ) );
+	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, item ) );
 	if ( loadoutItem != NULL )
 		item = loadoutItem;
 
@@ -7399,13 +7417,12 @@ void CCSPlayer::PostAutoBuyCommandProcessing(const AutoBuyInfoStruct *commandInf
 		return;
 	}
 
-	const char *classname = commandInfo->m_classname;
-	if ( Q_strncmp( classname, "weapon_", 7 ) == 0 )
-	{
-		const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( edict(), CSLoadout()->GetSlotFromWeapon( this, classname + 7 ) );
-		if ( loadoutWeapon != NULL )
-			classname = loadoutWeapon;
-	}
+	char classname[64];
+	Q_strcpy( classname, commandInfo->m_classname );
+
+	const char* loadoutWeapon = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, commandInfo->m_command ) );
+	if ( loadoutWeapon != NULL )
+		Q_snprintf( classname, sizeof( classname ), "weapon_%s", loadoutWeapon );
 
 	CBaseCombatWeapon *pPrimary = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 	CBaseCombatWeapon *pSecondary = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
@@ -8876,75 +8893,6 @@ void CCSPlayer::CreateViewModel( int index /*=0*/ )
 	}
 }
 
-void CCSPlayer::CreateHandsViewModel( int index, int parentindex )
-{
-	Assert( index >= 0 && index < MAX_VIEWMODELS );
-
-	if ( GetViewModel( index ) )
-		return;
-
-	CHandsViewModel *vm = (CHandsViewModel*)CreateEntityByName( "hands_viewmodel" );
-	if ( vm )
-	{
-		vm->SetParent( GetViewModel( parentindex ) );
-		vm->SetAbsOrigin( GetAbsOrigin() );
-		vm->CollisionProp()->MarkPartitionHandleDirty();
-		vm->SetOwner( this );
-		vm->SetIndex( index );
-		DispatchSpawn( vm );
-		vm->FollowEntity( GetViewModel( parentindex ), true );
-		m_hViewModel.Set( index, vm );
-	}
-}
-
-void CCSPlayer::SetHandsViewModel()
-{
-	if ( HasAgentSet( GetTeamNumber() ) )
-	{
-		if ( GetTeamNumber() == TEAM_CT )
-		{
-			GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_szArmsModel );
-			GetViewModel( HANDS_VIEWMODEL )->m_nSkin = GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iArmsSkin;
-		}
-		if ( GetTeamNumber() == TEAM_TERRORIST )
-		{
-			GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_szArmsModel );
-			GetViewModel( HANDS_VIEWMODEL )->m_nSkin = GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iArmsSkin;
-		}
-	}
-	else
-	{
-		GetViewModel( HANDS_VIEWMODEL )->SetModel( GetCSClassInfo( m_iClass )->m_szArmsModel );
-
-		switch ( m_iClass )
-		{
-			case CS_CLASS_L337_KREW:
-			{
-				if ( m_iSkin == 0 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 1;
-				else
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-			case CS_CLASS_PHOENIX_CONNNECTION:
-			{
-				if ( m_iSkin == 1 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 3;
-				else if ( m_iSkin == 2 )
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 2;
-				else
-					GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-			default:
-			{
-				GetViewModel( HANDS_VIEWMODEL )->m_nSkin = 0;
-				break;
-			}
-		}
-	}
-}
-
 bool CCSPlayer::HasC4() const
 {
 	return ( Weapon_OwnsThisType( "weapon_c4" ) != NULL );
@@ -10375,18 +10323,6 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 	return pNearestBot;
 }
 #endif // CS_CONTROLLABLE_BOTS_ENABLED
-
-bool CCSPlayer::IsBotOrControllingBot()
-{
-	if ( IsBot() )
-		return true;
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	if ( IsControllingBot() )
-		return true;
-#endif
-
-	return false;
-}
 
 bool CCSPlayer::HasAgentSet( int team )
 {

@@ -954,6 +954,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
 
+	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesT ) ),
+
 END_RECV_TABLE()
 
 
@@ -1697,6 +1701,8 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			UpdateAddonModels();
 
+			m_pViewmodelArmConfig = NULL;
+
 			m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
 			if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
@@ -2380,6 +2386,32 @@ void C_CSPlayer::UpdateClientSideAnimation()
 	if ( m_bKilledByTaser )
 	{
 		HandleTaserAnimation();
+	}
+
+	// We only update the view model for the local player.
+	if ( IsLocalPlayer() )
+	{
+		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+		if ( pWeapon )
+		{
+			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			if ( pViewModel )
+			{
+				pViewModel->UpdateAllViewmodelAddons();
+			}
+		}
+		else
+		{
+			//We have a null weapon so remove the add ons for all the view models for this player.
+			for ( int i=0; i<MAX_VIEWMODELS; ++i )
+			{
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				if ( pViewModel )
+				{
+					pViewModel->RemoveViewmodelArmModels();
+				}
+			}
+		}
 	}
 }
 

@@ -21,9 +21,13 @@
 #ifdef TF_CLIENT_DLL
 	#include "tf_weaponbase.h"
 #endif
-#include "weapon_csbase.h"
-#include "weapon_basecsgrenade.h"
-#include "cs_shareddefs.h"
+#ifdef CSTRIKE_DLL
+	#include "weapon_csbase.h"
+	#include "weapon_basecsgrenade.h"
+	#include "cs_shareddefs.h"
+	#include "c_cs_player.h"
+	#include "cs_loadout.h"
+#endif
 
 #if defined( REPLAY_ENABLED )
 #include "replay/replaycamera.h"
@@ -43,6 +47,9 @@
 #endif
 
 extern ConVar r_drawviewmodel;
+
+extern ConVar loadout_slot_gloves_ct;
+extern ConVar loadout_slot_gloves_t;
 
 #ifdef TF_CLIENT_DLL
 	ConVar cl_flipviewmodels( "cl_flipviewmodels", "0", FCVAR_USERINFO | FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED, "Flip view models." );
@@ -441,6 +448,24 @@ int C_BaseViewModel::DrawModel( int flags )
 		}
 	}
 
+	if ( flags )
+	{
+		FOR_EACH_VEC( m_vecViewmodelArmModels, i )
+		{
+			if ( m_vecViewmodelArmModels[i] )
+			{
+
+				if ( m_vecViewmodelArmModels[i]->GetMoveParent() != this )
+				{
+					m_vecViewmodelArmModels[i]->SetEFlags( EF_BONEMERGE );
+					m_vecViewmodelArmModels[i]->SetParent( this );
+				}
+
+				m_vecViewmodelArmModels[i]->DrawModel( flags );
+			}
+		}
+	}
+
 #ifdef TF_CLIENT_DLL
 	CTFWeaponBase* pTFWeapon = dynamic_cast<CTFWeaponBase*>( pWeapon );
 	if ( ( flags & STUDIO_RENDER ) && pTFWeapon && pTFWeapon->m_viewmodelStatTrakAddon )
@@ -609,6 +634,97 @@ void C_BaseViewModel::GetBoneControllers(float controllers[MAXSTUDIOBONECTRLS])
 	}
 }
 
+void C_BaseViewModel::UpdateAllViewmodelAddons( void )
+{
+	C_CSPlayer *pPlayer = dynamic_cast<C_CSPlayer*>( GetOwner() );
+
+	// Remove any view model add ons if we're spectating.
+	if ( !pPlayer )
+	{
+		RemoveViewmodelArmModels();
+		return;
+	}
+
+	CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>( pPlayer->GetActiveWeapon() );
+	if ( !pCSWeapon )
+	{
+		RemoveViewmodelArmModels();
+		return;
+	}
+
+	if ( pPlayer->m_pViewmodelArmConfig == NULL )
+	{
+		RemoveViewmodelArmModels();
+
+		CStudioHdr *pHdr = pPlayer->GetModelPtr();
+		if ( pHdr )
+		{
+			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
+		}
+	}
+
+	if ( pPlayer->m_bNeedToChangeGloves )
+		RemoveViewmodelArmModels();
+
+	// add gloves and sleeves
+	if ( m_vecViewmodelArmModels.Count() == 0 )
+	{
+		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			if ( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride[0] != NULL )
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride );
+			else
+				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
+		else
+		{
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
+		}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkintoneIndex )
+{
+	// Only create the view model attachment if we have a valid arm model
+	if ( pszArmsModel == NULL || pszArmsModel[0] == '\0' || modelinfo->GetModelIndex( pszArmsModel ) == -1 )
+		return NULL;
+
+	C_ViewmodelAttachmentModel *pEnt = new class C_ViewmodelAttachmentModel;
+	if ( pEnt && pEnt->InitializeAsClientEntity( pszArmsModel, RENDER_GROUP_VIEW_MODEL_OPAQUE ) )
+	{
+		m_vecViewmodelArmModels[ m_vecViewmodelArmModels.AddToTail() ] = pEnt;
+
+		if ( nSkintoneIndex != -1 )
+			pEnt->m_nSkin = nSkintoneIndex;
+
+		pEnt->SetParent( this );
+		pEnt->SetLocalOrigin( vec3_origin );
+		pEnt->UpdatePartitionListEntry();
+		pEnt->CollisionProp()->MarkPartitionHandleDirty();
+		pEnt->UpdateVisibility();
+		RemoveEffects( EF_NODRAW );
+		return pEnt;
+	}	
+
+	return NULL;
+}
+
+void C_BaseViewModel::RemoveViewmodelArmModels( void )
+{
+	FOR_EACH_VEC_BACK( m_vecViewmodelArmModels, i )
+	{
+		C_ViewmodelAttachmentModel *pEnt = m_vecViewmodelArmModels[i].Get();
+		if ( pEnt )
+		{
+			pEnt->Remove();
+		}
+	}
+	m_vecViewmodelArmModels.RemoveAll();
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : RenderGroup_t
@@ -618,7 +734,19 @@ RenderGroup_t C_BaseViewModel::GetRenderGroup()
 	return RENDER_GROUP_VIEW_MODEL_OPAQUE;
 }
 
-int C_HandsViewModel::InternalDrawModel( int flags )
+
+bool C_ViewmodelAttachmentModel::InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup )
+{
+	if ( !BaseClass::InitializeAsClientEntity( pszModelName, renderGroup ) )
+		return false;
+
+	AddEffects( EF_BONEMERGE );
+	AddEffects( EF_BONEMERGE_FASTCULL );
+	AddEffects( EF_NODRAW );
+	return true;
+}
+
+int C_ViewmodelAttachmentModel::InternalDrawModel( int flags )
 {
 	CMatRenderContextPtr pRenderContext( materials );
 

@@ -29,9 +29,8 @@
 
 using namespace vgui;
 
-class Knives
+struct Knives
 {
-public:
 	const char*		m_szUIName;
 	const char*		m_szImage;
 };

@@ -237,17 +237,30 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 {
 #if defined( CLIENT_DLL )
 	if ( cl_use_new_headbob.GetBool() == false )
-		return BaseClass::CalcViewModelView( owner, eyePosition, eyeAngles );
+	{
+		BaseClass::CalcViewModelView( owner, eyePosition, eyeAngles );
+#if IRONSIGHT
+		CalcIronsightView( eyePosition, eyeAngles );
+#endif
+		return;
+	}
 
 	Vector vecNewOrigin = eyePosition;
 	QAngle vecNewAngles = eyeAngles;
 
 	ApplyViewModelPitchAndDip( owner, vecNewOrigin, vecNewAngles );
 
+#if IRONSIGHT
+	CalcIronsightView( eyePosition, eyeAngles );
+#endif
+
 	BaseClass::CalcViewModelView( owner, vecNewOrigin, vecNewAngles );
 #endif //CLIENT_DLL
+}
 
 #if IRONSIGHT
+void CPredictedViewModel::CalcIronsightView( const Vector& eyePosition, const QAngle& eyeAngles )
+{
 	CWeaponCSBase* pWeapon = ( CWeaponCSBase* ) GetOwningWeapon();
 	if ( pWeapon )
 	{
@@ -274,5 +287,5 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 
 		}
 	}
-#endif //IRONSIGHT
 }
+#endif 

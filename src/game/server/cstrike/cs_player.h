@@ -305,8 +305,6 @@ public:
 	virtual bool		IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps );
 	
 	virtual void		CreateViewModel( int viewmodelindex = WEAPON_VIEWMODEL );
-	virtual void		CreateHandsViewModel( int index = HANDS_VIEWMODEL, int parentindex = WEAPON_VIEWMODEL );
-	void				SetHandsViewModel();
 	virtual void		ShowViewPortPanel( const char * name, bool bShow = true, KeyValues *data = NULL );
 
 	// This passes the event to the client's and server's CPlayerAnimState.
@@ -445,6 +443,8 @@ public:
 	bool	HasAgentSet( int team );
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
+
+	CNetworkVar( bool, m_bNeedToChangeGloves );
 
 	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
 
@@ -844,6 +844,8 @@ public:
 	int m_iLoadoutSlotKnifeWeaponT;
 	int m_iLoadoutSlotAgentCT;
 	int m_iLoadoutSlotAgentT;
+	CNetworkVar( int, m_iLoadoutSlotGlovesCT );
+	CNetworkVar( int, m_iLoadoutSlotGlovesT );
 
 private:
 	CountdownTimer m_ladderSurpressionTimer;
