@@ -179,6 +179,10 @@ public:
 	bool IsLogoMap() const;
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
 
+#ifndef CLIENT_DLL
+	bool UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
+#endif
+
 	bool IsBuyTimeElapsed();
 
 	int GetGamemode( void ) { return m_iCurrentGamemode; };

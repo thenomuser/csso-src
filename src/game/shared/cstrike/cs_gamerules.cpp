@@ -6038,6 +6038,25 @@ float CCSGameRules::GetWarmupRemainingTime()
 }
 
 #ifndef CLIENT_DLL
+bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+{
+	// im not sure that its even possible
+	if ( !pPlayer )
+		return false;
+
+	// 1 means enable for everyone
+	if ( mp_use_official_map_factions.GetInt() == 1 )
+		return true;
+
+	// 2 means enable for bots only
+	if ( mp_use_official_map_factions.GetInt() == 2 )
+		return pPlayer->IsBot();
+
+	return false;
+}
+#endif
+
+#ifndef CLIENT_DLL
 void CCSGameRules::StartWarmup( void )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
