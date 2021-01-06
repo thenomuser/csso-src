@@ -704,7 +704,7 @@ ConVar snd_music_selection(
 		"mp_use_official_map_factions",
 		"0",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"Determines wheter to use official factions for the current map or make faction selections free for everyone." );
+		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
