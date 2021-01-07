@@ -496,14 +496,14 @@ ConVar loadout_slot_gloves_ct(
 	"loadout_slot_gloves_ct",
 	"0",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for CTs.",
+	"Which gloves to use for CTs.",
 	true, 0, true, MAX_GLOVES );
 
 ConVar loadout_slot_gloves_t(
 	"loadout_slot_gloves_t",
 	"0",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for Ts.",
+	"Which gloves to use for Ts.",
 	true, 0, true, MAX_GLOVES );
 
 #ifdef CLIENT_DLL
@@ -6408,10 +6408,10 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		pCSPlayer->m_bNeedToChangeAgent = true;
 	}
 
-	int m_iNewGloveCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_ct" ) );
-	int m_iNewGloveT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_t" ) );
+	int m_iNewGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_ct" ) );
+	int m_iNewGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_t" ) );
 	// change the gloves in the next round if needed
-	if ( ( m_iNewGloveCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGloveT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
+	if ( ( m_iNewGlovesCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGlovesT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
 	{
 		pCSPlayer->m_bNeedToChangeGloves = true;
 	}
