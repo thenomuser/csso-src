@@ -3242,6 +3242,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 	if ( bIsInvisible && !clienttools->IsInRecordingMode() )
 		return;
 
+#ifndef CSTRIKE_DLL
 	// add in muzzleflash effect
 	if ( ShouldMuzzleFlash() )
 	{
@@ -3249,29 +3250,13 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 		
 		ProcessMuzzleFlashEvent();
 	}
+#endif
 
 	// If we're invisible, don't process animation events.
 	if ( bIsInvisible )
 		return;
 
-	// If we don't have any sequences, don't do anything
-	int nStudioNumSeq = pStudioHdr->GetNumSeq();
-	if ( nStudioNumSeq < 1 )
-	{
-		Warning( "%s[%d]: no sequences?\n", GetDebugName(), entindex() );
-		Assert( nStudioNumSeq >= 1 );
-		return;
-	}
-
-	int nSeqNum = GetSequence();
-	if ( nSeqNum >= nStudioNumSeq )
-	{
-		// This can happen e.g. while reloading Heavy's shotgun, switch to the minigun.
-		Warning( "%s[%d]: Playing sequence %d but there's only %d in total?\n", GetDebugName(), entindex(), nSeqNum, nStudioNumSeq );
-		return;
-	}
-
-	mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( nSeqNum );
+	mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( GetSequence() );
 
 	if (seqdesc.numevents == 0)
 		return;
@@ -3322,7 +3307,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 	BOOL bLooped = false;
 	if (flEventCycle <= m_flPrevEventCycle)
 	{
-		/*if (m_flPrevEventCycle - flEventCycle > 0.5)
+		if (m_flPrevEventCycle - flEventCycle > 0.5)
 		{
 			bLooped = true;
 		}
@@ -3331,11 +3316,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 			// things have backed up, which is bad since it'll probably result in a hitch in the animation playback
 			// but, don't play events again for the same time slice
 			return;
-		}*/
-
-		// PiMoN: seems like its broken, it's looping the animation
-		// only one time on most occasions; let's just do it this way
-		bLooped = true;
+		}
 	}
 
 	// This makes sure events that occur at the end of a sequence occur are
@@ -3373,7 +3354,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 		}
 
 		// Necessary to get the next loop working
-		m_flPrevEventCycle = flEventCycle - 0.001f;
+		m_flPrevEventCycle = -0.01;
 	}
 
 	for (int i = 0; i < (int)seqdesc.numevents; i++)
@@ -3404,7 +3385,7 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 		}
 	}
 
-	m_flPrevEventCycle = flEventCycle;
+	m_flPrevEventCycle = GetCycle();
 }
 
 //-----------------------------------------------------------------------------

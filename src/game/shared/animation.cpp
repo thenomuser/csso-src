@@ -548,7 +548,7 @@ const char *GetSequenceName( CStudioHdr *pstudiohdr, int iSequence )
 	{
 		if ( pstudiohdr )
 		{
-			Msg( "Bad sequence in GetSequenceName() for model '%s'!\n", pstudiohdr->pszName() );
+			DevMsg( "Bad sequence in GetSequenceName() for model '%s'!\n", pstudiohdr->pszName() );
 		}
 		return "Unknown";
 	}
