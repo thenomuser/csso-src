@@ -201,7 +201,9 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 #if IRONSIGHT
 		CIronSightController* pIronSightController = GetIronSightController();
 		if ( pIronSightController )
-			SendWeaponAnim( pIronSightController->IsInIronSight() ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
+			// hacky but for some reason IsInIronSight() returns false server-side resulting in a wrong anim
+			//SendWeaponAnim( pIronSightController->IsInIronSight() ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
+			SendWeaponAnim( (weaponMode == Secondary_Mode) ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 		else
 #endif
 			SendWeaponAnim( ACT_VM_PRIMARYATTACK );

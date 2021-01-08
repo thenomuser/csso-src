@@ -2085,13 +2085,10 @@ void CViewRender::RenderView( const CViewSetup &viewRender, int nClearFlags, int
 		}
 
 #if IRONSIGHT
-		if ( r_drawothermodels.GetInt() == 1 && ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView, true ) )
+		if ( r_drawothermodels.GetInt() == 1 )
 		{
-			//draw the viewmodel with a special flag that renders a special mask shape into the stencil buffer
-			DrawViewModels(viewRender, whatToDraw & RENDERVIEW_DRAWVIEWMODEL);
-
 			//apply the finished blur effect over the screen, while masking out the scope lens
-			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView, false );
+			ApplyIronSightScopeEffect( viewRender.x, viewRender.y, viewRender.width, viewRender.height, &m_CurrentView );
 		}
 #endif
 

@@ -73,7 +73,6 @@ public:
 
 	bool				ShouldHideCrossHair( void );
 
-	bool				PrepareScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup );
 	void				RenderScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup );
 
 #endif
