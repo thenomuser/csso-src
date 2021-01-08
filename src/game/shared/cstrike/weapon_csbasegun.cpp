@@ -198,10 +198,12 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	}
 	else
 	{
+#if IRONSIGHT
 		CIronSightController* pIronSightController = GetIronSightController();
 		if ( pIronSightController )
 			SendWeaponAnim( pIronSightController->IsInIronSight() ? ACT_VM_SECONDARYATTACK : ACT_VM_PRIMARYATTACK );
 		else
+#endif
 			SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	}
 
