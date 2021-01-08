@@ -328,7 +328,6 @@ SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
 SendPropTime( SENDINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
 SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
-SendPropBool( SENDINFO( m_bIronsightInitiallized ) ),
 #endif //IRONSIGHT
 #else
 RecvPropInt( RECVINFO( m_weaponMode ) ),
@@ -339,7 +338,6 @@ RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
 #if IRONSIGHT
 RecvPropInt( RECVINFO( m_iIronSightMode ) ),
-RecvPropBool( RECVINFO( m_bIronsightInitiallized ) ),
 #endif //IRONSIGHT
 #endif
 END_NETWORK_TABLE()
@@ -473,10 +471,6 @@ CWeaponCSBase::CWeaponCSBase()
 	m_flDoneSwitchingSilencer = 0.0f;
 
 	ResetGunHeat();
-
-#if IRONSIGHT
-	m_bIronsightInitiallized = false;
-#endif
 }
 
 CWeaponCSBase::~CWeaponCSBase()
@@ -1309,6 +1303,16 @@ void CWeaponCSBase::Precache( void )
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
 
 	PrecacheScriptSound( "Default.Zoom" );
+
+	// PiMoN: weaponscript parsing happens on Precache() of BaseCombatWeapon
+	// so moving it here from construct is actually a good solution, all
+	// those players with not working ironsights just had different problems...
+	// lost a week to understand that I was fixing what was working as intended >-<
+#if IRONSIGHT
+	m_iIronSightMode = IronSight_should_approach_unsighted;
+	m_IronSightController = NULL;
+	UpdateIronSightController();
+#endif //IRONSIGHT
 }
 
 Activity CWeaponCSBase::GetDeployActivity( void )
@@ -3000,19 +3004,8 @@ void CWeaponCSBase::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 	SetRemoveable( false );
 #endif
 
-	// PiMoN: moved from constructor because otherwise CIronSightController::Init
-	// gets called earlier than CCSWeaponInfo::Parse so the ironsight
-	// variables aren't initialized yet and ironsight doesn't work
-	// let's just hope that it's gonna work like that
 #if IRONSIGHT
-	if ( !m_bIronsightInitiallized )
-	{
-		m_iIronSightMode = IronSight_should_approach_unsighted;
-		m_IronSightController = NULL;
-		UpdateIronSightController();
-	}
-	else
-		UpdateIronSightController();
+	UpdateIronSightController();
 #endif //IRONSIGHT
 }
 

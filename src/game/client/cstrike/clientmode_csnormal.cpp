@@ -77,6 +77,7 @@ IClientMode *g_pClientMode = NULL;
 
 // This is a temporary entity used to render the player's model while drawing the class selection menu.
 CHandle<C_BaseAnimating> g_ClassImagePlayer;	// player
+CHandle<C_BaseAnimating> g_ClassImageGloves;	// gloves
 CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
 
 // This is a temporary entity used to render the player's model while drawing the buy menu.
@@ -859,13 +860,17 @@ void UpdateClassImageEntity(
 
 	const char* pWeaponName = "models/weapons/w_rif_ak47.mdl";
 	const char* pWeaponSequence = "t_loadout_rifle02_idle";
+	int iTeamNumber = TEAM_UNASSIGNED;
 
 	if ( Q_strncmp( V_UnqualifiedFileName(pModelName), "ctm_", 4 ) == 0 )
 	{
 		// give CTs a m4
 		pWeaponName = "models/weapons/w_rif_m4a4.mdl";
 		pWeaponSequence = "ct_loadout_rifle_idle_handrepo_m4";
+		iTeamNumber = TEAM_CT;
 	}
+	else if ( Q_strncmp( V_UnqualifiedFileName( pModelName ), "tm_", 3 ) == 0 )
+		iTeamNumber = TEAM_TERRORIST;
 
 	bool m_bSilenced = false;
 	/*if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
@@ -905,6 +910,8 @@ void UpdateClassImageEntity(
 
 	C_BaseAnimating *pPlayerModel = g_ClassImagePlayer.Get();
 
+	bool bCreateGloves = false;
+
 	// Does the entity even exist yet?
 	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, pModelName );
 	if ( recreatePlayer )
@@ -918,6 +925,12 @@ void UpdateClassImageEntity(
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
 
 		g_ClassImagePlayer = pPlayerModel;
+	}
+
+	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
+	{
+		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, iTeamNumber ) )
+			bCreateGloves = true;
 	}
 
 	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
@@ -939,6 +952,32 @@ void UpdateClassImageEntity(
 			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
 		g_ClassImageWeapon = pWeaponModel;
 	}
+
+	C_BaseAnimating *pGlovesModel = g_ClassImageGloves.Get();
+
+	if ( bCreateGloves )
+	{
+		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, iTeamNumber ) )->szWorldModel;
+
+		// Does the entity even exist yet?
+		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
+		{
+			if ( pGlovesModel )
+				pGlovesModel->Remove();
+
+			pGlovesModel = new C_BaseAnimating;
+			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
+			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
+			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
+			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
+
+			g_ClassImageGloves = pGlovesModel;
+		}
+
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
+	}
+	else if ( pGlovesModel )
+		pGlovesModel->Remove();
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -994,16 +1033,16 @@ void UpdateClassImageEntity(
 	// in the world.
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.5, 0.5, 0.5 );
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
 
 	static Vector white[6] = 
 	{
-		Vector( 0.5, 0.5, 0.5 ),
-		Vector( 0.5, 0.5, 0.5 ),
-		Vector( 0.5, 0.5, 0.5 ),
-		Vector( 0.5, 0.5, 0.5 ),
-		Vector( 0.5, 0.5, 0.5 ),
-		Vector( 0.5, 0.5, 0.5 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
 	};
 
 	g_pStudioRender->SetAmbientLightColors( white );
@@ -1014,10 +1053,13 @@ void UpdateClassImageEntity(
 	render->SetColorModulation( color );
 	render->SetBlend( 1.0f );
 	pPlayerModel->DrawModel( STUDIO_RENDER );
-
 	if ( pWeaponModel )
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
+	}
+	if ( pGlovesModel )
+	{
+		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
 
 	modelrender->SuppressEngineLighting( false );
@@ -1148,13 +1190,13 @@ void UpdateBuyMenuImageEntity(
 		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
 
-		if ( pPlayerModel->FindBodygroupByName( "gloves" ) > -1 )
-		{
-			if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
-				bCreateGloves = true;
-		}
-
 		g_BuyMenuImagePlayer = pPlayerModel;
+	}
+
+	if ( pPlayerModel->DoesModelSupportGloves() )
+	{
+		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
+			bCreateGloves = true;
 	}
 
 	C_BaseAnimating *pWeaponAnimating = g_BuyMenuImageWeapon.Get();

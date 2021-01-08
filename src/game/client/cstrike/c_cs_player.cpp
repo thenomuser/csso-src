@@ -50,6 +50,8 @@
 
 #include "cs_blackmarket.h"				// for vest/helmet prices
 
+#include "cs_loadout.h"
+
 #if defined( CCSPlayer )
 	#undef CCSPlayer
 #endif
@@ -292,6 +294,7 @@ private:
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
+	C_BaseAnimating* m_pGlovesModel;
 };
 
 
@@ -321,6 +324,9 @@ C_CSRagdoll::C_CSRagdoll()
 C_CSRagdoll::~C_CSRagdoll()
 {
 	PhysCleanupFrictionSounds( this );
+
+	if ( m_pGlovesModel )
+		m_pGlovesModel->Remove();
 }
 
 void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
@@ -589,6 +595,22 @@ void C_CSRagdoll::CreateCSRagdoll()
 			pPlayer->SetCycle( 0.0 );
 
 			Interp_Reset( varMap );
+		}
+
+		// add a separate gloves model when the player spawns if needed
+		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) && DoesModelSupportGloves() )
+		{
+			// hide the gloves first
+			SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+
+			// I dont think its possible for a ragdoll but just in case
+			if ( m_pGlovesModel )
+				m_pGlovesModel->Remove();
+
+			m_pGlovesModel = new C_BaseAnimating;
+			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+			m_pGlovesModel->FollowEntity( this ); // attach to player model
 		}
 	}
 	else
@@ -1680,7 +1702,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
-		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
+		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
 		C_CSPlayer* csPlayer = ToCSPlayer( pPlayer );
 		if (csPlayer && csPlayer->IsLocalPlayer())
 		{

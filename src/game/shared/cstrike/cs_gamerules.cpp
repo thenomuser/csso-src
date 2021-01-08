@@ -496,14 +496,14 @@ ConVar loadout_slot_gloves_ct(
 	"loadout_slot_gloves_ct",
 	"0",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for CTs.",
+	"Which gloves to use for CTs.",
 	true, 0, true, MAX_GLOVES );
 
 ConVar loadout_slot_gloves_t(
 	"loadout_slot_gloves_t",
 	"0",
 	FCVAR_ARCHIVE | FCVAR_USERINFO,
-	"Which glove to use for Ts.",
+	"Which gloveS to use for Ts.",
 	true, 0, true, MAX_GLOVES );
 
 #ifdef CLIENT_DLL
@@ -704,7 +704,7 @@ ConVar snd_music_selection(
 		"mp_use_official_map_factions",
 		"0",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"Determines wheter to use official factions for the current map or make faction selections free for everyone." );
+		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
@@ -6038,6 +6038,25 @@ float CCSGameRules::GetWarmupRemainingTime()
 }
 
 #ifndef CLIENT_DLL
+bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+{
+	// im not sure that its even possible
+	if ( !pPlayer )
+		return false;
+
+	// 1 means enable for everyone
+	if ( mp_use_official_map_factions.GetInt() == 1 )
+		return true;
+
+	// 2 means enable for bots only
+	if ( mp_use_official_map_factions.GetInt() == 2 )
+		return pPlayer->IsBot();
+
+	return false;
+}
+#endif
+
+#ifndef CLIENT_DLL
 void CCSGameRules::StartWarmup( void )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -6390,10 +6409,10 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		pCSPlayer->m_bNeedToChangeAgent = true;
 	}
 
-	int m_iNewGloveCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_ct" ) );
-	int m_iNewGloveT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_glove_t" ) );
+	int m_iNewGlovesCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_ct" ) );
+	int m_iNewGlovesT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_gloves_t" ) );
 	// change the gloves in the next round if needed
-	if ( ( m_iNewGloveCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGloveT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
+	if ( ( m_iNewGlovesCT != pCSPlayer->m_iLoadoutSlotGlovesCT ) || ( m_iNewGlovesT != pCSPlayer->m_iLoadoutSlotGlovesT ) )
 	{
 		pCSPlayer->m_bNeedToChangeGloves = true;
 	}

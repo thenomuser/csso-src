@@ -638,7 +638,8 @@ private:
 
 	CNetworkVar( bool, m_bHasControlledBotThisRound );
 #endif
-
+	
+private:
 	float		m_flNextMagDropTime;
 	int			m_nLastMagDropAttachmentIndex;
 

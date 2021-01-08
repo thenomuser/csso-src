@@ -151,8 +151,6 @@ extern ConVar ammo_molotov_max;
 
 extern ConVar mp_buy_anywhere;
 
-extern ConVar mp_use_official_map_factions;
-
 extern ConVar mp_respawn_immunitytime;
 
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED, "Determines whether a player can early-out of the deathcam." );
@@ -1177,7 +1175,7 @@ void CCSPlayer::Spawn()
 			m_iClass = GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass;
 	}
 	// PiMoN: placing it here since the server can change the varriable mid-game
-	else if ( mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
+	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
 			m_iClass = CSGameRules()->m_iMapFactionCT;
@@ -5920,8 +5918,8 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 	if ( team == GetTeamNumber() )
 	{
 		// if we don't have an agent and also map factions are disabled (or there are no default factions for current map) let the players choose a faction
-		if ( !HasAgentSet( GetTeamNumber() ) && (!mp_use_official_map_factions.GetBool() ||
-			(mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT == NULL) : (CSGameRules()->m_iMapFactionT == NULL)))))
+		if ( !HasAgentSet( GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this) ||
+			(CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT == NULL) : (CSGameRules()->m_iMapFactionT == NULL)))))
 		{
 			// Let people change class (skin) by re-joining the same team
 			if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -5938,7 +5936,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		{
 			if ( HasAgentSet(GetTeamNumber()) )
 				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass );
-			else if ( mp_use_official_map_factions.GetBool() && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
+			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
 			{
 				if ( GetTeamNumber() == TEAM_CT )
 					HandleCommand_JoinClass( CSGameRules()->m_iMapFactionCT );
@@ -6876,7 +6874,7 @@ void CCSPlayer::State_Enter_PICKINGCLASS()
 	{
 		if ( HasAgentSet( TEAM_TERRORIST ) )
 			HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iClass );
-		else if ( mp_use_official_map_factions.GetBool() && (CSGameRules()->m_iMapFactionT != NULL) )
+		else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && (CSGameRules()->m_iMapFactionT != NULL) )
 			HandleCommand_JoinClass( CSGameRules()->m_iMapFactionT );
 		else
 			ShowViewPortPanel( PANEL_CLASS_TER );
@@ -6885,7 +6883,7 @@ void CCSPlayer::State_Enter_PICKINGCLASS()
 	{
 		if ( HasAgentSet( TEAM_CT ) )
 			HandleCommand_JoinClass( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iClass );
-		else if ( mp_use_official_map_factions.GetBool() && (CSGameRules()->m_iMapFactionCT != NULL) )
+		else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && (CSGameRules()->m_iMapFactionCT != NULL) )
 			HandleCommand_JoinClass( CSGameRules()->m_iMapFactionCT );
 		else
 			ShowViewPortPanel( PANEL_CLASS_CT );

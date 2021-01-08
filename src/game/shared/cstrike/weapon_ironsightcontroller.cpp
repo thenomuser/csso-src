@@ -375,55 +375,11 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 
 }
 
-static void SetRenderTargetAndViewPort(ITexture *rt)
-{
-	CMatRenderContextPtr pRenderContext(materials);
-	pRenderContext->SetRenderTarget(rt);
-	if (rt)
-	{
-		pRenderContext->Viewport(0, 0, rt->GetActualWidth(), rt->GetActualHeight());
-	}
-}
-
 #ifdef DEBUG
 ConVar r_ironsight_scope_effect("r_ironsight_scope_effect", "1", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
 ConVar ironsight_laser_dot_render_tweak1("ironsight_laser_dot_render_tweak1", "61", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
 ConVar ironsight_laser_dot_render_tweak2("ironsight_laser_dot_render_tweak2", "64", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
 #endif
-
-bool CIronSightController::PrepareScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
-{
-#ifdef DEBUG
-	if (!r_ironsight_scope_effect.GetBool())
-		return false;
-#endif
-
-	if (!IsInIronSight())
-		return false;
-
-	Rect_t actualRect;
-	UpdateScreenEffectTexture(0, x, y, w, h, false, &actualRect);
-	ITexture *pRtFullFrame = GetFullFrameFrameBufferTexture(0);
-
-	CMatRenderContextPtr pRenderContext(materials);
-	pRenderContext->PushRenderTargetAndViewport();
-
-	// DOWNSAMPLE _rt_FullFrameFB TO _rt_SmallFB0
-	IMaterial *pMatDownsample = materials->FindMaterial("dev/scope_downsample", TEXTURE_GROUP_OTHER, true);
-	ITexture *pRtQuarterSize0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
-	SetRenderTargetAndViewPort(pRtQuarterSize0);
-
-	int nSrcWidth = pViewSetup->width;
-	int nSrcHeight = pViewSetup->height;
-
-	pRenderContext->DrawScreenSpaceRectangle(pMatDownsample, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-		0, 0, nSrcWidth - 4, nSrcHeight - 4,
-		pRtFullFrame->GetActualWidth(), pRtFullFrame->GetActualHeight());
-
-	pRenderContext->PopRenderTargetAndViewport();
-
-	return true;
-}
 
 void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
 {
@@ -438,15 +394,13 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 
 	CMatRenderContextPtr pRenderContext(materials);
 
-	// now draw the laser dot, masked to ONLY render on the lens
+	// now draw the laser dot
 
 	Vector2D dotCoords = GetDotCoords();
 	dotCoords.x *= engine->GetScreenAspectRatio();
 
 	//CMatRenderContextPtr pRenderContext(materials);
 	IMaterial *pMatDot = materials->FindMaterial(GetDotMaterial(), TEXTURE_GROUP_OTHER, true);
-
-	pRenderContext->OverrideDepthEnable(true, false);
 
 	int iWidth = GetDotWidth();
 
@@ -471,12 +425,6 @@ void CIronSightController::RenderScopeEffect( int x, int y, int w, int h, CViewS
 												  64, 64 );
 #endif
 	}
-
-	pRenderContext->OverrideDepthEnable(false, true);
-
-	//clean up stencil buffer once we're done so render elements like the glow pass draw correctly
-	pRenderContext->ClearBuffers(false, false, true);
-
 }
 
 #endif //CLIENT_DLL
@@ -533,8 +481,6 @@ bool CIronSightController::Init( CWeaponCSBase *pWeaponToMonitor )
 		{
 			return false;
 		}
-
-		pWeaponToMonitor->m_bIronsightInitiallized = true;
 
 		m_pAttachedWeapon = pWeaponToMonitor;
 

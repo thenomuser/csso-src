@@ -243,12 +243,9 @@ private:
 };
 
 #ifdef CLIENT_DLL
-// PiMoN: this has to be C_BaseAnimating, but if it is, then it
-// just acts like an ordinary model (obviously), its not affected
-// by viewmodel FOV and viewmodel renders on top of it, investigate
-class C_ViewmodelAttachmentModel: public CBaseViewModel
+class C_ViewmodelAttachmentModel: public C_BaseAnimating
 {
-	DECLARE_CLASS( C_ViewmodelAttachmentModel, CBaseViewModel );
+	DECLARE_CLASS( C_ViewmodelAttachmentModel, C_BaseAnimating );
 public:
 	bool InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup );
 	virtual int InternalDrawModel( int flags );

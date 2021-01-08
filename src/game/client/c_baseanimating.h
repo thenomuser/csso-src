@@ -378,6 +378,8 @@ public:
 	void SetBodygroup( int iGroup, int iValue );
 	int GetBodygroup( int iGroup );
 
+	bool DoesModelSupportGloves();
+
 	void SetSkin( int iSkin );
 	void SetBody( int iBody );
 
