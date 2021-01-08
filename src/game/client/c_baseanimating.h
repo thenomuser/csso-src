@@ -345,6 +345,8 @@ public:
 	void SetBodygroup( int iGroup, int iValue );
 	int GetBodygroup( int iGroup );
 
+	bool DoesModelSupportGloves();
+
 	const char *GetBodygroupName( int iGroup );
 	int FindBodygroupByName( const char *name );
 	int GetBodygroupCount( int iGroup );

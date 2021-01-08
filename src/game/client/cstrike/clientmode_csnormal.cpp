@@ -927,7 +927,7 @@ void UpdateClassImageEntity(
 		g_ClassImagePlayer = pPlayerModel;
 	}
 
-	if ( pPlayerModel && pPlayerModel->FindBodygroupByName( "gloves" ) > -1 )
+	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
 	{
 		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, iTeamNumber ) )
 			bCreateGloves = true;
@@ -1158,7 +1158,7 @@ void UpdateBuyMenuImageEntity(
 		g_BuyMenuImagePlayer = pPlayerModel;
 	}
 
-	if ( pPlayerModel && pPlayerModel->FindBodygroupByName( "gloves" ) > -1 )
+	if ( pPlayerModel && pPlayerModel->DoesModelSupportGloves() )
 	{
 		if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
 			bCreateGloves = true;
