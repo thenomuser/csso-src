@@ -534,8 +534,6 @@ bool CIronSightController::Init( CWeaponCSBase *pWeaponToMonitor )
 			return false;
 		}
 
-		pWeaponToMonitor->m_bIronsightInitiallized = true;
-
 		m_pAttachedWeapon = pWeaponToMonitor;
 
 		m_bIronSightAvailable			= pWeaponToMonitor->GetCSWpnData().m_bIronsightCapable;
