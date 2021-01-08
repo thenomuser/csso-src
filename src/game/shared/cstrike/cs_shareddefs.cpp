@@ -190,7 +190,7 @@ const char* TSeparatistPlayerModelStrings[] =
 	"models/player/tm_separatist_varianta.mdl",
 	"models/player/tm_separatist_variantb.mdl",
 	"models/player/tm_separatist_variantc.mdl",
-	"models/player/tm_separatist_variant.mdl",
+	"models/player/tm_separatist_variantd.mdl",
 };
 const char* TBalkanPlayerModelStrings[] =
 {
