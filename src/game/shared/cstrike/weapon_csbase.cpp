@@ -1304,7 +1304,7 @@ void CWeaponCSBase::Precache( void )
 	// so moving it here from construct is actually a good solution, all
 	// those players with not working ironsights just had different problems...
 	// lost a week to understand that I was fixing what was working as intended >-<
-#ifdef IRONSIGHT
+#if IRONSIGHT
 	m_iIronSightMode = IronSight_should_approach_unsighted;
 	m_IronSightController = NULL;
 	UpdateIronSightController();
