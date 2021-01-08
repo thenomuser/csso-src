@@ -442,14 +442,7 @@ bool CIronSightController::IsInIronSight( void )
 		CCSPlayer *pPlayer = ToCSPlayer( m_pAttachedWeapon->GetOwner() );
 		if ( pPlayer && pPlayer->IsLookingAtWeapon() )
 			return false;
-#ifndef CLIENT_DLL
-		if ( GetIronSightAmount() > 0 )
-			Warning( "GetIronSightAmount() > 0" );
-		if ( IsApproachingSighted() )
-			Warning( "IsApproachingSighted()" );
-		if ( IsApproachingUnSighted() )
-			Warning( "IsApproachingUnSighted" );
-#endif
+
 		if ( GetIronSightAmount() > 0  && (IsApproachingSighted() || IsApproachingUnSighted()) )
 			return true;
 	}
