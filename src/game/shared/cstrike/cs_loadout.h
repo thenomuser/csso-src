@@ -4,14 +4,17 @@
 #pragma once
 #endif
 
-#ifdef CLIENT_DLL
-#define CCSLoadout C_CSLoadout
-#define CBasePlayer C_BasePlayer
-#endif
-
 #include "cbase.h"
 #include "baseplayer_shared.h"
 #include "weapon_csbase.h"
+
+#ifdef CLIENT_DLL
+#define CCSLoadout C_CSLoadout
+#define CBasePlayer C_BasePlayer
+#define CCSPlayer C_CSPlayer
+#endif
+
+class CCSPlayer;
 
 // Loadout slots
 enum LoadoutSlot_t
