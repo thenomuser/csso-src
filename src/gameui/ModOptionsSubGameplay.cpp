@@ -55,6 +55,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 
 	m_pCloseOnBuy = new CCvarToggleCheckButton( this, "CloseOnBuyCheckbox", "#GameUI_Gameplay_CloseOnBuy", "closeonbuy" );
 	m_pUseOpensBuyMenu = new CCvarToggleCheckButton( this, "UseOpensBuyMenuCheckbox", "#GameUI_Gameplay_UseOpensBuyMenu", "cl_use_opens_buy_menu" );
+	m_pAddBotPrefix = new CCvarToggleCheckButton( this, "AddBotPrefix", "#GameUI_Gameplay_AddBotPrefix", "cl_add_bot_prefix" );
 	m_pViewmodelOffsetX = new CCvarSlider( this, "ViewmodelOffsetXSlider", "", -2.0f, 2.5f, "viewmodel_offset_x" );
 	m_pViewmodelOffsetXLabel = new Label( this, "ViewmodelOffsetXLabel", "" );
 	m_pViewmodelOffsetY = new CCvarSlider( this, "ViewmodelOffsetYSlider", "", -2.0f, 2.0f, "viewmodel_offset_y" );
@@ -79,6 +80,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 
 	m_pCloseOnBuy->AddActionSignalTarget( this );
 	m_pUseOpensBuyMenu->AddActionSignalTarget( this );
+	m_pAddBotPrefix->AddActionSignalTarget( this );
 	m_pViewmodelOffsetX->AddActionSignalTarget( this );
 	m_pViewmodelOffsetY->AddActionSignalTarget( this );
 	m_pViewmodelOffsetZ->AddActionSignalTarget( this );
@@ -167,6 +169,7 @@ void CModOptionsSubGameplay::OnResetData()
 {
 	m_pCloseOnBuy->Reset();
 	m_pUseOpensBuyMenu->Reset();
+	m_pAddBotPrefix->Reset();
 	m_pViewmodelOffsetX->Reset();
 	m_pViewmodelOffsetY->Reset();
 	m_pViewmodelOffsetZ->Reset();
@@ -191,6 +194,7 @@ void CModOptionsSubGameplay::OnApplyChanges()
 {
 	m_pCloseOnBuy->ApplyChanges();
 	m_pUseOpensBuyMenu->ApplyChanges();
+	m_pAddBotPrefix->ApplyChanges();
 	m_pViewmodelOffsetPreset->ApplyChanges();
 	m_pViewmodelOffsetX->ApplyChanges();
 	m_pViewmodelOffsetY->ApplyChanges();

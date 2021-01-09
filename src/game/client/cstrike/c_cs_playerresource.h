@@ -16,15 +16,6 @@
 
 #define MAX_DECORATED_PLAYER_NAME_LENGTH ( ( MAX_NETWORKID_LENGTH * 10 ) + 20 )
 
-enum EDecoratedPlayerNameFlag_t
-{
-	k_EDecoratedPlayerNameFlag_Simple = 0,
-	k_EDecoratedPlayerNameFlag_AddBotToNameIfControllingBot = (1 << 0),
-	k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer = (1 << 1),
-	k_EDecoratedPlayerNameFlag_DontShowClanName = (1 << 2),
-	k_EDecoratedPlayerNameFlag_DontMakeStringSafe = (1 << 3),
-};
-
 class C_CS_PlayerResource : public C_PlayerResource
 {
 	DECLARE_CLASS( C_CS_PlayerResource, C_PlayerResource );
