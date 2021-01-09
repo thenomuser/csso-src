@@ -49,6 +49,7 @@ protected:
 private:
 	CCvarToggleCheckButton*		m_pCloseOnBuy;
 	CCvarToggleCheckButton*		m_pUseOpensBuyMenu;
+	CCvarToggleCheckButton*		m_pAddBotPrefix;
 	CCvarSlider*				m_pViewmodelOffsetX;
 	vgui::Label*				m_pViewmodelOffsetXLabel;
 	CCvarSlider*				m_pViewmodelOffsetY;

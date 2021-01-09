@@ -549,6 +549,10 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 		m_DeathNotices.Remove(0);
 	}
 
+	// if our attacker is the same as our assiter, it means a bot attacked the victim and a player took over that bot
+	if ( iAssister == iKiller )
+		iAssister = 0;
+
 	// Get the names of the players
 	const char *killer_name = iKiller > 0 ? g_PR->GetPlayerName( iKiller ) : NULL;
 	const char *victim_name = iVictim > 0 ? g_PR->GetPlayerName( iVictim ) : NULL;
