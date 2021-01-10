@@ -194,12 +194,12 @@ void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** para
 		CLEAR_FLAGS( MATERIAL_VAR_BASEALPHAENVMAPMASK );
 	}
 
-	/*if ( IS_FLAG_SET( MATERIAL_VAR_BASEALPHAENVMAPMASK ) && info.m_nBumpmap != -1 && 
+	if ( IS_FLAG_SET( MATERIAL_VAR_BASEALPHAENVMAPMASK ) && info.m_nBumpmap != -1 && 
 		params[info.m_nBumpmap]->IsDefined() && !hasNormalMapAlphaEnvmapMask )
 	{
 		Warning( "material %s has a normal map and $basealphaenvmapmask.  Must use $normalmapalphaenvmapmask to get specular.\n\n", pMaterialName );
 		params[info.m_nEnvmap]->SetUndefined();
-	}*/
+	}
 	
 	if ( info.m_nEnvmapMask != -1 && params[info.m_nEnvmapMask]->IsDefined() && info.m_nBumpmap != -1 && params[info.m_nBumpmap]->IsDefined() )
 	{
@@ -987,7 +987,7 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 				{
 					int nWidth, nHeight;
 					pShaderAPI->GetBackBufferDimensions( nWidth, nHeight );
-					flResScale=max( 0.5f, max( 1024.f/nWidth, 768.f/nHeight ) );
+					flResScale=max( 0.5, max( 1024.0/nWidth, 768/nHeight ) );
 				
 					if ( bScaleEdges )
 					{
