@@ -170,6 +170,20 @@ void CResultProxy::SetFloatResult( float result )
 	}
 }
 
+void CResultProxy::SetVecResult( float x, float y, float z, float w )
+{
+	if (m_pResult->GetType() == MATERIAL_VAR_TYPE_VECTOR)
+	{		
+		float v[4] = { x, y, z, w };
+		int vecSize = m_pResult->VectorSize();
+		m_pResult->SetVecValue( v, vecSize );
+	}
+	else
+	{
+		m_pResult->SetFloatValue( x );
+	}
+}
+
 C_BaseEntity *CResultProxy::BindArgToEntity( void *pArg )
 {
 	IClientRenderable *pRend = (IClientRenderable *)pArg;

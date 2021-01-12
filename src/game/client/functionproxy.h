@@ -47,6 +47,7 @@ public:
 protected:
 	C_BaseEntity *BindArgToEntity( void *pArg );
 	void SetFloatResult( float result );
+	void SetVecResult( float x, float y, float z, float w );
 
 	IMaterialVar* m_pResult;
 	int m_ResultVecComp;

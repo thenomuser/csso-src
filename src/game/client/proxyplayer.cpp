@@ -587,3 +587,44 @@ void CPlayerLogoOnModelProxy::OnBind( void *pC_BaseEntity )
 
 EXPOSE_INTERFACE( CPlayerLogoOnModelProxy, IMaterialProxy, "PlayerLogoOnModel" IMATERIAL_PROXY_INTERFACE_VERSION );
 */
+
+//-----------------------------------------------------------------------------
+// CrosshairColor proxy
+//-----------------------------------------------------------------------------
+extern ConVar cl_crosshaircolor_r;
+extern ConVar cl_crosshaircolor_g;
+extern ConVar cl_crosshaircolor_b;
+class CCrossHairColorProxy : public CResultProxy
+{
+public:
+	virtual bool Init(IMaterial *pMaterial, KeyValues *pKeyValues);
+	virtual void OnBind(void *pC_BaseEntity);
+
+	Vector m_vecLocalCrossHairColor;
+};
+
+bool CCrossHairColorProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
+{
+	if (!CResultProxy::Init(pMaterial, pKeyValues))
+		return false;
+	m_vecLocalCrossHairColor.Init();
+	return true;
+}
+
+void CCrossHairColorProxy::OnBind(void *pC_BaseEntity)
+{
+	if ( m_vecLocalCrossHairColor.x != cl_crosshaircolor_r.GetFloat() || 
+		 m_vecLocalCrossHairColor.y != cl_crosshaircolor_g.GetFloat() || 
+		 m_vecLocalCrossHairColor.z != cl_crosshaircolor_b.GetFloat() )
+	{
+
+		m_vecLocalCrossHairColor.x = cl_crosshaircolor_r.GetFloat();
+		m_vecLocalCrossHairColor.y = cl_crosshaircolor_g.GetFloat();
+		m_vecLocalCrossHairColor.z = cl_crosshaircolor_b.GetFloat();
+
+		SetVecResult( (float) m_vecLocalCrossHairColor.x * 0.0039,
+						(float)m_vecLocalCrossHairColor.y * 0.0039,
+						(float)m_vecLocalCrossHairColor.z * 0.0039, 1);
+	}
+}
+EXPOSE_INTERFACE( CCrossHairColorProxy, IMaterialProxy, "CrossHairColor" IMATERIAL_PROXY_INTERFACE_VERSION );
