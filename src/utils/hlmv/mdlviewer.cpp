@@ -369,6 +369,10 @@ MDLViewer::MDLViewer ()
 	g_viewerSettings.ypos  = max( 0, g_viewerSettings.ypos );
 	g_viewerSettings.width = max( 640, g_viewerSettings.width );
 	g_viewerSettings.height = max( 700, g_viewerSettings.height );
+	
+	menuView->setChecked( IDC_VIEW_ACTIVITIES, g_viewerSettings.showActivities );
+	menuView->setChecked( IDC_VIEW_HIDDEN, g_viewerSettings.showHidden );
+	menuView->setChecked( IDC_VIEW_SORT_SEQUENCES, g_viewerSettings.sortSequences );
 
 	setBounds( g_viewerSettings.xpos, g_viewerSettings.ypos, g_viewerSettings.width, g_viewerSettings.height );
 	setVisible (true);
