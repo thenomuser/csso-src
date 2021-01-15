@@ -2202,6 +2202,14 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	{
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
 	}
+
+	// Brass Eject Effect.
+	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeapon );
+	pszEffect = pWeapon->GetCSWpnData().m_szEjectBrassEffect;
+	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeapon->ShouldDraw() && pWeapon->IsVisible() && !pWeapon->GetOwner()->IsDormant() )
+	{
+		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
+	}
 }
 
 const QAngle& C_CSPlayer::EyeAngles()

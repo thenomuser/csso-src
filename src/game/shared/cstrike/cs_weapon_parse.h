@@ -216,6 +216,9 @@ public:
 	float	m_flTimeToIdleAfterFire;
 	float	m_flIdleInterval;
 
+	// eject brass variables
+	char	m_szEjectBrassEffect[MAX_WEAPON_STRING];
+
 	// tracer variables
 	int		m_iTracerFrequency[2];
 	char	m_szTracerEffect[MAX_WEAPON_STRING];
