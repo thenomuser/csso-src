@@ -10,6 +10,7 @@
 #include "cbase.h"
 #include "cs_bot.h"
 #include "cs_shareddefs.h"
+#include "cs_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -144,6 +145,14 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 	if (GetTeamNumber() == 0)
 	{
 		HandleCommand_JoinTeam( m_desiredTeam );
+
+		// if we have map factions enabled, use them instead of random faction
+		if ( CSGameRules()->UseMapFactionsForThisPlayer( this ) )
+		{
+			HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer( this ) );
+			return true;
+		}
+
 		int desiredClass = GetProfile()->GetSkin();
 		if ( m_desiredTeam == TEAM_CT )
 		{
