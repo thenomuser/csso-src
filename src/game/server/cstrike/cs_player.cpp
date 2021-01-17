@@ -1162,12 +1162,9 @@ void CCSPlayer::Spawn()
 			m_iClass = GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass;
 	}
 	// PiMoN: placing it here since the server can change the varriable mid-game
-	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
+	else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
 	{
-		if ( GetTeamNumber() == TEAM_CT )
-			m_iClass = CSGameRules()->m_iMapFactionCT;
-		else if ( GetTeamNumber() == TEAM_TERRORIST )
-			m_iClass = CSGameRules()->m_iMapFactionT;
+		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer(this);
 	}
 
 	// Set their player model.
@@ -5900,8 +5897,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 	if ( team == GetTeamNumber() )
 	{
 		// if we don't have an agent and also map factions are disabled (or there are no default factions for current map) let the players choose a faction
-		if ( !HasAgentSet( GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this) ||
-			(CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT == NULL) : (CSGameRules()->m_iMapFactionT == NULL)))) )
+		if ( !HasAgentSet( GetTeamNumber() ) && (!CSGameRules()->UseMapFactionsForThisPlayer(this) || CSGameRules()->GetMapFactionsForThisPlayer(this) == -1) )
 		{
 			// Let people change class (skin) by re-joining the same team
 			if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -5918,12 +5914,9 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 		{
 			if ( HasAgentSet(GetTeamNumber()) )
 				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_iClass );
-			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && ((GetTeamNumber() == TEAM_CT) ? (CSGameRules()->m_iMapFactionCT != NULL) : (CSGameRules()->m_iMapFactionT != NULL)) )
+			else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
 			{
-				if ( GetTeamNumber() == TEAM_CT )
-					HandleCommand_JoinClass( CSGameRules()->m_iMapFactionCT );
-				else if ( GetTeamNumber() == TEAM_TERRORIST )
-					HandleCommand_JoinClass( CSGameRules()->m_iMapFactionT );
+				HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
 			}
 			return true;
 		}
@@ -6850,29 +6843,32 @@ void CCSPlayer::State_Enter_PICKINGCLASS()
 	m_iClass = (int)CS_CLASS_NONE;
 
 	PhysObjectSleep();
-
-	// show the class menu:
-	if ( GetTeamNumber() == TEAM_TERRORIST )
+	
+	if ( CSGameRules()->GetMapFactionsForThisPlayer(this) > -1 )
 	{
-		if ( HasAgentSet( TEAM_TERRORIST ) )
-			HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iClass );
-		else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && (CSGameRules()->m_iMapFactionT != NULL) )
-			HandleCommand_JoinClass( CSGameRules()->m_iMapFactionT );
-		else
-			ShowViewPortPanel( PANEL_CLASS_TER );
-	}
-	else if ( GetTeamNumber() == TEAM_CT )
-	{
-		if ( HasAgentSet( TEAM_CT ) )
-			HandleCommand_JoinClass( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iClass );
-		else if ( CSGameRules()->UseMapFactionsForThisPlayer(this) && (CSGameRules()->m_iMapFactionCT != NULL) )
-			HandleCommand_JoinClass( CSGameRules()->m_iMapFactionCT );
-		else
-			ShowViewPortPanel( PANEL_CLASS_CT );
+		HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer(this) );
 	}
 	else
 	{
-		HandleCommand_JoinClass( 0 );
+		// show the class menu:
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+		{
+			if ( HasAgentSet( TEAM_TERRORIST ) )
+				HandleCommand_JoinClass( GetCSAgentInfoT( GetAgentID( TEAM_TERRORIST ) )->m_iClass );
+			else
+				ShowViewPortPanel( PANEL_CLASS_TER );
+		}
+		else if ( GetTeamNumber() == TEAM_CT )
+		{
+			if ( HasAgentSet( TEAM_CT ) )
+				HandleCommand_JoinClass( GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_iClass );
+			else
+				ShowViewPortPanel( PANEL_CLASS_CT );
+		}
+		else
+		{
+			HandleCommand_JoinClass( 0 );
+		}
 	}
 }
 

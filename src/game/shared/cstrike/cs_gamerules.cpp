@@ -1137,8 +1137,8 @@ ConVar snd_music_selection(
 		m_iCurrentGamemode = 0;
 		m_iOldGamemode = 0;
 
-		m_iMapFactionCT = 0;
-		m_iMapFactionT = 0;
+		m_iMapFactionCT = -1;
+		m_iMapFactionT = -1;
 		LoadMapProperties();
 
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
@@ -6053,6 +6053,21 @@ bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
 		return pPlayer->IsBot();
 
 	return false;
+}
+int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer )
+{
+	if ( !UseMapFactionsForThisPlayer(pPlayer) )
+		return -1;
+
+	switch ( pPlayer->GetTeamNumber() )
+	{
+		case TEAM_CT:
+			return m_iMapFactionCT;
+		case TEAM_TERRORIST:
+			return m_iMapFactionT;
+	}
+
+	return -1;
 }
 #endif
 

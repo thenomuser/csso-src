@@ -169,8 +169,10 @@ public:
 	int   GetHumanTeam();			// TEAM_UNASSIGNED if no restrictions
 
 	void	LoadMapProperties();
-	int		m_iMapFactionCT;
-	int		m_iMapFactionT;
+#ifndef CLIENT_DLL
+	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
+	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer );
+#endif
 
 	bool IsVIPMap() const;
 	bool IsBombDefuseMap() const;
@@ -178,10 +180,6 @@ public:
 	bool IsIntermission() const;
 	bool IsLogoMap() const;
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
-
-#ifndef CLIENT_DLL
-	bool UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
-#endif
 
 	bool IsBuyTimeElapsed();
 
@@ -226,6 +224,9 @@ private:
 	CNetworkVar( bool, m_bMapHasRescueZone );
 	CNetworkVar( bool, m_bLogoMap );		 // If there's an info_player_logo entity, then it's a logo map.
 	CNetworkVar( bool, m_bBlackMarket );
+	
+	int		m_iMapFactionCT;
+	int		m_iMapFactionT;
 
 	bool		m_bDontUploadStats;
 
