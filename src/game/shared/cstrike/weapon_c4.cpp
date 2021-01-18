@@ -1621,6 +1621,8 @@ void CC4::AbortBombPlant()
 
 #endif
 
+	pPlayer->m_bDuckOverride = false;
+
 	#ifndef CLIENT_DLL
 	if ( pPlayer && !pPlayer->IsDormant() )
 	{
