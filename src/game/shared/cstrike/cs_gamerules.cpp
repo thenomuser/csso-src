@@ -3741,7 +3741,7 @@ ConVar snd_music_selection(
 			}
 		}
 
-		int which = cv_bot_defer_to_human.GetBool();
+		int which = cv_bot_defer_to_human_items.GetBool();
 		if ( numAliveTs[HUMAN_TERRORISTS] == 0 )
 		{
 			which = ALL_TERRORISTS;

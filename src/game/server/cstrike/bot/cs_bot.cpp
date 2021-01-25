@@ -418,7 +418,7 @@ bool CCSBot::StayOnNavMesh( void )
 bool CCSBot::IsDoingScenario( void ) const
 {
 	// if we are deferring to humans, and there is a live human on our team, don't do the scenario
-	if (cv_bot_defer_to_human.GetBool())
+	if ( cv_bot_defer_to_human_goals.GetBool() )
 	{
 		if (UTIL_HumansOnTeam( GetTeamNumber(), IS_ALIVE ))
 			return false;
