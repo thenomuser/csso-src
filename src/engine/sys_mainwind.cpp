@@ -1278,8 +1278,14 @@ void CGame::PlayStartupVideos( void )
 
 	if (!bNeedHealthWarning && !bEndGame && !bRecap && (CommandLine()->CheckParm("-dev") || CommandLine()->CheckParm("-novid") || CommandLine()->CheckParm("-allowdebug")))
 		return;
-
+	
+	int width, height;
 	const char *pszFile = "media/StartupVids.txt";
+	materials->GetBackBufferDimensions( width, height );
+	float aspectRatio = (float)width/(float)height;
+	bool bIsWidescreen = aspectRatio >= 1.5999f;
+	if ( bIsWidescreen )
+		pszFile = "media/StartupVids_WideScreen.txt";
 	if ( bEndGame )
 	{
 		// Don't go back into the map that triggered this.
