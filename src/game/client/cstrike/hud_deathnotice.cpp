@@ -529,6 +529,9 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 			if ( pWeaponInfo )
 				thrusmoke = (pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE);
 		}
+		// no thrusmoke icon for inferno as well
+		else if ( !V_strcmp( killedwith, "inferno" ) )
+			thrusmoke = false;
 	}
 
 	char fullkilledwith[128];
