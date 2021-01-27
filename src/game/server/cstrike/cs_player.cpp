@@ -1371,10 +1371,6 @@ void CCSPlayer::GiveDefaultItems()
 
 	// Always give the player the knife.
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-	if ( pistol )
-	{
-		return;
-	}
 
 	if ( GetTeamNumber() == TEAM_CT )
 	{
@@ -1383,13 +1379,17 @@ void CCSPlayer::GiveDefaultItems()
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponCT + 1] );
 
-		if ( IsBot() )
-			GiveNamedItem( "weapon_hkp2000" );
-		else
+		if ( !pistol )
 		{
-			char weapon[32];
-			Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
-			GiveNamedItem( weapon );
+			if ( IsBot() )
+				GiveNamedItem( "weapon_hkp2000" );
+			else
+			{
+				char weapon[32];
+				Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
+				GiveNamedItem( weapon );
+			}
+			m_bUsingDefaultPistol = true;
 		}
 	}
 	else if ( GetTeamNumber() == TEAM_TERRORIST )
@@ -1399,7 +1399,11 @@ void CCSPlayer::GiveDefaultItems()
 		else
 			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponT + 1] );
 
-		GiveNamedItem( "weapon_glock" );
+		if ( !pistol )
+		{
+			GiveNamedItem( "weapon_glock" );
+			m_bUsingDefaultPistol = true;
+		}
 	}
 
 	if ( Weapon_GetSlot( WEAPON_SLOT_PISTOL ) )
