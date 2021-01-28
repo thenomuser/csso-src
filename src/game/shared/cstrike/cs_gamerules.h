@@ -182,6 +182,8 @@ public:
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
 
 	bool IsBuyTimeElapsed();
+	bool IsMatchWaitingForResume( void );
+	void SetMatchWaitingForResume( bool pause ) { m_bMatchWaitingForResume = pause; };
 
 	int GetGamemode( void ) { return m_iCurrentGamemode; };
 
@@ -215,6 +217,7 @@ private:
 	CNetworkVar( bool, m_bWarmupPeriod );	 // 
 	CNetworkVar( float, m_fWarmupPeriodEnd ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
 	CNetworkVar( float, m_fWarmupPeriodStart );
+	CNetworkVar( bool, m_bMatchWaitingForResume ); // When mp_pause_match is called, this state becomes true and will prevent the next freezetime from ending.
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flGameStartTime );
