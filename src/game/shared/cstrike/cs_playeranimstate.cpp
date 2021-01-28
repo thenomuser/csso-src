@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -65,7 +65,6 @@ enum CSPlayerAnimStateLayer_t
 	GRENADESEQUENCE_LAYER,
 	FLASHEDSEQUENCE_LAYER,
 	FLINCHSEQUENCE_LAYER,
-	TAUNTSEQUENCE_LAYER,
 	//DEFUSESEQUENCE_LAYER,
 
 	NUM_LAYERS_WANTED
@@ -178,11 +177,6 @@ private:
 	float m_flFlinchStartTime;
 	float m_flFlinchLength;
 	int m_nFlinchSequence;
-
-	// Sequence for taunts
-	float m_flTauntStartTime;
-	float m_flTauntLength;
-	int m_nTauntSequence;
 
 	// Deploy sequence
 	bool m_bDeploying;
@@ -377,11 +371,7 @@ CCSPlayerAnimState::CCSPlayerAnimState()
 	m_flFlinchStartTime = -1.0f;
 	m_flFlinchLength = 0.0f;
 	m_nFlinchSequence = 0;
-
-	m_flTauntStartTime = -1.0f;
-	m_flTauntLength = 0.0f;
-	m_nTauntSequence = 0;
-
+	
 	m_bDeploying = false;
 	m_iDeploySequence = -1;
 	m_flDeployCycle = 0.0f;
