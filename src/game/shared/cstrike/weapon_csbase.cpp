@@ -1281,7 +1281,7 @@ void CWeaponCSBase::Precache( void )
 		PrecacheModel( GetCSWpnData().m_szAddonModel );
 
 	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
-		PrecacheModel( GetCSWpnData().m_szEjectBrassEffect );
+		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
 
 	if ( GetTracerType()[0] != 0 )
 		PrecacheParticleSystem( GetTracerType() );
