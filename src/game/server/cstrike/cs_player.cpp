@@ -60,6 +60,7 @@
 #include "weapon_decoy.h"
 #include "molotov_projectile.h"
 #include "cs_loadout.h"
+#include "item_healthshot.h"
 
 //=============================================================================
 // HPE_BEGIN
@@ -152,6 +153,8 @@ extern ConVar ammo_molotov_max;
 extern ConVar mp_buy_anywhere;
 
 extern ConVar mp_respawn_immunitytime;
+
+ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED, "Determines whether a player can early-out of the deathcam." );
 
@@ -5559,39 +5562,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 	}
 	else if ( FStrEq( pcmd, "drop" ) )
 	{
-		CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( GetActiveWeapon() );
-
-		if( pWeapon )
-		{
-			//=============================================================================
-			// HPE_BEGIN:
-			// [dwenger] Determine value of dropped item.
-			//=============================================================================
-
-			if ( !pWeapon->IsAPriorOwner( this ) )
-			{
-				pWeapon->AddToPriorOwnerList( this );
-
-				CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pWeapon->GetCSWpnData().GetWeaponPrice());
-			}
-
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
-
-			CSWeaponType type = pWeapon->GetCSWpnData().m_WeaponType;
-
-			if( type != WEAPONTYPE_KNIFE && type != WEAPONTYPE_GRENADE )
-			{
-				if (CSGameRules()->GetCanDonateWeapon() && !pWeapon->GetDonated())
-				{
-					pWeapon->SetDonated(true);
-					pWeapon->SetDonor(this);
-				}
-				CSWeaponDrop( pWeapon, true, true );
-
-			}
-		}
+		HandleDropWeapon();
 
 		return true;
 	}
@@ -8274,6 +8245,105 @@ void CCSPlayer::FlashlightTurnOff( void )
 	}
 }
 
+bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
+{
+
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon ? pWeapon : GetActiveWeapon() );
+
+	if( pCSWeapon )
+	{
+/*
+		CBaseCarribleItem *pItem = dynamic_cast< CBaseCarribleItem * >( pCSWeapon );
+		if ( pItem  )
+		{
+			pItem->DropItem();
+				
+			// decrement the ammo
+			pItem->DecrementAmmo( this );
+			// if that was the last item, delete this one
+			if ( pItem->GetCurrentItems() <= 0 )
+			{
+				CSWeaponDrop( pItem, true, true );
+				UTIL_Remove( pItem );
+				UpdateAddonBits();
+			}
+
+			return false;
+		}
+*/
+		
+		// [dwenger] Determine value of dropped item.
+		if ( !pCSWeapon->IsAPriorOwner( this ) )
+		{
+			pCSWeapon->AddToPriorOwnerList( this );
+			CCS_GameStats.IncrementStat(this, CSTAT_ITEMS_DROPPED_VALUE, pCSWeapon->GetCSWpnData().GetWeaponPrice() );
+		}
+
+		// PiMoN: uncomment this when we have healthshots
+		/*if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
+		{
+			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
+			if ( pHealth )
+			{
+				pHealth->DropHealthshot();
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+				
+			}
+			return true;
+		}*/
+
+		CSWeaponType type = pCSWeapon->GetWeaponType();
+		switch ( type )
+		{
+		// Only certail weapons can be dropped when drop is initiated by player
+		case WEAPONTYPE_PISTOL:
+		case WEAPONTYPE_SUBMACHINEGUN:
+		case WEAPONTYPE_RIFLE:
+		case WEAPONTYPE_SHOTGUN:
+		case WEAPONTYPE_SNIPER_RIFLE:
+		case WEAPONTYPE_MACHINEGUN:
+		case WEAPONTYPE_C4:
+		{
+			if (CSGameRules()->GetCanDonateWeapon() && !pCSWeapon->GetDonated() )
+			{
+				pCSWeapon->SetDonated(true );
+				pCSWeapon->SetDonor(this );
+			}
+			CSWeaponDrop( pCSWeapon, true, true );
+
+			if ( IsAlive() && !bSwapping )
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName() );
+		}
+		break;
+
+		default:
+		{
+			// let dedicated servers optionally allow droppable knives
+			if ( type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( ) )
+			{
+				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
+				{
+					pCSWeapon->SetDonated( true );
+					pCSWeapon->SetDonor( this );
+				}
+				CSWeaponDrop( pCSWeapon, true, true );
+
+				if ( IsAlive( ) && !bSwapping )
+					ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_YouDroppedWeapon", pCSWeapon->GetPrintName( ) );
+			}
+			else if ( IsAlive( ) && !bSwapping )
+			{
+				ClientPrint( this, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_CannotDropWeapon", pCSWeapon->GetPrintName( ) );
+			}
+		}
+		break;
+		}
+
+		return true;
+	}
+
+	return false;
+}
 
 //Drop the appropriate weapons:
 // Defuser if we have one
