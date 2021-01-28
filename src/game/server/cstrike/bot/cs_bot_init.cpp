@@ -281,9 +281,17 @@ void CCSBot::ResetValues( void )
 	m_lookYaw = 0.0f;
 	m_lookYawVel = 0.0f;
 
-	m_aimOffsetTimestamp = 0.0f;
-	m_aimSpreadTimestamp = 0.0f;
 	m_lookAtSpotState = NOT_LOOKING_AT_SPOT;
+
+	m_targetSpot.Zero();
+	m_targetSpotVelocity.Zero();
+	m_targetSpotPredicted.Zero();
+	m_aimError.Init();
+	m_aimGoal.Init();
+	m_targetSpotTime = 0.0f;
+	m_aimFocus = 0.0f;
+	m_aimFocusInterval = 0.0f;
+	m_aimFocusNextUpdate = 0.0f;
 
 	for( int p=0; p<MAX_PLAYERS; ++p )
 	{

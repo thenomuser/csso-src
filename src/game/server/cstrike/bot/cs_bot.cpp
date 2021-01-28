@@ -1122,4 +1122,16 @@ void CCSBot::BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwar
 	}
 }
 
+//
+// Returns a value in the -1 .. +1 range based on adding some cosines together. Cheap and sloppy.
+float CCSBot::SlowNoise( float fTau ) const
+{
+	int iUniqueOffset = HashInt(entindex()) & 0xFF;
+	float t = (float)iUniqueOffset;
+
+	t = (t + gpGlobals->curtime / fTau) * M_PI * 2.0f;
+
+	return 0.25f * ( cosf( fTau ) + cosf( fTau * 29.f / 47.f ) + cosf( fTau * 59.f / 137.f ) + cosf( fTau * 151.f / 499.f ) );
+}
+
 //--------------------------------------------------------------------------------------------------------------
