@@ -57,6 +57,9 @@ halflife.res
 studiomdl.pdb
 studiomdl.exe
 studiomdl.lib
+vbsp.pdb
+vbsp.exe
+vbsp.lib
 
 client.so
 client.so.dbg
