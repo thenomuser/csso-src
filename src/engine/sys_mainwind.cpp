@@ -1279,13 +1279,7 @@ void CGame::PlayStartupVideos( void )
 	if (!bNeedHealthWarning && !bEndGame && !bRecap && (CommandLine()->CheckParm("-dev") || CommandLine()->CheckParm("-novid") || CommandLine()->CheckParm("-allowdebug")))
 		return;
 	
-	int width, height;
 	const char *pszFile = "media/StartupVids.txt";
-	materials->GetBackBufferDimensions( width, height );
-	float aspectRatio = (float)width/(float)height;
-	bool bIsWidescreen = aspectRatio >= 1.5999f;
-	if ( bIsWidescreen )
-		pszFile = "media/StartupVids_WideScreen.txt";
 	if ( bEndGame )
 	{
 		// Don't go back into the map that triggered this.
@@ -1369,6 +1363,19 @@ void CGame::PlayVideoAndWait( const char *filename, bool bNeedHealthWarning )
 
 	//Chinese health messages appears for 11 seconds, so we force a minimum delay time for those
 	float forcedMinTime = ( bIsValveLogo && bNeedHealthWarning ) ? 11.0f : -1.0f;
+
+	// check if need to use a widescreen version and use it if it exists
+	int width, height;
+	materials->GetBackBufferDimensions( width, height );
+	if ( (float)width / (float)height > 1.5999f )
+	{
+		char pszWidescreenFile[128];
+		const char *pszExtension = Q_GetFileExtension( filename );
+		Q_StripExtension( filename, pszWidescreenFile, sizeof( pszWidescreenFile ) );
+		Q_snprintf( pszWidescreenFile, sizeof( pszWidescreenFile ), "%s_widescreen.%s", pszWidescreenFile, pszExtension );
+		if ( g_pFileSystem->FileExists( pszWidescreenFile ) )
+			filename = pszWidescreenFile;
+	}
 
 #if defined( WIN32 ) && !defined ( _X360 )	&& !defined( USE_SDL )
 	// Black out the back of the screen once at the beginning of each video (since we're not scaling to fit)
