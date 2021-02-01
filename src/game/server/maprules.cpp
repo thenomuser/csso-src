@@ -668,7 +668,15 @@ void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity )
 #ifdef CSTRIKE_DLL
 			// PiMoN: bruh... if its a knife, give the correct one from loadout
 			if ( !Q_strcmp( "weapon_knife", STRING( m_weaponNames[i] ) ) )
-				pPlayer->GiveNamedItem( KnivesEntities[pPlayer->m_iLoadoutSlotKnifeWeaponCT + 1] );
+			{
+				if ( pPlayer->GetTeamNumber() == TEAM_CT )
+					pPlayer->GiveNamedItem( KnivesEntities[pPlayer->m_iLoadoutSlotKnifeWeaponCT + 1] );
+				else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+					pPlayer->GiveNamedItem( KnivesEntities[pPlayer->m_iLoadoutSlotKnifeWeaponT + 1] );
+				else
+					// is it even possible??
+					pPlayer->GiveNamedItem( STRING( m_weaponNames[i] ) );
+			}
 			else
 #endif
  				pPlayer->GiveNamedItem( STRING(m_weaponNames[i]) );
