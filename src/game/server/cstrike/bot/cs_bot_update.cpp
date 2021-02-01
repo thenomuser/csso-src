@@ -157,7 +157,7 @@ void CCSBot::Update( void )
 		HandleCommand_JoinTeam( m_desiredTeam );
 
 		// if we have map factions enabled, use them instead of random faction
-		if ( CSGameRules()->UseMapFactionsForThisPlayer( this ) )
+		if ( CSGameRules()->UseMapFactionsForThisPlayer( this ) && CSGameRules()->GetMapFactionsForThisPlayer( this ) > -1 )
 		{
 			HandleCommand_JoinClass( CSGameRules()->GetMapFactionsForThisPlayer( this ) );
 			return;
