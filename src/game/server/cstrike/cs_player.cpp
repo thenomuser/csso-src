@@ -7651,6 +7651,9 @@ void CCSPlayer::BuildRebuyStruct()
 	// defuser
 	m_rebuyStruct.m_defuser = HasDefuser();
 
+	// taser
+	m_rebuyStruct.m_taser = (Weapon_OwnsThisType( "weapon_taser" )) ? true : false;
+
 	// night vision
 	m_rebuyStruct.m_nightVision = m_bHasNightVision.Get();	//cast to avoid strange compiler warning
 
@@ -7796,7 +7799,10 @@ BuyResult_e CCSPlayer::RebuySecondaryWeapon()
 
 BuyResult_e CCSPlayer::RebuyTaser()
 {
-	return HandleCommand_Buy( "taser" );
+	if ( m_rebuyStruct.m_taser )
+		return HandleCommand_Buy( "taser" );
+
+	return BUY_INVALID_ITEM;
 }
 /*
 BuyResult_e CCSPlayer::RebuyPrimaryAmmo()
