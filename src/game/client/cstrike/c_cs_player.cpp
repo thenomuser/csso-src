@@ -1340,7 +1340,7 @@ void C_CSPlayer::CreateAddonModel( int i )
 		// fade out all attached models except C4
 		pEnt->SetFadeMinMax( 400, 500 );
 
-		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() ? 1 : 0 );
+		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 	}
 
 	// Create the addon.
@@ -1353,8 +1353,6 @@ void C_CSPlayer::CreateAddonModel( int i )
 	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
 	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
 	pEnt->SetModelScale( iScale );
-	if ( addonType == ADDON_C4 )
-		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() ? 1 : 0 );
 	if ( IsLocalPlayer() )
 	{
 		pEnt->SetSolid( SOLID_NONE );

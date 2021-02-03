@@ -47,10 +47,7 @@ C_PlantedC4::C_PlantedC4()
 	m_flNextGlow = gpGlobals->curtime + 1.0;
 	m_flNextBeep = gpGlobals->curtime + 1.0;
 
-	if ( UTIL_IsNewYear() )
-	{
-		SetBodygroup( FindBodygroupByName( "gift" ), 1 );
-	}
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 }
 
 
@@ -80,10 +77,7 @@ void C_PlantedC4::Spawn( void )
 {
 	BaseClass::Spawn();
 
-	if ( UTIL_IsNewYear() )
-	{
-		SetBodygroup( FindBodygroupByName( "gift" ), 1 );
-	}
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
 

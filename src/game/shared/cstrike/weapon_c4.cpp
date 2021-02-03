@@ -287,10 +287,7 @@ END_PREDICTION_DATA()
 		SetModel( PLANTED_C4_MODEL );	// Change this to c4 model
 		SetSequence( 1 );	// this sequence keeps the toggle switch in the 'up' position
 
-		if ( UTIL_IsNewYear() )
-		{
-			SetBodygroup( FindBodygroupByName( "gift" ), 1 );
-		}
+		SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 		SetCollisionBounds( Vector( 0, 0, 0 ), Vector( 8, 8, 8 ) );
 
@@ -897,10 +894,7 @@ void CC4::Spawn()
 {
 	BaseClass::Spawn();
 
-	if ( UTIL_IsNewYear() )
-	{
-		SetBodygroup( FindBodygroupByName( "gift" ), 1 );
-	}
+	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 	//Don't allow players to shoot the C4 around
 	SetCollisionGroup( COLLISION_GROUP_DEBRIS );
@@ -1087,11 +1081,11 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 	bool CC4::Deploy()
 	{
 		bool ret = BaseClass::Deploy();
-		if ( ret && UTIL_IsNewYear() )
+		if ( ret )
 		{
 			CCSPlayer* pOwner = GetPlayerOwner();
 			if ( pOwner )
-				pOwner->GetViewModel()->SetBodygroup( pOwner->GetViewModel()->FindBodygroupByName( "gift" ), 1 );
+				pOwner->GetViewModel()->SetBodygroup( pOwner->GetViewModel()->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 		}
 		return ret;
 	}
