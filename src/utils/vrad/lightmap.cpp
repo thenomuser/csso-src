@@ -1519,6 +1519,26 @@ static void ParseLightEnvironment( entity_t* e, directlight_t* dl )
 	}
 }
 
+static void ParseLightDirectional( entity_t* e, directlight_t* dl )
+{
+	Vector dest;
+	GetVectorForKey (e, "origin", dest );
+	dl = AllocDLight( dest, true );
+
+	ParseLightGeneric( e, dl );
+
+	char *angle_str=ValueForKeyWithDefault( e, "SunSpreadAngle" );
+	if (angle_str)
+	{
+		g_SunAngularExtent = atof(angle_str);
+		g_SunAngularExtent = sin((M_PI/180.0)*g_SunAngularExtent);
+	}
+
+	dl->light.type = emit_skylight;
+
+	BuildVisForLightEnvironment();
+}
+
 static void ParseLightPoint( entity_t* e, directlight_t* dl )
 {
 	Vector dest;
@@ -1602,6 +1622,10 @@ void CreateDirectLights (void)
 		else if (!strcmp(name, "light_environment")) 
 		{
 			ParseLightEnvironment( e, dl );
+		}
+		else if (!strcmp(name, "light_directional")) 
+		{
+			ParseLightDirectional( e, dl );
 		}
 		else if (!strcmp(name, "light")) 
 		{
