@@ -125,16 +125,16 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairStyle = new CLabeledCommandComboBox( m_pOptionsPanel, "CrosshairStyle" );
 	m_pCrosshairAlpha = new CCvarSlider( m_pOptionsPanel, "CrosshairAlpha", "#GameUI_Crosshair_Alpha", 0.0f, 255.0f, "cl_crosshairalpha" );
 	m_pCrosshairUseAlpha = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairUseAlpha", "#GameUI_Crosshair_UseAlpha", "cl_crosshairusealpha" );
-	m_pCrosshairGap = new CCvarSlider( m_pOptionsPanel, "CrosshairGap", "#GameUI_Crosshair_Gap", 0.1f, 10.0f, "cl_crosshairgap" );
+	m_pCrosshairGap = new CCvarSlider( m_pOptionsPanel, "CrosshairGap", "#GameUI_Crosshair_Gap", -5.0f, 5.0f, "cl_crosshairgap" );
 	m_pCrosshairGapUseWeaponValue = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairGapUseWeaponValue", "#GameUI_Crosshair_Gap_UseWeaponValue", "cl_crosshairgap_useweaponvalue" );
-	m_pCrosshairSize = new CCvarSlider( m_pOptionsPanel, "CrosshairSize", "#GameUI_Crosshair_Size", 0.1f, 10.0f, "cl_crosshairsize" );
-	m_pCrosshairThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairThickness", "#GameUI_Crosshair_Thickness", 0.1f, 10.0f, "cl_crosshairthickness" );
+	m_pCrosshairSize = new CCvarSlider( m_pOptionsPanel, "CrosshairSize", "#GameUI_Crosshair_Size", 0.0f, 10.0f, "cl_crosshairsize" );
+	m_pCrosshairThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairThickness", "#GameUI_Crosshair_Thickness", 0.1f, 6.0f, "cl_crosshairthickness" );
 	m_pCrosshairDot = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairDot", "#GameUI_CrosshairDot", "cl_crosshairdot" );
 	m_pCrosshairColorR = new CCvarSlider( m_pOptionsPanel, "CrosshairColorR", "#GameUI_Crosshair_Color_R", 0.0f, 255.0f, "cl_crosshaircolor_r" );
 	m_pCrosshairColorG = new CCvarSlider( m_pOptionsPanel, "CrosshairColorG", "#GameUI_Crosshair_Color_G", 0.0f, 255.0f, "cl_crosshaircolor_g" );
 	m_pCrosshairColorB = new CCvarSlider( m_pOptionsPanel, "CrosshairColorB", "#GameUI_Crosshair_Color_B", 0.0f, 255.0f, "cl_crosshaircolor_b" );
 	m_pCrosshairDrawOutline = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairDrawOutline", "#GameUI_Crosshair_DrawOutline", "cl_crosshair_drawoutline" );
-	m_pCrosshairOutlineThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairOutlineThickness", "#GameUI_Crosshair_OutlineThickness", 0.1f, 3.0f, "cl_crosshair_outlinethickness" );
+	m_pCrosshairOutlineThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairOutlineThickness", "#GameUI_Crosshair_OutlineThickness", 0.0f, 3.0f, "cl_crosshair_outlinethickness" );
 	m_pCrosshairT = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairT", "#GameUI_Crosshair_T", "cl_crosshair_t" );
 
 	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_0", "cl_crosshairstyle 0" );
@@ -142,6 +142,7 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_2", "cl_crosshairstyle 2" );
 	m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_3", "cl_crosshairstyle 3" );
 	m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_4", "cl_crosshairstyle 4" );
+	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_5", "cl_crosshairstyle 5" ); // deprecated in CSGO
 
 	m_pCrosshairStyle->AddActionSignalTarget( this );
 	m_pCrosshairAlpha->AddActionSignalTarget( this );
@@ -199,11 +200,8 @@ void CrosshairImagePanelCS::Paint()
 	GetSize( wide, tall );
 
 	bool bAdditive = !m_pCrosshairUseAlpha->IsSelected();
-	bool bDynamic = /*(m_pCrosshairStyle->GetActiveItem() != 1) &&
-					(m_pCrosshairStyle->GetActiveItem() != 4);*/
-					m_pCrosshairStyle->GetActiveItem() != 2;
 
-	int a = 255;
+	int a = 200;
 	if ( !bAdditive )
 		a = m_pCrosshairAlpha->GetSliderValue();
 
@@ -212,7 +210,7 @@ void CrosshairImagePanelCS::Paint()
 	g = m_pCrosshairColorG->GetSliderValue();
 	b = m_pCrosshairColorB->GetSliderValue();
 
-	vgui::surface()->DrawSetColor( m_pCrosshairColorR->GetSliderValue(), m_pCrosshairColorG->GetSliderValue(), m_pCrosshairColorB->GetSliderValue(), a );
+	vgui::surface()->DrawSetColor( r, g, b, a );
 
 	if ( bAdditive )
 	{
@@ -225,58 +223,23 @@ void CrosshairImagePanelCS::Paint()
 	int iBarSize = RoundFloatToInt(m_pCrosshairSize->GetSliderValue() * screenTall / 480.0f);
 	int iBarThickness = max(1, RoundFloatToInt(m_pCrosshairThickness->GetSliderValue() * (float)screenTall / 480.0f));
 
-	float fBarGap = 4.0f;
-	if ( bDynamic )
-	{
-		float curtime = system()->GetFrameTime();
-		fBarGap *= (1.0f + cosf(curtime * 1.5f) * 0.5f);
-	}
-
-	int iBarSizeInner = iBarSize;
-
-	// draw the crosshair that splits off from the main xhair
-	if ( m_pCrosshairStyle->GetActiveItem() == 2 )
-	{
-		iBarSizeInner = ceil( (float) iBarSize * (1.0f - 0.35f) ); // 0.35f = cl_crosshair_dynamic_maxdist_splitratio.GetFloat()
-		int iBarSizeOuter = floor( (float) iBarSize * 0.35f ); // 0.35f = cl_crosshair_dynamic_maxdist_splitratio.GetFloat()
-
-		// draw horizontal crosshair lines
-		int iInnerLeft = (centerX - m_pCrosshairGap->GetSliderValue() - iBarThickness / 2) - iBarSizeInner;
-		int iInnerRight = iInnerLeft + 2 * (m_pCrosshairGap->GetSliderValue() + iBarSizeInner) + iBarThickness;
-		int iOuterLeft = iInnerLeft - iBarSizeOuter;
-		int iOuterRight = iInnerRight + iBarSizeOuter;
-		int y0 = centerY - iBarThickness / 2;
-		int y1 = y0 + iBarThickness;
-		DrawCrosshairRect( r, g, b, a, iOuterLeft, y0, iInnerLeft, y1, bAdditive );
-		DrawCrosshairRect( r, g, b, a, iInnerRight, y0, iOuterRight, y1, bAdditive );
-
-		// draw vertical crosshair lines
-		int iInnerTop = (centerY - m_pCrosshairGap->GetSliderValue() - iBarThickness / 2) - iBarSizeInner;
-		int iInnerBottom = iInnerTop + 2 * (m_pCrosshairGap->GetSliderValue() + iBarSizeInner) + iBarThickness;
-		int iOuterTop = iInnerTop - iBarSizeOuter;
-		int iOuterBottom = iInnerBottom + iBarSizeOuter;
-		int x0 = centerX - iBarThickness / 2;
-		int x1 = x0 + iBarThickness;
-		if ( !m_pCrosshairT->IsSelected() )
-			DrawCrosshairRect( r, g, b, a, x0, iOuterTop, x1, iInnerTop, bAdditive );
-		DrawCrosshairRect( r, g, b, a, x0, iInnerBottom, x1, iOuterBottom, bAdditive );
-	}
+	int iBarGap = m_pCrosshairGap->GetSliderValue() + 4;
 
 	// draw horizontal crosshair lines
-	int iInnerLeft = centerX - m_pCrosshairGap->GetSliderValue() - iBarThickness / 2;
-	int iInnerRight = iInnerLeft + 2 * m_pCrosshairGap->GetSliderValue() + iBarThickness;
-	int iOuterLeft = iInnerLeft - iBarSizeInner;
-	int iOuterRight = iInnerRight + iBarSizeInner;
+	int iInnerLeft = centerX - iBarGap - iBarThickness / 2;
+	int iInnerRight = iInnerLeft + 2 * iBarGap + iBarThickness;
+	int iOuterLeft = iInnerLeft - iBarSize;
+	int iOuterRight = iInnerRight + iBarSize;
 	int y0 = centerY - iBarThickness / 2;
 	int y1 = y0 + iBarThickness;
 	DrawCrosshairRect( r, g, b, a, iOuterLeft, y0, iInnerLeft, y1, bAdditive );
 	DrawCrosshairRect( r, g, b, a, iInnerRight, y0, iOuterRight, y1, bAdditive );
 
 	// draw vertical crosshair lines
-	int iInnerTop = centerY - m_pCrosshairGap->GetSliderValue() - iBarThickness / 2;
-	int iInnerBottom = iInnerTop + 2 * m_pCrosshairGap->GetSliderValue() + iBarThickness;
-	int iOuterTop = iInnerTop - iBarSizeInner;
-	int iOuterBottom = iInnerBottom + iBarSizeInner;
+	int iInnerTop = centerY - iBarGap - iBarThickness / 2;
+	int iInnerBottom = iInnerTop + 2 * iBarGap + iBarThickness;
+	int iOuterTop = iInnerTop - iBarSize;
+	int iOuterBottom = iInnerBottom + iBarSize;
 	int x0 = centerX - iBarThickness / 2;
 	int x1 = x0 + iBarThickness;
 	if ( !m_pCrosshairT->IsSelected() )
@@ -324,16 +287,16 @@ void CrosshairImagePanelCS::OnTextChanged(vgui::Panel *panel)
 void CrosshairImagePanelCS::OnCheckButtonChecked()
 {
 	m_pCrosshairAlpha->SetEnabled(m_pCrosshairUseAlpha->IsSelected());
+	m_pCrosshairOutlineThickness->SetEnabled(m_pCrosshairDrawOutline->IsSelected());
 	m_pOptionsPanel->OnControlModified();
 	UpdateCrosshair();
 }
 
 void CrosshairImagePanelCS::ResetData()
 {
-	ConVarRef cl_crosshairstyle( "cl_crosshairstyle", true );
-	m_pCrosshairStyle->SetInitialItem( cl_crosshairstyle.GetInt() );
+	ConVarRef cl_crosshairstyle( "cl_crosshairstyle" );
+	m_pCrosshairStyle->SetInitialItem( Clamp( cl_crosshairstyle.GetInt() - 2, 0, 2 ) ); // remove Clamp if unlocking other styles
 
-	m_pCrosshairStyle->Reset();
 	m_pCrosshairAlpha->Reset();
 	m_pCrosshairUseAlpha->Reset();
 	m_pCrosshairGap->Reset();
