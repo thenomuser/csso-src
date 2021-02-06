@@ -56,6 +56,8 @@ class CDmeCombinationOperator;
 #define MAXSTUDIOMOVEKEYS		64
 #define MAXSTUDIOIKRULES		64
 #define MAXSTUDIONAME			128
+#define MAXSTUDIOACTIVITYMODIFIERS	128
+#define MAXSTUDIOTAGS			1024
 
 #ifndef EXTERN
 #define EXTERN extern
@@ -254,6 +256,8 @@ struct s_bbox_t
 	int				group;		// hitgroup
 	int				model;
 	Vector			bmin, bmax;	// bounding box
+	QAngle			angOffsetOrientation;
+	float			flCapsuleRadius;
 };
 
 #define MAXSTUDIOHITBOXSETNAME 64
@@ -327,6 +331,13 @@ struct s_bonemerge_t
 };
 
 EXTERN CUtlVector< s_bonemerge_t > g_BoneMerge;
+
+struct s_alwayssetup_t
+{
+	char	bonename[MAXSTUDIONAME];
+};
+
+EXTERN CUtlVector< s_alwayssetup_t > g_BoneAlwaysSetup;
 
 struct s_mouth_t
 {
@@ -648,6 +659,8 @@ struct s_animation_t
 
 	bool			disableAnimblocks;		// no demand loading
 	bool			isFirstSectionLocal;	// first block of a section isn't demand loaded
+
+	int				rootDriverIndex;
 };
 EXTERN	s_animation_t *g_panimation[MAXSTUDIOANIMS];
 
@@ -674,6 +687,13 @@ EXTERN	int g_numikautoplaylocks;
 EXTERN	s_iklock_t g_ikautoplaylock[16];
 
 
+struct s_animtag_t
+{
+	int				tag;
+	float			cycle;
+	char			tagname[MAXSTUDIONAME];
+};
+
 struct s_event_t
 {
 	int				event;
@@ -694,6 +714,12 @@ struct s_autolayer_t
 	float			end;
 };
 
+struct s_activitymodifier_t
+{
+	int				id;
+	char			name[64];
+};
+
 
 class s_sequence_t
 {
@@ -707,6 +733,9 @@ public:
 
 	int				activity;
 	int				actweight;
+
+	int				numanimtags;
+	s_animtag_t		animtags[MAXSTUDIOTAGS];
 
 	int				numevents;
 	s_event_t		event[MAXSTUDIOEVENTS];
@@ -756,6 +785,12 @@ public:
 	int				cycleposeindex;
 
 	CUtlVector< char > KeyValue;
+
+	int						numactivitymodifiers;
+	s_activitymodifier_t	activitymodifier[MAXSTUDIOACTIVITYMODIFIERS];
+
+	int				rootDriverIndex;
+	char			rootDriverBoneName[MAXSTUDIONAME];
 };
 EXTERN	CUtlVector< s_sequence_t > g_sequence;
 //EXTERN	int g_numseq;

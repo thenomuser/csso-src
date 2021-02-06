@@ -621,6 +621,10 @@ bool LoadViewerRootSettings( void )
 	RegReadInt( hRootKey, "renderheight", &g_viewerSettings.height );
 
 	RegReadBool( hRootKey, "faceposerToolsDriveMouth", &g_viewerSettings.faceposerToolsDriveMouth );
+	
+	RegReadBool( hRootKey, "showHidden", &g_viewerSettings.showHidden );
+	RegReadBool( hRootKey, "showActivities", &g_viewerSettings.showActivities );
+	RegReadBool( hRootKey, "sortSequences", &g_viewerSettings.sortSequences );
 
 	RegReadBool( hRootKey, "showHidden", &g_viewerSettings.showHidden );
 	RegReadBool( hRootKey, "showActivities", &g_viewerSettings.showActivities );
@@ -708,6 +712,10 @@ bool SaveViewerRootSettings( void )
 	RegWriteInt( hRootKey, "renderheight", g_viewerSettings.height );
 
 	RegWriteInt( hRootKey, "faceposerToolsDriveMouth", g_viewerSettings.faceposerToolsDriveMouth ? 1 : 0 );
+	
+	RegWriteInt( hRootKey, "showHidden", g_viewerSettings.showHidden ? 1 : 0 );
+	RegWriteInt( hRootKey, "showActivities", g_viewerSettings.showActivities ? 1 : 0 );
+	RegWriteInt( hRootKey, "sortSequences", g_viewerSettings.sortSequences ? 1 : 0 );
 
 	RegWriteInt( hRootKey, "showHidden", g_viewerSettings.showHidden ? 1 : 0 );
 	RegWriteInt( hRootKey, "showActivities", g_viewerSettings.showActivities ? 1 : 0 );

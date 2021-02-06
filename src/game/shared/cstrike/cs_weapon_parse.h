@@ -87,6 +87,7 @@ enum CSWeaponID
 	WEAPON_KNIFE_STILETTO,
 	WEAPON_KNIFE_URSUS,
 	WEAPON_KNIFE_WIDOWMAKER,
+	WEAPON_KNIFE_PUSH,
 	WEAPON_P90,
 
 	WEAPON_HKP2000,
@@ -237,6 +238,10 @@ public:
 	float	m_flIronsightFOV;
 	float	m_flIronsightPivotForward;
 	char	m_szIronsightDotMaterial[MAX_WEAPON_STRING];
+
+	// buymenu
+	char	m_szBuyMenuAnim[MAX_WEAPON_STRING];
+	char	m_szBuyMenuAnimT[MAX_WEAPON_STRING];
 
 	struct RecoilOffset
 	{

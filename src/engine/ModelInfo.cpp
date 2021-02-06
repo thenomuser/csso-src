@@ -142,6 +142,7 @@ public:
 	vcollide_t *GetVCollide( int modelIndex );
 	virtual const char *GetModelKeyValueText( const model_t *model );
 	virtual bool GetModelKeyValue( const model_t *model, CUtlBuffer &buf );
+	virtual KeyValues *GetModelKeyValues( const model_t *pModel );
 	virtual float GetModelRadius( const model_t *model );
 	virtual studiohdr_t *GetStudiomodel( const model_t *mod );
 	virtual int GetModelSpriteWidth( const model_t *model ) const;
@@ -808,6 +809,26 @@ const char *CModelInfo::GetModelKeyValueText( const model_t *model )
 	return pStudioHdr->KeyValueText();
 }
 
+static CThreadFastMutex g_ModelKeyValueMutex;
+KeyValues *CModelInfo::GetModelKeyValues( const model_t *pModel )
+{
+	// in case we enter this from multiple threads
+	AUTO_LOCK_FM( g_ModelKeyValueMutex );
+	if ( !pModel->m_pKeyValues )
+	{
+		const char *pKeyValueText = GetModelKeyValueText( pModel );
+		KeyValues *pKV = new KeyValues("");
+		if ( pKV->LoadFromBuffer( GetModelName( pModel ), pKeyValueText ) )
+		{
+			const_cast<model_t *>(pModel)->m_pKeyValues = pKV;
+		}
+		else
+		{
+			pKV->deleteThis();
+		}
+	}
+	return pModel->m_pKeyValues;
+}
 
 
 bool CModelInfo::GetModelKeyValue( const model_t *model, CUtlBuffer &buf )

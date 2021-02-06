@@ -1682,7 +1682,7 @@ static void CenterScaleQuadUVs( Vector4D & quadUVs, const Vector2D & uvScale )
 }
 
 #if IRONSIGHT
-bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
+void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup )
 {
 	//the preparation stage returns true if following steps like rendering the scope stencil shape are necessary.
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
@@ -1697,7 +1697,6 @@ bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSet
 			}
 		}
 	}
-	return false;
 }
 #endif
 

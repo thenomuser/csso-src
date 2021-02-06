@@ -15,14 +15,13 @@
 #include "utldict.h"
 #include "weapon_basecsgrenade.h"
 #include "datacache/imdlcache.h"
+#include "cs_loadout.h"
 
 #include "cs_shareddefs.h"
-#include "cs_loadout.h"
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
 	#include "bone_setup.h"
-	#include "interpolatedvar.h"
 	#include "c_cs_hostage.h"
 #else
 	#include "cs_player.h"
@@ -65,7 +64,7 @@ enum CSPlayerAnimStateLayer_t
 	GRENADESEQUENCE_LAYER,
 	FLASHEDSEQUENCE_LAYER,
 	FLINCHSEQUENCE_LAYER,
-	//DEFUSESEQUENCE_LAYER,
+	FOOTPLANTSEQUENCE_LAYER,
 
 	NUM_LAYERS_WANTED
 };
@@ -125,10 +124,9 @@ protected:
 
 	int CalcFlinchLayerSequence( CBaseCombatCharacter *pBaseCombatCharacter );
 	void ComputeFlinchSequence( CStudioHdr *pStudioHdr );
-	/*
-	int CalcDefuseLayerSequence( CBaseCombatCharacter *pBaseCombatCharacter );
-	void ComputeDefuseSequence(CStudioHdr *pStudioHdr);
-	*/
+
+	void ComputeFootPlantSequence(CStudioHdr *pStudioHdr);
+
 	bool IsOuterGrenadePrimed();
 	void ComputeGrenadeSequence( CStudioHdr *pStudioHdr );
 	int CalcGrenadePrimeSequence();
@@ -186,10 +184,7 @@ private:
 	int m_iCurrentAimSequence;
 	float m_flTargetMaxSpeed;
 	float m_flCurrentMaxSpeed;
-	/*
-	float m_flLastUpdateTime;
-	float m_flLastUpdateIncrement;
-	*/
+
 	int m_iIdleFireSequence;
 
 	// This is set to true if ANY animation is being played in the fire layer.
@@ -228,8 +223,6 @@ private:
 
 	float m_flLastActChangeTime;
 	Activity m_LastActivity;
-
-	//bool m_bDefuseStarted;
 };
 
 
@@ -371,7 +364,7 @@ CCSPlayerAnimState::CCSPlayerAnimState()
 	m_flFlinchStartTime = -1.0f;
 	m_flFlinchLength = 0.0f;
 	m_nFlinchSequence = 0;
-	
+
 	m_bDeploying = false;
 	m_iDeploySequence = -1;
 	m_flDeployCycle = 0.0f;
@@ -405,10 +398,6 @@ CCSPlayerAnimState::CCSPlayerAnimState()
 
 	m_flLastActChangeTime = gpGlobals->curtime;
 	m_LastActivity = ACT_IDLE;
-	/*
-	m_bDefuseStarted = false;
-	m_flLastUpdateIncrement = 0.0;
-	m_flLastUpdateTime = 0.0;*/
 }
 
 void CCSPlayerAnimState::UpdateTimeSinceLastActChange()
@@ -434,13 +423,13 @@ void CCSPlayerAnimState::InitCS( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimSt
 	//Since this value is intended to be more than m_flMaxBodyYawDegrees, it will set the new yaw PAST the midpoint.
 	//This looks a little more lifelike when the player is rapidly turning, and if the player halts, it makes the facefront that follows more obvious.
 	config.m_flMaxBodyYawDegreesCorrectionAmount = 90;
-	/*
+
 	//Disable foot plant tunring if the feet are lagging behind by more than this angle
 	config.m_flIdleFootPlantMaxYaw = 110;
 
 	//Turning less than this amount? Don't lift the feet, just shuffle them over.
 	config.m_flIdleFootPlantFootLiftDelta = 25;
-	*/
+
 	config.m_LegAnimType = legAnimType;
 	config.m_bUseAimSequences = bUseAimSequences;
 
@@ -485,7 +474,7 @@ void CCSPlayerAnimState::ClearAnimationLayer( int layer )
 	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( layer );
 	if ( pLayer )
 	{
-		pLayer->m_flWeight = 0.0f;
+		pLayer->SetWeight( 0.0f );
 		pLayer->SetOrder( CBaseAnimatingOverlay::MAX_OVERLAYS );
 #ifndef CLIENT_DLL
 		pLayer->m_fFlags = 0;
@@ -637,7 +626,7 @@ void CCSPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nDat
 		{
 			// ignore normal reload events for shotguns - they get sent to trigger sounds etc only
 			// [mlowrance] Mag7 special case: it's classified as a Shotgun, but reloads like a conventional gun with a clip.
-			if ( pActiveWeapon && ( pActiveWeapon->GetWeaponType() != WEAPONTYPE_SHOTGUN || pActiveWeapon->GetWeaponID() == WEAPON_MAG7 ) )
+			if ( pActiveWeapon && ( pActiveWeapon->GetWeaponType() != WEAPONTYPE_SHOTGUN || pActiveWeapon->GetCSWeaponID() == WEAPON_MAG7 ) )
 			{
 				m_iReloadSequence = CalcReloadLayerSequence( animEvent );
 				if ( m_iReloadSequence != -1 )
@@ -692,7 +681,7 @@ void CCSPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nDat
 		{
 			// ignore shotgun reload events for non-shotguns
 			// [mlowrance] Mag7 special case: it's classified as a Shotgun, but reloads like a conventional gun with a clip.
-			if ( pActiveWeapon && ( pActiveWeapon->GetWeaponType() != WEAPONTYPE_SHOTGUN || pActiveWeapon->GetWeaponID() == WEAPON_MAG7 ) )
+			if ( pActiveWeapon && ( pActiveWeapon->GetWeaponType() != WEAPONTYPE_SHOTGUN || pActiveWeapon->GetCSWeaponID() == WEAPON_MAG7 ) )
 			{
 				m_flReloadHoldEndTime = 0.0f;  // clear this out in case we set it in _START or _LOOP above
 			}
@@ -881,6 +870,16 @@ int CCSPlayerAnimState::CalcReloadLayerSequence( PlayerAnimEvent_t animEvent )
 	char szName[512];
 	int iReloadSequence = -1;
 
+// Avoid doing this look up since we don't need it for CSSO
+#if !defined( CSTRIKE_DLL )
+
+	Q_snprintf( szName, sizeof( szName ), "%s_reload_%s%s", prefix, weaponSuffix, reloadSuffix );
+	iReloadSequence = m_pOuter->LookupSequence( szName );
+	if ( iReloadSequence != -1 )
+		return iReloadSequence;
+
+#endif
+
 	// Next, look for reload_<weapon name><_start|_loop|_end>.
 	Q_snprintf( szName, sizeof( szName ), "reload_%s%s", weaponSuffix, reloadSuffix );
 	iReloadSequence = m_pOuter->LookupSequence( szName );
@@ -910,10 +909,10 @@ void CCSPlayerAnimState::UpdateLayerSequenceGeneric( CStudioHdr *pStudioHdr, int
 		return;
 
 	CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( iLayer );
-	pLayer->m_nSequence = iSequence;
+	pLayer->SetSequence( iSequence );
 
 	// find cycle rate for the layer
-	float flSequenceCycleRate = m_pPlayer->GetSequenceCycleRate( pStudioHdr, iSequence );
+	float flSequenceCycleRate = m_pPlayer->GetLayerSequenceCycleRate( pLayer, iSequence );
 
 	// weapon vs self
 	flCurCycle += flSequenceCycleRate * gpGlobals->frametime;
@@ -934,10 +933,10 @@ void CCSPlayerAnimState::UpdateLayerSequenceGeneric( CStudioHdr *pStudioHdr, int
 	}
 
 	// Now dump the state into its animation layer.
-	pLayer->m_flCycle = flCurCycle;
+	pLayer->SetCycle( flCurCycle );
 
-	pLayer->m_flPlaybackRate = 1.0f;
-	pLayer->m_flWeight = flWeight;
+	pLayer->SetPlaybackRate( 1.0f );
+	pLayer->SetWeight( flWeight );
 	pLayer->SetOrder( iLayer );
 #ifndef CLIENT_DLL
 	pLayer->m_fFlags |= ANIM_LAYER_ACTIVE; 
@@ -1284,67 +1283,22 @@ int CCSPlayerAnimState::CalcFlinchLayerSequence( CBaseCombatCharacter *pBaseComb
 
 	return nSequence;
 }
-/*
-int CCSPlayerAnimState::CalcDefuseLayerSequence( CBaseCombatCharacter *pBaseCombatCharacter )
+
+void CCSPlayerAnimState::ComputeFootPlantSequence( CStudioHdr *pStudioHdr )
 {
-	if ( !pBaseCombatCharacter )
-		return ACTIVITY_NOT_AVAILABLE;
+	if ( !m_bInFootPlantIdleTurn )
+		return;
 
-	CCSPlayer *pPlayer = ToCSPlayer( pBaseCombatCharacter );
-	if ( !pPlayer )
-		return ACTIVITY_NOT_AVAILABLE;
-
-	if ( m_pOuter->GetFlags() & FL_DUCKING )
-		return SelectWeightedSequence( pPlayer->HasDefuser() ? ACT_DEFUSE_WITH_KIT_CROUCH : ACT_DEFUSE_CROUCH );
-	else
-		return SelectWeightedSequence( pPlayer->HasDefuser() ? ACT_DEFUSE_WITH_KIT : ACT_DEFUSE );
-
-	return SelectWeightedSequence( ACT_GESTURE_BIG_FLINCH );
-}
-
-#define CSGO_ANIM_DEFUSE_ABORT_SPEED 8.0f
-void CCSPlayerAnimState::ComputeDefuseSequence( CStudioHdr *pStudioHdr )
-{
-	VPROF( "CCSPlayerAnimState::ComputeFootPlantSequence" );
+	VPROF("CCSPlayerAnimState::ComputeFootPlantSequence");
 
 	CBaseCombatCharacter *pBaseCombatCharacter = dynamic_cast<CBaseCombatCharacter*>(m_pOuter);
-	if ( !pBaseCombatCharacter )
+	if (!pBaseCombatCharacter)
 		return;
 
-	CCSPlayer *pPlayer = ToCSPlayer( pBaseCombatCharacter );
-	if ( !pPlayer )
-		return;
-
-	if ( pPlayer->m_bIsDefusing )
-	{
-		if ( !m_bDefuseStarted )
-		{
-			int nSequence = CalcDefuseLayerSequence( pBaseCombatCharacter );
-			if ( nSequence != ACTIVITY_NOT_AVAILABLE )
-			{
-				CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( DEFUSESEQUENCE_LAYER );
-				pLayer->m_nSequence = nSequence;
-				//pLayer->m_flCycle = clamp( m_flFlashedAmountDelayed, 0, 1 );
-				pLayer->m_flPlaybackRate = 1.0f;
-				pLayer->m_flWeight = 1.0f;
-				pLayer->SetOrder( DEFUSESEQUENCE_LAYER );
-#ifndef CLIENT_DLL
-				pLayer->m_fFlags |= ANIM_LAYER_ACTIVE;
-#endif
-			}
-
-			m_bDefuseStarted = true;
-		}
-	}
-	else
-	{
-		CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( DEFUSESEQUENCE_LAYER );
-		float flCurrentWeight = pLayer->m_flWeight;
-		pLayer->m_flWeight = Approach( 0, flCurrentWeight, m_flLastUpdateIncrement * CSGO_ANIM_DEFUSE_ABORT_SPEED );
-		m_bDefuseStarted = false;
-	}
+	int nSequence = SelectWeightedSequence( m_bFootPlantIdleNeedToLiftFeet ? ACT_TURN : ACT_STEP_FORE );
+	UpdateLayerSequenceGeneric( pStudioHdr, FOOTPLANTSEQUENCE_LAYER, m_bInFootPlantIdleTurn, m_flFootPlantIdleTurnCycle, nSequence, false );
 }
-*/
+
 void CCSPlayerAnimState::ComputeFlinchSequence( CStudioHdr *pStudioHdr )
 {
 	VPROF( "CCSPlayerAnimState::ComputeFlinchSequence" );
@@ -1424,10 +1378,10 @@ void CCSPlayerAnimState::ComputeFlashedSequence( CStudioHdr *pStudioHdr )
 			m_flFlashedAmountDelayed = Approach( m_flFlashedAmount, m_flFlashedAmountDelayed, gpGlobals->frametime * 5.0f );
 
 			CAnimationLayer *pLayer = m_pOuter->GetAnimOverlay( FLASHEDSEQUENCE_LAYER );
-			pLayer->m_nSequence = m_iFlashedSequence;
-			pLayer->m_flCycle = clamp( m_flFlashedAmountDelayed, 0, 1 );
-			pLayer->m_flPlaybackRate = 1.0f;
-			pLayer->m_flWeight = 1.0f;
+			pLayer->SetSequence( m_iFlashedSequence );
+			pLayer->SetCycle( clamp( m_flFlashedAmountDelayed, 0, 1 ) );
+			pLayer->SetPlaybackRate( 1.0f );
+			pLayer->SetWeight( 1.0f );
 			pLayer->SetOrder( FLASHEDSEQUENCE_LAYER );
 #ifndef CLIENT_DLL
 			pLayer->m_fFlags |= ANIM_LAYER_ACTIVE; 
@@ -1541,7 +1495,7 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 		return -1;
 
 	char tempsuffix[256];
-	if ( pWeapon->GetWeaponID() == WEAPON_ELITE )
+	if ( pWeapon->GetCSWeaponID() == WEAPON_ELITE )
 	{
 		bool bPrimary = (animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY);
 		Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_%c", pSuffix, bPrimary?'r':'l' );
@@ -1845,7 +1799,7 @@ void CCSPlayerAnimState::ComputeSequences( CStudioHdr *pStudioHdr )
 	// not dispatched through weapon (normally)
 	ComputeFlashedSequence( pStudioHdr );
 	ComputeFlinchSequence( pStudioHdr );
-	//ComputeDefuseSequence(pStudioHdr);
+	ComputeFootPlantSequence(pStudioHdr);
 }
 
 
@@ -2020,8 +1974,6 @@ void CCSPlayerAnimState::Update( float eyeYaw, float eyePitch )
 	// We just need to avoid some pops from when the speed suddenly changes.
 	const float SPEED_BLEND_VALUE = 0.15f;
 	m_flCurrentMaxSpeed += ( m_flTargetMaxSpeed - m_flCurrentMaxSpeed ) * SPEED_BLEND_VALUE;
-	/*m_flLastUpdateIncrement = Max( 0.0f, gpGlobals->curtime - m_flLastUpdateTime );
-	m_flLastUpdateTime = gpGlobals->curtime;*/
 
 	BaseClass::Update(eyeYaw, eyePitch);
 }
@@ -2032,7 +1984,7 @@ bool CCSPlayerAnimState::ActiveWeaponIsDeployed()
 	bool currentWeaponIsDeployedWeapon = true;
 	if ( pActiveWeapon != NULL )
 	{
-		currentWeaponIsDeployedWeapon = ( pActiveWeapon->GetWeaponID() == m_iDeployedWeaponID );
+		currentWeaponIsDeployedWeapon = ( pActiveWeapon->GetCSWeaponID() == m_iDeployedWeaponID );
 		if ( !currentWeaponIsDeployedWeapon )
 		{
 			// If the player is out of view we don't get animation events about deploy etc.

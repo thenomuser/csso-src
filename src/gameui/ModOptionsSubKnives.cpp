@@ -56,6 +56,7 @@ static Knives knifeNames[] =
 	{ "#GameUI_Loadout_Knife_Stiletto",		"weapon_knife_stiletto"			},
 	{ "#GameUI_Loadout_Knife_Ursus",		"weapon_knife_ursus"			},
 	{ "#GameUI_Loadout_Knife_Widowmaker",	"weapon_knife_widowmaker"		},
+	{ "#GameUI_Loadout_Knife_Push",			"weapon_knife_push"				},
 };
 
 //-----------------------------------------------------------------------------

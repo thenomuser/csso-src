@@ -43,7 +43,7 @@
 #define MAX_HOSTAGES				12
 #define MAX_HOSTAGE_RESCUES			4
 #define HOSTAGE_RULE_CAN_PICKUP		1
-#define MAX_KNIVES					18 // any new knives? add them here
+#define MAX_KNIVES					19 // any new knives? add them here
 
 #define MAX_MODEL_STRING_SIZE 256
 
@@ -148,7 +148,7 @@ extern CUtlVectorInitialized< const char * > CTFBIPlayerModels;
 extern CUtlVectorInitialized< const char * > CTIDFPlayerModels;
 extern CUtlVectorInitialized< const char * > CTSWATPlayerModels;
 
-extern CUtlVectorInitialized< const char* > KnivesEntities;
+extern CUtlVectorInitialized< const char * > KnivesEntities;
 
 
 // These go in CCSPlayer::m_iAddonBits and get sent to the client so it can create

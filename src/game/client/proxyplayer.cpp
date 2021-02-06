@@ -627,4 +627,4 @@ void CCrossHairColorProxy::OnBind(void *pC_BaseEntity)
 						(float)m_vecLocalCrossHairColor.z * 0.0039, 1);
 	}
 }
-EXPOSE_INTERFACE( CCrossHairColorProxy, IMaterialProxy, "CrossHairColor" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_INTERFACE( CCrossHairColorProxy, IMaterialProxy, "CrossHairColor" IMATERIAL_PROXY_INTERFACE_VERSION ); 

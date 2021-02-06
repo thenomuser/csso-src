@@ -14,6 +14,7 @@
 
 #include "c_cs_player.h"
 
+#include "c_rope.h"
 #include "utlvector.h"
 
 // ------------------------------------------------------------------------------------------ //
@@ -54,6 +55,10 @@ public:
 	CNetworkVar( float, m_flDefuseLength );
 	CNetworkVar( float, m_flDefuseCountDown );
 	CNetworkVar( bool, m_bBombDefused );
+	CNetworkVar( CHandle<CCSPlayer>, m_pBombDefuser );
+
+	CUtlVector<CHandle<C_RopeKeyframe>> m_hDefuserRopes;
+	CHandle<C_BaseAnimating> m_hDefuserMultimeter;
 
 	float GetDefuseProgress( void )
 	{	
@@ -69,6 +74,13 @@ public:
 
 	float	m_flNextRadarFlashTime;	// next time to change flash state
 	bool	m_bRadarFlash;			// is the flash on or off
+
+	virtual void UpdateOnRemove( void ) OVERRIDE;
+
+private:
+	bool CreateDefuserRopes( void );
+	void DestroyDefuserRopes( void );
+	CHandle<CCSPlayer> m_hLocalDefusingPlayerHandle;
 };
 
 extern CUtlVector< C_PlantedC4* > g_PlantedC4s;

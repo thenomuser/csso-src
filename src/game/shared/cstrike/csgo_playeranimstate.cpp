@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+ //========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -11,6 +11,7 @@
 #include "weapon_csbase.h"
 #include "gamemovement.h"
 #include "in_buttons.h"
+#include "datacache/imdlcache.h"
 #include "utlbuffer.h"
 
 #ifdef CLIENT_DLL
@@ -18,14 +19,13 @@
 #else
 	#include "cs_player.h"
 	#include "ilagcompensationmanager.h"
-	#include "datacache/imdlcache.h"
 #endif
 
 extern CUtlSymbolTable g_ActivityModifiersTable;
 
 float ClampCycle( float flCycleIn )
 {
-	flCycleIn -= int( flCycleIn );
+	flCycleIn -= int(flCycleIn);
 
 	if ( flCycleIn < 0 )
 	{
@@ -74,40 +74,40 @@ void CCSGOPlayerAnimState::Reset( void )
 	ApplyLayerOrderPreset( get_animlayerpreset( Default ), true );
 
 #ifdef CLIENT_DLL
-	m_iLastUpdateFrame = 0;
-	m_flStepHeightLeft = 0;
-	m_flStepHeightRight = 0;
+	m_iLastUpdateFrame					= 0;
+	m_flStepHeightLeft					= 0;
+	m_flStepHeightRight					= 0;
 #endif
 
 #ifndef CLIENT_DLL
-	m_flFlashedAmountEaseOutStart = 0;
-	m_flFlashedAmountEaseOutEnd = 0;
+	m_flFlashedAmountEaseOutStart		= 0;
+	m_flFlashedAmountEaseOutEnd			= 0;
 #endif
 
-	m_pWeapon = m_pPlayer->GetActiveCSWeapon();
+	m_pWeapon							= m_pPlayer->GetActiveCSWeapon();
 	m_pWeaponLast = m_pWeapon;
 
 #ifdef CLIENT_DLL
 	m_pWeaponLastBoneSetup = m_pWeapon;
-	m_flEyePositionSmoothLerp = 0;
+	m_flEyePositionSmoothLerp			= 0;
 	m_flStrafeChangeWeightSmoothFalloff = 0;
-	m_bFirstFootPlantSinceInit = true;
+	m_bFirstFootPlantSinceInit			= true;
 #endif
 
-	m_flLastUpdateTime = 0;
-	m_flLastUpdateIncrement = 0;
+	m_flLastUpdateTime					= 0;
+	m_flLastUpdateIncrement				= 0;
 
-	m_flEyeYaw = 0;
-	m_flEyePitch = 0;
-	m_flFootYaw = 0;
-	m_flFootYawLast = 0;
-	m_flMoveYaw = 0;
-	m_flMoveYawIdeal = 0;
-	m_flMoveYawCurrentToIdeal = 0;
+	m_flEyeYaw							= 0;
+	m_flEyePitch						= 0;
+	m_flFootYaw							= 0;
+	m_flFootYawLast						= 0;
+	m_flMoveYaw							= 0;
+	m_flMoveYawIdeal					= 0;
+	m_flMoveYawCurrentToIdeal			= 0;
 
 #ifndef CLIENT_DLL
 	m_pPlayer->m_flLowerBodyYawTarget.Set( 0 );
-	m_flLowerBodyRealignTimer = 0;
+	m_flLowerBodyRealignTimer			= 0;
 #endif
 
 	m_tStandWalkAim.Init();
@@ -120,12 +120,12 @@ void CCSGOPlayerAnimState::Reset( void )
 	m_tCrouchWalkAim.m_flHowLongToWaitUntilTransitionCanBlendIn = 0.3f;
 	m_tCrouchWalkAim.m_flHowLongToWaitUntilTransitionCanBlendOut = 0.3f;
 
-	m_flPrimaryCycle = 0;
-	m_flMoveWeight = 0;
-	m_flMoveWeightSmoothed = 0;
-	m_flAnimDuckAmount = 0;
-	m_flDuckAdditional = 0; // for when we duck a bit after landing from a jump
-	m_flRecrouchWeight = 0;
+	m_flPrimaryCycle					= 0;
+	m_flMoveWeight						= 0;
+	m_flMoveWeightSmoothed				= 0;
+	m_flAnimDuckAmount					= 0;
+	m_flDuckAdditional					= 0; // for when we duck a bit after landing from a jump
+	m_flRecrouchWeight					= 0;
 
 	m_vecPositionCurrent.Init();
 	m_vecPositionLast.Init();
@@ -133,88 +133,88 @@ void CCSGOPlayerAnimState::Reset( void )
 	m_vecVelocity.Init();
 	m_vecVelocityNormalized.Init();
 	m_vecVelocityNormalizedNonZero.Init();
-	m_flVelocityLengthXY = 0;
-	m_flVelocityLengthZ = 0;
+	m_flVelocityLengthXY				= 0;
+	m_flVelocityLengthZ					= 0;
 
-	m_flSpeedAsPortionOfRunTopSpeed = 0;
-	m_flSpeedAsPortionOfWalkTopSpeed = 0;
-	m_flSpeedAsPortionOfCrouchTopSpeed = 0;
+	m_flSpeedAsPortionOfRunTopSpeed		= 0;
+	m_flSpeedAsPortionOfWalkTopSpeed	= 0;
+	m_flSpeedAsPortionOfCrouchTopSpeed	= 0;
 
-	m_flDurationMoving = 0;
-	m_flDurationStill = 0;
+	m_flDurationMoving					= 0;
+	m_flDurationStill					= 0;
 
-	m_bOnGround = true;
+	m_bOnGround							= true;
 #ifndef CLIENT_DLL
-	m_bJumping = false;
+	m_bJumping							= false;
 #endif
-	m_flLandAnimMultiplier = 1.0f;
-	m_flLeftGroundHeight = 0;
-	m_bLanding = false;
-	m_flJumpToFall = 0;
-	m_flDurationInAir = 0;
+	m_flLandAnimMultiplier				= 1.0f;
+	m_flLeftGroundHeight				= 0;
+	m_bLanding							= false;
+	m_flJumpToFall						= 0;
+	m_flDurationInAir					= 0;
 
-	m_flWalkToRunTransition = 0;
+	m_flWalkToRunTransition				= 0;
 
-	m_bLandedOnGroundThisFrame = false;
-	m_bLeftTheGroundThisFrame = false;
-	m_flInAirSmoothValue = 0;
+	m_bLandedOnGroundThisFrame			= false;
+	m_bLeftTheGroundThisFrame			= false;
+	m_flInAirSmoothValue				= 0;
 
-	m_bOnLadder = false;
-	m_flLadderWeight = 0;
-	m_flLadderSpeed = 0;
+	m_bOnLadder							= false;
+	m_flLadderWeight					= 0;
+	m_flLadderSpeed						= 0;
 
-	m_bWalkToRunTransitionState = ANIM_TRANSITION_WALK_TO_RUN;
+	m_bWalkToRunTransitionState			= ANIM_TRANSITION_WALK_TO_RUN;
 
-	m_bDefuseStarted = false;
-	m_bPlantAnimStarted = false;
-	m_bTwitchAnimStarted = false;
-	m_bAdjustStarted = false;
+	m_bDefuseStarted					= false;
+	m_bPlantAnimStarted					= false;
+	m_bTwitchAnimStarted				= false;
+	m_bAdjustStarted					= false;
 
-	m_flNextTwitchTime = 0;
+	m_flNextTwitchTime					= 0;
 
-	m_flTimeOfLastKnownInjury = 0;
+	m_flTimeOfLastKnownInjury			= 0;
 
-	m_flLastVelocityTestTime = 0;
+	m_flLastVelocityTestTime			= 0;
 	m_vecVelocityLast.Init();
 	m_vecTargetAcceleration.Init();
 	m_vecAcceleration.Init();
-	m_flAccelerationWeight = 0;
+	m_flAccelerationWeight				= 0;
 
-	m_flAimMatrixTransition = 0;
-	m_flAimMatrixTransitionDelay = 0;
+	m_flAimMatrixTransition				= 0;
+	m_flAimMatrixTransitionDelay		= 0;
 
-	m_bFlashed = 0;
+	m_bFlashed							= 0;
 
 
-	m_flStrafeChangeWeight = 0;
-	m_flStrafeChangeTargetWeight = 0;
-	m_flStrafeChangeCycle = 0;
-	m_nStrafeSequence = -1;
-	m_bStrafeChanging = false;
-	m_flDurationStrafing = 0;
+	m_flStrafeChangeWeight				= 0;
+	m_flStrafeChangeTargetWeight		= 0;
+	m_flStrafeChangeCycle				= 0;
+	m_nStrafeSequence					= -1;
+	m_bStrafeChanging					= false;
+	m_flDurationStrafing				= 0;
 
-	m_flFootLerp = 0;
+	m_flFootLerp						= 0;
 
-	m_bFeetCrossed = false;
+	m_bFeetCrossed						= false;
 
-	m_bPlayerIsAccelerating = false;
+	m_bPlayerIsAccelerating				= false;
 
 #ifndef CLIENT_DLL
-	m_bDeployRateLimiting = false;
+	m_bDeployRateLimiting				= false;
 #endif
 
-	m_flDurationMoveWeightIsTooHigh = 0;
-	m_flStaticApproachSpeed = 80;
+	m_flDurationMoveWeightIsTooHigh		= 0;
+	m_flStaticApproachSpeed				= 80;
 
-	m_flStutterStep = 0;
-	m_nPreviousMoveState = 0;
+	m_flStutterStep						= 0;
+	m_nPreviousMoveState				= 0;
 
-	m_flActionWeightBiasRemainder = 0;
+	m_flActionWeightBiasRemainder		= 0;
 
-	m_flAimYawMin = CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MIN;
-	m_flAimYawMax = CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MAX;
-	m_flAimPitchMin = CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN;
-	m_flAimPitchMax = CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MAX;
+	m_flAimYawMin						= CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MIN;
+	m_flAimYawMax						= CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MAX;
+	m_flAimPitchMin						= CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN;
+	m_flAimPitchMax						= CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MAX;
 
 	//m_flMoveWalkWeight					= 0;
 	//m_flMoveCrouchWalkWeight			= 0;
@@ -222,12 +222,12 @@ void CCSGOPlayerAnimState::Reset( void )
 
 	m_ActivityModifiers.Purge();
 
-	m_bFirstRunSinceInit = true;
+	m_bFirstRunSinceInit				= true;
 
 #ifdef CLIENT_DLL
-	m_flCameraSmoothHeight = 0;
-	m_bSmoothHeightValid = false;
-	m_flLastTimeVelocityOverTen = 0;
+	m_flCameraSmoothHeight				= 0;
+	m_bSmoothHeightValid				= false;
+	m_flLastTimeVelocityOverTen			= 0;
 
 	m_pPlayer->ClearAnimLODflags();
 #endif
@@ -236,11 +236,11 @@ void CCSGOPlayerAnimState::Reset( void )
 #define bonesnapshot_def( _name, _val ) const float _name = _val;
 #define bonesnapshot_get( _name ) _name
 
-bonesnapshot_def( cl_bonesnapshot_speed_weaponchange, 0.25 )
-bonesnapshot_def( cl_bonesnapshot_speed_strafestart, 0.15 )
-bonesnapshot_def( cl_bonesnapshot_speed_movebegin, 0.3 )
-bonesnapshot_def( cl_bonesnapshot_speed_ladderenter, 0.25 )
-bonesnapshot_def( cl_bonesnapshot_speed_ladderexit, 0.1 )
+bonesnapshot_def( cl_bonesnapshot_speed_weaponchange,	0.25 )
+bonesnapshot_def( cl_bonesnapshot_speed_strafestart,	0.15 )
+bonesnapshot_def( cl_bonesnapshot_speed_movebegin,		0.3 )
+bonesnapshot_def( cl_bonesnapshot_speed_ladderenter,	0.25 )
+bonesnapshot_def( cl_bonesnapshot_speed_ladderexit,		0.1 )
 
 #define CSGO_ANIM_DEPLOY_RATELIMIT 0.15f
 
@@ -265,20 +265,20 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 
 
 	// don't need to update animstate if we already have this curtime
-	if ( !bForce && (m_flLastUpdateTime == gpGlobals->curtime || m_nLastUpdateFrame == gpGlobals->framecount) )
+	if ( !bForce && ( m_flLastUpdateTime == gpGlobals->curtime || m_nLastUpdateFrame == gpGlobals->framecount ) )
 		return;
 	m_flLastUpdateIncrement = Max( 0.0f, gpGlobals->curtime - m_flLastUpdateTime ); // negative values possible when clocks on client and server go out of sync..
 
 #ifdef CLIENT_DLL
 	// suspend bonecache invalidation
-	//C_BaseAnimating::EnableInvalidateBoneCache( false );
+	C_BaseAnimating::EnableInvalidateBoneCache( false );
 #endif
 
 	m_flEyeYaw = AngleNormalize( eyeYaw );
 	m_flEyePitch = AngleNormalize( eyePitch );
 	m_vecPositionCurrent = m_pPlayer->GetAbsOrigin();
 	m_pWeapon = m_pPlayer->GetActiveCSWeapon();
-
+	
 
 	// purge layer dispatches on weapon change and init
 	if ( m_pWeapon != m_pWeaponLast || m_bFirstRunSinceInit )
@@ -290,7 +290,7 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 		m_pPlayer->m_nComputedLODframe = 0;
 #endif
 
-		for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ )
+		for ( int i=0; i < ANIMATION_LAYER_COUNT; i++ )
 		{
 			CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( i, USE_ANIMLAYER_RAW_INDEX );
 			if ( pLayer )
@@ -302,9 +302,7 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 		}
 	}
 
-	{
-		m_flAnimDuckAmount = clamp( Approach( clamp( m_pPlayer->m_flDuckAmount + m_flDuckAdditional, 0, 1), m_flAnimDuckAmount, m_flLastUpdateIncrement * 6.0f ), 0, 1 );
-	}
+	m_flAnimDuckAmount = clamp( Approach( clamp( m_pPlayer->m_flDuckAmount + m_flDuckAdditional, 0, 1), m_flAnimDuckAmount, m_flLastUpdateIncrement * 6.0f ), 0, 1 );
 
 	// no matter what, we're always playing 'default' underneath
 	{
@@ -327,11 +325,11 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 
 #ifdef  CLIENT_DLL
 	// zero-sequences are un-set and should have zero weight on the client
-	for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ )
+	for ( int i=0; i < ANIMATION_LAYER_COUNT; i++ )
 	{
 		CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( i, USE_ANIMLAYER_RAW_INDEX );
 		if ( pLayer && pLayer->GetSequence() == 0 )
-			pLayer->SetWeight( 0 );
+			pLayer->SetWeight(0);
 	}
 #endif
 
@@ -340,7 +338,7 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 
 #ifdef CLIENT_DLL
 	// restore bonecache invalidation
-	//C_BaseAnimating::EnableInvalidateBoneCache( true );
+	C_BaseAnimating::EnableInvalidateBoneCache( true );
 #endif
 
 	m_pWeaponLast = m_pWeapon;
@@ -369,9 +367,6 @@ float CCSGOPlayerAnimState::LerpCrouchWalkRun( float flCrouchVal, float flWalkVa
 
 #define FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN 4.0f
 #define FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX 10.0f
-#ifdef CLIENT_DLL
-extern ConVar cl_camera_height_restriction_debug;
-#endif
 void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 {
 	if ( !m_pPlayer )
@@ -400,11 +395,11 @@ void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 		// to be advantageous for the local player.
 		if ( vecHeadPos.z < vecInputEyePos.z )
 		{
-
+			
 			float flLerp = SimpleSplineRemapValClamped( abs( vecInputEyePos.z - vecHeadPos.z ),
-														FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN,
-														FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX,
-														0.0f, 1.0f );
+				FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN,
+				FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX,
+				0.0f, 1.0f );
 
 			vecInputEyePos.z = Lerp( flLerp, vecInputEyePos.z, vecHeadPos.z );
 
@@ -427,7 +422,7 @@ void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 				{
 					m_flCameraSmoothHeight = flHardCamHeight;
 				}
-
+		
 			}
 			else
 			{
@@ -450,26 +445,26 @@ void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 
 void CCSGOPlayerAnimState::OnClientWeaponChange( CWeaponCSBase* pCurrentWeapon )
 {
-	if ( !m_bFirstRunSinceInit && (pCurrentWeapon != m_pWeaponLastBoneSetup) &&
-		 !m_pPlayer->IsAnyBoneSnapshotPending() &&
-		 m_pPlayer->m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].GetCurrentWeight() <= 0 &&
-		 m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
+	if ( !m_bFirstRunSinceInit && ( pCurrentWeapon != m_pWeaponLastBoneSetup ) &&
+		!m_pPlayer->IsAnyBoneSnapshotPending() &&
+		m_pPlayer->m_boneSnapshots[ BONESNAPSHOT_UPPER_BODY ].GetCurrentWeight() <= 0 && 
+		m_pPlayer->m_boneSnapshots[ BONESNAPSHOT_ENTIRE_BODY ].GetCurrentWeight() <= 0 )
 	{
 		m_pWeaponLastBoneSetup = pCurrentWeapon;
 		if ( m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
 		{
-			m_pPlayer->m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_weaponchange ) );
+			m_pPlayer->m_boneSnapshots[ BONESNAPSHOT_UPPER_BODY ].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_weaponchange ) );
 		}
 		else
 		{
-			m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_weaponchange ) );
+			m_pPlayer->m_boneSnapshots[ BONESNAPSHOT_ENTIRE_BODY ].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_weaponchange ) );
 		}
 	}
 }
 
 inline bool CCSGOPlayerAnimState::LayerToIndex( const CAnimationLayer* pLayer, int &nIndex )
 {
-	for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ )
+	for ( int i=0; i < ANIMATION_LAYER_COUNT; i++ )
 	{
 		if ( pLayer == m_pPlayer->GetAnimOverlay( m_pLayerOrderPreset[i], USE_ANIMLAYER_RAW_INDEX ) )
 		{
@@ -485,8 +480,8 @@ void CCSGOPlayerAnimState::NotifyOnLayerChangeSequence( const CAnimationLayer* p
 	int nIndex;
 	if ( !LayerToIndex( pLayer, nIndex ) )
 		return;
-	animstate_layer_t nLayerIndex = (animstate_layer_t) nIndex;
-
+	animstate_layer_t nLayerIndex = (animstate_layer_t)nIndex;
+	
 	//todo: more hooks for pre-bonesetup sequence changes
 
 	// bone snapshot land/climb transitions
@@ -513,7 +508,7 @@ void CCSGOPlayerAnimState::NotifyOnLayerChangeWeight( const CAnimationLayer* pLa
 	int nIndex;
 	if ( !LayerToIndex( pLayer, nIndex ) )
 		return;
-	animstate_layer_t nLayerIndex = (animstate_layer_t) nIndex;
+	animstate_layer_t nLayerIndex = (animstate_layer_t)nIndex;
 
 	//todo: more hooks for pre-bonesetup sequence changes
 
@@ -528,10 +523,10 @@ void CCSGOPlayerAnimState::NotifyOnLayerChangeCycle( const CAnimationLayer* pLay
 	int nIndex;
 	if ( !LayerToIndex( pLayer, nIndex ) )
 		return;
-	animstate_layer_t nLayerIndex = (animstate_layer_t) nIndex;
+	animstate_layer_t nLayerIndex = (animstate_layer_t)nIndex;
 
 	//todo: more hooks for pre-bonesetup sequence changes
-
+	
 	if ( nLayerIndex == ANIMATION_LAYER_MOVEMENT_MOVE )
 	{
 		m_flPrimaryCycle = flNewcycle;
@@ -540,14 +535,14 @@ void CCSGOPlayerAnimState::NotifyOnLayerChangeCycle( const CAnimationLayer* pLay
 
 inline float CCSGOPlayerAnimState::FootBarrierEq( float flIn, float flMinWidth )
 {
-	return ((Sqr( flIn ) * 0.02f) + MIN( flMinWidth, 3 )) * MIN( m_flSpeedAsPortionOfCrouchTopSpeed, 1 );
+	return (( Sqr(flIn) * 0.02f ) + MIN( flMinWidth, 3 )) * MIN( m_flSpeedAsPortionOfCrouchTopSpeed, 1 );
 }
 
 void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mstudioikchain_t *pLeftFootChain, mstudioikchain_t *pRightFootChain, Vector pos[] )
 {
 	if ( !m_pPlayer )
 		return;
-
+	
 	if ( m_bOnGround && m_flInAirSmoothValue >= 1 && !m_bOnLadder )
 	{
 
@@ -564,14 +559,14 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 		{
 			m_footLeft.m_vecPosAnim = boneToWorld[nLeftFootBoneIndex].GetOrigin();
 			m_footRight.m_vecPosAnim = boneToWorld[nRightFootBoneIndex].GetOrigin();
-
+			
 			//debugoverlay->AddBoxOverlay( m_footLeft.m_vecPosAnim, Vector(-5,-5,0), Vector(5,5,0), QAngle(0,0,0), 255, 0, 0, 0, 0 );
 			//debugoverlay->AddBoxOverlay( m_footRight.m_vecPosAnim, Vector(-5,-5,0), Vector(5,5,0), QAngle(0,0,0), 255, 0, 0, 0, 0 );
 
 			Vector vecPlayerOrigin = m_pPlayer->GetAbsOrigin();
-
+			
 			// reset the procedural locations if this is the first computation or they haven't been computed recently
-			if ( m_bFirstFootPlantSinceInit || abs( gpGlobals->framecount - m_iLastUpdateFrame ) > 10 )
+			if ( m_bFirstFootPlantSinceInit || abs(gpGlobals->framecount - m_iLastUpdateFrame) > 10 )
 			{
 				m_footLeft.Init( m_footLeft.m_vecPosAnim );
 				m_footRight.Init( m_footRight.m_vecPosAnim );
@@ -583,40 +578,40 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 				m_bFirstFootPlantSinceInit = false;
 				return;
 			}
-
+			
 			// use the ik lock driver bones to determine if a new foot plant location has been triggered
 
-#define FOOT_LOCK_THRESHOLD 0.7f
-
+			#define FOOT_LOCK_THRESHOLD 0.7f
+			
 			bool bLeftFootLockWasBelowThreshold = m_footLeft.m_flLockAmount < FOOT_LOCK_THRESHOLD;
 			bool bRightFootLockWasBelowThreshold = m_footRight.m_flLockAmount < FOOT_LOCK_THRESHOLD;
-
-			m_footLeft.m_flLockAmount = Approach( clamp( abs( pos[nLeftLockIndex].y ), 0, 1 ), m_footLeft.m_flLockAmount, gpGlobals->frametime * 10.0f );
-			m_footRight.m_flLockAmount = Approach( clamp( abs( pos[nRightLockIndex].y ), 0, 1 ), m_footRight.m_flLockAmount, gpGlobals->frametime * 10.0f );
-
+			
+			m_footLeft.m_flLockAmount = Approach( clamp( abs(pos[nLeftLockIndex].y), 0, 1 ), m_footLeft.m_flLockAmount, gpGlobals->frametime * 10.0f );
+			m_footRight.m_flLockAmount = Approach( clamp( abs(pos[nRightLockIndex].y), 0, 1 ), m_footRight.m_flLockAmount, gpGlobals->frametime * 10.0f );
+			
 			bool bLeftFootLockIsAboveThreshold = m_footLeft.m_flLockAmount >= FOOT_LOCK_THRESHOLD;
 			bool bRightFootLockIsAboveThreshold = m_footRight.m_flLockAmount >= FOOT_LOCK_THRESHOLD;
-
+			
 			// for a short duration after each foot-plant, the feet are not allowed to deviate laterally from the player velocity at the time of the plant
 
-			float flLeftTimeLerp = RemapValClamped( m_footLeft.m_flLastPlantTime, gpGlobals->curtime, gpGlobals->curtime - 0.4f, 1.0f, 0.0f );
-			float flRightTimeLerp = RemapValClamped( m_footRight.m_flLastPlantTime, gpGlobals->curtime, gpGlobals->curtime - 0.4f, 1.0f, 0.0f );
-
+			float flLeftTimeLerp = RemapValClamped( m_footLeft.m_flLastPlantTime, gpGlobals->curtime, gpGlobals->curtime-0.4f, 1.0f, 0.0f );
+			float flRightTimeLerp = RemapValClamped( m_footRight.m_flLastPlantTime, gpGlobals->curtime, gpGlobals->curtime-0.4f, 1.0f, 0.0f );
+			
 			flLeftTimeLerp = Gain( flLeftTimeLerp, 0.8f );
 			flRightTimeLerp = Gain( flRightTimeLerp, 0.8f );
-
+			
 			//debugoverlay->AddBoxOverlay( m_footLeft.m_vecPosPlant, Vector(-5,-5,0)*flLeftTimeLerp, Vector(5,5,0)*flLeftTimeLerp, QAngle(0,0,0), 0, 255, 255, 0, 0 );
 			//debugoverlay->AddBoxOverlay( m_footRight.m_vecPosPlant, Vector(-5,-5,0)*flRightTimeLerp, Vector(5,5,0)*flRightTimeLerp, QAngle(0,0,0), 255, 255, 0, 0, 0 );
-
+			
 			Vector vecLeftPtOnVelLine;
 			Vector vecRightPtOnVelLine;
 
 			CalcClosestPointOnLine( m_footLeft.m_vecPosAnim, m_footLeft.m_vecPosPlant, m_footLeft.m_vecPosPlant + m_footLeft.m_vecPlantVel, vecLeftPtOnVelLine );
 			CalcClosestPointOnLine( m_footRight.m_vecPosAnim, m_footRight.m_vecPosPlant, m_footRight.m_vecPosPlant + m_footRight.m_vecPlantVel, vecRightPtOnVelLine );
-
+			
 			Vector vecLeftTarget = Lerp( flLeftTimeLerp, m_footLeft.m_vecPosAnim, vecLeftPtOnVelLine );
 			Vector vecRightTarget = Lerp( flRightTimeLerp, m_footRight.m_vecPosAnim, vecRightPtOnVelLine );
-
+			
 
 			// check for foot plants for next frame
 
@@ -626,7 +621,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 				m_footLeft.m_flLastPlantTime = gpGlobals->curtime;
 				m_footLeft.m_vecPlantVel = m_vecVelocityNormalizedNonZero;
 			}
-
+			
 			if ( bRightFootLockIsAboveThreshold && bRightFootLockWasBelowThreshold )
 			{
 				m_footRight.m_vecPosPlant = vecRightTarget;
@@ -642,8 +637,8 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 			// the feet are not allowed to exceed 3x the instantaneous velocity of the player (prevents pose-popping when mashing keys)
 
 			float flFrametime = MAX( gpGlobals->frametime, 0.0001f );
-			float flLeftDeltaVel = MAX( (m_footLeft.m_vecPosAnimLast - vecLeftTarget).Length() / flFrametime, 0.0001f );
-			float flRightDeltaVel = MAX( (m_footRight.m_vecPosAnimLast - vecRightTarget).Length() / flFrametime, 0.0001f );
+			float flLeftDeltaVel = MAX( ( m_footLeft.m_vecPosAnimLast - vecLeftTarget ).Length() / flFrametime, 0.0001f );
+			float flRightDeltaVel = MAX( ( m_footRight.m_vecPosAnimLast - vecRightTarget ).Length() / flFrametime, 0.0001f );
 
 			float flVelLimitLeft = m_flVelocityLengthXY * 3.0f;
 			float flVelLimitRight = m_flVelocityLengthXY * 3.0f;
@@ -658,7 +653,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 			if ( m_flVelocityLengthXY <= 10.0f )
 			{
 
-				float flEyeFootAngleDiff = abs( AngleDiff( m_flEyeYaw, m_flFootYaw ) );
+				float flEyeFootAngleDiff = abs( AngleDiff(m_flEyeYaw, m_flFootYaw) );
 				if ( flEyeFootAngleDiff > 56.0f || flTimeStill < 1.0f ) // when turning rapidly, allow the feet to step faster
 				{
 					float flFmod = fmod( gpGlobals->curtime, 0.33f );
@@ -751,7 +746,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 
 			if ( vecLeftTarget.DistToSqr( m_footLeft.m_vecPosAnim ) > (12 * 12) )
 			{
-				vecLeftTarget = m_footLeft.m_vecPosAnim + ((vecLeftTarget - m_footLeft.m_vecPosAnim).Normalized() * 12.0f);
+				vecLeftTarget = m_footLeft.m_vecPosAnim + (( vecLeftTarget - m_footLeft.m_vecPosAnim ).Normalized() * 12.0f);
 				//debugoverlay->AddLineOverlay( vecLeftTarget, m_footLeft.m_vecPosAnim, 0, 255, 0, true, 0 );
 			}
 
@@ -765,7 +760,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 
 			boneToWorld[nLeftFootBoneIndex].SetOrigin( vecLeftTarget );
 			boneToWorld[nRightFootBoneIndex].SetOrigin( vecRightTarget );
-
+			
 			//debugoverlay->AddBoxOverlay( vecLeftTarget, Vector(-5,-5,0), Vector(5,5,0), QAngle(0,0,0), 0, 255, 0, 0, 0 );
 			//debugoverlay->AddBoxOverlay(vecRightTarget, Vector(-5,-5,0), Vector(5,5,0), QAngle(0,0,0), 0, 255, 0, 0, 0 );
 
@@ -778,7 +773,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4_t boneToWorld[], mst
 		{
 			m_iLastUpdateFrame = gpGlobals->framecount;
 		}
-	}
+	}	
 }
 #endif
 
@@ -791,7 +786,7 @@ void CCSGOPlayerAnimState::SetUpLean( void )
 		flInterval = MIN( flInterval, 0.1f );
 		m_flLastVelocityTestTime = gpGlobals->curtime;
 
-		m_vecTargetAcceleration = (m_pPlayer->GetLocalVelocity() - m_vecVelocityLast) / flInterval;
+		m_vecTargetAcceleration = ( m_pPlayer->GetLocalVelocity() - m_vecVelocityLast ) / flInterval;
 		m_vecTargetAcceleration.z = 0;
 
 		m_vecVelocityLast = m_pPlayer->GetLocalVelocity();
@@ -799,19 +794,19 @@ void CCSGOPlayerAnimState::SetUpLean( void )
 
 	m_vecAcceleration = Approach( m_vecTargetAcceleration, m_vecAcceleration, m_flLastUpdateIncrement * 800.0f );
 
-	//#ifdef CLIENT_DLL
-	//	debugoverlay->AddLineOverlay( m_vecPositionCurrent, m_vecPositionCurrent + m_vecAcceleration, 255,0,0, 255, 1, m_flLastUpdateIncrement );
-	//#else
-	//	debugoverlay->AddLineOverlay( m_vecPositionCurrent, m_vecPositionCurrent + m_vecAcceleration, 0,0,255, 255, 1.5, m_flLastUpdateIncrement );
-	//#endif
+//#ifdef CLIENT_DLL
+//	debugoverlay->AddLineOverlay( m_vecPositionCurrent, m_vecPositionCurrent + m_vecAcceleration, 255,0,0, 255, 1, m_flLastUpdateIncrement );
+//#else
+//	debugoverlay->AddLineOverlay( m_vecPositionCurrent, m_vecPositionCurrent + m_vecAcceleration, 0,0,255, 255, 1.5, m_flLastUpdateIncrement );
+//#endif
 
 	QAngle temp;
-	VectorAngles( m_vecAcceleration, Vector( 0, 0, 1 ), temp );
-
+	VectorAngles( m_vecAcceleration, Vector(0,0,1), temp );
+	
 	m_flAccelerationWeight = clamp( (m_vecAcceleration.Length() / CS_PLAYER_SPEED_RUN) * m_flSpeedAsPortionOfRunTopSpeed, 0, 1 );
 	m_flAccelerationWeight *= (1.0f - m_flLadderWeight);
 
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_LEAN_YAW].SetValue( m_pPlayer, AngleNormalize( m_flFootYaw - temp[YAW] ) );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_LEAN_YAW ].SetValue( m_pPlayer, AngleNormalize( m_flFootYaw - temp[YAW] ) );
 
 	if ( GetLayerSequence( ANIMATION_LAYER_LEAN ) <= 0 )
 	{
@@ -830,15 +825,15 @@ void CCSGOPlayerAnimState::SetUpFlinch( void )
 		m_flTimeOfLastKnownInjury = m_pPlayer->GetTimeOfLastInjury();
 
 		// flinches override flinches of their own priority
-		bool bNoFlinchIsPlaying = (IsLayerSequenceCompleted( ANIMATION_LAYER_FLINCH ) || GetLayerWeight( ANIMATION_LAYER_FLINCH ) <= 0);
-		bool bHeadshotIsPlaying = (!bNoFlinchIsPlaying && GetLayerActivity( ANIMATION_LAYER_FLINCH ) == ACT_CSGO_FLINCH_HEAD);
+		bool bNoFlinchIsPlaying = ( IsLayerSequenceCompleted( ANIMATION_LAYER_FLINCH ) || GetLayerWeight( ANIMATION_LAYER_FLINCH ) <= 0 );
+		bool bHeadshotIsPlaying = ( !bNoFlinchIsPlaying && GetLayerActivity(ANIMATION_LAYER_FLINCH) == ACT_CSGO_FLINCH_HEAD );
 
 		if ( m_pPlayer->GetLastDamageTypeFlags() & DMG_BURN )
 		{
 			if ( bNoFlinchIsPlaying )
 			{
 				SetLayerSequence( ANIMATION_LAYER_FLINCH, SelectSequenceFromActMods( ACT_CSGO_FLINCH_MOLOTOV ) );
-
+			
 				// clear out all the flinch-related actmods now we selected a sequence
 				UpdateActivityModifiers();
 			}
@@ -848,8 +843,7 @@ void CCSGOPlayerAnimState::SetUpFlinch( void )
 			RelativeDamagedDirection_t damageDir = m_pPlayer->GetLastInjuryRelativeDirection();
 			bool bLeft = false;
 			bool bRight = false;
-			switch ( damageDir )
-			{
+			switch (damageDir) {
 				case DAMAGED_DIR_NONE:
 				case DAMAGED_DIR_FRONT:
 				{
@@ -874,8 +868,7 @@ void CCSGOPlayerAnimState::SetUpFlinch( void )
 					break;
 				}
 			}
-			switch ( m_pPlayer->LastHitGroup() )
-			{
+			switch (m_pPlayer->LastHitGroup()) {
 				case HITGROUP_HEAD:
 				{
 					AddActivityModifier( "head" );
@@ -918,7 +911,7 @@ void CCSGOPlayerAnimState::SetUpFlinch( void )
 				}
 			}
 			SetLayerSequence( ANIMATION_LAYER_FLINCH, SelectSequenceFromActMods( (m_pPlayer->LastHitGroup() == HITGROUP_HEAD) ? ACT_CSGO_FLINCH_HEAD : ACT_CSGO_FLINCH ) );
-
+			
 			// clear out all the flinch-related actmods now we selected a sequence
 			UpdateActivityModifiers();
 		}
@@ -960,7 +953,7 @@ void CCSGOPlayerAnimState::SetUpFlashedReaction( void )
 		}
 
 		float flFlashedAmount = RemapValClamped( gpGlobals->curtime, m_flFlashedAmountEaseOutStart, m_flFlashedAmountEaseOutEnd, 1, 0 );
-
+		
 		// TODO: make flashed anims look nicer by using a cycle, like the old ones
 		//SetLayerCycle( nLayer, 1.0f - flFlashedAmount );
 
@@ -968,7 +961,7 @@ void CCSGOPlayerAnimState::SetUpFlashedReaction( void )
 		SetLayerRate( nLayer, 0 );
 
 		float flWeightPrevious = GetLayerWeight( nLayer );
-		float flWeightNew = SimpleSpline( flFlashedAmount );
+		float flWeightNew = SimpleSpline(flFlashedAmount);
 
 		SetLayerWeight( nLayer, flWeightNew );
 		SetLayerWeightRate( nLayer, (flWeightNew >= flWeightPrevious) ? 0 : flWeightPrevious );
@@ -1029,7 +1022,7 @@ void CCSGOPlayerAnimState::SetUpWholeBodyAction( void )
 		}
 		else
 		{
-			IncrementLayerCycleWeightRateGeneric( nLayer );
+			IncrementLayerCycleWeightRateGeneric(nLayer);
 		}
 	}
 	else if ( GetLayerActivity( nLayer ) == ACT_CSGO_DEFUSE || GetLayerActivity( nLayer ) == ACT_CSGO_DEFUSE_WITH_KIT )
@@ -1065,7 +1058,7 @@ void CCSGOPlayerAnimState::SetUpWholeBodyAction( void )
 			SetLayerWeight( nLayer, Approach( GetLayerIdealWeightFromSeqCycle( nLayer ), flWeightPrevious, m_flLastUpdateIncrement * CSGO_ANIM_BOMBPLANT_BLEND_RATE ) );
 			SetLayerWeightRate( nLayer, flWeightPrevious );
 
-			m_bPlantAnimStarted = !(IsLayerSequenceCompleted( nLayer ));
+			m_bPlantAnimStarted = !( IsLayerSequenceCompleted( nLayer ) );
 		}
 		else
 		{
@@ -1175,7 +1168,7 @@ void CCSGOPlayerAnimState::SetUpAliveloop( void )
 void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 {
 	animstate_layer_t nLayer = ANIMATION_LAYER_WEAPON_ACTION;
-
+	
 #ifndef CLIENT_DLL
 
 	bool bDoIncrement = true;
@@ -1202,11 +1195,11 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 		// old re-crouch behavior
 
 		// fixme: this is a hack to fix the all-body weapon action that wants to crouch case. There's no fix for the crouching all-body action that wants to stand
-		if ( m_flAnimDuckAmount > 0 && GetLayerWeight( nLayer ) > 0 && !LayerSequenceHasActMod( nLayer, "crouch" ) )
+		if ( m_flAnimDuckAmount > 0 && GetLayerWeight(nLayer) > 0 && !LayerSequenceHasActMod( nLayer, "crouch" ) )
 		{
 			if ( GetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH ) <= 0 )
 				SetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH, m_pPlayer->LookupSequence( "recrouch_generic" ) );
-			SetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH, GetLayerWeight( nLayer ) * m_flAnimDuckAmount );
+			SetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH, GetLayerWeight(nLayer) * m_flAnimDuckAmount );
 		}
 		else
 		{
@@ -1218,7 +1211,7 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 		// newer version with "re-stand" blended into the re-crouch.
 
 		float flTargetRecrouchWeight = 0;
-		if ( GetLayerWeight( nLayer ) > 0 )
+		if ( GetLayerWeight(nLayer) > 0 )
 		{
 			if ( GetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH ) <= 0 )
 				SetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH, m_pPlayer->LookupSequence( "recrouch_generic" ) );
@@ -1228,7 +1221,7 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 				// this is a crouching anim. It might be the only anim available, or it's just lasted long enough that the 
 				// player stood up after it started. If we're standing up at all, we need to force the stand pose artificially.
 				if ( m_flAnimDuckAmount < 1 )
-					flTargetRecrouchWeight = GetLayerWeight( nLayer ) * (1.0f - m_flAnimDuckAmount);
+					flTargetRecrouchWeight = GetLayerWeight(nLayer) * (1.0f - m_flAnimDuckAmount);
 			}
 			else
 			{
@@ -1238,13 +1231,13 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 				// We can't trust this anim to crouch the player since it's not tagged as a crouch anim. So we need to force the
 				// crouch pose artificially.
 				if ( m_flAnimDuckAmount > 0 )
-					flTargetRecrouchWeight = GetLayerWeight( nLayer ) * m_flAnimDuckAmount;
+					flTargetRecrouchWeight = GetLayerWeight(nLayer) * m_flAnimDuckAmount;
 			}
 		}
 		else
 		{
 			if ( GetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH ) > 0 )
-				flTargetRecrouchWeight = Approach( 0, GetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH ), m_flLastUpdateIncrement * 4 );
+				flTargetRecrouchWeight = Approach( 0, GetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH ), m_flLastUpdateIncrement * 4 );	
 		}
 		SetLayerWeight( ANIMATION_LAYER_WEAPON_ACTION_RECROUCH, flTargetRecrouchWeight );
 	}
@@ -1285,16 +1278,16 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 				pWeaponWorldModel->SetSequence( pWeaponLayer->m_nDispatchedDst );
 				pWeaponWorldModel->SetCycle( pWeaponLayer->GetCycle() );
 				pWeaponWorldModel->SetPlaybackRate( pWeaponLayer->GetPlaybackRate() );
-#ifndef CLIENT_DLL
+				#ifndef CLIENT_DLL
 				pWeaponWorldModel->DispatchAnimEvents( pWeaponWorldModel );
-#endif
+				#endif
 			}
 			else
 			{
-#ifndef CLIENT_DLL
+				#ifndef CLIENT_DLL
 				if ( pWeaponWorldModel->GetCycle() != 0 )
 					pWeaponWorldModel->DispatchAnimEvents( pWeaponWorldModel );
-#endif
+				#endif
 				pWeaponWorldModel->SetSequence( 0 );
 				pWeaponWorldModel->SetCycle( 0 );
 				pWeaponWorldModel->SetPlaybackRate( 0 );
@@ -1341,13 +1334,13 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	if ( m_nAnimstateModelVersion < 2 )
 	{
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_RUN].SetValue( m_pPlayer, m_flWalkToRunTransition );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_RUN ].SetValue( m_pPlayer, m_flWalkToRunTransition );
 	}
 	else
 	{
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_WALK].SetValue( m_pPlayer, (1.0f - m_flWalkToRunTransition) * (1.0f - m_flAnimDuckAmount) );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_RUN].SetValue( m_pPlayer, (m_flWalkToRunTransition) * (1.0f - m_flAnimDuckAmount) );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK].SetValue( m_pPlayer, m_flAnimDuckAmount );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_WALK ].SetValue( m_pPlayer, (1.0f - m_flWalkToRunTransition) * (1.0f - m_flAnimDuckAmount) );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_RUN ].SetValue( m_pPlayer, (m_flWalkToRunTransition) * (1.0f - m_flAnimDuckAmount) );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK ].SetValue( m_pPlayer, m_flAnimDuckAmount );
 	}
 
 	char szWeaponMoveSeq[MAX_ANIMSTATE_ANIMNAME_CHARS];
@@ -1360,17 +1353,17 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	}
 	Assert( nWeaponMoveSeq > 0 );
 
-
+	
 	if ( m_pPlayer->m_iMoveState != m_nPreviousMoveState )
 	{
 		m_flStutterStep += 10;
 	}
 	m_nPreviousMoveState = m_pPlayer->m_iMoveState;
 	m_flStutterStep = clamp( Approach( 0, m_flStutterStep, m_flLastUpdateIncrement * 40 ), 0, 100 );
-
+	
 	// recompute moveweight
 
-	float flTargetMoveWeight = Lerp( m_flAnimDuckAmount, clamp( m_flSpeedAsPortionOfWalkTopSpeed, 0, 1 ), clamp( m_flSpeedAsPortionOfCrouchTopSpeed, 0, 1 ) );
+	float flTargetMoveWeight = Lerp( m_flAnimDuckAmount, clamp(m_flSpeedAsPortionOfWalkTopSpeed, 0, 1), clamp(m_flSpeedAsPortionOfCrouchTopSpeed, 0, 1) );
 	//flTargetMoveWeight *= RemapValClamped( m_flStutterStep, 90, 100, 1, 0 );
 
 	if ( m_flMoveWeight <= flTargetMoveWeight )
@@ -1383,20 +1376,20 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	}
 
 	Vector vecMoveYawDir;
-	AngleVectors( QAngle( 0, AngleNormalize( m_flFootYaw + m_flMoveYaw + 180 ), 0 ), &vecMoveYawDir );
+	AngleVectors( QAngle(0, AngleNormalize( m_flFootYaw + m_flMoveYaw + 180 ), 0), &vecMoveYawDir );
 	float flYawDeltaAbsDot = abs( DotProduct( m_vecVelocityNormalizedNonZero, vecMoveYawDir ) );
 	m_flMoveWeight *= Bias( flYawDeltaAbsDot, 0.2 );
 
 	float flMoveWeightWithAirSmooth = m_flMoveWeight * m_flInAirSmoothValue;
 
 	// dampen move weight for landings
-	flMoveWeightWithAirSmooth *= MAX( (1.0f - GetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB )), 0.55f );
+	flMoveWeightWithAirSmooth *= MAX( (1.0f - GetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ), 0.55f );
 
 	float flMoveCycleRate = 0;
 	if ( m_flVelocityLengthXY > 0 )
 	{
 		flMoveCycleRate = m_pPlayer->GetSequenceCycleRate( m_pPlayer->GetModelPtr(), nWeaponMoveSeq );
-		float flSequenceGroundSpeed = MAX( m_pPlayer->GetSequenceMoveDist( m_pPlayer->GetModelPtr(), nWeaponMoveSeq ) / (1.0f / flMoveCycleRate), 0.001f );
+		float flSequenceGroundSpeed = MAX( m_pPlayer->GetSequenceMoveDist( m_pPlayer->GetModelPtr(), nWeaponMoveSeq ) / ( 1.0f / flMoveCycleRate ), 0.001f );
 		flMoveCycleRate *= m_flVelocityLengthXY / flSequenceGroundSpeed;
 
 		flMoveCycleRate *= Lerp( m_flWalkToRunTransition, 1.0f, CSGO_ANIM_RUN_ANIM_PLAYBACK_MULTIPLIER );
@@ -1404,7 +1397,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	float flLocalCycleIncrement = (flMoveCycleRate * m_flLastUpdateIncrement);
 	m_flPrimaryCycle = ClampCycle( m_flPrimaryCycle + flLocalCycleIncrement );
-
+	
 	flMoveWeightWithAirSmooth = clamp( flMoveWeightWithAirSmooth, 0, 1 );
 	UpdateAnimLayer( ANIMATION_LAYER_MOVEMENT_MOVE, nWeaponMoveSeq, flLocalCycleIncrement, flMoveWeightWithAirSmooth, m_flPrimaryCycle );
 
@@ -1413,10 +1406,10 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	// blend in a strafe direction-change pose when the player changes strafe dir
 
 	// get the user's left and right button pressed states
-	bool moveRight = (m_pPlayer->m_nButtons & (IN_MOVERIGHT)) != 0;
-	bool moveLeft = (m_pPlayer->m_nButtons & (IN_MOVELEFT)) != 0;
-	bool moveForward = (m_pPlayer->m_nButtons & (IN_FORWARD)) != 0;
-	bool moveBackward = (m_pPlayer->m_nButtons & (IN_BACK)) != 0;
+	bool moveRight = ( m_pPlayer->m_nButtons & ( IN_MOVERIGHT ) ) != 0;
+	bool moveLeft = ( m_pPlayer->m_nButtons & ( IN_MOVELEFT ) ) != 0;
+	bool moveForward = ( m_pPlayer->m_nButtons & ( IN_FORWARD ) ) != 0;
+	bool moveBackward = ( m_pPlayer->m_nButtons & ( IN_BACK ) ) != 0;
 
 	//Vector vForward, vRight;
 	//AngleVectors( QAngle(0,m_flEyeYaw,0), &vForward, &vRight, NULL );
@@ -1433,7 +1426,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	Vector vecForward;
 	Vector vecRight;
-	AngleVectors( QAngle( 0, m_flFootYaw, 0 ), &vecForward, &vecRight, NULL );
+	AngleVectors( QAngle(0,m_flFootYaw,0), &vecForward, &vecRight, NULL );
 	vecRight.NormalizeInPlace();
 	float flVelToRightDot = DotProduct( m_vecVelocityNormalizedNonZero, vecRight );
 	float flVelToForwardDot = DotProduct( m_vecVelocityNormalizedNonZero, vecForward );
@@ -1441,12 +1434,12 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	// We're interested in if the player's desired direction (indicated by their held buttons) is opposite their current velocity.
 	// This indicates a strafing direction change in progress.
 
-	bool bStrafeRight = (m_flSpeedAsPortionOfWalkTopSpeed >= 0.73f && moveRight && !moveLeft && flVelToRightDot < -0.63f);
-	bool bStrafeLeft = (m_flSpeedAsPortionOfWalkTopSpeed >= 0.73f && moveLeft && !moveRight && flVelToRightDot > 0.63f);
-	bool bStrafeForward = (m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveForward && !moveBackward && flVelToForwardDot < -0.55f);
-	bool bStrafeBackward = (m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveBackward && !moveForward && flVelToForwardDot > 0.55f);
-
-	m_pPlayer->m_bStrafing = (bStrafeRight || bStrafeLeft || bStrafeForward || bStrafeBackward);
+	bool bStrafeRight =		( m_flSpeedAsPortionOfWalkTopSpeed >= 0.73f && moveRight && !moveLeft && flVelToRightDot < -0.63f );
+	bool bStrafeLeft =		( m_flSpeedAsPortionOfWalkTopSpeed >= 0.73f && moveLeft && !moveRight && flVelToRightDot > 0.63f );
+	bool bStrafeForward =	( m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveForward && !moveBackward && flVelToForwardDot < -0.55f );
+	bool bStrafeBackward =	( m_flSpeedAsPortionOfWalkTopSpeed >= 0.65f && moveBackward && !moveForward && flVelToForwardDot > 0.55f );
+	
+	m_pPlayer->m_bStrafing = ( bStrafeRight || bStrafeLeft || bStrafeForward || bStrafeBackward );
 #endif
 
 	if ( m_pPlayer->m_bStrafing )
@@ -1455,12 +1448,12 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		{
 			m_flDurationStrafing = 0;
 
-#ifdef CLIENT_DLL
+			#ifdef CLIENT_DLL
 			if ( !m_bFirstRunSinceInit && !m_bStrafeChanging && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].GetCurrentWeight() <= 0 )
 			{
 				m_pPlayer->m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_strafestart ) );
 			}
-#endif
+			#endif
 		}
 
 		m_bStrafeChanging = true;
@@ -1468,7 +1461,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		m_flStrafeChangeWeight = Approach( 1, m_flStrafeChangeWeight, m_flLastUpdateIncrement * 20 );
 		m_flStrafeChangeCycle = Approach( 0, m_flStrafeChangeCycle, m_flLastUpdateIncrement * 10 );
 
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_STRAFE_DIR].SetValue( m_pPlayer, AngleNormalize( m_flMoveYaw ) );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_STRAFE_DIR ].SetValue( m_pPlayer, AngleNormalize( m_flMoveYaw ) );
 
 		//float flCross = m_tPoseParamMappings[ PLAYER_POSE_PARAM_STRAFE_CROSS ].GetValue( m_pPlayer );
 		//flCross = clamp( Approach( m_bFeetCrossed ? 1 : 0, flCross, m_flLastUpdateIncrement * 10 ), 0, 1);
@@ -1497,10 +1490,10 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	// keep track of if the player is on the ground, and if the player has just touched or left the ground since the last check
 	bool bPreviousGroundState = m_bOnGround;
-	m_bOnGround = (m_pPlayer->GetFlags() & FL_ONGROUND);
+	m_bOnGround = ( m_pPlayer->GetFlags() & FL_ONGROUND );
 
-	m_bLandedOnGroundThisFrame = (!m_bFirstRunSinceInit && bPreviousGroundState != m_bOnGround && m_bOnGround);
-	m_bLeftTheGroundThisFrame = (bPreviousGroundState != m_bOnGround && !m_bOnGround);
+	m_bLandedOnGroundThisFrame = ( !m_bFirstRunSinceInit && bPreviousGroundState != m_bOnGround && m_bOnGround );
+	m_bLeftTheGroundThisFrame = ( bPreviousGroundState != m_bOnGround && !m_bOnGround );
 
 	float flDistanceFell = 0;
 	if ( m_bLeftTheGroundThisFrame )
@@ -1533,7 +1526,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 
 
-	m_flStrafeChangeWeight *= (1.0f - m_flAnimDuckAmount);
+	m_flStrafeChangeWeight *= ( 1.0f - m_flAnimDuckAmount );
 	m_flStrafeChangeWeight *= m_flInAirSmoothValue;
 	m_flStrafeChangeWeight = clamp( m_flStrafeChangeWeight, 0, 1 );
 
@@ -1557,9 +1550,9 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	//ladders
 	bool bPreviouslyOnLadder = m_bOnLadder;
 	m_bOnLadder = !m_bOnGround && m_pPlayer->GetMoveType() == MOVETYPE_LADDER;
-	bool bStartedLadderingThisFrame = (!bPreviouslyOnLadder && m_bOnLadder);
-	bool bStoppedLadderingThisFrame = (bPreviouslyOnLadder && !m_bOnLadder);
-
+	bool bStartedLadderingThisFrame = ( !bPreviouslyOnLadder && m_bOnLadder );
+	bool bStoppedLadderingThisFrame = ( bPreviouslyOnLadder && !m_bOnLadder );
+	
 
 	if ( bStartedLadderingThisFrame || bStoppedLadderingThisFrame )
 	{
@@ -1568,7 +1561,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		//m_footRight.m_flLateralWeight = 0;
 #endif
 	}
-
+	
 	if ( m_flLadderWeight > 0 || m_bOnLadder )
 	{
 
@@ -1579,7 +1572,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		}
 #endif
 
-		if ( abs( m_flVelocityLengthZ ) > 100 )
+		if ( abs(m_flVelocityLengthZ) > 100 )
 		{
 			m_flLadderSpeed = Approach( 1, m_flLadderSpeed, m_flLastUpdateIncrement * 10.0f );
 		}
@@ -1603,23 +1596,23 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		QAngle angLadder;
 		VectorAngles( vecLadderNormal, angLadder );
 		float flLadderYaw = AngleDiff( angLadder.y, m_flFootYaw );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_LADDER_YAW].SetValue( m_pPlayer, flLadderYaw );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LADDER_YAW ].SetValue( m_pPlayer, flLadderYaw );
 
 		//float flPlayerZ = m_pPlayer->GetAbsOrigin().z;
 		//float flLadderClimbCycle = fmod( abs(flPlayerZ), 80.0f ) / 80.0f;
 		//flLadderClimbCycle = ClampCycle( flPlayerZ < 0 ? (1.0f - flLadderClimbCycle) : flLadderClimbCycle );
 
-
+		
 		float flLadderClimbCycle = GetLayerCycle( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB );
 		flLadderClimbCycle += (m_vecPositionCurrent.z - m_vecPositionLast.z) * Lerp( m_flLadderSpeed, 0.010f, 0.004f );
 
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_LADDER_SPEED].SetValue( m_pPlayer, m_flLadderSpeed );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LADDER_SPEED ].SetValue( m_pPlayer, m_flLadderSpeed );
 
 		if ( GetLayerActivity( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) == ACT_CSGO_CLIMB_LADDER )
 		{
 			SetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, m_flLadderWeight );
 		}
-
+		
 		SetLayerCycle( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLadderClimbCycle );
 
 		// fade out jump if we're climbing
@@ -1650,8 +1643,8 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 			m_bLanding = true;
 		}
 		m_flDurationInAir = 0;
-
-		if ( m_bLanding && GetLayerActivity( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) != ACT_CSGO_CLIMB_LADDER )
+		
+		if ( m_bLanding && GetLayerActivity(ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB) != ACT_CSGO_CLIMB_LADDER )
 		{
 #ifndef CLIENT_DLL
 			m_bJumping = false;
@@ -1660,7 +1653,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 			IncrementLayerCycle( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, false );
 			IncrementLayerCycle( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
 
-			m_tPoseParamMappings[PLAYER_POSE_PARAM_JUMP_FALL].SetValue( m_pPlayer, 0 );
+			m_tPoseParamMappings[ PLAYER_POSE_PARAM_JUMP_FALL ].SetValue( m_pPlayer, 0 );
 
 			if ( IsLayerSequenceCompleted( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) )
 			{
@@ -1679,7 +1672,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 				flLandWeight *= clamp( (1.0f - m_flAnimDuckAmount), 0.2f, 1.0f );
 
 				SetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB, flLandWeight );
-
+				
 				// fade out jump because land is taking over
 				float flCurrentJumpFallWeight = GetLayerWeight( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL );
 				if ( flCurrentJumpFallWeight > 0 )
@@ -1687,7 +1680,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 					flCurrentJumpFallWeight = Approach( 0, flCurrentJumpFallWeight, m_flLastUpdateIncrement * 10.0f );
 					SetLayerWeight( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, flCurrentJumpFallWeight );
 				}
-
+				
 			}
 		}
 
@@ -1704,24 +1697,24 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 		// we're in the air
 		if ( m_bLeftTheGroundThisFrame || bStoppedLadderingThisFrame )
-		{
+		{ 
 #ifndef CLIENT_DLL
 			// If entered the air by jumping, then we already set the jump activity.
 			// But if we're in the air because we strolled off a ledge or the floor collapsed or something,
 			// we need to set the fall activity here.
-			if ( !m_bJumping )
+			if ( !m_bJumping ) 
 			{
 				SetLayerSequence( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, SelectSequenceFromActMods( ACT_CSGO_FALL ) );
 			}
 #endif
 			m_flDurationInAir = 0;
 		}
-
+		
 		m_flDurationInAir += m_flLastUpdateIncrement;
 
-		//#ifndef CLIENT_DLL
-		//		Msg( "%f\n", m_flDurationInAir );
-		//#endif
+//#ifndef CLIENT_DLL
+//		Msg( "%f\n", m_flDurationInAir );
+//#endif
 
 		IncrementLayerCycle( ANIMATION_LAYER_MOVEMENT_JUMP_OR_FALL, false );
 
@@ -1742,7 +1735,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		}
 
 		// blend jump into fall. This is a no-op if we're playing a fall anim.
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_JUMP_FALL].SetValue( m_pPlayer, clamp( smoothstep_bounds( 0.72f, 1.52f, m_flDurationInAir ), 0, 1 ) );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_JUMP_FALL ].SetValue( m_pPlayer, clamp(smoothstep_bounds( 0.72f, 1.52f, m_flDurationInAir ),0,1) );
 
 	}
 
@@ -1753,7 +1746,7 @@ Activity CCSGOPlayerAnimState::GetLayerActivity( animstate_layer_t nLayerIndex )
 	MDLCACHE_CRITICAL_SECTION();
 	CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 	if ( pLayer )
-		return (Activity) GetSequenceActivity( m_pPlayer->GetModelPtr(), pLayer->GetSequence() );
+		return (Activity)GetSequenceActivity( m_pPlayer->GetModelPtr(), pLayer->GetSequence() );
 	return ACT_INVALID;
 }
 
@@ -1761,7 +1754,7 @@ bool CCSGOPlayerAnimState::IsLayerSequenceCompleted( animstate_layer_t nLayerInd
 {
 	CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 	if ( pLayer )
-		return ((pLayer->GetCycle() + (m_flLastUpdateIncrement * pLayer->GetPlaybackRate())) >= 1);
+		return ( (pLayer->GetCycle() + (m_flLastUpdateIncrement * pLayer->GetPlaybackRate())) >= 1 );
 	return false;
 }
 
@@ -1794,7 +1787,7 @@ void CCSGOPlayerAnimState::IncrementLayerCycle( animstate_layer_t nLayerIndex, b
 	if ( !pLayer )
 		return;
 
-	if ( abs( pLayer->GetPlaybackRate() ) <= 0 )
+	if ( abs(pLayer->GetPlaybackRate()) <= 0 )
 		return;
 
 	float flCurrentCycle = pLayer->GetCycle();
@@ -1815,7 +1808,7 @@ void CCSGOPlayerAnimState::IncrementLayerWeight( animstate_layer_t nLayerIndex )
 	if ( !pLayer )
 		return;
 
-	if ( abs( pLayer->GetWeightDeltaRate() ) <= 0 )
+	if ( abs(pLayer->GetWeightDeltaRate()) <= 0 )
 		return;
 
 	float flCurrentWeight = pLayer->GetWeight();
@@ -1833,7 +1826,7 @@ void CCSGOPlayerAnimState::SetLayerSequence( animstate_layer_t nLayerIndex, int 
 		MDLCACHE_CRITICAL_SECTION();
 
 		CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
-
+		
 		if ( !pLayer )
 			return;
 
@@ -1843,9 +1836,9 @@ void CCSGOPlayerAnimState::SetLayerSequence( animstate_layer_t nLayerIndex, int 
 		pLayer->SetCycle( 0 );
 		pLayer->SetWeight( 0 );
 		UpdateLayerOrderPreset( nLayerIndex, nSequence );
-#ifndef CLIENT_DLL
-		pLayer->m_fFlags |= ANIM_LAYER_ACTIVE;
-#endif
+		#ifndef CLIENT_DLL
+		pLayer->m_fFlags |= ANIM_LAYER_ACTIVE; 
+		#endif
 	}
 }
 
@@ -1865,7 +1858,7 @@ float CCSGOPlayerAnimState::GetLayerIdealWeightFromSeqCycle( animstate_layer_t n
 	float flEaseIn = seqdesc.fadeintime;
 	float flEaseOut = seqdesc.fadeouttime;
 	float flIdealWeight = 1;
-
+	
 	if ( flEaseIn > 0 && flCycle < flEaseIn )
 	{
 		flIdealWeight = smoothstep_bounds( 0, flEaseIn, flCycle );
@@ -1878,7 +1871,7 @@ float CCSGOPlayerAnimState::GetLayerIdealWeightFromSeqCycle( animstate_layer_t n
 	if ( flIdealWeight < 0.0015f )
 		return 0;
 
-	return (clamp( flIdealWeight, 0, 1 ));
+	return (clamp( flIdealWeight, 0, 1));
 }
 
 float CCSGOPlayerAnimState::GetLayerCycle( animstate_layer_t nLayerIndex )
@@ -1918,10 +1911,10 @@ void CCSGOPlayerAnimState::SetLayerWeight( animstate_layer_t nLayerIndex, float 
 	CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 	if ( !pLayer )
 		return;
-	pLayer->SetWeight( clamp( flWeight, 0, 1 ) );
-#ifndef CLIENT_DLL
-	pLayer->m_fFlags |= ANIM_LAYER_ACTIVE;
-#endif
+	pLayer->SetWeight( clamp( flWeight, 0, 1) );
+	#ifndef CLIENT_DLL
+	pLayer->m_fFlags |= ANIM_LAYER_ACTIVE; 
+	#endif
 }
 
 void CCSGOPlayerAnimState::SetLayerWeightRate( animstate_layer_t nLayerIndex, float flPrevious )
@@ -1931,7 +1924,7 @@ void CCSGOPlayerAnimState::SetLayerWeightRate( animstate_layer_t nLayerIndex, fl
 	CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 	if ( !pLayer )
 		return;
-	float flNewRate = (pLayer->GetWeight() - flPrevious) / m_flLastUpdateIncrement;
+	float flNewRate = ( pLayer->GetWeight() - flPrevious ) / m_flLastUpdateIncrement;
 	pLayer->SetWeightDeltaRate( flNewRate );
 }
 
@@ -1940,23 +1933,23 @@ void CCSGOPlayerAnimState::UpdateAnimLayer( animstate_layer_t nLayerIndex, int n
 	AssertOnce( flWeight >= 0 && flWeight <= 1 );
 	AssertOnce( flCycle >= 0 && flCycle <= 1 );
 	Assert( nSequence > 1 );
-
+	
 	Assert( nSequence > 1 );
 	if ( nSequence > 1 )
 	{
-		MDLCACHE_CRITICAL_SECTION();
-
+		MDLCACHE_CRITICAL_SECTION();	
+	
 		CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 		if ( !pLayer )
 			return;
 		pLayer->SetSequence( nSequence );
 		pLayer->SetPlaybackRate( flPlaybackRate );
-		pLayer->SetCycle( clamp( flCycle, 0, 1 ) );
-		pLayer->SetWeight( clamp( flWeight, 0, 1 ) );
+		pLayer->SetCycle( clamp( flCycle, 0, 1) );
+		pLayer->SetWeight( clamp( flWeight, 0, 1) );
 		UpdateLayerOrderPreset( nLayerIndex, nSequence );
-#ifndef CLIENT_DLL
-		pLayer->m_fFlags |= ANIM_LAYER_ACTIVE;
-#endif
+		#ifndef CLIENT_DLL
+		pLayer->m_fFlags |= ANIM_LAYER_ACTIVE; 
+		#endif
 	}
 }
 
@@ -1967,7 +1960,7 @@ void CCSGOPlayerAnimState::ApplyLayerOrderPreset( animlayerpreset nNewPreset, bo
 
 	m_pLayerOrderPreset = nNewPreset;
 
-	for ( int i = 0; i < ANIMATION_LAYER_COUNT; i++ )
+	for ( int i=0; i < ANIMATION_LAYER_COUNT; i++ )
 	{
 		CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( m_pLayerOrderPreset[i], USE_ANIMLAYER_RAW_INDEX );
 		if ( pLayer )
@@ -1975,9 +1968,9 @@ void CCSGOPlayerAnimState::ApplyLayerOrderPreset( animlayerpreset nNewPreset, bo
 			pLayer->SetOrder( i );
 
 			// purge dispatch info too
-		//	pLayer->m_pDispatchedStudioHdr = NULL;
-		//	pLayer->m_nDispatchedSrc = ACT_INVALID;
-		//	pLayer->m_nDispatchedDst = ACT_INVALID;
+			pLayer->m_pDispatchedStudioHdr = NULL;
+			pLayer->m_nDispatchedSrc = ACT_INVALID;
+			pLayer->m_nDispatchedDst = ACT_INVALID;
 		}
 	}
 }
@@ -1986,7 +1979,7 @@ void CCSGOPlayerAnimState::UpdateLayerOrderPreset( animstate_layer_t nLayerIndex
 {
 	if ( !m_pPlayer || nLayerIndex != ANIMATION_LAYER_WEAPON_ACTION )
 		return;
-
+	
 	MDLCACHE_CRITICAL_SECTION();
 
 	if ( m_pPlayer->GetAnySequenceAnimTag( nSequence, ANIMTAG_WEAPON_POSTLAYER, 0 ) != 0 )
@@ -1996,7 +1989,7 @@ void CCSGOPlayerAnimState::UpdateLayerOrderPreset( animstate_layer_t nLayerIndex
 	else
 	{
 		ApplyLayerOrderPreset( get_animlayerpreset( Default ) );
-	}
+	}	
 }
 
 bool CCSGOPlayerAnimState::LayerSequenceHasActMod( animstate_layer_t nLayerIndex, const char* szActMod )
@@ -2007,14 +2000,14 @@ bool CCSGOPlayerAnimState::LayerSequenceHasActMod( animstate_layer_t nLayerIndex
 	//CUtlSymbol sym = g_ActivityModifiersTable.Find( szActMod );
 	//if ( sym.IsValid() )
 	//{
-	mstudioseqdesc_t &seqdesc = m_pPlayer->GetModelPtr()->pSeqdesc( pLayer->GetSequence() );
-	for ( int i = 0; i<seqdesc.numactivitymodifiers; i++ )
-	{
-		mstudioactivitymodifier_t *mod = seqdesc.pActivityModifier( i );
+		mstudioseqdesc_t &seqdesc = m_pPlayer->GetModelPtr()->pSeqdesc( pLayer->GetSequence() );
+		for ( int i=0; i<seqdesc.numactivitymodifiers; i++ )
+		{
+			mstudioactivitymodifier_t *mod = seqdesc.pActivityModifier(i);
 
-		if ( !V_strcmp( mod->pszName(), szActMod ) )
-			return true;
-	}
+			if ( !V_strcmp( mod->pszName(), szActMod ) )
+				return true;
+		}
 	//}
 	return false;
 }
@@ -2024,13 +2017,13 @@ bool CCSGOPlayerAnimState::LayerSequenceHasActMod( animstate_layer_t nLayerIndex
 void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 {
 	MDLCACHE_CRITICAL_SECTION();
-
+	
 	if ( m_flAnimDuckAmount <= 0 || m_flAnimDuckAmount >= 1 ) // only transition aim pose when fully ducked or fully standing
 	{
-		bool bPlayerIsWalking = (m_pPlayer && m_pPlayer->m_bIsWalking);
-		bool bPlayerIsScoped = (m_pPlayer && (m_pPlayer->GetFOV() <m_pPlayer->GetDefaultFOV()));
+		bool bPlayerIsWalking = ( m_pPlayer && m_pPlayer->m_bIsWalking );
+		bool bPlayerIsScoped = ( m_pPlayer && (m_pPlayer->GetFOV() < m_pPlayer->GetDefaultFOV()) );
 
-		float flTransitionSpeed = m_flLastUpdateIncrement * (bPlayerIsScoped ? CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX_SCOPED : CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX);
+		float flTransitionSpeed = m_flLastUpdateIncrement * ( bPlayerIsScoped ? CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX_SCOPED : CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX );
 
 		if ( bPlayerIsScoped ) // hacky: just tell all the transitions they've been invalid too long so all transitions clear as soon as the player starts scoping
 		{
@@ -2040,13 +2033,13 @@ void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 		}
 
 		m_tStandWalkAim.UpdateTransitionState( bPlayerIsWalking && !bPlayerIsScoped && m_flSpeedAsPortionOfWalkTopSpeed > 0.7f && m_flSpeedAsPortionOfRunTopSpeed < 0.7,
-											   m_flLastUpdateIncrement, flTransitionSpeed );
+			m_flLastUpdateIncrement, flTransitionSpeed );
 
 		m_tStandRunAim.UpdateTransitionState( !bPlayerIsScoped && m_flSpeedAsPortionOfRunTopSpeed >= 0.7,
-											  m_flLastUpdateIncrement, flTransitionSpeed );
+			m_flLastUpdateIncrement, flTransitionSpeed );
 
 		m_tCrouchWalkAim.UpdateTransitionState( !bPlayerIsScoped && m_flSpeedAsPortionOfCrouchTopSpeed >= 0.5,
-												m_flLastUpdateIncrement, flTransitionSpeed );
+			m_flLastUpdateIncrement, flTransitionSpeed );
 	}
 
 	// Set aims to zero weight if they're underneath aims with 100% weight, for animation perf optimization.
@@ -2093,11 +2086,11 @@ void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 	if ( flCrouchIdleWeight < 1 && flCrouchWalkWeight < 1 && flStandWalkWeight < 1 && flStandRunWeight < 1 )
 		flStandIdleWeight = 1;
 
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE].SetValue( m_pPlayer, flStandIdleWeight );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK].SetValue( m_pPlayer, flStandWalkWeight );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN].SetValue( m_pPlayer, flStandRunWeight );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE].SetValue( m_pPlayer, flCrouchIdleWeight );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK].SetValue( m_pPlayer, flCrouchWalkWeight );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE ].SetValue( m_pPlayer, flStandIdleWeight );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK ].SetValue( m_pPlayer, flStandWalkWeight );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN ].SetValue( m_pPlayer, flStandRunWeight );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE ].SetValue( m_pPlayer, flCrouchIdleWeight );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK ].SetValue( m_pPlayer, flCrouchWalkWeight );
 
 	char szTransitionStandAimMatrix[MAX_ANIMSTATE_ANIMNAME_CHARS];
 	V_sprintf_safe( szTransitionStandAimMatrix, "%s_aim", GetWeaponPrefix() );
@@ -2133,17 +2126,17 @@ void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 				float flYawCrouchIdleMax = pAimMatrixHolder->GetAnySequenceAnimTag( nSeq, ANIMTAG_AIMLIMIT_YAWMAX_CROUCHIDLE, CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MAX );
 				float flYawCrouchWalkMin = pAimMatrixHolder->GetAnySequenceAnimTag( nSeq, ANIMTAG_AIMLIMIT_YAWMIN_CROUCHWALK, flYawCrouchIdleMin );
 				float flYawCrouchWalkMax = pAimMatrixHolder->GetAnySequenceAnimTag( nSeq, ANIMTAG_AIMLIMIT_YAWMAX_CROUCHWALK, flYawCrouchIdleMax );
-
-				float flWalkAmt = m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK].GetValue( m_pPlayer );
-				float flRunAmt = m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN].GetValue( m_pPlayer );
-				float flCrouchWalkAmt = m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK].GetValue( m_pPlayer );
-
-				m_flAimYawMin = Lerp( m_flAnimDuckAmount,
-									  Lerp( flRunAmt, Lerp( flWalkAmt, flYawIdleMin, flYawWalkMin ), flYawRunMin ),
-									  Lerp( flCrouchWalkAmt, flYawCrouchIdleMin, flYawCrouchWalkMin ) );
+				
+				float flWalkAmt = m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK ].GetValue( m_pPlayer );
+				float flRunAmt = m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN ].GetValue( m_pPlayer );
+				float flCrouchWalkAmt = m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK ].GetValue( m_pPlayer );
+			
+				m_flAimYawMin = Lerp( m_flAnimDuckAmount, 
+										Lerp( flRunAmt, Lerp( flWalkAmt, flYawIdleMin, flYawWalkMin ), flYawRunMin ),
+										Lerp( flCrouchWalkAmt, flYawCrouchIdleMin, flYawCrouchWalkMin ) );
 				m_flAimYawMax = Lerp( m_flAnimDuckAmount,
-									  Lerp( flRunAmt, Lerp( flWalkAmt, flYawIdleMax, flYawWalkMax ), flYawRunMax ),
-									  Lerp( flCrouchWalkAmt, flYawCrouchIdleMax, flYawCrouchWalkMax ) );
+										Lerp( flRunAmt, Lerp( flWalkAmt, flYawIdleMax, flYawWalkMax ), flYawRunMax ),
+										Lerp( flCrouchWalkAmt, flYawCrouchIdleMax, flYawCrouchWalkMax ) );
 
 				float flPitchIdleMin = pAimMatrixHolder->GetAnySequenceAnimTag( nSeq, ANIMTAG_AIMLIMIT_PITCHMIN_IDLE, CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN );
 				float flPitchIdleMax = pAimMatrixHolder->GetAnySequenceAnimTag( nSeq, ANIMTAG_AIMLIMIT_PITCHMAX_IDLE, CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MAX );
@@ -2190,12 +2183,12 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	else
 	{
 		m_pPlayer->EstimateAbsVelocity( vecAbsVelocity );	// Using this accessor if the client is starved of information, 
-		// the player doesn't run on the spot. Note this is unreliable
-		// and could fail to populate the value if prediction fails.
+															// the player doesn't run on the spot. Note this is unreliable
+															// and could fail to populate the value if prediction fails.
 	}
 
 	// prevent the client input velocity vector from exceeding a reasonable magnitude
-#define CSGO_ANIM_MAX_VEL_LIMIT 1.2f
+	#define CSGO_ANIM_MAX_VEL_LIMIT 1.2f
 	if ( vecAbsVelocity.LengthSqr() > Sqr( CS_PLAYER_SPEED_RUN * CSGO_ANIM_MAX_VEL_LIMIT ) )
 		vecAbsVelocity = vecAbsVelocity.Normalized() * (CS_PLAYER_SPEED_RUN * CSGO_ANIM_MAX_VEL_LIMIT);
 
@@ -2206,9 +2199,9 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 
 	// discard z component
 	vecAbsVelocity.z = 0;
-
+	
 	// remember if the player is accelerating.
-	m_bPlayerIsAccelerating = (m_vecVelocityLast.LengthSqr() < vecAbsVelocity.LengthSqr());
+	m_bPlayerIsAccelerating = ( m_vecVelocityLast.LengthSqr() < vecAbsVelocity.LengthSqr() );
 
 	// rapidly approach ideal velocity instead of instantly adopt it. This helps smooth out instant velocity changes, like
 	// when the player runs headlong into a wall and their velocity instantly becomes zero.
@@ -2217,7 +2210,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 
 	// save horizontal velocity length
 	m_flVelocityLengthXY = MIN( m_vecVelocity.Length(), CS_PLAYER_SPEED_RUN );
-
+	
 	if ( m_flVelocityLengthXY > 0 )
 	{
 		m_vecVelocityNormalizedNonZero = m_vecVelocityNormalized;
@@ -2230,7 +2223,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	m_flSpeedAsPortionOfRunTopSpeed = clamp( m_flVelocityLengthXY / flMaxSpeedRun, 0, 1 );
 	m_flSpeedAsPortionOfWalkTopSpeed = m_flVelocityLengthXY / (flMaxSpeedRun * CS_PLAYER_SPEED_WALK_MODIFIER);
 	m_flSpeedAsPortionOfCrouchTopSpeed = m_flVelocityLengthXY / (flMaxSpeedRun * CS_PLAYER_SPEED_DUCK_MODIFIER);
-
+	
 
 	if ( m_flSpeedAsPortionOfWalkTopSpeed >= 1 )
 	{
@@ -2247,13 +2240,13 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 
 	if ( m_flVelocityLengthXY > 0 )
 	{
-		bStartedMovingThisFrame = (m_flDurationMoving <= 0);
+		bStartedMovingThisFrame = ( m_flDurationMoving <= 0 );
 		m_flDurationStill = 0;
 		m_flDurationMoving += m_flLastUpdateIncrement;
 	}
 	else
 	{
-		bStoppedMovingThisFrame = (m_flDurationStill <= 0);
+		bStoppedMovingThisFrame = ( m_flDurationStill <= 0 );
 		m_flDurationMoving = 0;
 		m_flDurationStill += m_flLastUpdateIncrement;
 	}
@@ -2271,7 +2264,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		if ( m_bAdjustStarted && m_flSpeedAsPortionOfCrouchTopSpeed <= 0.25f )
 		{
 			IncrementLayerCycleWeightRateGeneric( ANIMATION_LAYER_ADJUST );
-			m_bAdjustStarted = !(IsLayerSequenceCompleted( ANIMATION_LAYER_ADJUST ));
+			m_bAdjustStarted = !( IsLayerSequenceCompleted( ANIMATION_LAYER_ADJUST ) );
 		}
 		else
 		{
@@ -2286,26 +2279,26 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	// if the player is looking far enough to either side, turn the feet to keep them within the extent of the aim matrix
 	m_flFootYawLast = m_flFootYaw;
 	m_flFootYaw = clamp( m_flFootYaw, -360, 360 );
-	float flEyeFootDelta = AngleDiff( m_flEyeYaw, m_flFootYaw );
+	float flEyeFootDelta = AngleDiff(m_flEyeYaw, m_flFootYaw);
 
 	// narrow the available aim matrix width as speed increases
-	float flAimMatrixWidthRange = Lerp( clamp( m_flSpeedAsPortionOfWalkTopSpeed, 0, 1 ), 1.0f, Lerp( m_flWalkToRunTransition, CSGO_ANIM_AIM_NARROW_WALK, CSGO_ANIM_AIM_NARROW_RUN ) );
+	float flAimMatrixWidthRange = Lerp( clamp(m_flSpeedAsPortionOfWalkTopSpeed,0,1), 1.0f, Lerp( m_flWalkToRunTransition, CSGO_ANIM_AIM_NARROW_WALK, CSGO_ANIM_AIM_NARROW_RUN ) );
 
 	if ( m_flAnimDuckAmount > 0 )
 	{
 		flAimMatrixWidthRange = Lerp( m_flAnimDuckAmount * clamp( m_flSpeedAsPortionOfCrouchTopSpeed, 0, 1 ), flAimMatrixWidthRange, CSGO_ANIM_AIM_NARROW_CROUCHMOVING );
 	}
-
+	
 	float flTempYawMax = m_flAimYawMax * flAimMatrixWidthRange;
 	float flTempYawMin = m_flAimYawMin * flAimMatrixWidthRange;
 
 	if ( flEyeFootDelta > flTempYawMax )
 	{
-		m_flFootYaw = m_flEyeYaw - abs( flTempYawMax );
+		m_flFootYaw = m_flEyeYaw - abs(flTempYawMax);
 	}
 	else if ( flEyeFootDelta < flTempYawMin )
 	{
-		m_flFootYaw = m_flEyeYaw + abs( flTempYawMin );
+		m_flFootYaw = m_flEyeYaw + abs(flTempYawMin);
 	}
 	m_flFootYaw = AngleNormalize( m_flFootYaw );
 
@@ -2317,22 +2310,22 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		{
 			m_flFootYaw = ApproachAngle( m_flEyeYaw, m_flFootYaw, m_flLastUpdateIncrement * (30.0f + 20.0f * m_flWalkToRunTransition) );
 
-#ifndef CLIENT_DLL
-			m_flLowerBodyRealignTimer = gpGlobals->curtime + (CSGO_ANIM_LOWER_REALIGN_DELAY * 0.2f);
+			#ifndef CLIENT_DLL
+			m_flLowerBodyRealignTimer = gpGlobals->curtime + ( CSGO_ANIM_LOWER_REALIGN_DELAY * 0.2f );
 			m_pPlayer->m_flLowerBodyYawTarget.Set( m_flEyeYaw );
-#endif
+			#endif
 		}
 		else
 		{
 			m_flFootYaw = ApproachAngle( m_pPlayer->m_flLowerBodyYawTarget.Get(), m_flFootYaw, m_flLastUpdateIncrement * CSGO_ANIM_LOWER_CATCHUP_IDLE );
 
-#ifndef CLIENT_DLL
+			#ifndef CLIENT_DLL
 			if ( gpGlobals->curtime > m_flLowerBodyRealignTimer && abs( AngleDiff( m_flFootYaw, m_flEyeYaw ) ) > 35.0f )
 			{
 				m_flLowerBodyRealignTimer = gpGlobals->curtime + CSGO_ANIM_LOWER_REALIGN_DELAY;
 				m_pPlayer->m_flLowerBodyYawTarget.Set( m_flEyeYaw );
 			}
-#endif
+			#endif
 		}
 	}
 
@@ -2357,8 +2350,8 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	if ( m_flVelocityLengthXY > 0 && m_bOnGround )
 	{
 		// convert horizontal velocity vec to angular yaw
-		float flRawYawIdeal = (atan2( -m_vecVelocity[1], -m_vecVelocity[0] ) * 180 / M_PI);
-		if ( flRawYawIdeal < 0 )
+		float flRawYawIdeal = (atan2(-m_vecVelocity[1], -m_vecVelocity[0]) * 180 / M_PI);
+		if (flRawYawIdeal < 0)
 			flRawYawIdeal += 360;
 
 		m_flMoveYawIdeal = AngleNormalize( AngleDiff( flRawYawIdeal, m_flFootYaw ) );
@@ -2414,12 +2407,12 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 			}
 		}
 
-#ifdef CLIENT_DLL
-		if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs( m_flMoveYawCurrentToIdeal ) > 45 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
+		#ifdef CLIENT_DLL
+		if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs(m_flMoveYawCurrentToIdeal) > 45 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
 		{
 			m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_movebegin ) );
 		}
-#endif
+		#endif
 
 	}
 	else
@@ -2430,22 +2423,22 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		}
 		else
 		{
-#ifdef CLIENT_DLL
-			if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs( m_flMoveYawCurrentToIdeal ) > 100 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
+			#ifdef CLIENT_DLL
+			if ( m_flInAirSmoothValue >= 1 && !m_bFirstRunSinceInit && abs(m_flMoveYawCurrentToIdeal) > 100 && m_bOnGround && m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].GetCurrentWeight() <= 0 )
 			{
 				m_pPlayer->m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetShouldCapture( bonesnapshot_get( cl_bonesnapshot_speed_movebegin ) );
 			}
-#endif
+			#endif
 
-			float flMoveWeight = Lerp( m_flAnimDuckAmount, clamp( m_flSpeedAsPortionOfWalkTopSpeed, 0, 1 ), clamp( m_flSpeedAsPortionOfCrouchTopSpeed, 0, 1 ) );
+			float flMoveWeight = Lerp( m_flAnimDuckAmount, clamp(m_flSpeedAsPortionOfWalkTopSpeed, 0, 1), clamp(m_flSpeedAsPortionOfCrouchTopSpeed, 0, 1) );
 			float flRatio = Bias( flMoveWeight, 0.18f ) + 0.1f;
-
-			m_flMoveYaw = AngleNormalize( m_flMoveYaw + (m_flMoveYawCurrentToIdeal * flRatio) );
+			
+			m_flMoveYaw = AngleNormalize( m_flMoveYaw + ( m_flMoveYawCurrentToIdeal * flRatio ) );
 		}
-	}
+	}	
 
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_YAW].SetValue( m_pPlayer, m_flMoveYaw );
-
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_YAW ].SetValue( m_pPlayer, m_flMoveYaw );
+	
 	float flAimYaw = AngleDiff( m_flEyeYaw, m_flFootYaw );
 	if ( flAimYaw >= 0 && m_flAimYawMax != 0 )
 	{
@@ -2456,7 +2449,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		flAimYaw = (flAimYaw / m_flAimYawMin) * -60.0f;
 	}
 
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_BODY_YAW].SetValue( m_pPlayer, flAimYaw );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_BODY_YAW ].SetValue( m_pPlayer, flAimYaw );
 
 	// we need non-symmetrical arbitrary min/max bounds for vertical aim (pitch) too
 	float flPitch = AngleDiff( m_flEyePitch, 0 );
@@ -2469,9 +2462,9 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 		flPitch = (flPitch / m_flAimPitchMin) * CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN;
 	}
 
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_BODY_PITCH].SetValue( m_pPlayer, flPitch );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_SPEED].SetValue( m_pPlayer, m_flSpeedAsPortionOfWalkTopSpeed );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_STAND].SetValue( m_pPlayer, 1.0f - (m_flAnimDuckAmount*m_flInAirSmoothValue) );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_BODY_PITCH ].SetValue( m_pPlayer, flPitch );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_SPEED ].SetValue( m_pPlayer, m_flSpeedAsPortionOfWalkTopSpeed );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_STAND ].SetValue( m_pPlayer, 1.0f - (m_flAnimDuckAmount*m_flInAirSmoothValue) );
 }
 
 #ifndef CLIENT_DLL
@@ -2489,8 +2482,7 @@ void CCSGOPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nD
 {
 	UpdateActivityModifiers();
 
-	switch ( animEvent )
-	{
+	switch (animEvent) {
 		case PLAYERANIMEVENT_THROW_GRENADE_UNDERHAND:
 		{
 			AddActivityModifier( "underhand" );
@@ -2513,7 +2505,7 @@ void CCSGOPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nD
 			else
 			{
 				SetLayerSequence( ANIMATION_LAYER_WEAPON_ACTION, SelectSequenceFromActMods( ACT_CSGO_FIRE_PRIMARY ) );
-			}
+			}			
 			break;
 		}
 		case PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT:
@@ -2642,10 +2634,10 @@ void CCSGOPlayerAnimState::AddActivityModifier( const char *szName )
 {
 	if ( szName == NULL )
 	{
-		Assert( 0 );
+		Assert(0);
 		return;
 	}
-
+	
 	char szLookup[32];
 	V_strcpy_safe( szLookup, szName );
 
@@ -2662,7 +2654,7 @@ void CCSGOPlayerAnimState::UpdateActivityModifiers( void )
 	m_ActivityModifiers.Purge();
 
 	AddActivityModifier( GetWeaponPrefix() );
-
+	
 	if ( m_flSpeedAsPortionOfWalkTopSpeed > 0.25f )
 	{
 		AddActivityModifier( "moving" );
@@ -2685,26 +2677,26 @@ void CCSGOPlayerAnimState::SelectDeathPose( const CTakeDamageInfo &info, int hit
 
 	if ( hitgroup == HITGROUP_HEAD )
 	{
-		activity = (m_flAnimDuckAmount > 0.5f) ? ACT_DIE_CROUCH_HEADSHOT : ACT_DIE_STAND_HEADSHOT;
+		activity = ( m_flAnimDuckAmount > 0.5f ) ? ACT_DIE_CROUCH_HEADSHOT : ACT_DIE_STAND_HEADSHOT;
 	}
 	else
 	{
-		activity = (m_flAnimDuckAmount > 0.5f) ? ACT_DIE_CROUCH : ACT_DIE_STAND;
+		activity = ( m_flAnimDuckAmount > 0.5f ) ? ACT_DIE_CROUCH : ACT_DIE_STAND;
 	}
 
 
 	Vector vecDamageDir = info.GetDamageForce();
 	VectorNormalize( vecDamageDir );
 
-	Vector vecDamagePlusPlayerVel = vecDamageDir + (m_vecVelocity.Normalized() * MIN( m_vecVelocity.Length() / CS_PLAYER_SPEED_RUN, 1 ));
+	Vector vecDamagePlusPlayerVel = vecDamageDir + ( m_vecVelocity.Normalized() * MIN(m_vecVelocity.Length() / CS_PLAYER_SPEED_RUN, 1) );
 	VectorNormalize( vecDamagePlusPlayerVel );
 
 
 	QAngle angDamageAnglePlusCurrentMoveVelocity;
-	VectorAngles( vecDamageDir, Vector( 0, 0, 1 ), angDamageAnglePlusCurrentMoveVelocity );
-
+	VectorAngles( vecDamageDir, Vector(0,0,1), angDamageAnglePlusCurrentMoveVelocity );
+	
 	float flPlayerRelativeDamageAngle = AngleDiff( angDamageAnglePlusCurrentMoveVelocity[YAW], m_flFootYaw );
-	m_tPoseParamMappings[PLAYER_POSE_PARAM_DEATH_YAW].SetValue( m_pPlayer, clamp( flPlayerRelativeDamageAngle, -180, 180 ) );
+	m_tPoseParamMappings[ PLAYER_POSE_PARAM_DEATH_YAW ].SetValue( m_pPlayer, clamp( flPlayerRelativeDamageAngle, -180, 180 ) );
 
 	yaw = flPlayerRelativeDamageAngle;
 
@@ -2724,7 +2716,7 @@ const char* CCSGOPlayerAnimState::GetWeaponPrefix( void )
 	m_pWeapon = m_pPlayer->GetActiveCSWeapon();
 	if ( m_pWeapon )
 	{
-		nWeaponType = (int) m_pWeapon->GetWeaponType();
+		nWeaponType = (int)m_pWeapon->GetWeaponType();
 
 		int nWeaponID = m_pWeapon->GetCSWeaponID();
 		if ( nWeaponID == WEAPON_MAG7 )
@@ -2757,14 +2749,14 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 	if ( m_cachedModelIndex != m_pPlayer->GetModelIndex() )
 	{
 		// read animset version from keyvalues
-		//m_nAnimstateModelVersion = 0;
+		m_nAnimstateModelVersion = 0;
 
 		CUtlBuffer buf( 1024, 0, CUtlBuffer::TEXT_BUFFER );
 		buf.PutString( "keyvalues {\n" ); // trick the kv loader into thinking this is one big block
 		if ( modelinfo->GetModelKeyValue( m_pPlayer->GetModel(), buf ) )
 		{
 			buf.PutString( "\n}\0" ); // end trickery
-			KeyValues *modelKeyValues = new KeyValues( "" );
+			KeyValues *modelKeyValues = new KeyValues("");
 			KeyValues::AutoDelete autodelete_key( modelKeyValues );
 			if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( m_pPlayer->GetModel() ), buf ) )
 			{
@@ -2783,32 +2775,32 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 		AssertMsgOnce( m_nAnimstateModelVersion == CURRENT_ANIMSTATE_VERSION, "Animset version is out of date!" );
 
 		// cache pose param indices
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_LEAN_YAW].Init( m_pPlayer, "lean_yaw" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_SPEED].Init( m_pPlayer, "speed" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_LADDER_SPEED].Init( m_pPlayer, "ladder_speed" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_LADDER_YAW].Init( m_pPlayer, "ladder_yaw" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_YAW].Init( m_pPlayer, "move_yaw" );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LEAN_YAW				].Init( m_pPlayer, "lean_yaw"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_SPEED					].Init( m_pPlayer, "speed"					);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LADDER_SPEED			].Init( m_pPlayer, "ladder_speed"			);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LADDER_YAW				].Init( m_pPlayer, "ladder_yaw"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_YAW				].Init( m_pPlayer, "move_yaw"				);
 
 		if ( m_nAnimstateModelVersion < 2 )
-			m_tPoseParamMappings[PLAYER_POSE_PARAM_RUN].Init( m_pPlayer, "run" );
+			m_tPoseParamMappings[ PLAYER_POSE_PARAM_RUN					].Init( m_pPlayer, "run"					);
 
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_BODY_YAW].Init( m_pPlayer, "body_yaw" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_BODY_PITCH].Init( m_pPlayer, "body_pitch" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_DEATH_YAW].Init( m_pPlayer, "death_yaw" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_STAND].Init( m_pPlayer, "stand" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_JUMP_FALL].Init( m_pPlayer, "jump_fall" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE].Init( m_pPlayer, "aim_blend_stand_idle" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE].Init( m_pPlayer, "aim_blend_crouch_idle" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_STRAFE_DIR].Init( m_pPlayer, "strafe_yaw" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK].Init( m_pPlayer, "aim_blend_stand_walk" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN].Init( m_pPlayer, "aim_blend_stand_run" );
-		m_tPoseParamMappings[PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK].Init( m_pPlayer, "aim_blend_crouch_walk" );
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_BODY_YAW				].Init( m_pPlayer, "body_yaw"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_BODY_PITCH				].Init( m_pPlayer, "body_pitch"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_DEATH_YAW				].Init( m_pPlayer, "death_yaw"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_STAND					].Init( m_pPlayer, "stand"					);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_JUMP_FALL				].Init( m_pPlayer, "jump_fall"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_IDLE	].Init( m_pPlayer, "aim_blend_stand_idle"	);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_IDLE	].Init( m_pPlayer, "aim_blend_crouch_idle"	);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_STRAFE_DIR				].Init( m_pPlayer, "strafe_yaw"				);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_WALK	].Init( m_pPlayer, "aim_blend_stand_walk"	);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_STAND_RUN		].Init( m_pPlayer, "aim_blend_stand_run"	);
+		m_tPoseParamMappings[ PLAYER_POSE_PARAM_AIM_BLEND_CROUCH_WALK	].Init( m_pPlayer, "aim_blend_crouch_walk"	);
 
 		if ( m_nAnimstateModelVersion > 0 )
 		{
-			m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_WALK].Init( m_pPlayer, "move_blend_walk" );
-			m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_RUN].Init( m_pPlayer, "move_blend_run" );
-			m_tPoseParamMappings[PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK].Init( m_pPlayer, "move_blend_crouch" );
+			m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_WALK			].Init( m_pPlayer, "move_blend_walk"	);
+			m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_RUN			].Init( m_pPlayer, "move_blend_run"		);
+			m_tPoseParamMappings[ PLAYER_POSE_PARAM_MOVE_BLEND_CROUCH_WALK	].Init( m_pPlayer, "move_blend_crouch"	);
 		}
 
 		m_cachedModelIndex = m_pPlayer->GetModelIndex();

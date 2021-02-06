@@ -18,7 +18,7 @@ void DoImageSpaceMotionBlur( const CViewSetup &view, int x, int y, int w, int h 
 void DumpTGAofRenderTarget( const int width, const int height, const char *pFilename );
 
 #if IRONSIGHT
-bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup );
+void ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup );
 #endif
 
 #endif // VIEWPOSTPROCESS_H

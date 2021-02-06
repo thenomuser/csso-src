@@ -1607,7 +1607,21 @@ void CStudioHdr::RunFlexRules( const float *src, float *dest )
 	}
 }
 
+//-----------------------------------------------------------------------------
+//	propagate flags all the way down
+//-----------------------------------------------------------------------------
 
+void CStudioHdr::setBoneFlags( int iBone, int flags )
+{
+	((mstudiobone_t *)pBone( iBone ))->flags |= flags; 
+	mstudiolinearbone_t *pLinear = pLinearBones();
+	if ( pLinear )
+	{
+		*(pLinear->pflags( iBone )) |= flags;
+	}
+
+	m_boneFlags[ iBone ] |= flags; 
+}
 
 //-----------------------------------------------------------------------------
 //	CODE PERTAINING TO ACTIVITY->SEQUENCE MAPPING SUBCLASS
@@ -1859,4 +1873,36 @@ void CStudioHdr::CActivityToSequenceMapping::SetValidationPair( const CStudioHdr
 {
 	m_expectedPStudioHdr = pstudiohdr->GetRenderHdr();
 	m_expectedVModel = pstudiohdr->GetVirtualModel();
+}
+
+//-----------------------------------------------------------------------------
+//	
+//-----------------------------------------------------------------------------
+
+int CStudioHdr::LookupSequence( const char *pszName )
+{
+	int iSequence = m_namedSequence.Find( pszName );
+
+	if ( iSequence == m_namedSequence.InvalidIndex() )
+	{
+		for (iSequence = 0; iSequence < GetNumSeq(); iSequence++)
+		{
+			if ( V_stricmp( pSeqdesc( iSequence ).pszLabel(), pszName ) == 0)
+				break;
+		}
+		if ( iSequence == GetNumSeq() )
+		{
+			m_namedSequence.Insert( pszName, -1 );
+			return -1;
+		}
+		else
+		{
+			m_namedSequence.Insert( pszName, iSequence );
+			return iSequence;
+		}
+	}
+	else
+	{
+		return m_namedSequence[iSequence];
+	}
 }
