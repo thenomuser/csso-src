@@ -290,17 +290,12 @@ public:
 
 	CUtlVectorFixed< CIKTarget, 12 >	m_target;
 
-	void CopyTo( CIKContext* pOther, const unsigned short * iRemapping );
-
-	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
-
-	const int GetBoneMask( void ) { return m_boneMask; }
-
 private:
 
 	CStudioHdr const *m_pStudioHdr;
 
 	bool Estimate( int iSequence, float flCycle, int iTarget, const float poseParameter[], float flWeight = 1.0f ); 
+	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
 
 	// virtual IK rules, filtered and combined from each sequence
 	CUtlVector< CUtlVector< ikcontextikrule_t > > m_ikChainRule;
@@ -358,7 +353,7 @@ float Studio_GetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, flo
 float Studio_SetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, float flValue, float &ctlValue );
 
 // converts a global 0..1 pose parameter into the local sequences blending value
-int Studio_LocalPoseParameter( const CStudioHdr *pStudioHdr, const float poseParameter[], mstudioseqdesc_t &seqdesc, int iSequence, int iLocalIndex, float &flSetting );
+void Studio_LocalPoseParameter( const CStudioHdr *pStudioHdr, const float poseParameter[], mstudioseqdesc_t &seqdesc, int iSequence, int iLocalIndex, float &flSetting, int &index );
 
 void Studio_SeqAnims( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int iSequence, const float poseParameter[], mstudioanimdesc_t *panim[4], float *weight );
 int Studio_MaxFrame( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[] );
@@ -366,7 +361,6 @@ float Studio_FPS( const CStudioHdr *pStudioHdr, int iSequence, const float poseP
 float Studio_CPS( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int iSequence, const float poseParameter[] );
 float Studio_Duration( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[] );
 void Studio_MovementRate( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[], Vector *pVec );
-float Studio_SeqMovementAndDuration( const CStudioHdr *pStudioHdr, int iSequence, float flCycleFrom, float flCycleTo, const float poseParameter[], Vector &deltaPos );
 
 // void Studio_Movement( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[], Vector *pVec );
 
@@ -440,12 +434,10 @@ private:
 CBoneCache *Studio_GetBoneCache( memhandle_t cacheHandle );
 memhandle_t Studio_CreateBoneCache( bonecacheparams_t &params );
 void Studio_DestroyBoneCache( memhandle_t cacheHandle );
-void Studio_InvalidateBoneCacheIfNotMatching( memhandle_t cacheHandle, float flTimeValid );
+void Studio_InvalidateBoneCache( memhandle_t cacheHandle );
 
 // Given a ray, trace for an intersection with this studiomodel.  Get the array of bones from StudioSetupHitboxBones
 bool TraceToStudio( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
-// Given a ray, trace for an intersection with this studiomodel, bullets will hit bodyparts that result in higher damage
-bool TraceToStudioCSHitgroupsPriority( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
 
 void QuaternionSM( float s, const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMA( const Quaternion &p, float s, const Quaternion &q, Quaternion &qt );

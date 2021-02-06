@@ -31,8 +31,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_PlantedC4, DT_PlantedC4, CPlantedC4)
 	RecvPropFloat( RECVINFO(m_flTimerLength) ),
 	RecvPropFloat( RECVINFO(m_flDefuseLength) ),
 	RecvPropFloat( RECVINFO(m_flDefuseCountDown) ),
-	RecvPropBool( RECVINFO(m_bBombDefused) ),
-	RecvPropEHandle( RECVINFO(m_pBombDefuser) ),
+	RecvPropBool( RECVINFO( m_bBombDefused ) ),
 END_RECV_TABLE()
 
 CUtlVector< C_PlantedC4* > g_PlantedC4s;
@@ -49,8 +48,6 @@ C_PlantedC4::C_PlantedC4()
 	m_flNextBeep = gpGlobals->curtime + 1.0;
 
 	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
-
-	m_hLocalDefusingPlayerHandle = NULL;
 }
 
 
@@ -76,12 +73,6 @@ void C_PlantedC4::SetDormant( bool bDormant )
 	}
 }
 
-void C_PlantedC4::UpdateOnRemove( void )
-{
-	DestroyDefuserRopes();
-	BaseClass::UpdateOnRemove();
-}
-
 void C_PlantedC4::Spawn( void )
 {
 	BaseClass::Spawn();
@@ -93,131 +84,11 @@ void C_PlantedC4::Spawn( void )
 	m_bTenSecWarning = false;
 	m_bExplodeWarning = false;
 	m_bTriggerWarning = false;
-
-	DestroyDefuserRopes();
-}
-
-void C_PlantedC4::DestroyDefuserRopes( void )
-{
-	FOR_EACH_VEC_BACK( m_hDefuserRopes, i )
-	{
-		if ( m_hDefuserRopes[i] )
-			UTIL_Remove( m_hDefuserRopes[i] );
-	}
-	m_hDefuserRopes.RemoveAll();
-	
-	if ( m_hDefuserMultimeter )
-		UTIL_Remove( m_hDefuserMultimeter );
-}
-
-bool C_PlantedC4::CreateDefuserRopes( void )
-{
-	DestroyDefuserRopes();
-
-	// make sure we are being defused
-	C_CSPlayer *pDefusingPlayer = m_pBombDefuser->Get();
-	if ( !pDefusingPlayer )
-	{
-		DevWarning( "Cannot find defusing player to create bomb defuse wire.\n" );
-		return false;
-	}
-
-	if ( pDefusingPlayer->IsDormant() )
-		return false;
-
-	if ( !m_hDefuserMultimeter )
-	{
-		C_BaseAnimating *pMultimeter = new C_BaseAnimating;
-		if ( pMultimeter->InitializeAsClientEntity( "models/weapons/w_eq_multimeter.mdl", RENDER_GROUP_OPAQUE_ENTITY ) )
-		{
-			pMultimeter->AddSolidFlags( FSOLID_NOT_SOLID );
-			pMultimeter->AddEffects( EF_BONEMERGE );
-			pMultimeter->SetParent( pDefusingPlayer );
-			m_hDefuserMultimeter = pMultimeter;
-		}
-		else
-		{
-			m_hDefuserMultimeter = NULL;
-		}
-	}
-
-	if ( !m_hDefuserMultimeter )
-	{
-		DevWarning( "Could not create defuser tool model.\n" );
-		return false;
-	}
-
-	// validate attachments
-	int nDefuseToolAttachmentA = m_hDefuserMultimeter->LookupAttachment("weapon_defusewire_a");
-	int nDefuseToolAttachmentB = m_hDefuserMultimeter->LookupAttachment("weapon_defusewire_b");
-
-	int nBombClipAttachmentA = LookupAttachment("weapon_defusewire_a");
-	int nBombClipAttachmentB = LookupAttachment("weapon_defusewire_b");
-
-	if ( nDefuseToolAttachmentA < 0 ||
-		 nDefuseToolAttachmentB < 0 ||
-		 nBombClipAttachmentA < 0 ||
-		 nBombClipAttachmentB < 0 )
-	{
-		DevWarning( "Could not locate attachment for bomb defuse wire.\n" );
-		return false;
-	}
-
-	// create the wires
-	C_RopeKeyframe* pRopeA = C_RopeKeyframe::Create( this, m_hDefuserMultimeter, nBombClipAttachmentA, nDefuseToolAttachmentA, 0.9, "cable/phonecable", 8, ROPE_SIMULATE );
-	if ( pRopeA )
-	{
-		pRopeA->SetSlack( 142 );
-		pRopeA->AddToLeafSystem();
-		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeA;
-		//pRopeA->AddEffects( EF_NORECEIVESHADOW );
-	}
-	else
-	{
-		DevWarning( "Failed to create bomb defuse wire.\n" );
-		return false;
-	}
-
-	C_RopeKeyframe* pRopeB = C_RopeKeyframe::Create( this, m_hDefuserMultimeter, nBombClipAttachmentB, nDefuseToolAttachmentB, 0.9, "cable/phonecable_red", 8, ROPE_SIMULATE );
-	if ( pRopeB )
-	{
-		pRopeB->SetSlack( 142 );
-		pRopeB->AddToLeafSystem();
-		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeB;
-		//pRopeA->AddEffects( EF_NORECEIVESHADOW );
-	}
-	else
-	{
-		DevWarning( "Failed to create bomb defuse wire.\n" );
-		return false;
-	}
-	
-	m_hLocalDefusingPlayerHandle = m_pBombDefuser->Get(); // remember this player handle in case it changes
-
-	return true;
 }
 
 void C_PlantedC4::ClientThink( void )
 {
 	BaseClass::ClientThink();
-
-	C_CSPlayer *pDefusingPlayer = m_pBombDefuser->Get();
-
-	if ( m_pBombDefuser->Get() != m_hLocalDefusingPlayerHandle )
-		DestroyDefuserRopes(); // we're still being defused, but the defusing player changed
-
-	C_CSPlayer *pLocalPlayer = GetLocalOrInEyeCSPlayer();
-	if ( pDefusingPlayer && ( pDefusingPlayer != pLocalPlayer || pLocalPlayer->ShouldDraw() ) )
-	{
-		if ( m_hDefuserRopes.Count() == 0 )
-		{
-			CreateDefuserRopes();
-		}
-	}
-	else
-	{
-		DestroyDefuserRopes();
-	}
 
 	// If it's dormant, don't beep or anything..
 	if ( IsDormant() )

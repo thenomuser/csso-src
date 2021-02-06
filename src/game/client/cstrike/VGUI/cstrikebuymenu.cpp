@@ -69,7 +69,8 @@ CCSBuyMenuImagePanel::CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pN
 	: vgui::ImagePanel( pParent, pName )
 {
 	g_BuyMenuImagePanels.AddToTail( this );
-	m_WeaponName[0] = NULL;
+	m_ModelName[0] = NULL;
+	m_AnimName[0] = NULL;
 	m_ViewXPos = 0;
 	m_ViewYPos = 0;
 	m_ViewZPos = 0;
@@ -82,10 +83,15 @@ CCSBuyMenuImagePanel::~CCSBuyMenuImagePanel()
 
 void CCSBuyMenuImagePanel::ApplySettings( KeyValues *inResourceData )
 {
-	const char *pString = inResourceData->GetString( "weaponName" );
+	const char *pString = inResourceData->GetString( "3DModel" );
 	if ( pString )
 	{
-		Q_strncpy( m_WeaponName, pString, sizeof( m_WeaponName ) );
+		Q_strncpy( m_ModelName, pString, sizeof( m_ModelName ) );
+	}
+	pString = inResourceData->GetString( "AnimName" );
+	if ( pString )
+	{
+		Q_strncpy( m_AnimName, pString, sizeof( m_AnimName ) );
 	}
 
 	int pPos = inResourceData->GetInt( "view_xpos", 0 );

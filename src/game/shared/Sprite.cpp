@@ -740,9 +740,6 @@ void CSprite::ClientThink( void )
 		m_nDestBrightness		= m_nBrightness;
 		m_flBrightnessTimeStart = gpGlobals->curtime;
 	}
-
-	// changed bounds
-	InvalidatePhysicsRecursive(BOUNDS_CHANGED);
 }
 
 extern bool g_bRenderingScreenshot;

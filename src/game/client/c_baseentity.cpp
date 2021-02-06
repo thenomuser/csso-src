@@ -2914,7 +2914,6 @@ CStudioHdr *C_BaseEntity::OnNewModel()
 #ifdef TF_CLIENT_DLL
 	m_bValidatedOwner = false;
 #endif
-	InvalidatePhysicsRecursive( BOUNDS_CHANGED | SEQUENCE_CHANGED );
 
 	return NULL;
 }
@@ -4000,8 +3999,6 @@ void C_BaseEntity::SetDormant( bool bDormant )
 	UpdateVisibility();
 
 	ParticleProp()->OwnerSetDormantTo( bDormant );
-
-	OnSetDormant( bDormant );
 }
 
 //-----------------------------------------------------------------------------

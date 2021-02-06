@@ -6464,7 +6464,6 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 	int m_iNewAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_ct" ) );
 	int m_iNewAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "loadout_slot_agent_t" ) );
-
 	// change the agent in the next round if needed
 	if ( ( m_iNewAgentCT != pCSPlayer->m_iLoadoutSlotAgentCT ) || ( m_iNewAgentT != pCSPlayer->m_iLoadoutSlotAgentT ) )
 	{

@@ -371,7 +371,6 @@ struct model_t
 	// volume occupied by the model graphics	
 	Vector				mins, maxs;
 	float				radius;
-	KeyValues			*m_pKeyValues;
 
 	union
 	{

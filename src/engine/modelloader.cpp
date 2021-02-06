@@ -5534,12 +5534,6 @@ void CModelLoader::UnloadModel( model_t *pModel )
 		Sprite_UnloadModel( pModel );
 		break;
 	}
-
-	if ( pModel->m_pKeyValues )
-	{
-		pModel->m_pKeyValues->deleteThis();
-		pModel->m_pKeyValues = NULL;
-	}
 }
 
 const char *CModelLoader::GetActiveMapName( void )

@@ -91,7 +91,7 @@ static C_BaseEntity *FindPredictableByGameClass( const char *classname )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CPrediction::CPrediction( void ) : m_SavedVars( true )
+CPrediction::CPrediction( void )
 {
 #if !defined( NO_ENTITY_PREDICTION )
 	m_bInPrediction = false;
@@ -1639,12 +1639,13 @@ void CPrediction::Update( int startframe, bool validframe,
 	m_nPreviousStartFrame = startframe;
 
 	// Save off current timer values, etc.
-	m_SavedVars = *gpGlobals;
+	CGlobalVarsBase saveVars(true);
+	saveVars = *gpGlobals;
 
 	_Update( received_new_world_update, validframe, incoming_acknowledged, outgoing_command );
 
 	// Restore current timer values, etc.
-	*gpGlobals = m_SavedVars;
+	*gpGlobals = saveVars;
 #endif
 }
 
@@ -1842,9 +1843,4 @@ bool CPrediction::InPrediction( void ) const
 #else
 	return false;
 #endif
-}
-
-float CPrediction::GetSavedTime() const
-{
-	return m_SavedVars.curtime;
 }

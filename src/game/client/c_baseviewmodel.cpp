@@ -665,7 +665,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 
 	if ( pPlayer->m_bNeedToChangeGloves )
 		RemoveViewmodelArmModels();
-
+	
 	// add gloves and sleeves
 	if ( m_vecViewmodelArmModels.Count() == 0 )
 	{

@@ -583,40 +583,6 @@ CBaseEntity	*C_BasePlayer::GetObserverTarget() const	// returns players target o
 	}
 }
 
-
-
-void UpdateWorldmodelVisibility( C_BasePlayer *player )
-{
-	for ( int i = 0; i < player->WeaponCount(); i++ )
-	{
-		CBaseCombatWeapon *pWeapon = player->GetWeapon(i);
-		if ( pWeapon )
-		{
-			CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
-			if ( pWeaponWorldModel )
-			{
-				pWeaponWorldModel->UpdateVisibility();
-			}
-		}
-	}
-}
-
-// Helper method to fix up visiblity across split screen for view models when observer target or mode changes
-void UpdateViewmodelVisibility( C_BasePlayer *player )
-{
-	// also update world models
-	UpdateWorldmodelVisibility( player );
-
-	// Update view model visibility
-	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
-	{
-		CBaseViewModel *vm = player->GetViewModel( i );
-		if ( !vm )
-			continue;
-		vm->UpdateVisibility();
-	}
-}
-
 // Called from Recv Proxy, mainly to reset tone map scale
 void C_BasePlayer::SetObserverTarget( EHANDLE hObserverTarget )
 {
@@ -2689,26 +2655,30 @@ bool C_BasePlayer::ForceSetupBonesAtTimeFakeInterpolation( matrix3x4_t *pBonesOu
 	return bSuccess;
 }
 
-void C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
+bool C_BasePlayer::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
 {
 	if ( !IsLocalPlayer() )
-	{
-		BaseClass::GetRagdollInitBoneArrays(pDeltaBones0, pDeltaBones1, pCurrentBones, boneDt);
-		return;
-	}
+		return BaseClass::GetRagdollInitBoneArrays(pDeltaBones0, pDeltaBones1, pCurrentBones, boneDt);
 
-	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones0, -boneDt );
-	ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones1, 0 );
+	bool bSuccess = true;
+
+	if ( !ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones0, -boneDt ) )
+		bSuccess = false;
+	if ( !ForceSetupBonesAtTimeFakeInterpolation( pDeltaBones1, 0 ) )
+		bSuccess = false;
 
 	float ragdollCreateTime = PhysGetSyncCreateTime();
 	if ( ragdollCreateTime != gpGlobals->curtime )
 	{
-		ForceSetupBonesAtTimeFakeInterpolation( pCurrentBones, ragdollCreateTime - gpGlobals->curtime );
+		if ( !ForceSetupBonesAtTimeFakeInterpolation( pCurrentBones, ragdollCreateTime - gpGlobals->curtime ) )
+			bSuccess = false;
 	}
 	else
 	{
-		SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+		if ( !SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime ) )
+			bSuccess = false;
 	}
+	return bSuccess;
 }
 
 
@@ -2918,7 +2888,6 @@ void C_BasePlayer::UpdateWearables( void )
 //-----------------------------------------------------------------------------
 void C_BasePlayer::BuildFirstPersonMeathookTransformations( CStudioHdr *hdr, Vector *pos, Quaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed, const char *pchHeadBoneName )
 {
-#ifndef CSTRIKE_DLL
 	// Handle meathook mode. If we aren't rendering, just use last frame's transforms
 	if ( !InFirstPersonView() )
 		return;
@@ -3028,7 +2997,6 @@ void C_BasePlayer::BuildFirstPersonMeathookTransformations( CStudioHdr *hdr, Vec
 		matrix3x4_t  &transformhelmet = GetBoneForWrite( iHelm );
 		MatrixScaleByZero( transformhelmet );
 	}
-#endif
 }
 
 
