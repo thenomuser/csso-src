@@ -45,14 +45,7 @@ ConVar cl_disablefreezecam(
 	);
 
 
-Color LerpColors( Color cStart, Color cEnd, float flPercent )
-{
-	float r = (float)((float)(cStart.r()) + (float)(cEnd.r() - cStart.r()) * flPercent);
-	float g = (float)((float)(cStart.g()) + (float)(cEnd.g() - cStart.g()) * flPercent);
-	float b = (float)((float)(cStart.b()) + (float)(cEnd.b() - cStart.b()) * flPercent);
-	float a = (float)((float)(cStart.a()) + (float)(cEnd.a() - cStart.a()) * flPercent);
-	return Color( r, g, b, a );
-}
+extern Color LerpColors( Color cStart, Color cEnd, float flPercent );
 
 
 //-----------------------------------------------------------------------------

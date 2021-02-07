@@ -19,6 +19,7 @@
 //			... - 
 // Output : char
 //-----------------------------------------------------------------------------
+#ifndef CLIENT_DLL
 char *VarArgs( const char *format, ... )
 {
 	va_list		argptr;
@@ -30,3 +31,4 @@ char *VarArgs( const char *format, ... )
 
 	return string;	
 }
+#endif

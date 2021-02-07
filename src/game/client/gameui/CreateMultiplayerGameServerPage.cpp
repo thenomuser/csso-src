@@ -126,7 +126,7 @@ void CCreateMultiplayerGameServerPage::EnableBots( KeyValues *data )
 void CCreateMultiplayerGameServerPage::OnApplyChanges()
 {
 	KeyValues *kv = m_pMapList->GetActiveItemUserData();
-	strncpy(m_szMapName, kv->GetString("mapname", ""), DATA_STR_LENGTH);
+	Q_strncpy(m_szMapName, kv->GetString("mapname", ""), DATA_STR_LENGTH);
 
 	if ( m_pSavedData )
 	{
@@ -177,7 +177,7 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 
 		// FindFirst ignores the pszPathID, so check it here
 		// TODO: this doesn't find maps in fallback dirs
-		_snprintf( mapname, sizeof(mapname), "maps/%s", pszFilename );
+		Q_snprintf( mapname, sizeof(mapname), "maps/%s", pszFilename );
 		if ( !g_pFullFileSystem->FileExists( mapname, pszPathID ) )
 		{
 			goto nextFile;
@@ -188,11 +188,11 @@ void CCreateMultiplayerGameServerPage::LoadMaps( const char *pszPathID )
 		str = Q_strstr( pszFilename, "maps" );
 		if ( str )
 		{
-			strncpy( mapname, str + 5, sizeof(mapname) - 1 );	// maps + \\ = 5
+			Q_strncpy( mapname, str + 5, sizeof(mapname) - 1 );	// maps + \\ = 5
 		}
 		else
 		{
-			strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
+			Q_strncpy( mapname, pszFilename, sizeof(mapname) - 1 );
 		}
 		ext = Q_strstr( mapname, ".bsp" );
 		if ( ext )

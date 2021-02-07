@@ -96,10 +96,7 @@ IAchievementMgr *achievementmgr = NULL;
 IEngineClientReplay *g_pEngineClientReplay = NULL;
 ISourceVirtualReality *g_pSourceVR = NULL;
 
-static CSteamAPIContext g_SteamAPIContext;
-CSteamAPIContext *steamapicontext = &g_SteamAPIContext;
-
-static CBasePanel *staticPanel = NULL;
+static CBaseModPanel *staticPanel = NULL;
 
 class CGameUI;
 CGameUI *g_pGameUI = NULL;
@@ -204,7 +201,7 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	}
 
 	// setup base panel
-	staticPanel = new CBasePanel();
+	staticPanel = new CBaseModPanel();
 	staticPanel->SetBounds(0, 0, 400, 300 );
 	staticPanel->SetPaintBorderEnabled( false );
 	staticPanel->SetPaintBackgroundEnabled( true );
@@ -257,7 +254,7 @@ void CGameUI::BonusMapUnlock( const char *pchFileName, const char *pchMapName )
 		if ( !g_pBonusMapsDialog )
 		{
 			// It unlocked without the bonus maps menu open, so flash the menu item
-			CBasePanel *pBasePanel = BasePanel();
+			CBaseModPanel *pBasePanel = BasePanel();
 			if ( pBasePanel )
 			{
 				if ( GameUI().IsConsoleUI() )
@@ -1258,7 +1255,7 @@ void CGameUI::OnConfirmQuit( void )
 
 bool CGameUI::IsMainMenuVisible( void )
 {
-	CBasePanel *pBasePanel = BasePanel();
+	CBaseModPanel *pBasePanel = BasePanel();
 	if ( pBasePanel )
 		return (pBasePanel->IsVisible() && pBasePanel->GetMenuAlpha() > 0 );
 	return false;
@@ -1267,7 +1264,7 @@ bool CGameUI::IsMainMenuVisible( void )
 // Client DLL is providing us with a panel that it wants to replace the main menu with
 void CGameUI::SetMainMenuOverride( vgui::VPANEL panel )
 {
-	CBasePanel *pBasePanel = BasePanel();
+	CBaseModPanel *pBasePanel = BasePanel();
 	if ( pBasePanel )
 	{
 		pBasePanel->SetMainMenuOverride( panel );
@@ -1277,7 +1274,7 @@ void CGameUI::SetMainMenuOverride( vgui::VPANEL panel )
 // Client DLL is telling us that a main menu command was issued, probably from its custom main menu panel
 void CGameUI::SendMainMenuCommand( const char *pszCommand )
 {
-	CBasePanel *pBasePanel = BasePanel();
+	CBaseModPanel *pBasePanel = BasePanel();
 	if ( pBasePanel )
 	{
 		pBasePanel->RunMenuCommand( pszCommand );

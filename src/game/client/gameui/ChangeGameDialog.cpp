@@ -5,6 +5,7 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#undef fopen
 
 #ifdef _XBOX
 #include "xbox/xbox_platform.h"

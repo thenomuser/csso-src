@@ -108,12 +108,12 @@ const char *CCreateMultiplayerGameGameplayPage::GetValue(const char *cvarName, c
 			static char buf[128];
 			if (control && control->RequestInfo(data))
 			{
-				strncpy(buf, data->GetString("text", defaultValue), sizeof(buf) - 1);
+				Q_strncpy(buf, data->GetString("text", defaultValue), sizeof(buf) - 1);
 			}
 			else
 			{
 				// no value found, copy in default text
-				strncpy(buf, defaultValue, sizeof(buf) - 1);
+				Q_strncpy(buf, defaultValue, sizeof(buf) - 1);
 			}
 
 			// ensure null termination of string

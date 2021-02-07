@@ -13,8 +13,18 @@ $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\game\shared\cstrike\control,.\cstrike,.\cstrike\control,.\cstrike\VGUI,$SRCDIR\game\shared\cstrike"
+		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\game\shared\cstrike\control,.\cstrike,.\cstrike\control,.\cstrike\VGUI,$SRCDIR\game\shared\cstrike;.\gameui"
+		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\vgui2\include;$SRCDIR\vgui2\controls;$SRCDIR\common\GameUI"
 		$PreprocessorDefinitions			"$BASE;CSTRIKE_DLL;NEXT_BOT"
+		$PreprocessorDefinitions			"$BASE;GAMEUI_EXPORTS;VERSION_SAFE_STEAM_API_INTERFACES"
+	}
+
+	$Linker
+	{
+		$AdditionalDependencies			"$BASE Ws2_32.lib odbc32.lib odbccp32.lib Shlwapi.lib" [$WIN32]
+		$SystemLibraries				"iconv;z" [$OSXALL]	
+		$SystemLibraries				"rt" [$LINUXALL && !$DEDICATED]
+		$GCC_ExtraLinkerFlags			"-L/usr/lib32 -L/usr/lib" [$LINUXALL && !$DEDICATED]
 	}
 }
 
@@ -121,6 +131,261 @@ $Project "Client (CSSO)"
 			$File	"$SRCDIR\game\shared\cstrike\bot\shared_util.cpp"
 			$File	"$SRCDIR\game\shared\cstrike\bot\shared_util.h"
 			$File	"cstrike\vgui_rootpanel_cs.cpp"
+			
+			$Folder "GameUI - Embedded"
+			{
+				$Folder	"Source Files"
+				{
+					$File	"gameui\BackgroundMenuButton.cpp" \
+							"gameui\BasePanel.cpp" \
+							"gameui\GameConsole.cpp" \
+							"gameui\GameUI_Interface.cpp" \
+							"gameui\LogoFile.cpp" [!$POSIX] \
+							"gameui\ModInfo.cpp" \
+							"gameui\MouseMessageForwardingPanel.cpp" \
+							"$SRCDIR\Tracker\common\msgbuffer.cpp" [!$POSIX] \
+							"$SRCDIR\Tracker\common\netapi.cpp" [!$POSIX] \
+							"$SRCDIR\common\GameUI\ObjectList.cpp" \
+							"gameui\PanelListPanel.cpp" \
+							"gameui\RunGameEngine.cpp" \
+							"$SRCDIR\common\GameUI\scriptobject.cpp" \
+							"$SRCDIR\Tracker\common\Socket.cpp" [!$POSIX] \
+							"gameui\Sys_Utils.cpp" \
+							"gameui\TextEntryBox.cpp" \
+							"gameui\TGAImagePanel.cpp" \
+							"$SRCDIR\public\vgui_controls\vgui_controls.cpp" \
+							"gameui\VGuiSystemModuleLoader.cpp" \
+							"gameui\BonusMapsDatabase.cpp" \
+							"$SRCDIR\common\language.cpp" \
+							"$SRCDIR\common\imageutils.cpp" \
+							"gameui\SaveGameBrowserDialog.cpp" \
+							"gameui\gameui_util.cpp"
+					{
+						$Configuration
+						{
+							$Compiler
+							{
+								$Create/UsePrecompiledHeader "Not Using Precompiled Headers"
+							}
+						}
+					}
+					$File	"gameui\BonusMapsDatabase.h"
+					$File	"gameui\gameui_util.h"
+				}
+
+				$Folder	"Header Files"
+				{
+					$File	"gameui\BackgroundMenuButton.h"
+					$File	"gameui\BasePanel.h"
+					$File	"gameui\BaseSaveGameDialog.h"
+					$File	"gameui\CDKeyEntryDialog.h"
+					$File	"gameui\ChangeGameDialog.h"
+					$File	"gameui\CreateMultiplayerGameBotPage.h"
+					$File	"gameui\CreateMultiplayerGameDialog.h"
+					$File	"gameui\CreateMultiplayerGameGameplayPage.h"
+					$File	"gameui\CreateMultiplayerGameServerPage.h"
+					$File	"gameui\EngineInterface.h"
+					$File	"gameui\GameConsole.h"
+					$File	"gameui\GameUI_Interface.h"
+					$File	"gameui\LoadingDialog.h"
+					$File	"$SRCDIR\vgui2\src\Memorybitmap.h"
+					$File	"gameui\ModInfo.h"
+					$File	"gameui\MouseMessageForwardingPanel.h"
+					$File	"gameui\PanelListPanel.h"
+					$File	"$SRCDIR\common\GameUI\scriptobject.h"
+					$File	"gameui\Sys_Utils.h"
+					$File	"gameui\TextEntryBox.h"
+					$File	"gameui\TGAImagePanel.h"
+					$File	"gameui\VGuiSystemModuleLoader.h"
+					$File	"gameui\SaveGameBrowserDialog.h"
+				}
+
+				$Folder	"Public Header Files"
+				{
+					$File	"$SRCDIR\public\iachievementmgr.h"
+					$File	"$SRCDIR\public\game\client\IGameClientExports.h"
+					$File	"$SRCDIR\common\GameUI\IGameUI.h"
+					$File	"$SRCDIR\public\IGameUIFuncs.h"
+					$File	"$SRCDIR\public\tier1\interface.h"
+					$File	"$SRCDIR\common\IObjectContainer.h"
+					$File	"$SRCDIR\common\IRunGameEngine.h"
+					$File	"$SRCDIR\common\IVguiModule.h"
+					$File	"$SRCDIR\common\IVGuiModuleLoader.h"
+					$File	"$SRCDIR\common\GameUI\ObjectList.h"
+					$File	"$SRCDIR\public\savegame_version.h"
+					$File	"$SRCDIR\Tracker\common\TrackerMessageFlags.h"
+					$File	"$SRCDIR\common\ValveCDKeyGameAndTerritoryCodes.h"
+					$File	"$SRCDIR\common\language.h"		
+					$File	"$SRCDIR\common\imageutils.h"		
+				}
+
+				$Folder	"Controls"
+				{
+					$File	"gameui\BitmapImagePanel.cpp" \
+							"gameui\CommandCheckButton.cpp" \
+							"gameui\CvarNegateCheckButton.cpp" \
+							"$SRCDIR\common\GameUI\cvarslider.cpp" \
+							"gameui\CvarTextEntry.cpp" \
+							"gameui\CvarToggleCheckButton.cpp" \
+							"gameui\HapticControlBox.cpp" \
+							"gameui\KeyToggleCheckButton.cpp" \
+							"gameui\LabeledCommandComboBox.cpp" \
+							"gameui\URLButton.cpp" \
+							"gameui\vcontrolslistpanel.cpp"
+					{
+						$Configuration
+						{
+							$Compiler
+							{
+								$Create/UsePrecompiledHeader "Not Using Precompiled Headers"
+							}
+						}
+					}
+					$File	"gameui\BitmapImagePanel.h"
+					$File	"gameui\CommandCheckButton.h"
+					$File	"gameui\CvarNegateCheckButton.h"
+					$File	"$SRCDIR\common\GameUI\cvarslider.h"
+					$File	"gameui\CvarTextEntry.h"
+					$File	"gameui\CvarToggleCheckButton.h"
+					$File	"gameui\HapticControlBox.h"
+					$File	"gameui\KeyToggleCheckButton.h"
+					$File	"gameui\LabeledCommandComboBox.h"
+					$File	"gameui\URLButton.h"
+					$File	"gameui\vcontrolslistpanel.h"
+				}
+
+				$Folder	"Dialogs"
+				{
+					$File	"gameui\BenchmarkDialog.cpp" \
+							"gameui\BonusMapsDialog.cpp" \
+							"gameui\CommentaryDialog.cpp" \
+							"gameui\CommentaryExplanationDialog.cpp" \
+							"gameui\CustomTabExplanationDialog.cpp" \
+							"gameui\ContentControlDialog.cpp" \
+							"gameui\GameConsoleDialog.cpp" \
+							"gameui\LoadGameDialog_Xbox.cpp" \
+							"gameui\LoadGameDialog.cpp" \
+							"gameui\MultiplayerAdvancedDialog.cpp" \
+							"gameui\NewGameDialog.cpp" \
+							"gameui\PlayerListDialog.cpp" \
+							"gameui\SaveGameDialog_Xbox.cpp" \
+							"gameui\SaveGameDialog.cpp" \
+							"gameui\LoadCommentaryDialog.cpp" \
+							"gameui\LoadingDialog.cpp" \
+							"gameui\BaseSaveGameDialog.cpp" \
+							"gameui\ChangeGameDialog.cpp" [!$POSIX] \
+							"gameui\CreateMultiplayerGameBotPage.cpp" \
+							"gameui\CreateMultiplayerGameDialog.cpp" \
+							"gameui\CreateMultiplayerGameGameplayPage.cpp" \
+							"gameui\CreateMultiplayerGameServerPage.cpp" \
+							"gameui\OptionsDialog_Xbox.cpp" \
+							"gameui\ControllerDialog.cpp"
+					{
+						$Configuration
+						{
+							$Compiler
+							{
+								$Create/UsePrecompiledHeader "Not Using Precompiled Headers"
+							}
+						}
+					}
+					$File	"gameui\BenchmarkDialog.h"
+					$File	"gameui\BonusMapsDialog.h"
+					$File	"gameui\CommentaryDialog.h"
+					$File	"gameui\CommentaryExplanationDialog.h"
+					$File	"gameui\ContentControlDialog.h"
+					$File	"gameui\CustomTabExplanationDialog.h"
+					$File	"gameui\GameConsoleDialog.h"
+					$File	"gameui\LoadGameDialog.h"
+					$File	"gameui\MultiplayerAdvancedDialog.h"
+					$File	"gameui\NewGameDialog.h"
+					$File	"gameui\PlayerListDialog.h"
+					$File	"gameui\SaveGameDialog.h"
+					$File	"gameui\ControllerDialog.h"
+				}
+
+				$Folder	"Matchmaking"
+				{
+					$File	"gameui\matchmaking\achievementsdialog.cpp" \
+							"gameui\matchmaking\basedialog.cpp" \
+							"gameui\matchmaking\dialogmenu.cpp" \
+							"gameui\matchmaking\leaderboarddialog.cpp" \
+							"gameui\matchmaking\matchmakingbasepanel.cpp" \
+							"gameui\matchmaking\pausedialog.cpp" \
+							"gameui\matchmaking\sessionlobbydialog.cpp" \
+							"gameui\matchmaking\sessionoptionsdialog.cpp" \
+							"gameui\matchmaking\sessionbrowserdialog.cpp" \
+							"gameui\matchmaking\welcomedialog.cpp"
+					{
+						$Configuration
+						{
+							$Compiler
+							{
+								$Create/UsePrecompiledHeader "Not Using Precompiled Headers"
+							}
+						}
+					}
+					$File	"gameui\matchmaking\achievementsdialog.h"
+					$File	"gameui\matchmaking\basedialog.h"
+					$File	"gameui\matchmaking\dialogmenu.h"
+					$File	"gameui\matchmaking\leaderboarddialog.h"
+					$File	"gameui\matchmaking\matchmakingbasepanel.h"
+					$File	"gameui\matchmaking\pausedialog.h"
+					$File	"gameui\matchmaking\sessionlobbydialog.h"
+					$File	"gameui\matchmaking\sessionoptionsdialog.h"
+					$File	"gameui\matchmaking\sessionbrowserdialog.h"
+					$File	"gameui\matchmaking\welcomedialog.h"
+				}
+
+				$Folder	"Options Dialog"
+				{
+					$File	"gameui\OptionsDialog.cpp" \
+							"gameui\OptionsSubAudio.cpp" \
+							"gameui\OptionsSubDifficulty.cpp" \
+							"gameui\OptionsSubGame.cpp" \
+							"gameui\OptionsSubHaptics.cpp"	[$WIN32] \
+							"gameui\OptionsSubKeyboard.cpp" \
+							"gameui\OptionsSubMouse.cpp" \
+							"gameui\OptionsSubMultiplayer.cpp" \
+							"gameui\OptionsSubPortal.cpp" \
+							"gameui\OptionsSubVideo.cpp" \
+							"gameui\OptionsSubVoice.cpp" \
+							"gameui\ModOptionsDialog.cpp" \
+							"gameui\ModOptionsSubAgents.cpp" \
+							"gameui\ModOptionsSubGameplay.cpp" \
+							"gameui\ModOptionsSubLoadout.cpp" \
+							"gameui\ModOptionsSubKnives.cpp" \
+							"gameui\ModOptionsSubGloves.cpp" \
+							"gameui\ModOptionsSubCrosshair.cpp"
+					{
+						$Configuration
+						{
+							$Compiler
+							{
+								$Create/UsePrecompiledHeader "Not Using Precompiled Headers"
+							}
+						}
+					}
+					$File	"gameui\OptionsDialog.h"
+					$File	"gameui\OptionsSubAudio.h"
+					$File	"gameui\OptionsSubDifficulty.h"
+					$File	"gameui\OptionsSubGame.h"
+					$File	"gameui\OptionsSubHaptics.h"	[$WIN32]
+					$File	"gameui\OptionsSubKeyboard.h"
+					$File	"gameui\OptionsSubMouse.h"
+					$File	"gameui\OptionsSubMultiplayer.h"
+					$File	"gameui\OptionsSubPortal.h"
+					$File	"gameui\OptionsSubVideo.h"
+					$File	"gameui\OptionsSubVoice.h"
+					$File	"gameui\ModOptionsDialog.h"
+					$File	"gameui\ModOptionsSubAgents.h"
+					$File	"gameui\ModOptionsSubGameplay.h"
+					$File	"gameui\ModOptionsSubLoadout.h"
+					$File	"gameui\ModOptionsSubKnives.h"
+					$File	"gameui\ModOptionsSubGloves.h"
+					$File	"gameui\ModOptionsSubCrosshair.h"
+				}
+			}
 			
 			$Folder "HUD Elements"
 			{
@@ -302,6 +567,19 @@ $Project "Client (CSSO)"
 		$Lib vtf
 		$Lib "$LIBPUBLIC\discord-rpc"
 		$Lib $LIBPUBLIC\raytrace
+		
+		$Lib	bitmap
+		$Lib	mathlib
+		$Lib	matsys_controls
+		$Lib	tier2
+		$Lib	tier3
+		$Lib	vgui_controls
+		$Lib  	"$LIBCOMMON/libjpeg"		[!$DEDICATED]
+		$ImpLib	steam_api
+		$Lib libpng [!$VS2015&&!$DEDICATED]
+		$Lib $LIBCOMMON/libpng [$VS2015&&!$DEDICATED]
+		$Lib libz [!$DEDICATED]
+		$ImpLib SDL2 [$SDL]
 	}
 
 }

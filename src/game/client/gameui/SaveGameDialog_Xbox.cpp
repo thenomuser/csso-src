@@ -103,7 +103,7 @@ void CSaveGameDialogXbox::UpdateFooterOptions( void )
 //-----------------------------------------------------------------------------
 // Purpose: perfrom the save on a separate thread
 //-----------------------------------------------------------------------------
-class CAsyncCtxSaveGame : public CBasePanel::CAsyncJobContext
+class CAsyncCtxSaveGame : public CBaseModPanel::CAsyncJobContext
 {
 public:
 	explicit CAsyncCtxSaveGame( CSaveGameDialogXbox *pDlg );
@@ -119,7 +119,7 @@ public:
 };
 
 CAsyncCtxSaveGame::CAsyncCtxSaveGame( CSaveGameDialogXbox *pDlg ) :
-	CBasePanel::CAsyncJobContext( 3.0f ),	// Storage device info for at least 3 seconds
+	CBaseModPanel::CAsyncJobContext( 3.0f ),	// Storage device info for at least 3 seconds
 	m_pSaveGameDlg( pDlg )
 {
 	NULL;

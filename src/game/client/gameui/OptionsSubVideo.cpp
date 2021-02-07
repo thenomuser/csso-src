@@ -5,6 +5,8 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#undef fopen
+
 #include "OptionsSubVideo.h"
 #include "cvarslider.h"
 #include "EngineInterface.h"

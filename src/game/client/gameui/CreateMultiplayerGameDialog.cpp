@@ -107,9 +107,9 @@ bool CCreateMultiplayerGameDialog::OnOK(bool applyOnly)
 
 	// get these values from m_pServerPage and store them temporarily
 	char szMapName[64], szHostName[64], szPassword[64];
-	strncpy(szMapName, m_pServerPage->GetMapName(), sizeof( szMapName ));
-	strncpy(szHostName, m_pGameplayPage->GetHostName(), sizeof( szHostName ));
-	strncpy(szPassword, m_pGameplayPage->GetPassword(), sizeof( szPassword ));
+	Q_strncpy(szMapName, m_pServerPage->GetMapName(), sizeof( szMapName ));
+	Q_strncpy(szHostName, m_pGameplayPage->GetHostName(), sizeof( szHostName ));
+	Q_strncpy(szPassword, m_pGameplayPage->GetPassword(), sizeof( szPassword ));
 
 	// save the config data
 	if (m_pSavedData)

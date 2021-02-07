@@ -5,6 +5,14 @@
 // $NoKeywords: $
 //===========================================================================//
 
+#if !defined( DONT_PROTECT_FILEIO_FUNCTIONS )
+#define DONT_PROTECT_FILEIO_FUNCTIONS // for protected_things.h
+#endif
+
+#if defined( PROTECTED_THINGS_ENABLE )
+#undef PROTECTED_THINGS_ENABLE // from protected_things.h
+#endif
+
 #include <stdio.h>
 
 #include "threadtools.h"
@@ -98,7 +106,7 @@ using namespace vgui;
 ConVar vgui_message_dialog_modal( "vgui_message_dialog_modal", "1", FCVAR_ARCHIVE );
 
 extern vgui::DHANDLE<CLoadingDialog> g_hLoadingDialog;
-static CBasePanel	*g_pBasePanel = NULL;
+static CBaseModPanel	*g_pBasePanel = NULL;
 static float		g_flAnimationPadding = 0.01f;
 
 extern const char *COM_GetModDirectory( void );
@@ -111,7 +119,7 @@ static vgui::DHANDLE<vgui::PropertyDialog> g_hOptionsDialog;
 //-----------------------------------------------------------------------------
 // Purpose: singleton accessor
 //-----------------------------------------------------------------------------
-CBasePanel *BasePanel()
+CBaseModPanel *BasePanel()
 {
 	return g_pBasePanel;
 }
@@ -640,7 +648,7 @@ void CGameMenu::OnCursorEnteredMenuItem(int VPanel)
 	BaseClass::OnCursorEnteredMenuItem( VPanel );
 }
 
-static CBackgroundMenuButton* CreateMenuButton( CBasePanel *parent, const char *panelName, const wchar_t *panelText )
+static CBackgroundMenuButton* CreateMenuButton( CBaseModPanel *parent, const char *panelName, const wchar_t *panelText )
 {
 	CBackgroundMenuButton *pButton = new CBackgroundMenuButton( parent, panelName );
 	pButton->SetProportional(true);
@@ -655,7 +663,7 @@ bool g_bIsCreatingNewGameMenuForPreFetching = false;
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
+CBaseModPanel::CBaseModPanel() : Panel(NULL, "BaseGameUIPanel")
 {	
 	g_pBasePanel = this;
 	m_bLevelLoading = false;
@@ -804,7 +812,7 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 //-----------------------------------------------------------------------------
 // Purpose: Xbox 360 - Get the console UI keyvalues to pass to LoadControlSettings()
 //-----------------------------------------------------------------------------
-KeyValues *CBasePanel::GetConsoleControlSettings( void )
+KeyValues *CBaseModPanel::GetConsoleControlSettings( void )
 {
 	return m_pConsoleControlSettings;
 }
@@ -812,7 +820,7 @@ KeyValues *CBasePanel::GetConsoleControlSettings( void )
 //-----------------------------------------------------------------------------
 // Purpose: Causes the first menu item to be armed
 //-----------------------------------------------------------------------------
-void CBasePanel::ArmFirstMenuItem( void )
+void CBaseModPanel::ArmFirstMenuItem( void )
 {
 	UpdateGameMenus();
 
@@ -827,7 +835,7 @@ void CBasePanel::ArmFirstMenuItem( void )
 	}
 }
 
-CBasePanel::~CBasePanel()
+CBaseModPanel::~CBaseModPanel()
 {
 	g_pBasePanel = NULL;
 
@@ -952,7 +960,7 @@ static ConCommand gamemenucommand( "gamemenucommand", CC_GameMenuCommand, "Issue
 //-----------------------------------------------------------------------------
 // Purpose: paints the main background image
 //-----------------------------------------------------------------------------
-void CBasePanel::PaintBackground()
+void CBaseModPanel::PaintBackground()
 {
 	if ( !GameUI().IsInLevel() || g_hLoadingDialog.Get() || m_ExitingFrameCount )
 	{
@@ -980,7 +988,7 @@ void CBasePanel::PaintBackground()
 // NOTE: These states change at funny times and overlap. They CANNOT be
 // used to demarcate exact transitions.
 //-----------------------------------------------------------------------------
-void CBasePanel::UpdateBackgroundState()
+void CBaseModPanel::UpdateBackgroundState()
 {
 	if ( m_ExitingFrameCount )
 	{
@@ -1124,7 +1132,7 @@ void CBasePanel::UpdateBackgroundState()
 //-----------------------------------------------------------------------------
 // Purpose: sets how the game background should render
 //-----------------------------------------------------------------------------
-void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
+void CBaseModPanel::SetBackgroundRenderState(EBackgroundState state)
 {
 	if ( state == m_eBackgroundState )
 	{
@@ -1200,7 +1208,7 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 	m_eBackgroundState = state;
 }
 
-void CBasePanel::StartExitingProcess()
+void CBaseModPanel::StartExitingProcess()
 {
 	// must let a non trivial number of screen swaps occur to stabilize image
 	// ui runs in a constrained state, while shutdown is occurring
@@ -1221,7 +1229,7 @@ void CBasePanel::StartExitingProcess()
 //-----------------------------------------------------------------------------
 // Purpose: Size should only change on first vgui frame after startup
 //-----------------------------------------------------------------------------
-void CBasePanel::OnSizeChanged( int newWide, int newTall )
+void CBaseModPanel::OnSizeChanged( int newWide, int newTall )
 {
 	// Recenter message dialogs
 	m_MessageDialogHandler.PositionDialogs( newWide, newTall );
@@ -1235,7 +1243,7 @@ void CBasePanel::OnSizeChanged( int newWide, int newTall )
 //-----------------------------------------------------------------------------
 // Purpose: notifications
 //-----------------------------------------------------------------------------
-void CBasePanel::OnLevelLoadingStarted()
+void CBaseModPanel::OnLevelLoadingStarted()
 {
 	m_bLevelLoading = true;
 
@@ -1257,7 +1265,7 @@ void CBasePanel::OnLevelLoadingStarted()
 //-----------------------------------------------------------------------------
 // Purpose: notification
 //-----------------------------------------------------------------------------
-void CBasePanel::OnLevelLoadingFinished()
+void CBaseModPanel::OnLevelLoadingFinished()
 {
 	m_bLevelLoading = false;
 
@@ -1270,7 +1278,7 @@ void CBasePanel::OnLevelLoadingFinished()
 //-----------------------------------------------------------------------------
 // Draws the background image.
 //-----------------------------------------------------------------------------
-void CBasePanel::DrawBackgroundImage()
+void CBaseModPanel::DrawBackgroundImage()
 {
 	if ( IsX360() && m_bCopyFrameBuffer )
 	{
@@ -1380,7 +1388,7 @@ void CBasePanel::DrawBackgroundImage()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::CreateGameMenu()
+void CBaseModPanel::CreateGameMenu()
 {
 	// load settings from config file
 	KeyValues *datafile = new KeyValues("GameMenu");
@@ -1407,7 +1415,7 @@ void CBasePanel::CreateGameMenu()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::CreateGameLogo()
+void CBaseModPanel::CreateGameLogo()
 {
 	if ( ModInfo().UseGameLogo() )
 	{
@@ -1428,7 +1436,7 @@ void CBasePanel::CreateGameLogo()
 	}
 }
 
-void CBasePanel::CheckBonusBlinkState()
+void CBaseModPanel::CheckBonusBlinkState()
 {
 #ifdef _X360
 	// On 360 if we have a storage device at this point and try to read the bonus data it can't find the bonus file!
@@ -1447,7 +1455,7 @@ void CBasePanel::CheckBonusBlinkState()
 //-----------------------------------------------------------------------------
 // Purpose: Checks to see if menu items need to be enabled/disabled
 //-----------------------------------------------------------------------------
-void CBasePanel::UpdateGameMenus()
+void CBaseModPanel::UpdateGameMenus()
 {
 	// check our current state
 	bool isInGame = GameUI().IsInLevel();
@@ -1473,7 +1481,7 @@ void CBasePanel::UpdateGameMenus()
 // Purpose: sets up the game menu from the keyvalues
 //			the game menu is hierarchial, so this is recursive
 //-----------------------------------------------------------------------------
-CGameMenu *CBasePanel::RecursiveLoadGameMenu(KeyValues *datafile)
+CGameMenu *CBaseModPanel::RecursiveLoadGameMenu(KeyValues *datafile)
 {
 	CGameMenu *menu = new CGameMenu(this, datafile->GetName());
 
@@ -1496,7 +1504,7 @@ CGameMenu *CBasePanel::RecursiveLoadGameMenu(KeyValues *datafile)
 //-----------------------------------------------------------------------------
 // Purpose: update the taskbar a frame
 //-----------------------------------------------------------------------------
-void CBasePanel::RunFrame()
+void CBaseModPanel::RunFrame()
 {
 	InvalidateLayout();
 	vgui::GetAnimationController()->UpdateAnimations( engine->Time() );
@@ -1556,7 +1564,7 @@ void CBasePanel::RunFrame()
 //-----------------------------------------------------------------------------
 // Purpose: Tells XBox Live our user is in the current game's menu
 //-----------------------------------------------------------------------------
-void CBasePanel::UpdateRichPresenceInfo()
+void CBaseModPanel::UpdateRichPresenceInfo()
 {
 #if defined( _X360 )
 	// For all other users logged into this console (not primary), set to idle to satisfy cert
@@ -1601,7 +1609,7 @@ void CBasePanel::UpdateRichPresenceInfo()
 //-----------------------------------------------------------------------------
 // Purpose: Lays out the position of the taskbar
 //-----------------------------------------------------------------------------
-void CBasePanel::PerformLayout()
+void CBaseModPanel::PerformLayout()
 {
 	BaseClass::PerformLayout();
 
@@ -1654,7 +1662,7 @@ void CBasePanel::PerformLayout()
 //-----------------------------------------------------------------------------
 // Purpose: Loads scheme information
 //-----------------------------------------------------------------------------
-void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
+void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 {
 	int i;
 	BaseClass::ApplySchemeSettings(pScheme);
@@ -1784,7 +1792,7 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 //-----------------------------------------------------------------------------
 // Purpose: message handler for platform menu; activates the selected module
 //-----------------------------------------------------------------------------
-void CBasePanel::OnActivateModule(int moduleIndex)
+void CBaseModPanel::OnActivateModule(int moduleIndex)
 {
 	g_VModuleLoader.ActivateModule(moduleIndex);
 }
@@ -1792,7 +1800,7 @@ void CBasePanel::OnActivateModule(int moduleIndex)
 //-----------------------------------------------------------------------------
 // Purpose: Animates menus on gameUI being shown
 //-----------------------------------------------------------------------------
-void CBasePanel::OnGameUIActivated()
+void CBaseModPanel::OnGameUIActivated()
 {
 	// If the load failed, we're going to bail out here
 	if ( engine->MapLoadFailed() )
@@ -1882,7 +1890,7 @@ void CBasePanel::OnGameUIActivated()
 //-----------------------------------------------------------------------------
 // Purpose: executes a menu command
 //-----------------------------------------------------------------------------
-void CBasePanel::RunMenuCommand(const char *command)
+void CBaseModPanel::RunMenuCommand(const char *command)
 {
 	if ( !Q_stricmp( command, "OpenGameMenu" ) )
 	{
@@ -2214,7 +2222,7 @@ void CBasePanel::RunMenuCommand(const char *command)
 //-----------------------------------------------------------------------------
 // Purpose: Queue a command to be run when XUI Closes
 //-----------------------------------------------------------------------------
-void CBasePanel::QueueCommand( const char *pCommand )
+void CBaseModPanel::QueueCommand( const char *pCommand )
 {
 	if ( m_bXUIVisible )
 	{
@@ -2229,7 +2237,7 @@ void CBasePanel::QueueCommand( const char *pCommand )
 //-----------------------------------------------------------------------------
 // Purpose: Run all the commands in the queue
 //-----------------------------------------------------------------------------
-void CBasePanel::RunQueuedCommands()
+void CBaseModPanel::RunQueuedCommands()
 {
 	for ( int i = 0; i < m_CommandQueue.Count(); ++i )
 	{
@@ -2241,7 +2249,7 @@ void CBasePanel::RunQueuedCommands()
 //-----------------------------------------------------------------------------
 // Purpose: Clear all queued commands
 //-----------------------------------------------------------------------------
-void CBasePanel::ClearQueuedCommands()
+void CBaseModPanel::ClearQueuedCommands()
 {
 	m_CommandQueue.Purge();
 }
@@ -2249,7 +2257,7 @@ void CBasePanel::ClearQueuedCommands()
 //-----------------------------------------------------------------------------
 // Purpose: Whether this command should cause us to prompt the user if they're not signed in and do not have a storage device
 //-----------------------------------------------------------------------------
-bool CBasePanel::IsPromptableCommand( const char *command )
+bool CBaseModPanel::IsPromptableCommand( const char *command )
 {
 	// Blech!
 	if ( !Q_stricmp( command, "OpenNewGameDialog" ) ||
@@ -2287,7 +2295,7 @@ bool CBasePanel::IsPromptableCommand( const char *command )
 //-------------------------
 static unsigned PanelJobWrapperFn( void *pvContext )
 {
-	CBasePanel::CAsyncJobContext *pAsync = reinterpret_cast< CBasePanel::CAsyncJobContext * >( pvContext );
+	CBaseModPanel::CAsyncJobContext *pAsync = reinterpret_cast< CBaseModPanel::CAsyncJobContext * >( pvContext );
 
 	float const flTimeStart = Plat_FloatTime();
 	
@@ -2310,7 +2318,7 @@ static unsigned PanelJobWrapperFn( void *pvContext )
 //-----------------------------------------------------------------------------
 // Purpose: Enqueues a job function to be called on a separate thread
 //-----------------------------------------------------------------------------
-void CBasePanel::ExecuteAsync( CAsyncJobContext *pAsync )
+void CBaseModPanel::ExecuteAsync( CAsyncJobContext *pAsync )
 {
 	Assert( !m_pAsyncJob );
 	Assert( pAsync && !pAsync->m_hThreadHandle );
@@ -2334,7 +2342,7 @@ void CBasePanel::ExecuteAsync( CAsyncJobContext *pAsync )
 //-----------------------------------------------------------------------------
 // Purpose: Whether this command requires the user be signed in
 //-----------------------------------------------------------------------------
-bool CBasePanel::CommandRequiresSignIn( const char *command )
+bool CBaseModPanel::CommandRequiresSignIn( const char *command )
 {
 	// Blech again!
 	if ( !Q_stricmp( command, "OpenAchievementsDialog" ) ||
@@ -2361,7 +2369,7 @@ bool CBasePanel::CommandRequiresSignIn( const char *command )
 //-----------------------------------------------------------------------------
 // Purpose: Whether the command requires the user to have a valid storage device
 //-----------------------------------------------------------------------------
-bool CBasePanel::CommandRequiresStorageDevice( const char *command )
+bool CBaseModPanel::CommandRequiresStorageDevice( const char *command )
 {
 	// Anything which touches the storage device must prompt
 	if ( !Q_stricmp( command, "OpenSaveGameDialog" ) ||
@@ -2374,7 +2382,7 @@ bool CBasePanel::CommandRequiresStorageDevice( const char *command )
 //-----------------------------------------------------------------------------
 // Purpose: Whether the command requires the user to have a valid profile selected
 //-----------------------------------------------------------------------------
-bool CBasePanel::CommandRespectsSignInDenied( const char *command )
+bool CBaseModPanel::CommandRespectsSignInDenied( const char *command )
 {
 	// Anything which touches the user profile must prompt
 	if ( !Q_stricmp( command, "OpenOptionsDialog" ) ||
@@ -2388,7 +2396,7 @@ bool CBasePanel::CommandRespectsSignInDenied( const char *command )
 // Purpose: A storage device has been connected, update our settings and anything else
 //-----------------------------------------------------------------------------
 
-class CAsyncCtxOnDeviceAttached : public CBasePanel::CAsyncJobContext
+class CAsyncCtxOnDeviceAttached : public CBaseModPanel::CAsyncJobContext
 {
 public:
 	CAsyncCtxOnDeviceAttached();
@@ -2402,7 +2410,7 @@ private:
 };
 
 CAsyncCtxOnDeviceAttached::CAsyncCtxOnDeviceAttached() :
-	CBasePanel::CAsyncJobContext( 3.0f ),	// Storage device info for at least 3 seconds
+	CBaseModPanel::CAsyncJobContext( 3.0f ),	// Storage device info for at least 3 seconds
 	m_ContainerOpenResult( ERROR_SUCCESS )
 {
 	BasePanel()->ShowMessageDialog( MD_CHECKING_STORAGE_DEVICE );
@@ -2437,12 +2445,12 @@ void CAsyncCtxOnDeviceAttached::Completed()
 }
 
 
-void CBasePanel::OnDeviceAttached( void )
+void CBaseModPanel::OnDeviceAttached( void )
 {
 	ExecuteAsync( new CAsyncCtxOnDeviceAttached );
 }
 
-void CBasePanel::OnCompletedAsyncDeviceAttached( CAsyncCtxOnDeviceAttached *job )
+void CBaseModPanel::OnCompletedAsyncDeviceAttached( CAsyncCtxOnDeviceAttached *job )
 {
 	uint nRet = job->GetContainerOpenResult();
 	if ( nRet != ERROR_SUCCESS )
@@ -2487,7 +2495,7 @@ void CBasePanel::OnCompletedAsyncDeviceAttached( CAsyncCtxOnDeviceAttached *job 
 //-----------------------------------------------------------------------------
 // Purpose: FIXME: Only TF takes this path...
 //-----------------------------------------------------------------------------
-bool CBasePanel::ValidateStorageDevice( void )
+bool CBaseModPanel::ValidateStorageDevice( void )
 {
 	if ( m_bUserRefusedStorageDevice == false )
 	{
@@ -2515,7 +2523,7 @@ bool CBasePanel::ValidateStorageDevice( void )
 	return true;
 }
 
-bool CBasePanel::ValidateStorageDevice( int *pStorageDeviceValidated )
+bool CBaseModPanel::ValidateStorageDevice( int *pStorageDeviceValidated )
 {
 	if ( m_pStorageDeviceValidatedNotify )
 	{
@@ -2546,7 +2554,7 @@ bool CBasePanel::ValidateStorageDevice( int *pStorageDeviceValidated )
 // Purpose: Monitor commands for certain necessary cases
 // Input  : *command - What menu command we're policing
 //-----------------------------------------------------------------------------
-bool CBasePanel::HandleSignInRequest( const char *command )
+bool CBaseModPanel::HandleSignInRequest( const char *command )
 {
 #ifdef _X360
 	// If we have a post-prompt command, we're coming back into the call from that prompt
@@ -2601,7 +2609,7 @@ bool CBasePanel::HandleSignInRequest( const char *command )
 // Purpose: 
 // Input  : *command - 
 //-----------------------------------------------------------------------------
-bool CBasePanel::HandleStorageDeviceRequest( const char *command )
+bool CBaseModPanel::HandleStorageDeviceRequest( const char *command )
 {
 	// If we don't have a valid sign-in, then we do nothing!
 	if ( m_bUserRefusedSignIn )
@@ -2668,7 +2676,7 @@ bool CBasePanel::HandleStorageDeviceRequest( const char *command )
 //-----------------------------------------------------------------------------
 // Purpose: Clear the command we've queued once it has succeeded in being called
 //-----------------------------------------------------------------------------
-void CBasePanel::ClearPostPromptCommand( const char *pCompletedCommand )
+void CBaseModPanel::ClearPostPromptCommand( const char *pCompletedCommand )
 {
 	if ( !Q_stricmp( m_strPostPromptCommand, pCompletedCommand ) )
 	{
@@ -2680,7 +2688,7 @@ void CBasePanel::ClearPostPromptCommand( const char *pCompletedCommand )
 //-----------------------------------------------------------------------------
 // Purpose: Issue our queued command to either the base panel or the matchmaking panel
 //-----------------------------------------------------------------------------
-void CBasePanel::IssuePostPromptCommand( void )
+void CBaseModPanel::IssuePostPromptCommand( void )
 {
 	// The device is valid, so launch any pending commands
 	if ( m_strPostPromptCommand.IsEmpty() == false )
@@ -2703,7 +2711,7 @@ void CBasePanel::IssuePostPromptCommand( void )
 //-----------------------------------------------------------------------------
 // Purpose: message handler for menu selections
 //-----------------------------------------------------------------------------
-void CBasePanel::OnCommand( const char *command )
+void CBaseModPanel::OnCommand( const char *command )
 {
 	if ( GameUI().IsConsoleUI() )
 	{
@@ -2742,7 +2750,7 @@ void CBasePanel::OnCommand( const char *command )
 // Purpose: runs an animation sequence, then calls a message mapped function
 //			when the animation is complete. 
 //-----------------------------------------------------------------------------
-void CBasePanel::RunAnimationWithCallback( vgui::Panel *parent, const char *animName, KeyValues *msgFunc )
+void CBaseModPanel::RunAnimationWithCallback( vgui::Panel *parent, const char *animName, KeyValues *msgFunc )
 {
 	if ( !m_pConsoleAnimationController )
 		return;
@@ -2912,7 +2920,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: asks user how they feel about quiting
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenQuitConfirmationDialog()
+void CBaseModPanel::OnOpenQuitConfirmationDialog()
 {
 	if ( GameUI().IsConsoleUI() )
 	{
@@ -2957,7 +2965,7 @@ void CBasePanel::OnOpenQuitConfirmationDialog()
 //-----------------------------------------------------------------------------
 // Purpose: asks user how they feel about disconnecting
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenDisconnectConfirmationDialog()
+void CBaseModPanel::OnOpenDisconnectConfirmationDialog()
 {
 	// THis is for disconnecting from a multiplayer server
 	Assert( m_bUseMatchmaking );
@@ -2979,7 +2987,7 @@ void CBasePanel::OnOpenDisconnectConfirmationDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenNewGameDialog(const char *chapter )
+void CBaseModPanel::OnOpenNewGameDialog(const char *chapter )
 {
 	if ( !m_hNewGameDialog.Get() )
 	{
@@ -2999,7 +3007,7 @@ void CBasePanel::OnOpenNewGameDialog(const char *chapter )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenBonusMapsDialog( void )
+void CBaseModPanel::OnOpenBonusMapsDialog( void )
 {
 	if ( !m_hBonusMapsDialog.Get() )
 	{
@@ -3013,7 +3021,7 @@ void CBasePanel::OnOpenBonusMapsDialog( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenLoadGameDialog()
+void CBaseModPanel::OnOpenLoadGameDialog()
 {
 	if ( !m_hLoadGameDialog.Get() )
 	{
@@ -3026,7 +3034,7 @@ void CBasePanel::OnOpenLoadGameDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenLoadGameDialog_Xbox()
+void CBaseModPanel::OnOpenLoadGameDialog_Xbox()
 {
 	if ( !m_hLoadGameDialog_Xbox.Get() )
 	{
@@ -3039,7 +3047,7 @@ void CBasePanel::OnOpenLoadGameDialog_Xbox()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenSaveGameDialog()
+void CBaseModPanel::OnOpenSaveGameDialog()
 {
 	if ( !m_hSaveGameDialog.Get() )
 	{
@@ -3052,7 +3060,7 @@ void CBasePanel::OnOpenSaveGameDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenSaveGameDialog_Xbox()
+void CBaseModPanel::OnOpenSaveGameDialog_Xbox()
 {
 	if ( !m_hSaveGameDialog_Xbox.Get() )
 	{
@@ -3065,7 +3073,7 @@ void CBasePanel::OnOpenSaveGameDialog_Xbox()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenOptionsDialog()
+void CBaseModPanel::OnOpenOptionsDialog()
 {
 	if ( !m_hOptionsDialog.Get() )
 	{
@@ -3080,7 +3088,7 @@ void CBasePanel::OnOpenOptionsDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenModOptionsDialog()
+void CBaseModPanel::OnOpenModOptionsDialog()
 {
 	if ( !m_hModOptionsDialog.Get() )
 	{
@@ -3094,7 +3102,7 @@ void CBasePanel::OnOpenModOptionsDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenOptionsDialog_Xbox()
+void CBaseModPanel::OnOpenOptionsDialog_Xbox()
 {
 	if ( !m_hOptionsDialog_Xbox.Get() )
 	{
@@ -3108,7 +3116,7 @@ void CBasePanel::OnOpenOptionsDialog_Xbox()
 //-----------------------------------------------------------------------------
 // Purpose: forces any changed options dialog settings to be applied immediately, if it's open
 //-----------------------------------------------------------------------------
-void CBasePanel::ApplyOptionsDialogSettings()
+void CBaseModPanel::ApplyOptionsDialogSettings()
 {
 	if (m_hOptionsDialog.Get())
 	{
@@ -3123,7 +3131,7 @@ void CBasePanel::ApplyOptionsDialogSettings()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenControllerDialog()
+void CBaseModPanel::OnOpenControllerDialog()
 {
 	if ( !m_hControllerDialog.Get() )
 	{
@@ -3137,7 +3145,7 @@ void CBasePanel::OnOpenControllerDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenBenchmarkDialog()
+void CBaseModPanel::OnOpenBenchmarkDialog()
 {
 	if (!m_hBenchmarkDialog.Get())
 	{
@@ -3150,7 +3158,7 @@ void CBasePanel::OnOpenBenchmarkDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenServerBrowser()
+void CBaseModPanel::OnOpenServerBrowser()
 {
 	g_VModuleLoader.ActivateModule("Servers");
 }
@@ -3158,7 +3166,7 @@ void CBasePanel::OnOpenServerBrowser()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenFriendsDialog()
+void CBaseModPanel::OnOpenFriendsDialog()
 {
 	g_VModuleLoader.ActivateModule("Friends");
 }
@@ -3166,7 +3174,7 @@ void CBasePanel::OnOpenFriendsDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenDemoDialog()
+void CBaseModPanel::OnOpenDemoDialog()
 {
 /*	if ( !m_hDemoPlayerDialog.Get() )
 	{
@@ -3179,7 +3187,7 @@ void CBasePanel::OnOpenDemoDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenCreateMultiplayerGameDialog()
+void CBaseModPanel::OnOpenCreateMultiplayerGameDialog()
 {
 	if (!m_hCreateMultiplayerGameDialog.Get())
 	{
@@ -3192,7 +3200,7 @@ void CBasePanel::OnOpenCreateMultiplayerGameDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenChangeGameDialog()
+void CBaseModPanel::OnOpenChangeGameDialog()
 {
 #ifdef POSIX
 	// Alfred says this is old legacy code that allowed you to walk through looking for
@@ -3210,7 +3218,7 @@ void CBasePanel::OnOpenChangeGameDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenPlayerListDialog()
+void CBaseModPanel::OnOpenPlayerListDialog()
 {
 	if (!m_hPlayerListDialog.Get())
 	{
@@ -3223,7 +3231,7 @@ void CBasePanel::OnOpenPlayerListDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenLoadCommentaryDialog()
+void CBaseModPanel::OnOpenLoadCommentaryDialog()
 {
 	if (!m_hPlayerListDialog.Get())
 	{
@@ -3236,7 +3244,7 @@ void CBasePanel::OnOpenLoadCommentaryDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OpenLoadSingleplayerCommentaryDialog()
+void CBaseModPanel::OpenLoadSingleplayerCommentaryDialog()
 {
 	if ( !m_hNewGameDialog.Get() )
 	{
@@ -3251,7 +3259,7 @@ void CBasePanel::OpenLoadSingleplayerCommentaryDialog()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenAchievementsDialog()
+void CBaseModPanel::OnOpenAchievementsDialog()
 {
 	if (!m_hAchievementsDialog.Get())
 	{
@@ -3266,7 +3274,7 @@ void CBasePanel::OnOpenAchievementsDialog()
 // [dwenger] Use cs-specific achievements dialog
 //=============================================================================
 
-void CBasePanel::OnOpenCSAchievementsDialog()
+void CBaseModPanel::OnOpenCSAchievementsDialog()
 {
     if ( GameClientExports() )
     {
@@ -3296,7 +3304,7 @@ void CBasePanel::OnOpenCSAchievementsDialog()
 // HPE_END
 //=============================================================================
 
-void CBasePanel::OnOpenAchievementsDialog_Xbox()
+void CBaseModPanel::OnOpenAchievementsDialog_Xbox()
 {
 	if (!m_hAchievementsDialog.Get())
 	{
@@ -3309,7 +3317,7 @@ void CBasePanel::OnOpenAchievementsDialog_Xbox()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnOpenMatchmakingBasePanel()
+void CBaseModPanel::OnOpenMatchmakingBasePanel()
 {
 	if (!m_hMatchmakingBasePanel.Get())
 	{
@@ -3341,7 +3349,7 @@ void CBasePanel::OnOpenMatchmakingBasePanel()
 //-----------------------------------------------------------------------------
 // Purpose: Helper function for this common operation
 //-----------------------------------------------------------------------------
-CMatchmakingBasePanel *CBasePanel::GetMatchmakingBasePanel()
+CMatchmakingBasePanel *CBaseModPanel::GetMatchmakingBasePanel()
 {
 	CMatchmakingBasePanel *pBase = NULL;
 	if ( m_bUseMatchmaking )
@@ -3354,7 +3362,7 @@ CMatchmakingBasePanel *CBasePanel::GetMatchmakingBasePanel()
 //-----------------------------------------------------------------------------
 // Purpose: moves the game menu button to the right place on the taskbar
 //-----------------------------------------------------------------------------
-void CBasePanel::PositionDialog(vgui::PHandle dlg)
+void CBaseModPanel::PositionDialog(vgui::PHandle dlg)
 {
 	if (!dlg.Get())
 		return;
@@ -3370,7 +3378,7 @@ void CBasePanel::PositionDialog(vgui::PHandle dlg)
 //-----------------------------------------------------------------------------
 // Purpose: Add an Xbox 360 message dialog to a dialog stack
 //-----------------------------------------------------------------------------
-void CBasePanel::ShowMessageDialog( const uint nType, vgui::Panel *pOwner )
+void CBaseModPanel::ShowMessageDialog( const uint nType, vgui::Panel *pOwner )
 {
 	if ( pOwner == NULL )
 	{
@@ -3383,7 +3391,7 @@ void CBasePanel::ShowMessageDialog( const uint nType, vgui::Panel *pOwner )
 //-----------------------------------------------------------------------------
 // Purpose: Add an Xbox 360 message dialog to a dialog stack
 //-----------------------------------------------------------------------------
-void CBasePanel::CloseMessageDialog( const uint nType )
+void CBaseModPanel::CloseMessageDialog( const uint nType )
 {
 	m_MessageDialogHandler.CloseMessageDialog( nType );
 }
@@ -3391,7 +3399,7 @@ void CBasePanel::CloseMessageDialog( const uint nType )
 //-----------------------------------------------------------------------------
 // Purpose: Matchmaking notification from engine
 //-----------------------------------------------------------------------------
-void CBasePanel::SessionNotification( const int notification, const int param )
+void CBaseModPanel::SessionNotification( const int notification, const int param )
 {
 	// This is a job for the matchmaking panel
 	CMatchmakingBasePanel *pBase = GetMatchmakingBasePanel();
@@ -3404,7 +3412,7 @@ void CBasePanel::SessionNotification( const int notification, const int param )
 //-----------------------------------------------------------------------------
 // Purpose: System notification from engine
 //-----------------------------------------------------------------------------
-void CBasePanel::SystemNotification( const int notification )
+void CBaseModPanel::SystemNotification( const int notification )
 {
 	CMatchmakingBasePanel *pBase = GetMatchmakingBasePanel();
 	if ( pBase )
@@ -3581,7 +3589,7 @@ void CBasePanel::SystemNotification( const int notification )
 //-----------------------------------------------------------------------------
 // Purpose: Matchmaking notification that a player's info has changed
 //-----------------------------------------------------------------------------
-void CBasePanel::UpdatePlayerInfo( uint64 nPlayerId, const char *pName, int nTeam, byte cVoiceState, int nPlayersNeeded, bool bHost )
+void CBaseModPanel::UpdatePlayerInfo( uint64 nPlayerId, const char *pName, int nTeam, byte cVoiceState, int nPlayersNeeded, bool bHost )
 {
 	CMatchmakingBasePanel *pBase = GetMatchmakingBasePanel();
 	if ( pBase )
@@ -3593,7 +3601,7 @@ void CBasePanel::UpdatePlayerInfo( uint64 nPlayerId, const char *pName, int nTea
 //-----------------------------------------------------------------------------
 // Purpose: Matchmaking notification to add a session to the browser
 //-----------------------------------------------------------------------------
-void CBasePanel::SessionSearchResult( int searchIdx, void *pHostData, XSESSION_SEARCHRESULT *pResult, int ping )
+void CBaseModPanel::SessionSearchResult( int searchIdx, void *pHostData, XSESSION_SEARCHRESULT *pResult, int ping )
 {
 	CMatchmakingBasePanel *pBase = GetMatchmakingBasePanel();
 	if ( pBase )
@@ -3605,7 +3613,7 @@ void CBasePanel::SessionSearchResult( int searchIdx, void *pHostData, XSESSION_S
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnChangeStorageDevice( void )
+void CBaseModPanel::OnChangeStorageDevice( void )
 {
 	if ( m_bWaitingForStorageDeviceHandle == false )
 	{
@@ -3616,7 +3624,7 @@ void CBasePanel::OnChangeStorageDevice( void )
 	}
 }
 
-void CBasePanel::OnCreditsFinished( void )
+void CBaseModPanel::OnCreditsFinished( void )
 {
 	if ( !IsX360() )
 	{
@@ -3645,7 +3653,7 @@ void CBasePanel::OnCreditsFinished( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::OnGameUIHidden()
+void CBaseModPanel::OnGameUIHidden()
 {
 	if ( m_hOptionsDialog.Get() )
 	{
@@ -3660,7 +3668,7 @@ void CBasePanel::OnGameUIHidden()
 //-----------------------------------------------------------------------------
 // Purpose: Sets the alpha of the menu panels
 //-----------------------------------------------------------------------------
-void CBasePanel::SetMenuAlpha(int alpha)
+void CBaseModPanel::SetMenuAlpha(int alpha)
 {
 	if ( GameUI().IsConsoleUI() )
 	{
@@ -3685,7 +3693,7 @@ void CBasePanel::SetMenuAlpha(int alpha)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CBasePanel::GetMenuAlpha( void ) 
+int CBaseModPanel::GetMenuAlpha( void ) 
 { 
 	return m_pGameMenu->GetAlpha(); 
 }
@@ -3693,7 +3701,7 @@ int CBasePanel::GetMenuAlpha( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::SetMainMenuOverride( vgui::VPANEL panel )
+void CBaseModPanel::SetMainMenuOverride( vgui::VPANEL panel )
 {
 	m_hMainMenuOverridePanel = panel;
 
@@ -3712,7 +3720,7 @@ void CBasePanel::SetMainMenuOverride( vgui::VPANEL panel )
 //-----------------------------------------------------------------------------
 // Purpose: starts the game
 //-----------------------------------------------------------------------------
-void CBasePanel::FadeToBlackAndRunEngineCommand( const char *engineCommand )
+void CBaseModPanel::FadeToBlackAndRunEngineCommand( const char *engineCommand )
 {
 	KeyValues *pKV = new KeyValues( "RunEngineCommand", "command", engineCommand );
 
@@ -3720,7 +3728,7 @@ void CBasePanel::FadeToBlackAndRunEngineCommand( const char *engineCommand )
 	PostMessage( this, pKV, 0 );
 }
 
-void CBasePanel::SetMenuItemBlinkingState( const char *itemName, bool state )
+void CBaseModPanel::SetMenuItemBlinkingState( const char *itemName, bool state )
 {
 	for (int i = 0; i < GetChildCount(); i++)
 	{
@@ -3737,7 +3745,7 @@ void CBasePanel::SetMenuItemBlinkingState( const char *itemName, bool state )
 //-----------------------------------------------------------------------------
 // Purpose: runs an engine command, used for delays
 //-----------------------------------------------------------------------------
-void CBasePanel::RunEngineCommand(const char *command)
+void CBaseModPanel::RunEngineCommand(const char *command)
 {
 	engine->ClientCmd_Unrestricted(command);
 }
@@ -3745,7 +3753,7 @@ void CBasePanel::RunEngineCommand(const char *command)
 //-----------------------------------------------------------------------------
 // Purpose: runs an animation to close a dialog and cleans up after close
 //-----------------------------------------------------------------------------
-void CBasePanel::RunCloseAnimation( const char *animName )
+void CBaseModPanel::RunCloseAnimation( const char *animName )
 {
 	RunAnimationWithCallback( this, animName, new KeyValues( "FinishDialogClose" ) );
 }
@@ -3753,7 +3761,7 @@ void CBasePanel::RunCloseAnimation( const char *animName )
 //-----------------------------------------------------------------------------
 // Purpose: cleans up after a menu closes
 //-----------------------------------------------------------------------------
-void CBasePanel::FinishDialogClose( void )
+void CBaseModPanel::FinishDialogClose( void )
 {
 }
 
@@ -4139,7 +4147,7 @@ DECLARE_BUILD_FACTORY( CFooterPanel );
 //-----------------------------------------------------------------------------
 // Purpose: Reload the resource files on the Xbox 360
 //-----------------------------------------------------------------------------
-void CBasePanel::Reload_Resources( const CCommand &args )
+void CBaseModPanel::Reload_Resources( const CCommand &args )
 {
 	m_pConsoleControlSettings->Clear();
 	if ( m_pConsoleControlSettings->LoadFromFile( g_pFullFileSystem, "resource/UI/XboxDialogs.res" ) )
@@ -4731,7 +4739,7 @@ void CMessageDialogHandler::PositionDialog( vgui::PHandle dlg, int wide, int tal
 }			
 
 //-----------------------------------------------------------------------------
-// Purpose: Editable panel that can replace the GameMenuButtons in CBasePanel
+// Purpose: Editable panel that can replace the GameMenuButtons in CBaseModPanel
 //-----------------------------------------------------------------------------
 CMainMenuGameLogo::CMainMenuGameLogo( vgui::Panel *parent, const char *name ) : vgui::EditablePanel( parent, name )
 {
@@ -4781,7 +4789,7 @@ void CMainMenuGameLogo::ApplySchemeSettings( vgui::IScheme *pScheme )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePanel::CloseBaseDialogs( void )
+void CBaseModPanel::CloseBaseDialogs( void )
 {
 	if ( m_hNewGameDialog.Get() )
 		m_hNewGameDialog->Close();
@@ -4842,7 +4850,7 @@ static void RefreshOptionsDialog( const CCommand &args )
 {
 	if ( g_hOptionsDialog )
 	{
-		CBasePanel* pBasePanel = (CBasePanel*) g_hOptionsDialog->GetParent();
+		CBaseModPanel* pBasePanel = (CBaseModPanel*) g_hOptionsDialog->GetParent();
 		g_hOptionsDialog->Close();
 		delete g_hOptionsDialog.Get();
 		if ( pBasePanel )
