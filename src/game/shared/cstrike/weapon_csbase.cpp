@@ -1302,6 +1302,7 @@ void CWeaponCSBase::Precache( void )
 	PrecacheScriptSound( "Default.ClipEmpty_Rifle" );
 
 	PrecacheScriptSound( "Default.Zoom" );
+	PrecacheScriptSound( "Weapon.AutoSemiAutoSwitch" );
 
 	// PiMoN: weaponscript parsing happens on Precache() of BaseCombatWeapon
 	// so moving it here from construct is actually a good solution, all
