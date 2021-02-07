@@ -296,6 +296,13 @@ void CCSModeManager::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 ClientModeCSNormal::ClientModeCSNormal()
 {
+	m_CCDeathHandle = INVALID_CLIENT_CCHANDLE;
+	m_CCDeathPercent = 0.0f;
+	m_CCFreezePeriodHandle_CT = INVALID_CLIENT_CCHANDLE;
+	m_CCFreezePeriodPercent_CT = 0.0f;
+	m_CCFreezePeriodHandle_T = INVALID_CLIENT_CCHANDLE;
+	m_CCFreezePeriodPercent_T = 0.0f;
+
 	HOOK_MESSAGE( MatchEndConditions );
 }
 
@@ -320,11 +327,8 @@ void ClientModeCSNormal::Init()
 
 	usermessages->HookMessage( "KillCam", MsgFunc_KillCam );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] Add the shared HUD elements to the render groups responsible for hiding 
 	//		conflicting UI
-	//=============================================================================
 	CHudElement* hintBox = (CHudElement*)GET_HUDELEMENT( CHudHintDisplay );
 	if (hintBox)
 	{
@@ -338,9 +342,27 @@ void ClientModeCSNormal::Init()
 	{
 		historyResource->RegisterForRenderGroup("hide_for_scoreboard");		
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+	
+	if ( m_CCDeathHandle == INVALID_CLIENT_CCHANDLE )
+	{
+		const char *szRawFile = "materials/correction/cc_death.raw";
+		m_CCDeathPercent = 0.0f;
+		m_CCDeathHandle = g_pColorCorrectionMgr->AddColorCorrection( szRawFile );
+	}
+
+	if ( m_CCFreezePeriodHandle_CT == INVALID_CLIENT_CCHANDLE )
+	{
+		const char *szRawFile = "materials/correction/cc_freeze_ct.raw";
+		m_CCFreezePeriodPercent_CT = 0.0f;
+		m_CCFreezePeriodHandle_CT = g_pColorCorrectionMgr->AddColorCorrection( szRawFile );
+	}
+
+	if ( m_CCFreezePeriodHandle_T == INVALID_CLIENT_CCHANDLE )
+	{
+		const char *szRawFile = "materials/correction/cc_freeze_t.raw";
+		m_CCFreezePeriodPercent_T = 0.0f;
+		m_CCFreezePeriodHandle_T = g_pColorCorrectionMgr->AddColorCorrection( szRawFile );
+	}
 
 	m_fDelayedCTWinTime = -1.0f;
 }
@@ -371,6 +393,90 @@ void ClientModeCSNormal::Update()
 	}
 }
 
+//--------------------------------------------------------------------------------------------------------
+void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
+{
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
+
+	if ( !pPlayer )
+	{
+		m_CCDeathPercent = 0.0f;
+		m_CCFreezePeriodPercent_CT = 0.0f;
+		m_CCFreezePeriodPercent_T = 0.0f;
+		return;
+	}
+
+	bool isDying = false;
+	if ( !pPlayer->IsAlive() && (pPlayer->GetObserverMode() == OBS_MODE_DEATHCAM) )
+	{
+		isDying = true;
+	}
+
+	m_CCDeathPercent = clamp( m_CCDeathPercent + ((isDying) ? 0.1f : -0.1f), 0.0f, 1.0f );
+
+	float flTimer = 0;
+
+	bool bFreezePeriod = CSGameRules()->IsFreezePeriod();
+	bool bImmune = pPlayer->m_bImmunity;
+	if ( bFreezePeriod || bImmune )
+	{
+		float flFadeBegin = 2.0f;
+
+		// countdown to the start of the round while we're in freeze period
+		if ( bImmune )
+		{
+			// if freeze time is also active and freeze time is longer than immune time, use that time instead
+			if ( bFreezePeriod && (CSGameRules()->GetRoundStartTime() - gpGlobals->curtime) > (pPlayer->m_fImmuneToDamageTime - gpGlobals->curtime))
+				flTimer = CSGameRules()->GetRoundStartTime() - gpGlobals->curtime;
+			else
+			{
+				flTimer = pPlayer->m_fImmuneToDamageTime - gpGlobals->curtime;
+				flFadeBegin = 0.5;
+			}
+		}
+		else if ( bFreezePeriod )
+		{
+			flTimer = CSGameRules()->GetRoundStartTime() - gpGlobals->curtime;
+		}
+
+		if ( flTimer > flFadeBegin )
+		{
+			if ( pPlayer->GetTeamNumber() == TEAM_CT )
+			{
+				m_CCFreezePeriodPercent_CT = 1.0f;
+				m_CCFreezePeriodPercent_T = 0.0f;
+			}
+			else
+			{
+				m_CCFreezePeriodPercent_CT = 0.0f;
+				m_CCFreezePeriodPercent_T = 1.0f;
+			}
+		}
+		else
+		{
+			if ( pPlayer->GetTeamNumber() == TEAM_CT )
+			{
+				m_CCFreezePeriodPercent_CT = clamp( flTimer / flFadeBegin, 0.05f, 1.0f );
+				m_CCFreezePeriodPercent_T = 0;
+			}
+			else
+			{
+				m_CCFreezePeriodPercent_T = clamp( flTimer / flFadeBegin, 0.05f, 1.0f );
+				m_CCFreezePeriodPercent_CT = 0;
+			}	
+		}
+	}
+
+}
+
+void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
+{
+	UpdateColorCorrectionWeights();
+	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCDeathHandle, m_CCDeathPercent );
+	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_CT, m_CCFreezePeriodPercent_CT );
+	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_T, m_CCFreezePeriodPercent_T );
+}
 
 /*
 void ClientModeCSNormal::UpdateSpectatorMode( void )
