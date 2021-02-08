@@ -60,7 +60,8 @@ void CChicken::Precache( void )
 	PrecacheScriptSound( "Chicken.Fly" );
 	PrecacheScriptSound( "Chicken.FlapWings" );
 	PrecacheScriptSound( "Chicken.Death" );
-
+	
+	PrecacheParticleSystem( "weapon_confetti_omni" );
 	PrecacheParticleSystem( "impact_helmet_headshot" );
 	PrecacheParticleSystem( "chicken_gone" );
 }
@@ -143,8 +144,12 @@ void CChicken::Spawn( void )
 
 	m_flActiveFollowStartTime = 0;
 
-	SetBodygroup( FindBodygroupByName( "holiday" ), UTIL_IsNewYear() );
-
+	// TODO: rewrite this
+	int bodygroup = FindBodygroupByName( "holiday" );
+	if ( UTIL_IsCSSOBirthday() )
+		SetBodygroup( bodygroup, 1 );
+	if ( UTIL_IsNewYear() )
+		SetBodygroup( bodygroup, 3 );
 }
 
 
@@ -371,8 +376,11 @@ int CChicken::OnTakeDamage( const CTakeDamageInfo &info )
 void CChicken::Event_Killed( const CTakeDamageInfo &info )
 {
 	EmitSound( "Chicken.Death" );
-
-	DispatchParticleEffect( "chicken_gone", GetAbsOrigin(), GetAbsAngles() );
+	
+	if ( UTIL_IsCSSOBirthday() )
+		DispatchParticleEffect( "weapon_confetti_omni", GetAbsOrigin(), QAngle( 0, 0, 0 ) );
+	else
+		DispatchParticleEffect( "chicken_gone", GetAbsOrigin(), GetAbsAngles() );
 
 	if ( IsFollowingSomeone( ) )
 	{

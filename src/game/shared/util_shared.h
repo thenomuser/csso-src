@@ -738,5 +738,6 @@ bool				UTIL_IsHolidayActive( /*EHoliday*/ int eHoliday );
 const char		   *UTIL_GetActiveHolidayString();
 
 bool				UTIL_IsNewYear();
+bool				UTIL_IsCSSOBirthday();
 
 #endif // UTIL_SHARED_H

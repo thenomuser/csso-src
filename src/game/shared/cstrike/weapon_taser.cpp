@@ -18,6 +18,9 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
 
+#define TASER_BIRTHDAY_PARTICLES	"weapon_confetti"
+#define TASER_BIRTHDAY_SOUND		"Weapon_PartyHorn.Single"
+
 class CWeaponTaser : public CWeaponCSBaseGun
 {
 public:
@@ -33,6 +36,10 @@ public:
 #if defined( GAME_DLL )
 	virtual bool Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void ItemPostFrame();
+#endif
+
+#ifdef CLIENT_DLL
+	const char* GetMuzzleFlashEffectName( bool bThirdPerson );
 #endif
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_TASER; }
@@ -61,6 +68,9 @@ CWeaponTaser::CWeaponTaser() :
 void CWeaponTaser::Precache()
 {
 	BaseClass::Precache();
+
+	PrecacheParticleSystem( TASER_BIRTHDAY_PARTICLES );
+	PrecacheScriptSound( TASER_BIRTHDAY_SOUND );
 }
 
 void CWeaponTaser::PrimaryAttack( void )
@@ -69,6 +79,16 @@ void CWeaponTaser::PrimaryAttack( void )
 		return;
 
 	m_fFireTime = gpGlobals->curtime;
+
+	if ( UTIL_IsCSSOBirthday() )
+	{
+		//CPASAttenuationFilter filter( this, params.soundlevel );
+		//EmitSound( filter, entindex(), TASER_BIRTHDAY_SOUND, &GetLocalOrigin(), 0.0f );
+
+		CPASAttenuationFilter filter( this );
+		filter.UsePredictionRules();
+		EmitSound( filter, entindex(), TASER_BIRTHDAY_SOUND );
+	}
 }
 
 #if defined( GAME_DLL )
@@ -95,4 +115,14 @@ void CWeaponTaser::ItemPostFrame()
 	}
 }
 
+#endif
+
+#ifdef CLIENT_DLL
+const char* CWeaponTaser::GetMuzzleFlashEffectName( bool bThirdPerson )
+{
+	if ( UTIL_IsCSSOBirthday() )
+		return TASER_BIRTHDAY_PARTICLES;
+
+	return BaseClass::GetMuzzleFlashEffectName( bThirdPerson );
+}
 #endif

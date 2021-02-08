@@ -148,7 +148,8 @@ END_PREDICTION_DATA()
 		engine->ForceModelBounds( PLANTED_C4_MODEL, Vector( -7, -13, -5 ), Vector( 9, 12, 11 ) );
 
 		PrecacheParticleSystem( "explosion_c4_500" );
-
+		
+		PrecacheParticleSystem( "weapon_confetti_balloons" );
 		PrecacheParticleSystem( "c4_timer_light_trigger" );
 		PrecacheParticleSystem( "c4_timer_light" );
 		PrecacheParticleSystem( "c4_timer_light_dropped" );
@@ -566,19 +567,24 @@ END_PREDICTION_DATA()
 				m_pBombDefuser->m_bIsDefusing = false;
 
 				CSGameRules()->m_bBombDefused = true;
-				//=============================================================================
-				// HPE_BEGIN:
-				// [menglish] Give the bomb defuser an mvp if they ended the round
-				//=============================================================================				 
+				
+				if ( UTIL_IsCSSOBirthday() )
+				{
+					DispatchParticleEffect( "weapon_confetti_balloons", GetAbsOrigin(), QAngle( 0, 0, 0 ) );
+					CPASAttenuationFilter filter( this );
+					filter.UsePredictionRules();
+					EmitSound( filter, entindex(), "Weapon_PartyHorn.Single" );
+					//EmitSound( filter, entindex(), "Birthday_PartyHorn.VO" );
+					//C_BaseEntity::EmitSound(filter, SOUND_FROM_LOCAL_PLAYER, "Birthday_PartyHorn.VO");
+				}
+
+				// [menglish] Give the bomb defuser an mvp if they ended the round		 
 				bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 
 				if(CSGameRules()->CheckWinConditions() && !roundWasAlreadyWon)
 				{
 					m_pBombDefuser->IncrementNumMVPs( CSMVP_BOMBDEFUSE );
-				}				 
-				//=============================================================================
-				// HPE_END
-				//=============================================================================
+				}
 
 				// give the defuser credit for defusing the bomb
 				m_pBombDefuser->IncrementFragCount( 3 );

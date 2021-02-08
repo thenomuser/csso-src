@@ -188,7 +188,7 @@ public:
 
 #ifdef CLIENT_DLL
 	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
-	const char* GetMuzzleFlashEffectName( bool bThirdPerson );
+	virtual const char* GetMuzzleFlashEffectName( bool bThirdPerson );
 	virtual int GetEjectBrassAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson = false );
 #endif
 

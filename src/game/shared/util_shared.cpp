@@ -1181,7 +1181,20 @@ bool UTIL_IsNewYear()
 	time_t timet = time( NULL );
 	struct tm *tm = localtime( &timet );
 
+	// december or january
 	if ( tm->tm_mon > 10 || tm->tm_mon < 1 )
+		return true;
+
+	return false;
+}
+
+bool UTIL_IsCSSOBirthday()
+{
+	time_t timet = time( NULL );
+	struct tm *tm = localtime( &timet );
+
+	// july 9th
+	if ( tm->tm_mon == 6 && tm->tm_mday == 9 )
 		return true;
 
 	return false;
