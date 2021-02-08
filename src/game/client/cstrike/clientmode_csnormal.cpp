@@ -467,6 +467,11 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 			}	
 		}
 	}
+	else
+	{
+		m_CCFreezePeriodPercent_T = 0;
+		m_CCFreezePeriodPercent_CT = 0;
+	}
 
 }
 
