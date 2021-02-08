@@ -8051,8 +8051,7 @@ bool CCSPlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps
 {
 	// High priority entities go through a different use code path requiring
 	// other conditions like distance and view angles to be satisfied
-	CConfigurationForHighPriorityUseEntity_t cfgUseEntity;
-	if ( GetUseConfigurationForHighPriorityUseEntity( pEntity, cfgUseEntity ) )
+	if ( GetUseConfigurationForHighPriorityUseEntity( pEntity ) )
 		return false;
 
 	CWeaponCSBase *pCSWepaon = dynamic_cast<CWeaponCSBase*>(pEntity);

@@ -413,6 +413,7 @@ public:
 
 	CBaseEntity *GetUsableHighPriorityEntity( void );
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
 	
 	bool HasShield() const;
 	bool IsShieldDrawn() const;

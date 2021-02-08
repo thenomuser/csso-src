@@ -315,6 +315,19 @@ bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntit
 	return false;
 }
 
+bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity )
+{
+	if ( dynamic_cast<CPlantedC4*>( pEntity ) )
+	{
+		return true;
+	}
+	else if ( dynamic_cast<CHostage*>( pEntity ) )
+	{
+		return true;
+	}
+	return false;
+}
+
 
 
 CBaseEntity *CCSPlayer::GetUsableHighPriorityEntity( void )

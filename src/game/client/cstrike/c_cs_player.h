@@ -214,6 +214,7 @@ public:
 	virtual float GetPlayerMaxSpeed();
 
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
+	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );
 	CBaseEntity *GetUsableHighPriorityEntity( void );
 
 	void GetBulletTypeParameters(
