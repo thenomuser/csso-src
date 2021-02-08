@@ -77,6 +77,8 @@ void C_PlantedC4::Spawn( void )
 {
 	BaseClass::Spawn();
 
+	AddFlag( FL_OBJECT );
+
 	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 
 	SetNextClientThink( CLIENT_THINK_ALWAYS );

@@ -283,6 +283,7 @@ END_PREDICTION_DATA()
 	{
 		SetMoveType( MOVETYPE_NONE );
 		SetSolid( SOLID_NONE );
+		AddFlag( FL_OBJECT );
 
 		SetModel( PLANTED_C4_MODEL );	// Change this to c4 model
 		SetSequence( 1 );	// this sequence keeps the toggle switch in the 'up' position

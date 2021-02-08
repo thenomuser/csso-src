@@ -8049,6 +8049,12 @@ BuyResult_e CCSPlayer::RebuyArmor()
 
 bool CCSPlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps )
 {
+	// High priority entities go through a different use code path requiring
+	// other conditions like distance and view angles to be satisfied
+	CConfigurationForHighPriorityUseEntity_t cfgUseEntity;
+	if ( GetUseConfigurationForHighPriorityUseEntity( pEntity, cfgUseEntity ) )
+		return false;
+
 	CWeaponCSBase *pCSWepaon = dynamic_cast<CWeaponCSBase*>(pEntity);
 
 	if( pCSWepaon )
@@ -8072,34 +8078,7 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 
 	// Check to see if the bomb is close enough to use before attempting to use anything else.
 
-	if ( CSGameRules()->IsBombDefuseMap() && GetTeamNumber() == TEAM_CT )
-	{
-		// This is done separately since there might be something blocking our LOS to it
-		// but we might want to use it anyway if it's close enough.  This should eliminate
-		// the vast majority of bomb placement exploits (places where the bomb can be planted
-		// but can't be "used".  This also mimics goldsrc cstrike behavior.
-		CBaseEntity *bomb = gEntList.FindEntityByClassname( NULL, PLANTED_C4_CLASSNAME );
-		if (bomb != NULL)
-		{
-			Vector bombPos = bomb->GetAbsOrigin();
-			Vector vecLOS = EyePosition() - bombPos;
-
-			if (vecLOS.LengthSqr() < (96*96)) // 64 is the distance in Goldsrc.  However since Goldsrc did distance from the player's origin and we're doing distance from the player's eye, make the radius a bit bigger.
-			{
-				// bomb is close enough, now make sure the player is facing the bomb.
-				Vector forward;
-				AngleVectors(EyeAngles(), &forward, NULL, NULL);
-
-				vecLOS.NormalizeInPlace();
-
-				float flDot = DotProduct(forward, vecLOS);
-				if (flDot < -0.7) // 0.7 taken from Goldsrc, +/- ~45 degrees
-				{
-					entity = bomb;
-				}
-			}
-		}
-	}
+	entity = GetUsableHighPriorityEntity();
 
 	if ( entity == NULL )
 	{
