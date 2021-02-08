@@ -272,6 +272,8 @@ public:
 	bool IsVIP() const;	// Is this player the VIP?
 
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
+	
+	virtual bool ShouldInterpolate( void );
 
 
 public:
@@ -373,8 +375,18 @@ public:
 
 	float m_flNightVisionAlpha;
 
-	float m_flFlashAlpha;
-	float m_flFlashBangTime;
+	float m_flFlashBangTime;		// end time
+	float m_flFlashScreenshotAlpha;
+	float m_flFlashOverlayAlpha;
+	bool m_bFlashBuildUp;
+	bool m_bFlashDspHasBeenCleared;
+	bool m_bFlashScreenshotHasBeenGrabbed;
+
+	bool IsFlashBangActive( void ) { return ( m_flFlashDuration > 0.0f ) && ( gpGlobals->curtime < m_flFlashBangTime ); }
+	float GetFlashStartTime( void ) { return (m_flFlashBangTime - m_flFlashDuration); }
+	float GetFlashTimeElapsed( void ) { return MAX( gpGlobals->curtime - GetFlashStartTime(), 0.0f ); }
+
+	bool IsBlinded( void ) { return (m_flFlashBangTime - 1.0f) > gpGlobals->curtime; }
 	CNetworkVar( float, m_flFlashMaxAlpha );
 	CNetworkVar( float, m_flFlashDuration );
 
@@ -395,6 +407,8 @@ public:
 	bool IsAbleToInstantRespawn( void );
 
 private:
+	void UpdateFlashBangEffect( void );
+
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;
 	Vector m_lastLadderPos;
@@ -516,6 +530,7 @@ private:
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );
+C_CSPlayer* GetHudPlayer( void );	// get the player we should show the HUD for (local or observed)
 
 inline C_CSPlayer *ToCSPlayer( CBaseEntity *pEntity )
 {

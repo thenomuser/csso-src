@@ -504,6 +504,7 @@ public:
 
 	bool IsBlind( void ) const;		// return true if this player is blind (from a flashbang)
 	virtual void Blind( float holdTime, float fadeTime, float startingAlpha = 255 );	// player blinded by a flashbang
+	void Unblind( void );	// removes the blind effect from the player
 	float m_blindUntilTime;
 	float m_blindStartTime;
 

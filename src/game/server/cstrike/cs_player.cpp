@@ -3188,45 +3188,28 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 	m_blindUntilTime = MAX( m_blindUntilTime, gpGlobals->curtime + holdTime + 0.5f * fadeTime );
 	m_blindStartTime = gpGlobals->curtime;
 
-	// Spectators get a lessened flash.
-	if ( (GetObserverMode() != OBS_MODE_NONE)  &&  (GetObserverMode() != OBS_MODE_IN_EYE) )
-	{
-		if ( !mp_fadetoblack.GetBool() )
-		{
-			clr.a = 150;
+	fadeTime /= 1.4f;
 
-			fadeTime = MIN(fadeTime, 0.5f); // make sure the spectator flashbang time is 1/2 second or less.
-			holdTime = MIN(holdTime, fadeTime * 0.5f); // adjust the hold time to match the fade time.
-			UTIL_ScreenFade( this, clr, fadeTime, holdTime, FFADE_IN );
-		}
+	if ( gpGlobals->curtime > oldBlindUntilTime )
+	{
+		// The previous flashbang is wearing off, or completely gone
+		m_flFlashDuration = fadeTime;
+		m_flFlashMaxAlpha = startingAlpha;
 	}
 	else
 	{
-		fadeTime /= 1.4;
+		// The previous flashbang is still going strong - only extend the duration
+		float remainingDuration = oldBlindStartTime + m_flFlashDuration - gpGlobals->curtime;
 
-		if ( gpGlobals->curtime > oldBlindUntilTime )
-		{
-			// The previous flashbang is wearing off, or completely gone
-			m_flFlashDuration = fadeTime;
-			m_flFlashMaxAlpha = startingAlpha;
-		}
-		else
-		{
-			// The previous flashbang is still going strong - only extend the duration
-			float remainingDuration = oldBlindStartTime + m_flFlashDuration - gpGlobals->curtime;
+		float flNewDuration = Max( remainingDuration, fadeTime );
 
-			m_flFlashDuration = MAX( remainingDuration, fadeTime );
-			m_flFlashMaxAlpha = MAX( m_flFlashMaxAlpha, startingAlpha );
-		}
+		// The flashbang client effect runs off a network var change callback... Make sure the bits for duration get
+		// sent by changing it a tiny bit whenever these end up being equal.
+		if ( m_flFlashDuration == flNewDuration )
+			flNewDuration += 0.01f;
 
-		// PiMoN: it's not even used!!!
-		// allow bots to react
-		//IGameEvent * event = gameeventmanager->CreateEvent( "player_blind" );
-		//if ( event )
-		//{
-		//	event->SetInt( "userid", GetUserID() );
-		//	gameeventmanager->FireEvent( event );
-		//}
+		m_flFlashDuration = flNewDuration;
+		m_flFlashMaxAlpha = Max( m_flFlashMaxAlpha.Get(), startingAlpha );
 	}
 }
 
@@ -10433,6 +10416,17 @@ void CCSPlayer::IncrementAssistsCount( int nCount )
 	m_iAssists += nCount;
 	pl.assists = m_iAssists;
 }
+
+
+//This effectively disables the rendering of the flashbang effect,
+//but allows the server to finish and game rules processing.
+//(Used to hide effect at the end of a match so that players can see the scoreboard. )
+void CCSPlayer::Unblind( void )
+{
+	m_flFlashDuration = 0.0f;
+	m_flFlashMaxAlpha = 0.0f;
+}
+
 
 void UTIL_AwardMoneyToTeam( int iAmount, int iTeam, CBaseEntity *pIgnore )
 {

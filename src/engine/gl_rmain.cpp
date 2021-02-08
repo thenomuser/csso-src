@@ -248,8 +248,8 @@ public:
 	void ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags );
 
 	void ViewEnd( void );
-
-	void ViewDrawFade( byte *color, IMaterial* pMaterial );
+	
+	void ViewDrawFade( byte *color, IMaterial* pMaterial, bool mapFullTextureToScreen = true );
 
 	IWorldRenderList * CreateWorldList();
 	void BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pWaterReflectionHeight );
@@ -920,7 +920,7 @@ bool CRender::ScreenTransform( const Vector& point, Vector* pScreen )
 	return retval;
 }
 
-void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial )
+void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen )
 {		
 	if ( !color || !color[3] )
 		return;
@@ -931,6 +931,8 @@ void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial )
 	const CViewSetup &view = CurrentView();
 
 	CMatRenderContextPtr pRenderContext( materials );
+
+	pRenderContext->PushRenderTargetAndViewport();
 
 	pRenderContext->Bind( pFadeMaterial );
 	pFadeMaterial->AlphaModulate( color[3] * ( 1.0f / 255.0f ) );
@@ -947,13 +949,17 @@ void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial )
 	float flUOffset = 0.5f / nTexWidth;
 	float flVOffset = 0.5f / nTexHeight;
 
+	int width, height;
+	pRenderContext->GetRenderTargetDimensions( width, height );
+	pRenderContext->Viewport( 0, 0, width, height );
+
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 
 	pRenderContext->PushMatrix();
 	pRenderContext->LoadIdentity();
 
 	pRenderContext->Scale( 1, -1, 1 );
-	pRenderContext->Ortho( 0, 0, view.width, view.height, -99999, 99999 );
+	pRenderContext->Ortho( 0, 0, width, height, -99999, 99999 );
 
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PushMatrix();
@@ -966,20 +972,32 @@ void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial )
 	IMesh* pMesh = pRenderContext->GetDynamicMesh();
 	CMeshBuilder meshBuilder;
 	meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );
-	
-	float flOffset = 0.5f;
 
-	// Note - the viewport has already adjusted the origin
-	float x1=0.0f - flOffset;
-	float x2=view.width - flOffset;
-	float y1=0.0f - flOffset;
-	float y2=view.height - flOffset;
+	// adjusted xys
+	float x1=view.x-.5;
+	float x2=view.x+view.width;
+	float y1=view.y-.5;
+	float y2=view.y+view.height;
 
-	// adjust nominal uvs to reflect adjusted xys
-	float u1=FLerp(flUOffset, 1-flUOffset,view.x,view.x+view.width,x1);
-	float u2=FLerp(flUOffset, 1-flUOffset,view.x,view.x+view.width,x2);
-	float v1=FLerp(flVOffset, 1-flVOffset,view.y,view.y+view.height,y1);
-	float v2=FLerp(flVOffset, 1-flVOffset,view.y,view.y+view.height,y2);
+	float u1, u2, v1, v2;
+
+	if ( mapFullTextureToScreen )
+	{
+		// adjust nominal uvs to reflect adjusted xys
+		u1=FLerp(flUOffset, 1-flUOffset,view.x,view.x+view.width,x1);
+		u2=FLerp(flUOffset, 1-flUOffset,view.x,view.x+view.width,x2);
+		v1=FLerp(flVOffset, 1-flVOffset,view.y,view.y+view.height,y1);
+		v2=FLerp(flVOffset, 1-flVOffset,view.y,view.y+view.height,y2);
+	}
+	else
+	{
+		// Match up the view port window with a corresponding window in the fade texture.
+		// This is mainly for split screen support.
+		u1 = Lerp( x1 / (float)width, flUOffset, 1-flUOffset );
+		u2 = Lerp( x2 / (float)width, flUOffset, 1-flUOffset );
+		v1 = Lerp( y1 / (float)height, flVOffset, 1-flVOffset );
+		v2 = Lerp( y2 / (float)height, flVOffset, 1-flVOffset );
+	}
 
 	for ( int corner=0; corner<4; corner++ )
 	{
@@ -999,6 +1017,8 @@ void CRender::ViewDrawFade( byte *color, IMaterial* pFadeMaterial )
     pRenderContext->PopMatrix();
     
 	pFadeMaterial->SetMaterialVarFlag( MATERIAL_VAR_IGNOREZ, bOldIgnoreZ );
+
+	pRenderContext->PopRenderTargetAndViewport();
 }
 
 void CRender::ExtractFrustumPlanes( Frustum frustumPlanes )

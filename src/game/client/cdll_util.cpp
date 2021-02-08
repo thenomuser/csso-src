@@ -163,6 +163,23 @@ int GetSpectatorTarget( void )
 	}
 }
 
+bool CanSeeSpectatorOnlyTools( void )
+{
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( !pPlayer )
+		return false;
+
+	if ( pPlayer->IsHLTV() )
+		return true;
+
+	if ( pPlayer->GetTeamNumber() == TEAM_SPECTATOR )
+	{
+		return true;
+	}
+		
+	return false;
+}
+
 int GetLocalPlayerTeam( void ) 
 { 
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();

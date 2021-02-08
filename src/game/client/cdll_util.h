@@ -78,6 +78,7 @@ char	*VarArgs( PRINTF_FORMAT_STRING const char *format, ... );
 
 // Get the entity the local player is spectating (can be a player or a ragdoll entity).
 int		GetSpectatorTarget();
+bool	CanSeeSpectatorOnlyTools( void );
 int		GetSpectatorMode( void );
 bool	IsPlayerIndex( int index );
 void	UpdateLocalPlayerVisionFlags();

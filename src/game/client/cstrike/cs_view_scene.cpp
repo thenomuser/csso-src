@@ -36,6 +36,7 @@
 #include "cs_gamerules.h"
 #include "shake.h"
 #include "clienteffectprecachesystem.h"
+#include "engine/IEngineSound.h"
 #include <vgui/ISurface.h>
 
 CLIENTEFFECT_REGISTER_BEGIN( PrecacheCSViewScene )
@@ -168,128 +169,131 @@ void CCSViewRender::PerformNightVisionEffect( const CViewSetup &view )
 // this does the burn in for the flashbang effect.
 void CCSViewRender::PerformFlashbangEffect( const CViewSetup &view )
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-
-	if ( pPlayer == NULL )
+	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( pLocalPlayer == NULL )
 		 return;
 
-	if ( pPlayer->m_flFlashBangTime < gpGlobals->curtime )
-		return;
-	
-	IMaterial *pMaterial = materials->FindMaterial( "effects/flashbang", TEXTURE_GROUP_CLIENT_EFFECTS, true );
+	C_CSPlayer *pFlashBangPlayer = pLocalPlayer;
+	//bool bReduceEffect = false;
 
-	if ( !pMaterial )
-		return;
-
-	byte overlaycolor[4] = { 255, 255, 255, 255 };
-	
-	CMatRenderContextPtr pRenderContext( materials );
-	
-	if ( pPlayer->m_flFlashAlpha < pPlayer->m_flFlashMaxAlpha )
+	float flAlphaScale = 1.0f;
+	if ( pLocalPlayer->GetObserverMode() != OBS_MODE_NONE )
 	{
-		pPlayer->m_flFlashAlpha += 45;
-		
-		pPlayer->m_flFlashAlpha = MIN( pPlayer->m_flFlashAlpha, pPlayer->m_flFlashMaxAlpha );
-
-		overlaycolor[0] = overlaycolor[1] = overlaycolor[2] = pPlayer->m_flFlashAlpha;
-
-		m_pFlashTexture = GetFullFrameFrameBufferTexture( 1 );
-
-		bool foundVar;
-
-		IMaterialVar* m_BaseTextureVar = pMaterial->FindVar( "$basetexture", &foundVar, false );
-	
-		Rect_t srcRect;
-		srcRect.x = view.x;
-		srcRect.y = view.y;
-		srcRect.width = view.width;
-		srcRect.height = view.height;
-		m_BaseTextureVar->SetTextureValue( m_pFlashTexture );
-		pRenderContext->CopyRenderTargetToTextureEx( m_pFlashTexture, 0, &srcRect, NULL );
-		pRenderContext->SetFrameBufferCopyTexture( m_pFlashTexture );
-
-		render->ViewDrawFade( overlaycolor, pMaterial );
-
-		// just do one pass for dxlevel < 80.
-		if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 80)
+		// If spectating, use values from target
+		CBaseEntity *pTarget = pLocalPlayer->GetObserverTarget();
+		if ( pTarget )
 		{
-			pRenderContext->DrawScreenSpaceRectangle( pMaterial, view.x, view.y, view.width, view.height,
-				0, 0, m_pFlashTexture->GetActualWidth()-1, m_pFlashTexture->GetActualHeight()-1, 
-				m_pFlashTexture->GetActualWidth(), m_pFlashTexture->GetActualHeight() );
-			render->ViewDrawFade( overlaycolor, pMaterial );
-			pRenderContext->DrawScreenSpaceRectangle( pMaterial, view.x, view.y, view.width, view.height,
-				0, 0, m_pFlashTexture->GetActualWidth()-1, m_pFlashTexture->GetActualHeight()-1, 
-				m_pFlashTexture->GetActualWidth(), m_pFlashTexture->GetActualHeight() );
-		}
-	}
-	else if ( m_pFlashTexture )
-	{
-		float flAlpha = pPlayer->m_flFlashMaxAlpha * (pPlayer->m_flFlashBangTime - gpGlobals->curtime) / pPlayer->m_flFlashDuration;
-
-		flAlpha = clamp( flAlpha, 0, pPlayer->m_flFlashMaxAlpha );
-		
-		overlaycolor[0] = overlaycolor[1] = overlaycolor[2] = flAlpha;
-
-		render->ViewDrawFade( overlaycolor, pMaterial );
-
-		// just do one pass for dxlevel < 80.
-		if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 80)
-		{
-			pRenderContext->DrawScreenSpaceRectangle( pMaterial, view.x, view.y, view.width, view.height,
-				0, 0, m_pFlashTexture->GetActualWidth()-1, m_pFlashTexture->GetActualHeight()-1, 
-				m_pFlashTexture->GetActualWidth(), m_pFlashTexture->GetActualHeight() );
-			render->ViewDrawFade( overlaycolor, pMaterial );
-			pRenderContext->DrawScreenSpaceRectangle( pMaterial, view.x, view.y, view.width, view.height,
-				0, 0, m_pFlashTexture->GetActualWidth()-1, m_pFlashTexture->GetActualHeight()-1, 
-				m_pFlashTexture->GetActualWidth(), m_pFlashTexture->GetActualHeight() );
-		}
-	}
-
-	// this does the pure white overlay part of the flashbang effect.
-	pMaterial = materials->FindMaterial( "effects/flashbang_white", TEXTURE_GROUP_CLIENT_EFFECTS, true );
-
-	if ( !pMaterial )
-		return;
-
-	float flAlpha = 255;
-
-	if ( pPlayer->m_flFlashAlpha < pPlayer->m_flFlashMaxAlpha )
-	{
-		 flAlpha = pPlayer->m_flFlashAlpha;
-	}
-	else
-	{
-		float flFlashTimeLeft = pPlayer->m_flFlashBangTime - gpGlobals->curtime;
-		float flAlphaPercentage = 1.0;
-		const float certainBlindnessTimeThresh = 3.0; // yes this is a magic number, necessary to match CS/CZ flashbang effectiveness cause the rendering system is completely different.
-
-		if (flFlashTimeLeft > certainBlindnessTimeThresh)
-		{
-			// if we still have enough time of blindness left, make sure the player can't see anything yet.
-			flAlphaPercentage = 1.0;
-		}
-		else
-		{
-			// blindness effects shorter than 'certainBlindnessTimeThresh' will start off at less than 255 alpha.
-			flAlphaPercentage = flFlashTimeLeft / certainBlindnessTimeThresh;
-
-			if (g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 80)
+			C_CSPlayer *pPlayerTmp = ToCSPlayer(pTarget);
+			if ( pPlayerTmp )
 			{
-				// reduce alpha level quicker with dx 8 support and higher to compensate
-				// for having the burn-in effect.
-				flAlphaPercentage *= flAlphaPercentage;
+				pFlashBangPlayer = pPlayerTmp;
 			}
 		}
 
-		flAlpha = flAlphaPercentage *= pPlayer->m_flFlashMaxAlpha; // scale a [0..1) value to a [0..MaxAlpha] value for the alpha.
-
-		// make sure the alpha is in the range of [0..MaxAlpha]
-		flAlpha = MAX ( flAlpha, 0 );
-		flAlpha = MIN ( flAlpha, pPlayer->m_flFlashMaxAlpha);
+		// reduce the effect
+		if ( pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE && CanSeeSpectatorOnlyTools() )
+		{
+			// Reduce alpha.
+			// Note: the logic to reduce the duration of the effect is done when the effect is started (RecvProxy_FlashTime).
+			flAlphaScale = 0.6f;
+		}
+		else if ( pLocalPlayer->GetObserverMode() == OBS_MODE_FIXED || pLocalPlayer->GetObserverMode() == OBS_MODE_ROAMING )
+		{
+			// Reduce alpha.
+			// Note: the logic to reduce the duration of the effect is done when the effect is started (RecvProxy_FlashTime).
+			flAlphaScale = 0.2f;
+		}
+		else if ( pLocalPlayer->GetObserverMode() != OBS_MODE_IN_EYE )
+		{
+			// Reduce alpha.
+			// Note: the logic to reduce the duration of the effect is done when the effect is started (RecvProxy_FlashTime).
+			flAlphaScale = 0.6f;
+		}
 	}
 
-	overlaycolor[0] = overlaycolor[1] = overlaycolor[2] = flAlpha;
-	render->ViewDrawFade( overlaycolor, pMaterial );
+	if ( !pFlashBangPlayer->IsFlashBangActive() || CSGameRules()->IsIntermission() )
+	{
+		if ( !pLocalPlayer->m_bFlashDspHasBeenCleared )
+		{
+			CLocalPlayerFilter filter;
+			enginesound->SetPlayerDSP( filter, 0, true );
+			pLocalPlayer->m_bFlashDspHasBeenCleared = true;
+		}
+		return;
+	}
+
+	// bandaid to insure that flashbang dsp effect doesn't continue on indefinitely
+	if( pFlashBangPlayer->GetFlashTimeElapsed() > 1.6f && !pLocalPlayer->m_bFlashDspHasBeenCleared )
+	{
+		CLocalPlayerFilter filter;
+		enginesound->SetPlayerDSP( filter, 0, true );
+		pLocalPlayer->m_bFlashDspHasBeenCleared = true;
+	}
+
+	byte overlaycolor[4] = { 255, 255, 255, 255 };
+
+	// draw the screenshot overlay portion of the flashbang effect
+	IMaterial *pMaterial = materials->FindMaterial( "effects/flashbang", TEXTURE_GROUP_CLIENT_EFFECTS, true );
+	if ( pMaterial )
+	{
+		// This is for handling split screen where we could potentially enter this function more than once a frame.
+		// Since this bit of code grabs both the left and right viewports of the buffer, it only needs to be done once per frame per flash.
+		static float lastTimeGrabbed = 0.0f;
+		if ( gpGlobals->curtime == lastTimeGrabbed )
+		{
+			pLocalPlayer->m_bFlashScreenshotHasBeenGrabbed = true;
+			pFlashBangPlayer->m_bFlashScreenshotHasBeenGrabbed = true;
+		}
+
+		if ( !pFlashBangPlayer->m_bFlashScreenshotHasBeenGrabbed )
+		{
+			CMatRenderContextPtr pRenderContext( materials );
+			int nScreenWidth, nScreenHeight;
+			pRenderContext->GetRenderTargetDimensions( nScreenWidth, nScreenHeight );
+
+			// update m_pFlashTexture
+			lastTimeGrabbed = gpGlobals->curtime;
+			bool foundVar;
+
+			IMaterialVar* m_BaseTextureVar = pMaterial->FindVar( "$basetexture", &foundVar, false );
+			m_pFlashTexture = GetFullFrameFrameBufferTexture( 1 );
+
+			// When grabbing the texture for the super imposed frame, we grab the whole buffer, not just the viewport.
+			// We were having issues with trying to grab only the right side of the buffer for the second player in split screen.
+			Rect_t srcRect;
+			srcRect.x = 0;
+			srcRect.y = 0;
+			srcRect.width = nScreenWidth;
+			srcRect.height = nScreenHeight;
+			m_BaseTextureVar->SetTextureValue( m_pFlashTexture );
+			pRenderContext->CopyRenderTargetToTextureEx( m_pFlashTexture, 0, &srcRect, NULL );
+			pRenderContext->SetFrameBufferCopyTexture( m_pFlashTexture );
+
+			pFlashBangPlayer->m_bFlashScreenshotHasBeenGrabbed = true;
+			pLocalPlayer->m_bFlashScreenshotHasBeenGrabbed = true;
+		}
+
+		if ( !CanSeeSpectatorOnlyTools() )
+		{
+			overlaycolor[0] = overlaycolor[1] = overlaycolor[2] = pFlashBangPlayer->m_flFlashScreenshotAlpha * flAlphaScale;
+			if ( m_pFlashTexture != NULL )
+			{
+				static int NUM_AFTER_IMAGE_PASSES = 4;
+				for ( int pass = 0; pass < NUM_AFTER_IMAGE_PASSES; ++pass )
+				{
+					render->ViewDrawFade( overlaycolor, pMaterial, false );
+				}
+			}
+		}
+	}
+
+	// draw pure white overlay part of the flashbang effect.
+	pMaterial = materials->FindMaterial( "effects/flashbang_white", TEXTURE_GROUP_CLIENT_EFFECTS, true );
+	if ( pMaterial )
+	{
+		overlaycolor[0] = overlaycolor[1] = overlaycolor[2] = pFlashBangPlayer->m_flFlashOverlayAlpha * flAlphaScale;
+		render->ViewDrawFade( overlaycolor, pMaterial );
+	}
 }
 
 

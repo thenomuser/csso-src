@@ -3621,7 +3621,7 @@ ConVar snd_music_selection(
 			GiveC4();
 
 		// Reset game variables
-		m_flIntermissionEndTime = 0;
+        m_flIntermissionStartTime = 0;
 		m_flRestartRoundTime = 0.0;
 		m_iHostagesRescued = 0;
 		m_iHostagesTouched = 0;
@@ -4016,22 +4016,16 @@ ConVar snd_music_selection(
 	{
 		if ( g_fGameOver )   // someone else quit the game already
 		{
-			//=============================================================================
-			// HPE_BEGIN:
 			// [Forrest] Calling ChangeLevel multiple times was causing IncrementMapCycleIndex
 			// to skip over maps in the list.  Avoid this using a technique from CTeamplayRoundBasedRules::Think.
-			//=============================================================================
 			// check to see if we should change levels now
-			if ( m_flIntermissionEndTime && ( m_flIntermissionEndTime < gpGlobals->curtime ) )
+			if ( m_flIntermissionStartTime && ( m_flIntermissionStartTime + GetIntermissionDuration() < gpGlobals->curtime ) )
 			{
 				ChangeLevel(); // intermission is over
 
-				// Don't run this code again
-				m_flIntermissionEndTime = 0.f;
+                // Don't run this code again
+                m_flIntermissionStartTime = 0.f;
 			}
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
 
 			return true;
 		}
@@ -4323,8 +4317,17 @@ ConVar snd_music_selection(
 
 		BaseClass::GoToIntermission();
 
-		// set all players to FL_FROZEN
-		FreezePlayers();
+		//Clear various states from all players and freeze them in place
+		for ( int i = 1; i <= MAX_PLAYERS; i++ )
+		{
+			CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+
+			if ( pPlayer )
+			{
+				pPlayer->Unblind();
+				pPlayer->AddFlag( FL_FROZEN );
+			}
+		}
 
 		// freeze players while in intermission
 		m_bFreezePeriod = true;
@@ -4493,7 +4496,8 @@ ConVar snd_music_selection(
 		PrintToConsole( player, str.sprintf( "m_iRoundWinStatus: %d\n", m_iRoundWinStatus ) );
 
 		PrintToConsole( player, str.sprintf( "first connected: %d\n", m_bFirstConnected ) );
-		PrintToConsole( player, str.sprintf( "intermission end time: %f\n", m_flIntermissionEndTime ) );
+        PrintToConsole( player, str.sprintf( "intermission start time: %f\n", m_flIntermissionStartTime ) );
+		PrintToConsole( player, str.sprintf( "intermission duration: %f\n", GetIntermissionDuration() ) );
 		PrintToConsole( player, str.sprintf( "freeze period: %d\n", m_bFreezePeriod.Get() ) );
 		PrintToConsole( player, str.sprintf( "round restart time: %f\n", m_flRestartRoundTime ) );
 		PrintToConsole( player, str.sprintf( "game start time: %f\n", m_flGameStartTime.Get() ) );
@@ -7037,6 +7041,15 @@ float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGre
 	}
 	
 	return 0;
+}
+
+bool CCSGameRules::IsIntermission( void ) const
+{
+#ifndef CLIENT_DLL
+    return m_flIntermissionStartTime + GetIntermissionDuration() > gpGlobals->curtime;
+#endif
+
+    return false;
 }
 
 #ifdef CLIENT_DLL

@@ -663,7 +663,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			C_BasePlayer* pTeamPlayer = pLocalPlayer;
 			if ( pLocalPlayer->GetTeamNumber() == TEAM_SPECTATOR || pLocalPlayer->IsHLTV() )
 			{
-				pTeamPlayer = UTIL_PlayerByIndex( GetLocalPlayerIndex() );
+				pTeamPlayer = GetHudPlayer();
 			}
 			if ( winningTeam == pTeamPlayer->GetTeamNumber() )
 			{
@@ -1562,7 +1562,7 @@ void ClientModeCSNormal::PostRenderVGui()
 
 bool ClientModeCSNormal::ShouldDrawViewModel( void )
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	C_CSPlayer *pPlayer = GetHudPlayer();
 	
 	if( pPlayer && pPlayer->GetFOV() != CSGameRules()->DefaultFOV() )
 	{

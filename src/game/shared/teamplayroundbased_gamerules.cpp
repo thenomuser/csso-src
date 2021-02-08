@@ -615,7 +615,7 @@ void CTeamplayRoundBasedRules::Think( void )
 	if ( g_fGameOver )   // someone else quit the game already
 	{
 		// check to see if we should change levels now
-		if ( m_flIntermissionEndTime && ( m_flIntermissionEndTime < gpGlobals->curtime ) )
+		if ( m_flIntermissionStartTime && ( m_flIntermissionStartTime + GetIntermissionDuration() < gpGlobals->curtime ) )
 		{
 			if ( !IsX360() )
 			{
@@ -633,7 +633,7 @@ void CTeamplayRoundBasedRules::Think( void )
 			}
 
 			// Don't run this code again
-			m_flIntermissionEndTime = 0.f;
+			m_flIntermissionStartTime = 0.f;
 		}
 
 		return;

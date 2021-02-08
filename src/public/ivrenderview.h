@@ -252,7 +252,7 @@ public:
 
 	virtual	void			VguiPaint( void ) = 0;
 	// Sets up view fade parameters
-	virtual void			ViewDrawFade( byte *color, IMaterial *pMaterial ) = 0;
+	virtual void			ViewDrawFade( byte *color, IMaterial *pMaterial, bool mapFullTextureToScreen = true ) = 0;
 	// Sets up the projection matrix for the specified field of view
 	virtual void			OLD_SetProjectionMatrix( float fov, float zNear, float zFar ) = 0;
 	// Determine lighting at specified position

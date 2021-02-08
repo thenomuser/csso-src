@@ -1122,12 +1122,26 @@ ConVarRef suitcharger( "sk_suitcharger" );
 	//=========================================================
 	//======== CMultiplayRules private functions ===========
 
+	float CMultiplayRules::GetIntermissionDuration() const
+	{
+		float flWaitTime = mp_chattime.GetInt();
+
+		if ( tv_delaymapchange.GetBool() )
+		{
+			if ( HLTVDirector()->IsActive() )	
+				flWaitTime = MAX( flWaitTime, HLTVDirector()->GetDelay() );
+		}
+
+		return flWaitTime;
+	}
+
 	void CMultiplayRules::GoToIntermission( void )
 	{
 		if ( g_fGameOver )
 			return;
 
 		g_fGameOver = true;
+		m_flIntermissionStartTime = gpGlobals->curtime;
 
 		float flWaitTime = mp_chattime.GetInt();
 
@@ -1136,8 +1150,6 @@ ConVarRef suitcharger( "sk_suitcharger" );
 			if ( HLTVDirector()->IsActive() )	
 				flWaitTime = MAX( flWaitTime, HLTVDirector()->GetDelay() );
 		}
-				
-		m_flIntermissionEndTime = gpGlobals->curtime + flWaitTime;
 
 		for ( int i = 1; i <= MAX_PLAYERS; i++ )
 		{

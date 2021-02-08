@@ -705,13 +705,25 @@ void RecvProxy_NightVision( const CRecvProxyData *pData, void *pStruct, void *pO
 void RecvProxy_FlashTime( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_CSPlayer *pPlayerData = (C_CSPlayer * ) pStruct;
+	pPlayerData->m_bFlashBuildUp = false;
 
 	float flNewFlashDuration = pData->m_Value.m_Float;
 	if ( flNewFlashDuration == 0.0f )
 	{
 		// Disable flashbang effect
+		pPlayerData->m_flFlashScreenshotAlpha = 0.0f;
+		pPlayerData->m_flFlashOverlayAlpha = 0.0f;
+		pPlayerData->m_bFlashBuildUp = false;
+		pPlayerData->m_bFlashScreenshotHasBeenGrabbed = false;
 		pPlayerData->m_flFlashDuration = 0.0f;
 		pPlayerData->m_flFlashBangTime = 0.0f;
+		pPlayerData->m_bFlashDspHasBeenCleared = false;
+	
+		C_CSPlayer *pLocalCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if (pLocalCSPlayer)
+		{
+			pLocalCSPlayer->m_bFlashDspHasBeenCleared = false;
+		}
 		return;
 	}
 
@@ -729,8 +741,83 @@ void RecvProxy_FlashTime( const CRecvProxyData *pData, void *pStruct, void *pOut
 		return;
 	}
 
+	if ( !pPlayerData->IsFlashBangActive() && flNewFlashDuration > 0.0f )
+	{
+		// reset flash alpha to start of effect build-up
+		pPlayerData->m_flFlashScreenshotAlpha = 1.0f;
+		pPlayerData->m_flFlashOverlayAlpha = 1.0f;
+		pPlayerData->m_bFlashBuildUp = true;
+		pPlayerData->m_bFlashScreenshotHasBeenGrabbed = false;
+	}
+
 	pPlayerData->m_flFlashDuration = flNewFlashDuration;
 	pPlayerData->m_flFlashBangTime = gpGlobals->curtime + pPlayerData->m_flFlashDuration;
+	pPlayerData->m_bFlashDspHasBeenCleared = false;
+	
+	C_CSPlayer *pLocalCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if (pLocalCSPlayer)
+	{
+		pLocalCSPlayer->m_bFlashDspHasBeenCleared = false;
+	}
+}
+
+void C_CSPlayer::UpdateFlashBangEffect( void )
+{
+	if ( ( m_flFlashBangTime < gpGlobals->curtime ) || ( m_flFlashMaxAlpha <= 0.0f ) )
+	{
+		// FlashBang is inactive
+		m_flFlashScreenshotAlpha = 0.0f;
+		m_flFlashOverlayAlpha = 0.0f;
+		return;
+	}
+
+	static const float FLASH_BUILD_UP_PER_FRAME = 45.0f;
+	static const float FLASH_BUILD_UP_DURATION = ( 255.0f / FLASH_BUILD_UP_PER_FRAME ) * ( 1.0f / 60.0f );
+
+	float flFlashTimeElapsed = GetFlashTimeElapsed();
+
+	if ( m_bFlashBuildUp )
+	{
+		// build up
+		m_flFlashScreenshotAlpha = Clamp( ( flFlashTimeElapsed / FLASH_BUILD_UP_DURATION ) * m_flFlashMaxAlpha.Get(), 0.0f, m_flFlashMaxAlpha.Get() );
+		m_flFlashOverlayAlpha = m_flFlashScreenshotAlpha;
+
+		if ( flFlashTimeElapsed >= FLASH_BUILD_UP_DURATION )
+		{
+			m_bFlashBuildUp = false;
+		}
+	}
+	else
+	{
+		// cool down
+		float flFlashTimeLeft = m_flFlashBangTime - gpGlobals->curtime;
+		m_flFlashScreenshotAlpha = ( m_flFlashMaxAlpha * flFlashTimeLeft ) / m_flFlashDuration;
+		m_flFlashScreenshotAlpha = Clamp( m_flFlashScreenshotAlpha, 0.0f, m_flFlashMaxAlpha.Get() );
+
+		float flAlphaPercentage = 1.0f;
+		const float certainBlindnessTimeThresh = 3.0f; // yes this is a magic number, necessary to match CS/CZ flashbang effectiveness cause the rendering system is completely different.
+
+		if (flFlashTimeLeft > certainBlindnessTimeThresh)
+		{
+			// if we still have enough time of blindness left, make sure the player can't see anything yet.
+			flAlphaPercentage = 1.0f;
+		}
+		else
+		{
+			// blindness effects shorter than 'certainBlindness`TimeThresh' will start off at less than 255 alpha.
+			flAlphaPercentage = flFlashTimeLeft / certainBlindnessTimeThresh;
+
+			// reduce alpha level quicker with dx 8 support and higher to compensate
+			// for having the burn-in effect.
+			flAlphaPercentage *= flAlphaPercentage;
+		}
+
+		m_flFlashOverlayAlpha = flAlphaPercentage *= m_flFlashMaxAlpha; // scale a [0..1) value to a [0..MaxAlpha] value for the alpha.
+
+		// make sure the alpha is in the range of [0..MaxAlpha]
+		m_flFlashOverlayAlpha = Max( m_flFlashOverlayAlpha, 0.0f );
+		m_flFlashOverlayAlpha = Min( m_flFlashOverlayAlpha, m_flFlashMaxAlpha.Get());
+	}
 }
 
 void RecvProxy_HasDefuser( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -963,6 +1050,12 @@ C_CSPlayer::C_CSPlayer() :
 	m_bPlayingHostageCarrySound = false;
 
 	m_iMoveState = MOVESTATE_IDLE;
+
+	m_flFlashScreenshotAlpha = 0.0f;
+	m_flFlashOverlayAlpha = 0.0f;
+	m_bFlashBuildUp = false;
+	m_bFlashScreenshotHasBeenGrabbed = false;
+	m_bFlashDspHasBeenCleared = true;
 
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
@@ -1522,6 +1615,24 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 		SetCurrentMusic( CSMUSIC_START );
 	}
+	else if ( (Q_strcmp( "bot_takeover", name ) == 0 || Q_strcmp( "spec_target_updated", name ) == 0) && GetUserID() == EventUserID )
+	{
+		C_CSPlayer *pLocalCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if (pLocalCSPlayer)
+		{
+			// FlashBang effect needs to update it's screenshot
+			pLocalCSPlayer->m_bFlashScreenshotHasBeenGrabbed = false;
+			
+			if ( pLocalPlayer->GetObserverMode() != OBS_MODE_NONE && pLocalPlayer->GetUserID() == EventUserID )
+			{
+				C_CSPlayer *pFlashBangPlayer = GetHudPlayer();
+				if ( pFlashBangPlayer )
+				{
+					pFlashBangPlayer->m_bFlashScreenshotHasBeenGrabbed = false;
+				}
+			}
+		}
+	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
 		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
@@ -1606,7 +1717,7 @@ void C_CSPlayer::ClientThink()
 		float flAbsVelocity = vAbsVelocity.Length2D();
 		if( flAbsVelocity > 10 )
 		{
-			if( this == GetLocalPlayer() )
+			if( this == GetHudPlayer() )
 			{
 				CLocalPlayerFilter filter;
 				PlayMusicSelection( filter, CSMUSIC_ACTION );
@@ -1618,6 +1729,8 @@ void C_CSPlayer::ClientThink()
 	UpdateSoundEvents();
 
 	UpdateAddonModels();
+
+	UpdateFlashBangEffect();
 
 	UpdateHostageCarryModels();
 
@@ -1795,6 +1908,18 @@ int	C_CSPlayer::GetMaxHealth() const
 	return 100;
 }
 
+bool C_CSPlayer::ShouldInterpolate()
+{
+	// [msmith] Do we need to check this for split screen as well?
+	// If this is the player, (or being observed by the player ) then we want to interpolate it.
+	if ( this == GetLocalOrInEyeCSPlayer() )
+	{
+		return true;
+	}
+
+	return BaseClass::ShouldInterpolate();
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Return the local player, or the player being spectated in-eye
 //-----------------------------------------------------------------------------
@@ -1803,6 +1928,25 @@ C_CSPlayer* GetLocalOrInEyeCSPlayer( void )
 	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
 
 	if( player && player->GetObserverMode() == OBS_MODE_IN_EYE )
+	{
+		C_BaseEntity *target = player->GetObserverTarget();
+
+		if( target && target->IsPlayer() )
+		{
+			return ToCSPlayer( target );
+		}
+	}
+	return player;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Return the local player, or the player being spectated
+//-----------------------------------------------------------------------------
+C_CSPlayer* GetHudPlayer( void )
+{
+	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( player && ( player->GetObserverMode() == OBS_MODE_IN_EYE || player->GetObserverMode() == OBS_MODE_CHASE ) )
 	{
 		C_BaseEntity *target = player->GetObserverTarget();
 

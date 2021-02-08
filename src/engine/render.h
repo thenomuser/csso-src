@@ -113,8 +113,8 @@ public:
 	virtual void	FrameEnd( void ) = 0;
 	
 	virtual void	ViewSetupVis( bool novis, int numorigins, const Vector origin[] ) = 0;
-
-	virtual void	ViewDrawFade( byte *color, IMaterial* pFadeMaterial ) = 0;
+	
+	virtual void	ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen = true ) = 0;
 
 	virtual void	DrawSceneBegin( void ) = 0;
 	virtual void	DrawSceneEnd( void ) = 0;
