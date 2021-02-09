@@ -159,9 +159,9 @@ public:
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
 
-		m_avaliableColor = Color( 162, 255, 71, 255 );
-		m_unavailableColor = Color( 255, 64, 64, 255 );
-		m_alreadyOwnColor = pScheme->GetColor( "Label.DisabledFgColor2", Color( 0, 0, 0, 0 ) );
+		m_avaliableColor = pScheme->GetColor( "BuyMenu.AvailableColor", Color( 0, 0, 0, 0 ) );
+		m_unavailableColor = pScheme->GetColor( "BuyMenu.UnavailableColor", Color( 0, 0, 0, 0 ) );
+		m_alreadyOwnColor = pScheme->GetColor( "BuyMenu.AlreadyOwnColor", Color( 0, 0, 0, 0 ) ); // Label.DisabledFgColor2
 		m_bargainColor = Color( 0, 255, 0, 192 );
 		m_defaultColor = pScheme->GetColor( "Label.TextColor", Color( 0, 0, 0, 0 ) );
 
