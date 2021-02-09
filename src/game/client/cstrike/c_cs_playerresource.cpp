@@ -221,7 +221,7 @@ int C_CS_PlayerResource::GetControlledByPlayer( int index )
 	return m_iControlledByPlayer[index];
 }
 
-ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "0", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
+ConVar cl_add_bot_prefix( "cl_add_bot_prefix", "1", FCVAR_ARCHIVE, "Whether to add a BOT prefix to bot names or not.", true, 0, true, 1 );
 void C_CS_PlayerResource::UpdatePlayerName( int slot )
 {
 	if ( slot < 1 || slot > MAX_PLAYERS )
