@@ -73,14 +73,7 @@ public:
 			m_pBlackMarketPrice->SetAutoResize( GetClassPanel()->GetPinCorner(), GetClassPanel()->GetAutoResize(), px, py, rx, ry );
 		}
 	  }
-	/*
-	virtual void DoClick()
-	{
-		BaseClass::DoClick();
-
-		SetPriceState();
-	}
-	*/
+	
 	virtual void ApplySettings( KeyValues *resourceData )
 	{
 		BaseClass::ApplySettings( resourceData );
@@ -162,7 +155,7 @@ public:
 		m_avaliableColor = pScheme->GetColor( "BuyMenu.AvailableColor", Color( 0, 0, 0, 0 ) );
 		m_unavailableColor = pScheme->GetColor( "BuyMenu.UnavailableColor", Color( 0, 0, 0, 0 ) );
 		m_alreadyOwnColor = pScheme->GetColor( "BuyMenu.AlreadyOwnColor", Color( 0, 0, 0, 0 ) ); // Label.DisabledFgColor2
-		m_bargainColor = Color( 0, 255, 0, 192 );
+		m_bargainColor = Color( 0, 255, 0, 192 ); 
 		m_defaultColor = pScheme->GetColor( "Label.TextColor", Color( 0, 0, 0, 0 ) );
 
 		SetPriceState();
@@ -198,9 +191,17 @@ public:
 		if ( !pPlayer )
 			return;
 
-		/*if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
+		if ( m_iPrice && ( m_iPrice > pPlayer->GetAccount() ) )
+			SetFgColor( m_unavailableColor );
+		else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
+			SetFgColor( m_avaliableColor );
+		else
+			SetFgColor( m_bIsBargain ? m_bargainColor : m_defaultColor );
+
+		// check if we already own the weapon
+		if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
 		{
-			const char* weaponClassFromSlot = CCSLoadout().GetWeaponFromSlot( CCSLoadout().GetSlotFromWeapon( pPlayer, m_command + 4 ) );
+			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer, m_command + 4 ) );
 			char weaponClass[64];
 			Q_snprintf( weaponClass, sizeof( weaponClass ), "weapon_%s", weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 );
 			C_WeaponCSBase* pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_OwnsThisType( weaponClass ));
@@ -213,12 +214,6 @@ public:
 					SetFgColor( m_alreadyOwnColor );
 			}
 		}
-		else */if ( m_iPrice && ( m_iPrice > pPlayer->GetAccount() ) )
-			SetFgColor( m_unavailableColor );
-		else if ( m_iPrice && (m_iPrice <= pPlayer->GetAccount()) )
-			SetFgColor( m_avaliableColor );
-		else
-			SetFgColor( m_bIsBargain ? m_bargainColor : m_defaultColor );
 	}
 
 	void SetMarketState( void )
