@@ -824,17 +824,17 @@ void CInferno::MarkCoveredAreaAsDamaging()
 
 bool CInferno::CanHarm( CBaseEntity *pEnt ) const
 {
-	CCSPlayer* pPlayer = dynamic_cast<CCSPlayer*>(pEnt);
-
-	if ( !pPlayer )
+	if ( !pEnt )
 		return true;
 
 	if ( !GetOwnerEntity() )
 		return true;
 
-	// dont damage teammates
-	if ( CSGameRules()->IsFriendlyFireOn() && pPlayer->GetTeamNumber() == GetOwnerEntity()->GetTeamNumber() )
-		return false;
+	// dont damage teammates but damage the owner
+	int entUserID = static_cast<CBasePlayer*>(pEnt)->GetUserID();
+	int ownerUserID = static_cast<CBasePlayer*>(GetOwnerEntity())->GetUserID();
+	if ( !CSGameRules()->IsFriendlyFireOn() )
+		return entUserID == ownerUserID;
 
 	return true;
 
