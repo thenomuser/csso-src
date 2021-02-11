@@ -13,6 +13,7 @@
 #include "KeyValues.h"
 #include "cs_achievement_constants.h"
 #include "fmtstr.h"
+#include "molotov_projectile.h"
 
 #ifdef CLIENT_DLL
 
@@ -1857,6 +1858,22 @@ ConVar snd_music_selection(
 		else if( strncmp( killer_weapon_name, "flashbang", 9 ) == 0 )	//"flashbang_projectile"
 		{
 			killer_weapon_name = "flashbang";
+		}
+		else if( strncmp( killer_weapon_name, "decoy", 5 ) == 0 )	//"decoy_projectile"
+		{
+			killer_weapon_name = "decoy";
+		}
+		else if( strncmp( killer_weapon_name, "smokegrenade", 5 ) == 0 )	//"smokegrenade_projectile"
+		{
+			killer_weapon_name = "smokegrenade";
+		}
+		else if( strncmp( killer_weapon_name, "molotov", 5 ) == 0 )	//"molotov_projectile"
+		{
+			killer_weapon_name = "molotov";
+
+			CMolotovProjectile *pMolotovProjectile = dynamic_cast<CMolotovProjectile*>(pInflictor);
+			if ( pMolotovProjectile && pMolotovProjectile->IsIncGrenade() )
+				killer_weapon_name = "incgrenade";
 		}
 
 		IGameEvent * event = gameeventmanager->CreateEvent( "player_death" );
