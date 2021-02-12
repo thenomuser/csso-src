@@ -2122,20 +2122,27 @@ void GatherSampleStandardLightSSE( SSE_sampleLightOutput_t &out, directlight_t *
 		out.m_flFalloff = MulSIMD( mult, out.m_flFalloff );
 	}
 
-	// Raytrace for visibility function
-	fltx4 fractionVisible = Four_Ones;
-	TestLine( pos, src, &fractionVisible, static_prop_index_to_ignore);
-	dot = MulSIMD( fractionVisible, dot );
-	out.m_flDot[0] = dot;
+	if ( !( nLFlags & GATHERLFLAGS_NO_OCCLUSION ) )
+	{
+		// Raytrace for visibility function
+		fltx4 fractionVisible = Four_Ones;
+		TestLine( pos, src, &fractionVisible, static_prop_index_to_ignore);
+		dot = MulSIMD( fractionVisible, dot );
+	}
 
+	out.m_flDot[0] = dot;
 	for ( int i = 1; i < normalCount; i++ )
 	{
 		if ( bIgnoreNormals )
-			out.m_flDot[i] = ReplicateX4( (float) CONSTANT_DOT );
+		{
+			out.m_flDot[i] = ReplicateX4( (float)CONSTANT_DOT );
+			out.m_flSunAmount = Four_Zeros; 
+		}
 		else
 		{
 			out.m_flDot[i] = pNormals[i] * delta;
 			out.m_flDot[i] = MaxSIMD( Four_Zeros, out.m_flDot[i] );
+			out.m_flSunAmount = Four_Zeros; 
 		}
 	}
 }
@@ -2185,7 +2192,7 @@ void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int 
 	bool bIgnoreNormals = (nLFlags & GATHERLFLAGS_IGNORE_NORMALS) != 0;
 	if ( !bIgnoreNormals ) // Don't calculate ambient occlusion for objects that ignore normals for gathering light
 	{
-		/*if ( nLFlags & GATHERLFLAGS_STATICPROP )
+		if ( nLFlags & GATHERLFLAGS_STATICPROP )
 		{
 			// for static props we want the sun amount for the basis normals to be mutliplied by the ao of the main vertex normal only.
 			// lightmaps using this path do not send basis normals here, we do so for static props to take advantage of the SIMD optimisation this path provides.
@@ -2193,7 +2200,7 @@ void GatherSampleLightSSE( SSE_sampleLightOutput_t &out, directlight_t *dl, int 
 			fltx4 ao0 = SplatXSIMD( ao );
 			ao = ao0;
 		}
-		else*/
+		else
 		{
 			ao = CalculateAmbientOcclusion4( pos, *pNormals, static_prop_index_to_ignore );
 		}
