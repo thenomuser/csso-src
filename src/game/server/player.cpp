@@ -7539,6 +7539,7 @@ void CBasePlayer::ChangeTeam( int iTeamNum, bool bAutoTeam, bool bSilent)
 		event->SetInt("autoteam", bAutoTeam );
 		event->SetInt("silent", bSilent );
 		event->SetString("name", GetPlayerName() );
+		event->SetBool("isbot", !IsNetClient());
 
 		gameeventmanager->FireEvent( event );
 	}

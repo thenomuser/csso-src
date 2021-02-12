@@ -730,13 +730,40 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			// that's me
 			pPlayer->TeamChange( iTeam );
 		}
+		
+		bool bSilent = event->GetBool( "silent" );
+		if ( !bSilent )
+		{
+			wchar_t wszLocalized[100];
+			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
+			char szLocalized[100];
+			bool bIsBot = event->GetBool("isbot"); // squelch 'bot has joined the game' messages
 
-		if ( iTeam == TEAM_SPECTATOR )
-			pHudChat->Printf( CHAT_FILTER_NONE, hudtextmessage->LookupString( "#Game_join_spectators" ), pPlayer->GetPlayerName() );
-		else if ( iTeam == TEAM_TERRORIST )
-			pHudChat->Printf( CHAT_FILTER_NONE, hudtextmessage->LookupString( "#Game_join_terrorist" ), pPlayer->GetPlayerName() );
-		else if ( iTeam == TEAM_CT )
-			pHudChat->Printf( CHAT_FILTER_NONE, hudtextmessage->LookupString( "#Game_join_ct" ), pPlayer->GetPlayerName() );
+			if ( iTeam == TEAM_SPECTATOR && !bIsBot )
+			{
+				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_spectators" ), 1, wszPlayerName );
+
+				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
+			}
+			else if ( iTeam == TEAM_TERRORIST && !bIsBot )
+			{
+				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_terrorist" ), 1, wszPlayerName );
+
+				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
+			}
+			else if ( iTeam == TEAM_CT && !bIsBot )
+			{
+				g_pVGuiLocalize->ConvertANSIToUnicode( pPlayer->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_game_join_ct" ), 1, wszPlayerName );
+
+				g_pVGuiLocalize->ConvertUnicodeToANSI( wszLocalized, szLocalized, sizeof(szLocalized) );
+				pHudChat->Printf( CHAT_FILTER_NONE, "%s", szLocalized );
+			}
+		}
 	}
 	else if ( Q_strcmp( "bomb_planted", eventname ) == 0 )
 	{
