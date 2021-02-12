@@ -45,6 +45,8 @@ const int MAX_LEAF_PVERTS = 128;
 // Only allocate this after it is turned on
 leafvis_t *g_LeafVis = NULL;
 
+leafvis_t *g_FrustumVis = NULL, *g_ClipVis[4] = {NULL,NULL,NULL,NULL};
+
 static void AddPlaneToList( CUtlVector<cplane_t> &list, const Vector& normal, float dist, int invert )
 {
 	cplane_t plane;
@@ -173,6 +175,12 @@ void LeafvisChanged( IConVar *pLeafvisVar, const char *pOld, float flOldValue )
 	{
 		delete g_LeafVis;
 		g_LeafVis = NULL;
+	}
+
+	if ( g_FrustumVis )
+	{
+		delete g_FrustumVis;
+		g_FrustumVis = NULL;
 	}
 }
 
@@ -352,8 +360,6 @@ void DrawLeafvis_Solid( leafvis_t *pVis )
 	}
 }
 
-leafvis_t *g_FrustumVis = NULL, *g_ClipVis[4] = {NULL,NULL,NULL,NULL};
-
 int FindMinBrush( CCollisionBSPData *pBSPData, int nodenum, int brushIndex )
 {
 	while (1)
@@ -378,6 +384,7 @@ int FindMinBrush( CCollisionBSPData *pBSPData, int nodenum, int brushIndex )
 	return brushIndex;
 }
 
+#pragma warning (disable:4389) // '==' : signed/unsigned mismatch; yeah go fuck yourself idiot
 void RecomputeClipbrushes( bool bEnabled )
 {
 	for ( int v = 0; v < 4; v++ )
@@ -410,7 +417,7 @@ void RecomputeClipbrushes( bool bEnabled )
 		for ( int i = 0; i < lastBrush; i++ )
 		{
 			cbrush_t *pBrush = &pBSP->map_brushes[i];
-			if ( (pBrush->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP)) == contents[v] )
+			if ( (pBrush->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_GRENADECLIP)) == contents[v] )
 			{
 				CUtlVector<cplane_t> planeList;
 				if ( pBrush->IsBox() )
