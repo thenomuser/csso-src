@@ -200,38 +200,6 @@ private:
 };
 
 
-//---------------------------------------------------------------------------------------------
-/**
- * Given a vector of entities, a nav area, and a max travel distance, return 
- * the entity that has the shortest travel distance.
- */
-inline CBaseEntity *SelectClosestEntityByTravelDistance( INextBot *me, const CUtlVector< CBaseEntity * > &candidateEntities, CNavArea *startArea, float travelRange )
-{
-	// collect nearby walkable areas within travelRange
-	CUtlVector< CNavArea * > nearbyAreaVector;
-	CollectSurroundingAreas( &nearbyAreaVector, startArea, travelRange, me->GetLocomotionInterface()->GetStepHeight(), me->GetLocomotionInterface()->GetDeathDropHeight() );
-
-	// find closest entity in the collected area set
-	CBaseEntity *closeEntity = NULL;
-	float closeTravelRange = FLT_MAX;
-
-	for( int i=0; i<candidateEntities.Count(); ++i )
-	{
-		CBaseEntity *candidate = candidateEntities[i];
-
-		CNavArea *area = TheNavMesh->GetNearestNavArea( candidate, GETNAVAREA_CHECK_LOS, 500.0f );
-
-		if ( area && area->IsMarked() && area->GetCostSoFar() < closeTravelRange )
-		{
-			closeEntity = candidate;
-			closeTravelRange = area->GetCostSoFar();
-		}
-	}
-
-	return closeEntity;
-}
-
-
 #ifdef OBSOLETE
 //--------------------------------------------------------------------------------------------
 /**

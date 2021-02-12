@@ -57,16 +57,30 @@ public:
 
 	void ClearPlayerCounts( void );										///< zero player counts in all areas
 
+	void ResetDMSpawns( void );
+
 protected:
 	virtual void BeginCustomAnalysis( bool bIncremental );
 	virtual void PostCustomAnalysis( void );							// invoked when custom analysis step is complete
 	virtual void EndCustomAnalysis();
+
+	virtual bool IsMeshVisibilityGenerated( void ) const	{ return false; }	// allow derived meshes to skip costly mesh visibility computation and storage
 
 private:
 	void MaintainChickenPopulation( void );
 	int m_desiredChickenCount;
 	CountdownTimer m_refreshChickenTimer;
 	CUtlVector< CHandle< CBaseEntity > > m_chickenVector;
+
+	void MaintainDMSpawnPopulation( void );
+	int m_desiredDMSpawns;
+	int m_consecutiveFailedAttempts;
+	CountdownTimer m_refreshDMSpawnTimer;
+	CUtlVector< CHandle< CBaseEntity > > m_DMSpawnVector;
+
+	bool IsSpawnBlockedByTrigger( Vector pos );
+
+	int AllEdictsAlongRay( CBaseEntity **pList, int listMax, const Ray_t &ray, int flagMask );
 };
 
 #endif // _CS_NAV_MESH_H_

@@ -905,7 +905,7 @@ void CNavMesh::DrawEditMode( void )
 				{
 					V_snprintf( buffer, sizeof( buffer ), "Ladder #%d\n", m_selectedLadder->GetID() );
 				}
-				NDebugOverlay::ScreenText( 0.5, 0.53, buffer, 255, 255, 0, 128, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				NDebugOverlay::ScreenText( 0.5, 0.53, buffer, 255, 255, 0, 128, nav_show_area_info.GetBool() ? 0.1 : 0.5 );
 			}
 
 			// draw the ladder we are pointing at and all connected areas
@@ -947,9 +947,9 @@ void CNavMesh::DrawEditMode( void )
 				{
 					const char *name = TheNavMesh->PlaceToName( m_selectedArea->GetPlace() );
 					if (name)
-						V_strcpy_safe( locName, name );
+						strcpy( locName, name );
 					else
-						V_strcpy_safe( locName, "ERROR" );
+						strcpy( locName, "ERROR" );
 				}
 				else
 				{
@@ -1450,7 +1450,7 @@ void CNavMesh::CommandNavAddToSelectedSetByID( const CCommand &args )
 	if (player == NULL)
 		return;
 
-	if ( ( !IsEditMode( NORMAL ) && !IsEditMode( PLACE_PAINTING ) ) || args.ArgC() < 2 )
+	if ( !IsEditMode( NORMAL ) && !IsEditMode( PLACE_PAINTING ) || args.ArgC() < 2 )
 		return;
 
 	int id = atoi( args[1] );
@@ -2364,44 +2364,6 @@ void CNavMesh::CommandNavSelectStairs( void )
 
 
 //--------------------------------------------------------------------------------------------------------------
-// Adds areas not connected to mesh to the selected set
-void CNavMesh::CommandNavSelectOrphans( void )
-{
-	CBasePlayer *player = UTIL_GetListenServerHost();
-	if (player == NULL)
-		return;
-
-	if ( !IsEditMode( NORMAL ) && !IsEditMode( PLACE_PAINTING ) )
-		return;
-
-	FindActiveNavArea();
-
-	CNavArea *start = m_selectedArea;
-	if ( !start )
-	{
-		start = m_markedArea;
-	}
-
-	if ( start )
-	{
-		player->EmitSound( "EDIT_DELETE" );
-
-		int connections = INCLUDE_BLOCKED_AREAS | INCLUDE_INCOMING_CONNECTIONS;
-
-		// collect all areas connected to this area
-		SelectCollector collector;
-		SearchSurroundingAreas( start, start->GetCenter(), collector, -1, connections );
-
-		// toggle the selected set to reveal the orphans
-		CommandNavToggleSelectedSet();
-	}
-
-	SetMarkedArea( NULL );			// unmark the mark area
-
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
 void CNavMesh::CommandNavSplit( void )
 {
 	CBasePlayer *player = UTIL_GetListenServerHost();
@@ -3101,55 +3063,6 @@ void CNavMesh::CommandNavDisconnect( void )
 			player->EmitSound( "EDIT_DISCONNECT.NoMarkedArea" );
 		}
 	}
-
-	ClearSelectedSet();
-	SetMarkedArea( NULL );			// unmark the mark area
-	m_markedCorner = NUM_CORNERS;	// clear the corner selection
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-// Disconnect all outgoing one-way connects from each area in the selected set
-void CNavMesh::CommandNavDisconnectOutgoingOneWays( void )
-{
-	CBasePlayer *player = UTIL_GetListenServerHost();
-	if ( !player )
-		return;
-
-	if ( !IsEditMode( NORMAL ) )
-		return;
-
-	if ( m_selectedSet.Count() == 0 )
-	{
-		FindActiveNavArea();
-
-		if ( !m_selectedArea )
-		{
-			return;
-		}
-
-		m_selectedSet.AddToTail( m_selectedArea );
-	}
-
-	for ( int i = 0; i < m_selectedSet.Count(); ++i )
-	{
-		CNavArea *area = m_selectedSet[i];
-
-		CUtlVector< CNavArea * > adjVector;
-		area->CollectAdjacentAreas( &adjVector );
-
-		for( int j=0; j<adjVector.Count(); ++j )
-		{
-			CNavArea *adj = adjVector[j];
-
-			if ( !adj->IsConnected( area, NUM_DIRECTIONS ) )
-			{
-				// no connect back - this is a one-way connection
-				area->Disconnect( adj );
-			}
-		}
-	}
-	player->EmitSound( "EDIT_DISCONNECT.MarkedArea" );
 
 	ClearSelectedSet();
 	SetMarkedArea( NULL );			// unmark the mark area

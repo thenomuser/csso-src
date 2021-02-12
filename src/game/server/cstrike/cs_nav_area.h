@@ -14,6 +14,16 @@
 
 #include "nav_area.h"
 
+class CCSHidingSpot : public HidingSpot
+{
+public:
+	virtual ~CCSHidingSpot();
+	void SetOwningEntity( class CPointHidingSpot *pHidingSpotEnt );
+protected:
+	CPointHidingSpot *m_pOwningEntity;
+};
+
+
 //-------------------------------------------------------------------------------------------------------------------
 /**
  * A CNavArea is a rectangular region defining a walkable area in the environment
@@ -37,14 +47,25 @@ public:
 
 	virtual void CustomAnalysis( bool isIncremental = false );		// for game-specific analysis
 
+	virtual float GetDangerDecayRate( void ) const;				// return danger decay rate per second
+	virtual float GetEarliestOccupyTime( int teamID ) const OVERRIDE;			// returns the minimum time for someone of the given team to reach this spot from their spawn
+
+	// Use nav blockers in coop mode. There is a bug with these functions causing bots to lose
+	// their path at the start of rounds that is undiagnosed at the time of this comment. Coop needs nav blockers
+	// and doesn't (seem) to have any issues with blocked nav so let's leave it on for them
+	virtual void UpdateBlocked( bool force = false, int teamID = TEAM_ANY ) OVERRIDE;
+	// Updates the (un)blocked status of the nav area (throttled)
+	virtual bool IsBlocked( int teamID, bool ignoreNavBlockers = false ) const OVERRIDE;	
+
+
 	//- approach areas ----------------------------------------------------------------------------------
 	struct ApproachInfo
 	{
 		NavConnect here;										///< the approach area
 		NavConnect prev;										///< the area just before the approach area on the path
-		NavTraverseType prevToHereHow;
-		NavConnect next;										///< the area just after the approach area on the path
-		NavTraverseType hereToNextHow;
+        NavConnect next;										///< the area just after the approach area on the path
+		uint16 prevToHereHow;                                   // NavTraverseType
+		uint16 hereToNextHow;
 	};
 	const ApproachInfo *GetApproachInfo( int i ) const	{ return &m_approach[i]; }
 	int GetApproachInfoCount( void ) const				{ return m_approachCount; }
@@ -62,6 +83,8 @@ private:
 	enum { MAX_APPROACH_AREAS = 16 };
 	ApproachInfo m_approach[ MAX_APPROACH_AREAS ];
 	unsigned char m_approachCount;
+
+	unsigned char m_paddingToAlignTo128[ int( 0 - sizeof( CNavArea ) - ( sizeof( ApproachInfo ) * MAX_APPROACH_AREAS ) - sizeof( unsigned char ) ) & 127 ];
 };
 
 //--------------------------------------------------------------------------------------------------------------

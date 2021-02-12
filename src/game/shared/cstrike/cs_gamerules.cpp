@@ -210,6 +210,8 @@ ConVar cs_AssistDamageThreshold( "cs_AssistDamageThreshold", "40.0", FCVAR_DEVEL
 
 
 extern ConVar sv_stopspeed;
+extern ConVar mp_randomspawn;
+extern ConVar mp_randomspawn_los;
 extern ConVar mp_hostages_max;
 extern ConVar mp_hostages_spawn_farthest;
 extern ConVar mp_hostages_spawn_force_positions;
@@ -4909,22 +4911,35 @@ ConVar snd_music_selection(
 		}
 	}
 
+    
+    // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
+    int CCSGameRules::MaxNumPlayersOnTerrTeam()
+    {
+		bool bRandomTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_TERRORIST;
+        return bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist;
+    }
+
+    int CCSGameRules::MaxNumPlayersOnCTTeam()
+    {
+		bool bRandomCTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_CT;
+        return bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT;
+    }
 
 	bool CCSGameRules::TeamFull( int team_id )
 	{
-		CheckLevelInitialized();
+        CheckLevelInitialized();
 
-		switch ( team_id )
-		{
-		case TEAM_TERRORIST:
-			return m_iNumTerrorist >= m_iSpawnPointCount_Terrorist;
+        switch ( team_id )
+        {
+        case TEAM_TERRORIST:
+            return m_iNumTerrorist >= MaxNumPlayersOnTerrTeam();
 
-		case TEAM_CT:
-			return m_iNumCT >= m_iSpawnPointCount_CT;
-		}
+        case TEAM_CT:
+            return m_iNumCT >= MaxNumPlayersOnCTTeam();
+        }
 
-		return false;
-	}
+        return false;
+    }
 	
 	int CCSGameRules::GetHumanTeam()
 	{
@@ -6163,6 +6178,9 @@ void CCSGameRules::EndWarmup( void )
 }
 #endif
 
+ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
+ConVar mp_randomspawn_los("mp_randomspawn_los", "1", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test Line of Sight when spawning." );
+ConVar mp_randomspawn_dist( "mp_randomspawn_dist", "0", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test distance when selecting this spot." );
 
 bool CCSGameRules::IsVIPMap() const
 {

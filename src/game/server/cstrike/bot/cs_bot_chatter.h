@@ -30,7 +30,7 @@ typedef unsigned int CountCriteria;
 #define UNDEFINED_SUBJECT (-1)
 
 /// @todo Make Place a class with member fuctions for this
-const Vector *GetRandomSpotAtPlace( Place place );
+bool GetRandomSpotAtPlace( Place place, Vector *pPos );
 
 //----------------------------------------------------------------------------------------------------
 /**

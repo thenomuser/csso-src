@@ -12,13 +12,15 @@
 #include "cbase.h"
 #include "cs_nav_mesh.h"
 #include "cs_nav_area.h"
+#include "cs_gamerules.h"
 #include "nav_pathfind.h"
 #include "nav_colors.h"
 #include "fmtstr.h"
 #include "props_shared.h"
 #include "func_breakablesurf.h"
-#include "Color.h"
+#include "color.h"
 #include "collisionutils.h"
+#include "point_hiding_spot.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include <tier0/memdbgon.h>
@@ -180,6 +182,30 @@ void CCSNavArea::CustomAnalysis( bool isIncremental /*= false */ )
 	ComputeApproachAreas();
 }
 
+
+//--------------------------------------------------------------------------------------------------------------
+// return danger decay rate per second
+float CCSNavArea::GetDangerDecayRate( void ) const
+{
+	// one kill == 1.0, which we will forget about in two minutes
+	return 1.0f / 120.0f;
+}
+
+
+float CCSNavArea::GetEarliestOccupyTime( int teamID ) const
+{
+	return BaseClass::GetEarliestOccupyTime( teamID );
+}
+
+void CCSNavArea::UpdateBlocked( bool force /*= false*/, int teamID /*= TEAM_ANY */ )
+{
+}
+
+bool CCSNavArea::IsBlocked( int teamID, bool ignoreNavBlockers /*= false */ ) const
+{
+	return false;
+}
+
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Load legacy navigation area from the file
@@ -211,10 +237,6 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	fileBuffer.Get( &m_nwCorner, 3*sizeof(float) );
 	fileBuffer.Get( &m_seCorner, 3*sizeof(float) );
 
-	m_center.x = (m_nwCorner.x + m_seCorner.x)/2.0f;
-	m_center.y = (m_nwCorner.y + m_seCorner.y)/2.0f;
-	m_center.z = (m_nwCorner.z + m_seCorner.z)/2.0f;
-
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
 		m_invDxCorners = 1.0f / ( m_seCorner.x - m_nwCorner.x );
@@ -225,7 +247,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 		m_invDxCorners = m_invDyCorners = 0;
 
 		DevWarning( "Degenerate Navigation Area #%d at setpos %g %g %g\n", 
-			m_id, m_center.x, m_center.y, m_center.z );
+			m_id, m_nwCorner.x, m_nwCorner.y, m_nwCorner.z );
 	}
 
 	// load heights of implicit corners
@@ -442,18 +464,8 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 
 	// load visibility information
 	unsigned int visibleAreaCount = fileBuffer.GetUnsignedInt();
-	if ( !IsX360() )
-	{
-		m_potentiallyVisibleAreas.EnsureCapacity( visibleAreaCount );
-	}
-	else
-	{
-/* TODO: Re-enable when latest 360 code gets integrated (MSB 5/5/09)
-		size_t nBytes = visibleAreaCount * sizeof( AreaBindInfo ); 
-		m_potentiallyVisibleAreas.~CAreaBindInfoArray();
-		new ( &m_potentiallyVisibleAreas ) CAreaBindInfoArray( (AreaBindInfo *)engine->AllocLevelStaticData( nBytes ), visibleAreaCount );
-*/
-	}
+
+	m_potentiallyVisibleAreas.EnsureCapacity( visibleAreaCount );
 
 	for( unsigned int j=0; j<visibleAreaCount; ++j )
 	{
@@ -471,3 +483,8 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 }
 
 
+CCSHidingSpot::~CCSHidingSpot()
+{
+	if ( m_pOwningEntity )
+		m_pOwningEntity->DetachFromHidingSpot();
+}

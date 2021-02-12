@@ -264,10 +264,10 @@ bool CCSBot::RespondToHelpRequest( CCSPlayer *them, Place place, float maxRange 
 			return true;
 
 		// go to where help is needed
-		const Vector *pos = GetRandomSpotAtPlace( place );
-		if (pos)
+		Vector pos;		
+		if ( GetRandomSpotAtPlace( place, &pos ) )
 		{
-			MoveTo( *pos, FASTEST_ROUTE );
+			MoveTo( pos, FASTEST_ROUTE );
 		}
 		else
 		{

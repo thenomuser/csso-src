@@ -29,7 +29,7 @@
 #include "tier0/memdbgon.h"
 
 
-#define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, NDEBUG_PERSIST_TILL_NEXT_SERVER )
+#define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
 
 
 /**
@@ -38,13 +38,18 @@
 CNavMesh *TheNavMesh = NULL;
 
 ConVar nav_edit( "nav_edit", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Set to one to interactively edit the Navigation Mesh. Set to zero to leave edit mode." );
-ConVar nav_quicksave( "nav_quicksave", "1", FCVAR_GAMEDLL | FCVAR_CHEAT, "Set to one to skip the time consuming phases of the analysis.  Useful for data collection and testing." );	// TERROR: defaulting to 1, since we don't need the other data
+
+#ifdef CSTRIKE_DLL
+#define NAV_QUICKSAVE_DEFAULT "0"	// the CSBots need this data
+#else
+#define NAV_QUICKSAVE_DEFAULT "1"
+#endif
+
+ConVar nav_quicksave( "nav_quicksave", NAV_QUICKSAVE_DEFAULT, FCVAR_GAMEDLL | FCVAR_CHEAT, "Set to one to skip the time consuming phases of the analysis.  Useful for data collection and testing." );
+
 ConVar nav_show_approach_points( "nav_show_approach_points", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show Approach Points in the Navigation Mesh." );
 ConVar nav_show_danger( "nav_show_danger", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show current 'danger' levels." );
 ConVar nav_show_player_counts( "nav_show_player_counts", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show current player counts in each area." );
-ConVar nav_show_func_nav_avoid( "nav_show_func_nav_avoid", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show areas of designer-placed bot avoidance due to func_nav_avoid entities" );
-ConVar nav_show_func_nav_prefer( "nav_show_func_nav_prefer", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show areas of designer-placed bot preference due to func_nav_prefer entities" );
-ConVar nav_show_func_nav_prerequisite( "nav_show_func_nav_prerequisite", "0", FCVAR_GAMEDLL | FCVAR_CHEAT, "Show areas of designer-placed bot preference due to func_nav_prerequisite entities" );
 ConVar nav_max_vis_delta_list_length( "nav_max_vis_delta_list_length", "64", FCVAR_CHEAT );
 
 extern ConVar nav_show_potentially_visible;
@@ -71,7 +76,7 @@ CNavMesh::CNavMesh( void )
 	LoadPlaceDatabase();
 
 	ListenForGameEvent( "round_start" );
-//	ListenForGameEvent( "round_start_pre_entity" );
+	ListenForGameEvent( "round_start_pre_entity" );
 	ListenForGameEvent( "break_prop" );
 	ListenForGameEvent( "break_breakable" );
 	ListenForGameEvent( "teamplay_round_start" );
@@ -296,23 +301,6 @@ void CNavMesh::Update( void )
 	{
 		DrawPlayerCounts();
 	}
-
-	if ( nav_show_func_nav_avoid.GetBool() )
-	{
-		DrawFuncNavAvoid();
-	}
-
-	if ( nav_show_func_nav_prefer.GetBool() )
-	{
-		DrawFuncNavPrefer();
-	}
-
-#ifdef NEXT_BOT
-	if ( nav_show_func_nav_prerequisite.GetBool() )
-	{
-		DrawFuncNavPrerequisite();
-	}
-#endif
 
 	if ( nav_show_potentially_visible.GetBool() )
 	{
@@ -581,28 +569,8 @@ void CNavMesh::OnServerActivate( void )
 	}
 }
 
-#ifdef NEXT_BOT
 
 //--------------------------------------------------------------------------------------------------------------
-class CRegisterPrerequisite
-{
-public:
-	CRegisterPrerequisite( CFuncNavPrerequisite *prereq )
-	{
-		m_prereq = prereq;
-	}
-
-	bool operator() ( CNavArea *area )
-	{
-		area->AddPrerequisite( m_prereq );
-		return true;
-	}
-
-	CFuncNavPrerequisite *m_prereq;
-};
-
-#endif
-
 //--------------------------------------------------------------------------------------------------------------
 /**
 * Test all areas for blocked status
@@ -622,28 +590,13 @@ void CNavMesh::TestAllAreasForBlockedStatus( void )
  */
 void CNavMesh::OnRoundRestart( void )
 {
-	m_updateBlockedAreasTimer.Start( 1.0f );
+	m_updateBlockedAreasTimer.Start( 0.1 );
 
-#ifdef NEXT_BOT
 	FOR_EACH_VEC( TheNavAreas, pit )
 	{
 		CNavArea *area = TheNavAreas[ pit ];
-		area->RemoveAllPrerequisites();
+		area->UpdateBlocked( true );
 	}
-
-	// attach prerequisites
-	for ( int i=0; i<IFuncNavPrerequisiteAutoList::AutoList().Count(); ++i )
-	{
-		CFuncNavPrerequisite *prereq = static_cast< CFuncNavPrerequisite* >( IFuncNavPrerequisiteAutoList::AutoList()[i] );
-
-		Extent prereqExtent;
-		prereqExtent.Init( prereq );
-
-		CRegisterPrerequisite apply( prereq );
-
-		ForAllAreasOverlappingExtent( apply, prereqExtent );
-	}
-#endif
 }
 
 
@@ -687,7 +640,7 @@ inline void CNavMesh::GridToWorld( int gridX, int gridY, Vector *pos ) const
 /**
  * Given a position, return the nav area that IsOverlapping and is *immediately* beneath it
  */
-CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit ) const
+CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit, bool checkLOS ) const
 {
 	VPROF_BUDGET( "CNavMesh::GetNavArea", "NextBot"  );
 
@@ -725,8 +678,26 @@ CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit ) const
 			// if area is higher than the one we have, use this instead
 			if (z > useZ)
 			{
-				use = area;
-				useZ = z;
+				bool isUsable = true;
+
+				if ( checkLOS )
+				{
+					trace_t result;
+					Vector groundPos( pos.x, pos.y, z + 0.1f );
+
+					UTIL_TraceLine( pos, groundPos, MASK_NPCSOLID_BRUSHONLY, NULL, COLLISION_GROUP_NONE, &result );
+
+					if ( result.DidHit() && fabs( result.endpos.z - groundPos.z ) > StepHeight )
+					{
+						isUsable = false;
+					}
+				}
+				
+				if ( isUsable )
+				{
+					use = area;
+					useZ = z;
+				}
 			}
 		}
 	}
@@ -781,7 +752,7 @@ CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneat
 			continue;
 
 		// don't consider blocked areas
-		if ( bSkipBlockedAreas && pArea->IsBlocked( pEntity->GetTeamNumber() ) )
+		if ( bSkipBlockedAreas && pArea->IsBlocked( TEAM_ANY ) )
 			continue;
 
 		// project position onto area to get Z
@@ -823,7 +794,7 @@ CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneat
  * Used to find initial area if we start off of the mesh.
  * @todo Make sure area is not on the other side of the wall from goal.
  */
-CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDist, bool checkLOS, bool checkGround, int team ) const
+CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDist, bool checkLOS, bool checkGround ) const
 {
 	VPROF_BUDGET( "CNavMesh::GetNearestNavArea", "NextBot" );
 
@@ -918,7 +889,7 @@ CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDi
 						continue;
 
 					// don't consider blocked areas
-					if ( area->IsBlocked( team ) )
+					if ( area->IsBlocked( TEAM_ANY ) )
 						continue;
 
 					// mark as visited
@@ -1013,7 +984,7 @@ CNavArea *CNavMesh::GetNearestNavArea( CBaseEntity *pEntity, int nFlags, float m
 
 	bool bCheckLOS = ( nFlags & GETNAVAREA_CHECK_LOS ) != 0;
 	bool bCheckGround = ( nFlags & GETNAVAREA_CHECK_GROUND ) != 0;
-	return GetNearestNavArea( pEntity->GetAbsOrigin(), false, maxDist, bCheckLOS, bCheckGround, pEntity->GetTeamNumber() );
+	return GetNearestNavArea( pEntity->GetAbsOrigin(), false, maxDist, bCheckLOS, bCheckGround );
 }
 
 
@@ -1326,37 +1297,8 @@ public:
 
 bool CNavMesh::GetGroundHeight( const Vector &pos, float *height, Vector *normal ) const
 {
-	VPROF( "CNavMesh::GetGroundHeight" );
-
-	const float flMaxOffset = 100.0f;
-
-	CTraceFilterGroundEntities filter( NULL, COLLISION_GROUP_NONE, WALK_THRU_EVERYTHING );
-
-	trace_t result;
-	Vector to( pos.x, pos.y, pos.z - 10000.0f );
 	Vector from( pos.x, pos.y, pos.z + HalfHumanHeight + 1e-3 );
-	while( to.z - pos.z < flMaxOffset ) 
-	{
-		UTIL_TraceLine( from, to, MASK_NPCSOLID_BRUSHONLY, &filter, &result );
-		if ( !result.startsolid && (( result.fraction == 1.0f ) || ( ( from.z - result.endpos.z ) >= HalfHumanHeight ) ) )
-		{
-			*height = result.endpos.z;
-			if ( normal )
-			{
-				*normal = !result.plane.normal.IsZero() ? result.plane.normal : Vector( 0, 0, 1 );
-			}
-			return true;
-		}	  
-		to.z = ( result.startsolid ) ? from.z : result.endpos.z;
-		from.z = to.z + HalfHumanHeight + 1e-3;
-	}
-
-	*height = 0.0f;
-	if ( normal )
-	{
-		normal->Init( 0.0f, 0.0f, 1.0f );
-	}
-	return false;
+	return GetSimpleGroundHeight( from, height, normal );
 }
 
 
@@ -1438,66 +1380,10 @@ void CNavMesh::DrawPlayerCounts( void ) const
 
 		if (area->GetPlayerCount() > 0)
 		{
-			NDebugOverlay::Text( area->GetCenter(), msg.sprintf( "%d (%d/%d)", area->GetPlayerCount(), area->GetPlayerCount(1), area->GetPlayerCount(2) ), false, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+			NDebugOverlay::Text( area->GetCenter(), msg.sprintf( "%d (%d/%d)", area->GetPlayerCount(), area->GetPlayerCount(1), area->GetPlayerCount(2) ), false, 0.1f );
 		}
 	}
 }
-
-
-//--------------------------------------------------------------------------------------------------------------
-/**
- * Draw bot avoidance areas from func_nav_avoid entities
- */
-void CNavMesh::DrawFuncNavAvoid( void ) const
-{
-	FOR_EACH_VEC( TheNavAreas, it )
-	{
-		CNavArea *area = TheNavAreas[ it ];
-
-		if ( area->HasFuncNavAvoid() )
-		{
-			area->DrawFilled( 255, 0, 0, 255 );
-		}
-	}
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
-/**
- * Draw bot preference areas from func_nav_prefer entities
- */
-void CNavMesh::DrawFuncNavPrefer( void ) const
-{
-	FOR_EACH_VEC( TheNavAreas, it )
-	{
-		CNavArea *area = TheNavAreas[ it ];
-
-		if ( area->HasFuncNavPrefer() )
-		{
-			area->DrawFilled( 0, 255, 0, 255 );
-		}
-	}
-}
-
-
-#ifdef NEXT_BOT
-//--------------------------------------------------------------------------------------------------------------
-/**
- * Draw bot preference areas from func_nav_prerequisite entities
- */
-void CNavMesh::DrawFuncNavPrerequisite( void ) const
-{
-	FOR_EACH_VEC( TheNavAreas, it )
-	{
-		CNavArea *area = TheNavAreas[ it ];
-
-		if ( area->HasPrerequisite() )
-		{
-			area->DrawFilled( 0, 0, 255, 255 );
-		}
-	}
-}
-#endif
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -1695,104 +1581,6 @@ void CommandNavClearSelectedSet( void )
 	TheNavMesh->CommandNavClearSelectedSet();
 }
 static ConCommand nav_clear_selected_set( "nav_clear_selected_set", CommandNavClearSelectedSet, "Clear the selected set.", FCVAR_GAMEDLL | FCVAR_CHEAT );
-
-
-//----------------------------------------------------------------------------------
-CON_COMMAND_F( nav_dump_selected_set_positions, "Write the (x,y,z) coordinates of the centers of all selected nav areas to a file.", FCVAR_GAMEDLL | FCVAR_CHEAT )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	const NavAreaVector &selectedSet = TheNavMesh->GetSelectedSet();
-
-	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::TEXT_BUFFER );
-
-	for( int i=0; i<selectedSet.Count(); ++i )
-	{
-		const Vector &center = selectedSet[i]->GetCenter();
-
-		fileBuffer.Printf( "%f %f %f\n", center.x, center.y, center.z );
-	}
-
-	// filename is local to game dir for Steam, so we need to prepend game dir for regular file save
-	char gamePath[256];
-	engine->GetGameDir( gamePath, 256 );
-
-	char filename[256];
-	Q_snprintf( filename, sizeof( filename ), "%s\\maps\\%s_xyz.txt", gamePath, STRING( gpGlobals->mapname ) );
-
-	if ( !filesystem->WriteFile( filename, "MOD", fileBuffer ) )
-	{
-		Warning( "Unable to save %d bytes to %s\n", fileBuffer.Size(), filename );
-	}
-	else
-	{
-		DevMsg( "Write %d nav area center positions to '%s'.\n", selectedSet.Count(), filename );
-	}
-};
-
-
-//----------------------------------------------------------------------------------
-CON_COMMAND_F( nav_show_dumped_positions, "Show the (x,y,z) coordinate positions of the given dump file.", FCVAR_GAMEDLL | FCVAR_CHEAT )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	CUtlBuffer fileBuffer( 4096, 1024*1024, CUtlBuffer::TEXT_BUFFER );
-
-	// filename is local to game dir for Steam, so we need to prepend game dir for regular file save
-	char gamePath[256];
-	engine->GetGameDir( gamePath, 256 );
-
-	char filename[256];
-	Q_snprintf( filename, sizeof( filename ), "%s\\maps\\%s_xyz.txt", gamePath, STRING( gpGlobals->mapname ) );
-
-	if ( !filesystem->ReadFile( filename, "MOD", fileBuffer ) )
-	{
-		Warning( "Unable to read %s\n", filename );
-	}
-	else
-	{
-		while( true )
-		{
-			Vector center;
-			if ( fileBuffer.Scanf( "%f %f %f", &center.x, &center.y, &center.z ) <= 0 )
-			{
-				break;
-			}
-
-			NDebugOverlay::Cross3D( center, 5.0f, 255, 255, 0, true, 99999.9f );
-		}
-	}
-};
-
-
-//----------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_larger_than, "Select nav areas where both dimensions are larger than the given size.", FCVAR_GAMEDLL | FCVAR_CHEAT )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	if ( args.ArgC() > 1 )
-	{
-		float minSize = atof( args[1] );
-
-		int selectedCount = 0;
-
-		for( int i=0; i<TheNavAreas.Count(); ++i )
-		{
-			CNavArea *area = TheNavAreas[i];
-
-			if ( area->GetSizeX() > minSize && area->GetSizeY() > minSize )
-			{
-				TheNavMesh->AddToSelectedSet( area );
-				++selectedCount;
-			}
-		}
-
-		DevMsg( "Selected %d areas with dimensions larger than %3.2f units.\n", selectedCount, minSize );
-	}
-}
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -2033,16 +1821,6 @@ CON_COMMAND_F( nav_select_stairs, "Adds all stairway areas to the selected set",
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_orphans, "Adds all orphan areas to the selected set (highlight a valid area first).", FCVAR_CHEAT )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	TheNavMesh->CommandNavSelectOrphans();
-}
-
-
-//--------------------------------------------------------------------------------------------------------------
 void CommandNavSplit( void )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -2139,17 +1917,6 @@ void CommandNavDisconnect( void )
 	TheNavMesh->CommandNavDisconnect();
 }
 static ConCommand nav_disconnect( "nav_disconnect", CommandNavDisconnect, "To disconnect two Areas, mark an Area, highlight a second Area, then invoke the disconnect command. This will remove all connections between the two Areas.", FCVAR_GAMEDLL | FCVAR_CHEAT );
-
-
-//--------------------------------------------------------------------------------------------------------------
-void CommandNavDisconnectOutgoingOneWays( void )
-{
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
-	TheNavMesh->CommandNavDisconnectOutgoingOneWays();
-}
-static ConCommand nav_disconnect_outgoing_oneways( "nav_disconnect_outgoing_oneways", CommandNavDisconnectOutgoingOneWays, "For each area in the selected set, disconnect all outgoing one-way connections.", FCVAR_GAMEDLL | FCVAR_CHEAT );
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -2674,9 +2441,6 @@ void CNavMesh::CommandNavMarkWalkable( void )
 {
 	Vector pos;
 
-	if ( !UTIL_IsCommandIssuedByServerAdmin() )
-		return;
-
 	if (nav_edit.GetBool())
 	{
 		// we are in edit mode, use the edit cursor's location
@@ -3054,14 +2818,17 @@ HidingSpot::HidingSpot( void )
 	m_id = m_nextID++;
 	m_flags = 0;
 	m_area = NULL;
+	m_bIsSaved = true;
 
 	TheHidingSpots.AddToTail( this );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 void HidingSpot::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
 {
+	if ( !m_bIsSaved )
+		return;
+
 	fileBuffer.PutUnsignedInt( m_id );
 	fileBuffer.PutFloat( m_pos.x );
 	fileBuffer.PutFloat( m_pos.y );
@@ -3097,6 +2864,7 @@ NavErrorType HidingSpot::PostLoad( void )
 	if ( !m_area )
 	{
 		DevWarning( "A Hiding Spot is off of the Nav Mesh at setpos %.0f %.0f %.0f\n", m_pos.x, m_pos.y, m_pos.z );
+		AssertMsg(false, "This will cause crashes in the Bot Navigation code!");
 	}
 
 	return NAV_OK;

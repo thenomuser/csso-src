@@ -374,6 +374,8 @@ public:
 	void BalanceTeams( void );
 	void MoveHumansToHumanTeam( void );
 	bool TeamFull( int team_id );
+	int	 MaxNumPlayersOnTerrTeam();
+	int  MaxNumPlayersOnCTTeam();
 	bool TeamStacked( int newTeam_id, int curTeam_id  );
 	bool FPlayerCanRespawn( CBasePlayer *pPlayer );
 	void UpdateTeamScores();

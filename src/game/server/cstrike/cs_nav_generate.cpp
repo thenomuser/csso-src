@@ -86,7 +86,7 @@ void CCSNavArea::ComputeApproachAreas( void )
 		return;
 
 	// use the center of the nav area as the "view" point
-	Vector eye = m_center;
+	Vector eye = GetCenter();
 	if (TheNavMesh->GetGroundHeight( eye, &eye.z ) == false)
 		return;
 
