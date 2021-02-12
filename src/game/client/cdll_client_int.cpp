@@ -1164,7 +1164,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		Discord_UpdatePresence( &discordPresence );
 	}
 
-	Msg( "\nCounter-Strike: Source Offensive, version %2.1f\n\n", mod_version.GetFloat() );
+	Msg( "\nCounter-Strike: Source Offensive, version %2.1f\nMade by PiMoNFeeD using property of Valve Software\n\n", mod_version.GetFloat() );
 
 	return true;
 }
