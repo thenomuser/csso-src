@@ -320,18 +320,10 @@ CBonusMapsDatabase::~CBonusMapsDatabase()
 	g_pBonusMapsDatabase = NULL;
 }
 
-extern bool g_bIsCreatingNewGameMenuForPreFetching;
-
 bool CBonusMapsDatabase::ReadBonusMapSaveData( void )
 {
 	if ( !m_pBonusMapSavedData )
 		m_pBonusMapSavedData = new KeyValues( "bonus_map_saved_data" );
-
-	if ( g_bIsCreatingNewGameMenuForPreFetching )
-	{
-		// Although we may have a storage device it's not going to be able to find our file at this point! BAIL!
-		return false;
-	}
 
 #ifdef _X360
 	// Nothing to read

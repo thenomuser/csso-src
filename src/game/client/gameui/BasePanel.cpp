@@ -665,8 +665,6 @@ static CBackgroundMenuButton* CreateMenuButton( CBaseModPanel *parent, const cha
 	return pButton;
 }
 
-bool g_bIsCreatingNewGameMenuForPreFetching = false;
-
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
@@ -767,21 +765,22 @@ CBaseModPanel::CBaseModPanel() : Panel(NULL, "BaseGameUIPanel")
 	// start the menus fully transparent
 	SetMenuAlpha( 0 );
 
+	// do any costly resource prefetching now....
+	// PiMoN: even I myself get so much stutter when opening these
+	m_hOptionsDialog = new COptionsDialog( this );
+	m_hOptionsDialog->MarkForDeletion();
+	m_hModOptionsDialog = new CModOptionsDialog( this );
+	m_hModOptionsDialog->MarkForDeletion();
+	m_hCreateMultiplayerGameDialog = new CCreateMultiplayerGameDialog( this );
+	m_hCreateMultiplayerGameDialog->MarkForDeletion();
+#ifdef CSTRIKE_DLL
+	// CS achievments panel is loaded differently
+	GameClientExports()->CreateAchievementsPanel( this );
+	GameClientExports()->ShutdownAchievementPanel();
+#endif
+	
 	if ( GameUI().IsConsoleUI() )
 	{
-		// do any costly resource prefetching now....
-		// force the new dialog to get all of its chapter pics
-		g_bIsCreatingNewGameMenuForPreFetching = true;
-		m_hNewGameDialog = new CNewGameDialog( this, false );
-		m_hNewGameDialog->MarkForDeletion();
-		g_bIsCreatingNewGameMenuForPreFetching = false;
-
-		m_hOptionsDialog_Xbox = new COptionsDialogXbox( this );
-		m_hOptionsDialog_Xbox->MarkForDeletion();
-
-		m_hControllerDialog = new CControllerDialog( this );
-		m_hControllerDialog->MarkForDeletion();
-		
 		ArmFirstMenuItem();
 		m_pConsoleAnimationController->StartAnimationSequence( "InitializeUILayout" );
 	}
