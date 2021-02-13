@@ -136,17 +136,27 @@ VPANEL GetGameUIBasePanel()
 CGameMenuItem::CGameMenuItem(vgui::Menu *parent, const char *name)  : BaseClass(parent, name, "GameMenuItem") 
 {
 	m_bRightAligned = false;
+	m_bFadeBox = false;
 }
 
 void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 {
 	BaseClass::ApplySchemeSettings(pScheme);
+	
+	KeyValues *kv = GetUserData();
+	if ( kv )
+	{
+		m_bFadeBox = kv->GetBool( "FadeBox" );
+	}
 
 	// make fully transparent
 	SetFgColor(GetSchemeColor("MainMenu.TextColor", pScheme));
 	SetBgColor(Color(0, 0, 0, 0));
 	SetDefaultColor(GetSchemeColor("MainMenu.TextColor", pScheme), Color(0, 0, 0, 0));
-	SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), Color(0, 0, 0, 0));
+	if ( m_bFadeBox )
+		SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), GetSchemeColor("Button.ArmedBgColor", pScheme));
+	else
+		SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), Color(0, 0, 0, 0));
 	SetDepressedColor(GetSchemeColor("MainMenu.DepressedTextColor", pScheme), Color(0, 0, 0, 0));
 	SetContentAlignment(Label::a_west);
 	SetBorder(NULL);
@@ -164,17 +174,14 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 	{
 		SetFont( pScheme->GetFont( "MenuLarge", IsProportional() ) );
 	}
-	SetTextInset(0, 0);
+	if ( m_bFadeBox )
+		SetTextInset( MAIN_MENU_INDENT_X360, 0 );
+	else
+		SetTextInset( 0, 0 );
 	SetArmedSound("UI/buttonrollover.wav");
 	SetDepressedSound("UI/buttonclick.wav");
 	SetReleasedSound("UI/buttonclickrelease.wav");
 	SetButtonActivationType(Button::ACTIVATE_ONPRESSED);
-
-	if ( GameUI().IsConsoleUI() )
-	{
-		SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), GetSchemeColor("Button.ArmedBgColor", pScheme));
-		SetTextInset( MAIN_MENU_INDENT_X360, 0 );
-	}
 
 	if (m_bRightAligned)
 	{
@@ -184,7 +191,7 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 
 void CGameMenuItem::PaintBackground()
 {
-	if ( !GameUI().IsConsoleUI() )
+	if ( !m_bFadeBox )
 	{
 		BaseClass::PaintBackground();
 	}
