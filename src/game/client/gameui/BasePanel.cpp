@@ -203,8 +203,8 @@ void CGameMenuItem::PaintBackground()
 		int wide, tall;
 		GetSize( wide, tall );
 
-		DrawBoxFade( 0, 0, wide, tall, GetButtonBgColor(), 1.0f, 255, 0, true );
-		DrawBoxFade( 2, 2, wide - 4, tall - 4, Color( 0, 0, 0, 96 ), 1.0f, 255, 0, true );
+		DrawBoxFade( 0, 0, wide * 1.5, tall, GetButtonBgColor(), 1.0f, 255, 0, true );
+		DrawBoxFade( 2, 2, wide * 1.5 - 4, tall - 4, Color( 0, 0, 0, 96 ), 1.0f, 255, 0, true );
 	}
 }
 
