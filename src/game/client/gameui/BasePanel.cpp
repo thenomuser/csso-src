@@ -773,11 +773,6 @@ CBaseModPanel::CBaseModPanel() : Panel(NULL, "BaseGameUIPanel")
 	m_hModOptionsDialog->MarkForDeletion();
 	m_hCreateMultiplayerGameDialog = new CCreateMultiplayerGameDialog( this );
 	m_hCreateMultiplayerGameDialog->MarkForDeletion();
-#ifdef CSTRIKE_DLL
-	// CS achievments panel is loaded differently
-	GameClientExports()->CreateAchievementsPanel( this );
-	GameClientExports()->ShutdownAchievementPanel();
-#endif
 	
 	if ( GameUI().IsConsoleUI() )
 	{
