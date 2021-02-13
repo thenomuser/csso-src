@@ -19,8 +19,9 @@
 #define IN_BUTTONS_H
 
 // engine interface
-#include "cdll_int.h"
+#include "cdll_client_int.h"
 #include "icvar.h"
+#include "tier2/tier2.h"
 
 // engine interface singleton accessors
 extern IVEngineClient *engine;

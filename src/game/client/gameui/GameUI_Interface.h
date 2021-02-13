@@ -14,6 +14,10 @@
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/PHandle.h>
 
+
+#define BACKGROUND_MUSIC_FILENAME "mainmenu.mp3"
+#define MAX_BACKGROUND_MUSIC 3
+
 class IGameClientExports;
 
 //-----------------------------------------------------------------------------
@@ -31,9 +35,6 @@ public:
 	virtual void Shutdown();
 	virtual void RunFrame();
 	virtual void PostInit();
-
-	// plays the startup mp3 when GameUI starts
-	void PlayGameStartupSound();
 
 	// Engine wrappers for activating / hiding the gameUI
 	void ActivateGameUI();
@@ -112,6 +113,10 @@ public:
 	void HideLoadingBackgroundDialog();
 	bool HasLoadingBackgroundDialog();
 
+	bool IsBackgroundMusicPlaying( void );
+	void SetBackgroundMusicDesired( bool bPlayMusic );
+	void StartBackgroundMusicFade( void );
+
 private:
 	void SendConnectedToGameMessage();
 
@@ -128,9 +133,12 @@ private:
 	void GetUpdateVersion( char *pszProd, char *pszVer);
 	void ValidateCDKey();
 
+	void UpdateBackgroundMusic( void );
+
+	void ReleaseBackgroundMusic( void );
+
 	CreateInterfaceFn m_GameFactory;
 
-	bool m_bPlayGameStartupSound : 1;
 	bool m_bTryingToLoadFriends : 1;
 	bool m_bActivatedUI : 1;
 	bool m_bIsConsoleUI : 1;
@@ -142,11 +150,19 @@ private:
 	int m_iGameQueryPort;
 	
 	int m_iFriendsLoadPauseFrames;
+	int m_iPlayGameStartupSound;
 
 	char m_szPreviousStatusText[128];
 	char m_szPlatformDir[MAX_PATH];
 
 	vgui::DHANDLE<class CCDKeyEntryDialog> m_hCDKeyEntryDialog;
+
+	int m_nBackgroundMusicGUID;
+	bool m_bBackgroundMusicDesired;
+	int m_nBackgroundMusicVersion;
+	float m_flBackgroundMusicStopTime;
+	const char *m_pMusicExtension;
+	float m_flMasterMusicVolume;
 };
 
 // Purpose: singleton accessor

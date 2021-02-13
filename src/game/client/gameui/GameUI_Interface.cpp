@@ -141,6 +141,13 @@ CGameUI::CGameUI()
 	m_bIsConsoleUI = false;
 	m_bHasSavedThisMenuSession = false;
 	m_bOpenProgressOnStart = false;
+	m_iPlayGameStartupSound = 0;
+	m_nBackgroundMusicGUID = 0;
+	m_bBackgroundMusicDesired = false;
+	m_nBackgroundMusicVersion = RandomInt( 1, MAX_BACKGROUND_MUSIC );
+	m_flBackgroundMusicStopTime = -1.0;
+	m_pMusicExtension = NULL;
+	m_flMasterMusicVolume = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -379,136 +386,6 @@ int __stdcall SendShutdownMsgFunc(WHANDLE hwnd, int lparam)
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Searches for GameStartup*.mp3 files in the sound/ui folder and plays one
-//-----------------------------------------------------------------------------
-void CGameUI::PlayGameStartupSound()
-{
-	if ( IsX360() )
-		return;
-
-	if ( CommandLine()->FindParm( "-nostartupsound" ) )
-		return;
-
-	FileFindHandle_t fh;
-
-	CUtlVector<char *> fileNames;
-	char path[ 512 ];
-
-	bool bHolidayFound = false;
-
-	// only want to run the holiday check for TF2
-	const char *pGameName = CommandLine()->ParmValue( "-game", "hl2" );
-	if ( ( Q_stricmp( pGameName, "tf" ) == 0 ) || ( Q_stricmp( pGameName, "tf_beta" ) == 0 ) )
-	{
-		// check for a holiday sound file
-		const char *pszHoliday = NULL;
-	
-		if ( GameClientExports() )
-		{
-			pszHoliday = GameClientExports()->GetHolidayString();
-			if ( pszHoliday && pszHoliday[0] )
-			{
-				Q_snprintf( path, sizeof( path ), "sound/ui/holiday/gamestartup_%s*.mp3", pszHoliday );
-				Q_FixSlashes( path );
-
-				char const *fn = g_pFullFileSystem->FindFirstEx( path, "MOD", &fh );
-				{
-					if ( fn )
-					{
-						bHolidayFound = true;
-					}
-				}
-			}
-		}
-	}
-
-	// only want to do this if we haven't found a holiday file
-	if ( !bHolidayFound )
-	{
-		Q_snprintf( path, sizeof( path ), "sound/ui/gamestartup*.mp3" );
-		Q_FixSlashes( path );
-	}
-
-	char const *fn = g_pFullFileSystem->FindFirstEx( path, "MOD", &fh );
-	if ( fn )
-	{
-		do
-		{
-			char ext[ 10 ];
-			Q_ExtractFileExtension( fn, ext, sizeof( ext ) );
-
-			if ( !Q_stricmp( ext, "mp3" ) )
-			{
-				char temp[ 512 ];
-				if ( bHolidayFound )
-				{
-					Q_snprintf( temp, sizeof( temp ), "ui/holiday/%s", fn );
-				}
-				else
-				{
-					Q_snprintf( temp, sizeof( temp ), "ui/%s", fn );
-				}
-
-				char *found = new char[ strlen( temp ) + 1 ];
-				Q_strncpy( found, temp, strlen( temp ) + 1 );
-
-				Q_FixSlashes( found );
-				fileNames.AddToTail( found );
-			}
-	
-			fn = g_pFullFileSystem->FindNext( fh );
-
-		} while ( fn );
-
-		g_pFullFileSystem->FindClose( fh );
-	}
-
-	// did we find any?
-	if ( fileNames.Count() > 0 )
-	{
-#ifdef WIN32
-		SYSTEMTIME SystemTime;
-		GetSystemTime( &SystemTime );
-		int index = SystemTime.wMilliseconds % fileNames.Count();
-#else
-		struct timeval tm;
-		gettimeofday( &tm, NULL );
-		int index = tm.tv_usec/1000 % fileNames.Count();
-#endif
-
-		if ( fileNames.IsValidIndex( index ) && fileNames[index] )
-		{
-			// Play the Saxxy music if we're in saxxy mode.
-#if defined( SAXXYMAINMENU_ENABLED )
-			bool bIsTF = false;
-			const char *pGameDir = engine->GetGameDirectory();
-			if ( pGameDir )
-			{
-				// Is the game TF?
-				const int nStrLen = V_strlen( pGameDir );
-				bIsTF = nStrLen
-					&& nStrLen >= 2 &&
-					pGameDir[nStrLen-2] == 't' &&
-					pGameDir[nStrLen-1] == 'f';
-			}
-
-			// escape chars "*#" make it stream, and be affected by snd_musicvolume
-			const char *pSoundFile = bIsTF ? "ui/holiday/gamestartup_saxxy.mp3" : fileNames[index];
-#else
-			const char *pSoundFile = fileNames[index];
-#endif
-
-			char found[ 512 ];
-			Q_snprintf( found, sizeof( found ), "play *#%s", pSoundFile );
-
-			engine->ClientCmd_Unrestricted( found );
-		}
-
-		fileNames.PurgeAndDeleteElements();
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Called to setup the game UI
 //-----------------------------------------------------------------------------
 void CGameUI::Start()
@@ -581,9 +458,6 @@ void CGameUI::Start()
 #endif
 			}
 		}
-			
-		// Delay playing the startup music until the first frame
-		m_bPlayGameStartupSound = true;
 
 		// now we are set up to check every frame to see if we can friends/server browser
 		m_bTryingToLoadFriends = true;
@@ -809,10 +683,13 @@ void CGameUI::RunFrame()
 	BasePanel()->RunFrame();
 
 	// Play the start-up music the first time we run frame
-	if ( IsPC() && m_bPlayGameStartupSound )
+	if ( m_iPlayGameStartupSound > 0 )
 	{
-		PlayGameStartupSound();
-		m_bPlayGameStartupSound = false;
+		m_iPlayGameStartupSound--;		
+	}
+	else
+	{
+		UpdateBackgroundMusic();
 	}
 
 	if ( IsPC() && ( ( IsPosix() && m_bTryingToLoadFriends ) || 
@@ -946,7 +823,7 @@ void CGameUI::OnLevelLoadingStarted( bool bShowProgressDialog )
 	}
 
 	// Don't play the start game sound if this happens before we get to the first frame
-	m_bPlayGameStartupSound = false;
+	m_iPlayGameStartupSound = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1246,6 +1123,111 @@ bool CGameUI::ValidateStorageDevice( int *pStorageDeviceValidated )
 void CGameUI::SetProgressOnStart()
 {
 	m_bOpenProgressOnStart = true;
+}
+
+
+bool CGameUI::IsBackgroundMusicPlaying( void )
+{
+	if ( m_nBackgroundMusicGUID == 0 )
+	{
+		return false;
+	}
+
+	return enginesound->IsSoundStillPlaying( m_nBackgroundMusicGUID );
+}
+
+void CGameUI::ReleaseBackgroundMusic( void )
+{
+	if ( m_nBackgroundMusicGUID == 0 )
+		return;
+	
+	enginesound->StopSoundByGuid( m_nBackgroundMusicGUID );
+
+	m_nBackgroundMusicGUID = 0;
+}
+
+//The way to loop an MP3 is just to constantly check if it is playing and restart it otherwise
+#define MENUMUSIC_FADETIME 1.34
+
+#include "cdll_util.h"
+void CGameUI::UpdateBackgroundMusic( void )
+{
+	if ( m_bBackgroundMusicDesired )
+	{	
+		const char * pNewMusicExtension = "";
+		
+		static ConVarRef snd_musicvolume( "snd_musicvolume" );
+		static ConVarRef snd_music_selection( "snd_music_selection" );
+		if ( snd_music_selection.IsValid() )
+			pNewMusicExtension = snd_music_selection.GetString();
+
+		if ( !IsBackgroundMusicPlaying() )
+		{
+			m_flMasterMusicVolume = snd_musicvolume.GetFloat();
+			m_flBackgroundMusicStopTime = -1.0;
+
+			char sMusicKit[128];
+
+			m_pMusicExtension = pNewMusicExtension;
+
+			bool bUseStandardMusic = (!Q_strcmp( m_pMusicExtension, "valve_csgo_01" )) || (!Q_strcmp( m_pMusicExtension, "valve_csgo_02" ));
+			if ( !bUseStandardMusic && m_pMusicExtension != NULL )
+			{
+				V_sprintf_safe( sMusicKit, "music/%s/%s", m_pMusicExtension, BACKGROUND_MUSIC_FILENAME );
+			}
+			else
+			{
+				m_nBackgroundMusicVersion++;
+
+				if ( m_nBackgroundMusicVersion == 1 )
+				{
+					V_sprintf_safe( sMusicKit, "music/valve_csgo_02/%s", BACKGROUND_MUSIC_FILENAME );
+				}
+				else
+				{
+					m_nBackgroundMusicVersion = 0;
+					V_sprintf_safe( sMusicKit, "music/valve_csgo_01/%s", BACKGROUND_MUSIC_FILENAME );
+				}
+			}
+			m_nBackgroundMusicGUID = enginesound->EmitAmbientSound( sMusicKit, m_flMasterMusicVolume );
+			
+		}
+		else
+		{
+			if ( m_flMasterMusicVolume != snd_musicvolume.GetFloat() )
+			{
+				m_flMasterMusicVolume = snd_musicvolume.GetFloat();
+				enginesound->SetVolumeByGuid( m_nBackgroundMusicGUID, m_flMasterMusicVolume );
+			}
+
+			if ( !FStrEq( pNewMusicExtension, m_pMusicExtension ) )
+			{
+				ReleaseBackgroundMusic();
+			}
+			else if( ( m_flBackgroundMusicStopTime > -1.0 ) )
+			{
+				float flDelta = gpGlobals->curtime - m_flBackgroundMusicStopTime;
+				float flFadeAmount = 1.0 - ( flDelta / MENUMUSIC_FADETIME );
+				enginesound->SetVolumeByGuid( m_nBackgroundMusicGUID, flFadeAmount );
+				if( flFadeAmount < .05 )
+				{
+					SetBackgroundMusicDesired( false );
+				}
+			}
+		}
+	}
+	else
+	{
+		ReleaseBackgroundMusic();
+	}
+}
+void CGameUI::StartBackgroundMusicFade( void )
+{
+	m_flBackgroundMusicStopTime = gpGlobals->curtime;
+}
+void CGameUI::SetBackgroundMusicDesired( bool bPlayMusic )
+{
+	m_bBackgroundMusicDesired = bPlayMusic;
 }
 
 void CGameUI::OnConfirmQuit( void )

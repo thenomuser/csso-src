@@ -97,7 +97,7 @@ public:
 	
 	// emit an "ambient" sound that isn't spatialized
 	// only available on the client, assert on server
-	virtual void EmitAmbientSound( const char *pSample, float flVolume, int iPitch = PITCH_NORM, int flags = 0, float soundtime = 0.0f ) = 0;
+	virtual int EmitAmbientSound( const char *pSample, float flVolume, int iPitch = PITCH_NORM, int flags = 0, float soundtime = 0.0f ) = 0;
 
 
 //	virtual EntChannel_t	CreateEntChannel() = 0;

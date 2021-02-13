@@ -63,7 +63,7 @@ public:
 
 	// emit an "ambient" sound that isn't spatialized - specify left/right volume
 	// only available on the client, assert on server
-	virtual void EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime = 0.0f );
+	virtual int EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime = 0.0f );
 
 	virtual float GetDistGainFromSoundLevel( soundlevel_t soundlevel, float dist );
 
@@ -369,9 +369,10 @@ void CEngineSoundServer::StopAllSounds(bool bClearBuffers)
 	AssertMsg( 0, "Not supported" );
 }
 
-void CEngineSoundServer::EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime /*= 0.0f*/ )
+int CEngineSoundServer::EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime /*= 0.0f*/ )
 {
 	AssertMsg( 0, "Not supported" );
+	return 0;
 }
 
 //-----------------------------------------------------------------------------
