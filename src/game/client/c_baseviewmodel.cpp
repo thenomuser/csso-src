@@ -671,7 +671,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	{
 		if ( CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
-			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			AddViewmodelArmModel( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szViewModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex, pPlayer->m_pViewmodelArmConfig->bHideBareArms );
 			if ( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride[0] != NULL )
 				AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModelGloveOverride );
 			else
@@ -679,14 +679,14 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		}
 		else
 		{
-			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex );
+			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, pPlayer->m_pViewmodelArmConfig->iSkintoneIndex, pPlayer->m_pViewmodelArmConfig->bHideBareArms );
 			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedSleeveModel );
 		}
 	}
 }
 
 //--------------------------------------------------------------------------------------------------------
-C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkintoneIndex )
+C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *pszArmsModel, int nSkintoneIndex, bool bHideBareArms )
 {
 	// Only create the view model attachment if we have a valid arm model
 	if ( pszArmsModel == NULL || pszArmsModel[0] == '\0' || modelinfo->GetModelIndex( pszArmsModel ) == -1 )
@@ -699,6 +699,10 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 
 		if ( nSkintoneIndex != -1 )
 			pEnt->m_nSkin = nSkintoneIndex;
+
+		// magic tricks to get 0.01 more fps on potato PCs
+		if ( pEnt->FindBodygroupByName( "bare" ) != -1 )
+			pEnt->SetBodygroup( pEnt->FindBodygroupByName( "bare" ), bHideBareArms );
 
 		pEnt->SetParent( this );
 		pEnt->SetLocalOrigin( vec3_origin );
