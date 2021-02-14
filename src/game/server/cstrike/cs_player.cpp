@@ -1148,6 +1148,11 @@ void CCSPlayer::Spawn()
 		m_bNeedToChangeGloves = false;
 	}
 
+	if ( CSLoadout()->HasGlovesSet(this, GetTeamNumber()) )
+		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // moved from client as it is not working there
+	else
+		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+
 	m_RateLimitLastCommandTimes.Purge();
 
 	// Get rid of the progress bar...
