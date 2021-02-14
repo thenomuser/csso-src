@@ -391,6 +391,9 @@ public:
 	void CheckLevelInitialized();
 	void CheckRestartRound();
 
+	bool CanPlayerHearTalker( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
+	virtual bool PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
+
 
 	// Checks if it still needs players to start a round, or if it has enough players to start rounds.
 	// Starts a round and returns true if there are enough players.

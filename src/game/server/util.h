@@ -69,6 +69,15 @@ T *_CreateEntityTemplate( T *newEnt, const char *className )
 
 #include "tier0/memdbgoff.h"
 
+
+enum EUtilSayTextMessageType_t
+{
+	kEUtilSayTextMessageType_Default,		// default text
+	kEUtilSayTextMessageType_TeamonlyChat,	// teamonly chat
+	kEUtilSayTextMessageType_AllChat,		// all chat
+};
+
+
 CBaseEntity *CreateEntityByName( const char *className, int iForceEdictIndex );
 
 // creates an entity by name, and ensure it's correctness
@@ -409,9 +418,9 @@ void ClientPrint( CBasePlayer *player, int msg_dest, const char *msg_name, const
 
 // prints a message to the HUD say (chat)
 void		UTIL_SayText( const char *pText, CBasePlayer *pEntity );
-void		UTIL_SayTextAll( const char *pText, CBasePlayer *pEntity = NULL, bool bChat = false );
-void		UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlayer *pEntity, bool bChat );
-void		UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, bool bChat, const char *msg_name, const char *param1 = NULL, const char *param2 = NULL, const char *param3 = NULL, const char *param4 = NULL );
+void		UTIL_SayTextAll( const char *pText, CBasePlayer *pEntity = NULL, EUtilSayTextMessageType_t eMessageType = kEUtilSayTextMessageType_Default );
+void		UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlayer *pEntity, EUtilSayTextMessageType_t eMessageType );
+void		UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, EUtilSayTextMessageType_t eMessageType, const char *msg_name, const char *param1 = NULL, const char *param2 = NULL, const char *param3 = NULL, const char *param4 = NULL );
 
 byte		*UTIL_LoadFileForMe( const char *filename, int *pLength );
 void        UTIL_FreeFile( byte *buffer );

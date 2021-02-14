@@ -12,6 +12,8 @@
 // Minimum interval between rate-limited commands that players can run.
 #define COMMAND_MAX_RATE  0.3
 
+ConVar sv_allchat("sv_allchat", "1", FCVAR_NOTIFY, "Players can receive all other players' text chat, team restrictions apply");
+
 CBaseMultiplayerPlayer::CBaseMultiplayerPlayer()
 {
 	m_iCurrentConcept = MP_CONCEPT_NONE;

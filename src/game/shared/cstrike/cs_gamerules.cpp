@@ -393,6 +393,21 @@ ConVar sv_kick_ban_duration(
 	FCVAR_REPLICATED | FCVAR_NOTIFY,
 	"How long should a kick ban from the server should last (in minutes)" );
 
+// Set game rules to allow all clients to talk to each other.
+// Muted players still can't talk to each other.
+ConVar sv_alltalk( "sv_alltalk", "0", FCVAR_REPLICATED | FCVAR_NOTIFY, "Deprecated. Replaced with sv_talk_enemy_dead and sv_talk_enemy_living." );
+
+// [jason] Can the dead speak to the living?
+ConVar sv_deadtalk( "sv_deadtalk", "0",	FCVAR_REPLICATED | FCVAR_NOTIFY, "Dead players can speak (voice, text) to the living" );
+
+// [jason] Override that removes all chat restrictions, including those for spectators
+ConVar sv_full_alltalk( "sv_full_alltalk", "0", FCVAR_REPLICATED, "Any player (including Spectator team) can speak to any other player" );
+
+ConVar sv_talk_enemy_dead( "sv_talk_enemy_dead", "0", FCVAR_REPLICATED, "Dead players can hear all dead enemy communication (voice, chat)" );
+ConVar sv_talk_enemy_living( "sv_talk_enemy_living", "0", FCVAR_REPLICATED, "Living players can hear all living enemy communication (voice, chat)" );
+
+ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Determines who spectators can hear: 0: only spectators; 1: all players; 2: spectated team; 3: self only; 4: nobody" );
+
 #ifdef CLIENT_DLL
 
 ConVar cl_autowepswitch(
@@ -585,17 +600,14 @@ ConVar snd_music_selection(
 	public:
 		virtual bool		CanPlayerHearPlayer( CBasePlayer *pListener, CBasePlayer *pTalker, bool &bProximity )
 		{
-			// Dead players can only be heard by other dead team mates
-			if ( pTalker->IsAlive() == false )
-			{
-				if ( pListener->IsAlive() == false )
-					return ( pListener->InSameTeam( pTalker ) );
+            if ( pListener == NULL || pTalker == NULL )
+                return false;
 
-				return false;
-			}
+            if ( !CSGameRules() )
+                return false;
 
-			return ( pListener->InSameTeam( pTalker ) );
-		}
+            return CSGameRules()->CanPlayerHearTalker( pListener, pTalker, false );
+        }
 	};
 	CVoiceGameMgrHelper g_VoiceGameMgrHelper;
 	IVoiceGameMgrHelper *g_pVoiceGameMgrHelper = &g_VoiceGameMgrHelper;
@@ -827,6 +839,18 @@ ConVar snd_music_selection(
 		"cash_player_killed_hostage",
 		"-1000",
 		FCVAR_REPLICATED | FCVAR_NOTIFY );
+
+	namespace SpecHear
+	{
+		enum Type
+		{
+			OnlySpectators = 0,
+			AllPlayers = 1,
+			SpectatedTeam = 2,
+			Self = 3,
+			Nobody = 4,
+		};
+	}
 
 
 	// --------------------------------------------------------------------------------------------------- //
@@ -6248,6 +6272,95 @@ const CViewVectors* CCSGameRules::GetViewVectors() const
 	return &g_CSViewVectors;
 }
 
+#ifdef GAME_DLL
+/*
+	Helper function which handles both voice and chat. The only difference is which convar to use
+	to determine whether enemies can be heard (sv_alltalk or sv_allchat).
+*/
+bool CanPlayerHear( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly, bool bHearEnemies )
+{
+	Assert(pListener != NULL && pSpeaker != NULL);
+	if ( pListener == NULL || pSpeaker == NULL )
+		return false;
+
+	// sv_full_alltalk lets everyone can talk to everyone else, except comms specifically flagged as team-only
+	if ( !bTeamOnly && sv_full_alltalk.GetBool() )
+		return true;
+
+	// if either speaker or listener are coaching then for intents and purposes treat them as teammates.
+	int iListenerTeam = pListener->GetTeamNumber();
+	int iSpeakerTeam = pSpeaker->GetTeamNumber();
+
+	// use the observed target's team when sv_spec_hear is mode 2
+	if ( iListenerTeam == TEAM_SPECTATOR && sv_spec_hear.GetInt() == SpecHear::SpectatedTeam && 
+		( pListener->GetObserverMode() == OBS_MODE_IN_EYE || pListener->GetObserverMode() == OBS_MODE_CHASE ) )
+	{
+		CBaseEntity *pTarget = pListener->GetObserverTarget();
+		if ( pTarget && pTarget->IsPlayer() )
+		{
+			iListenerTeam = pTarget->GetTeamNumber();
+		}
+	}
+
+	if ( iListenerTeam == TEAM_SPECTATOR )
+	{
+		if ( sv_spec_hear.GetInt() == SpecHear::Nobody )
+			return false; // spectators are selected to not hear other spectators
+
+		if ( sv_spec_hear.GetInt() == SpecHear::Self )
+			return ( pListener == pSpeaker ); // spectators are selected to not hear other spectators
+
+		// spectators can always hear other spectators
+		if ( iSpeakerTeam == TEAM_SPECTATOR )
+			return true;
+
+		return !bTeamOnly && sv_spec_hear.GetInt() == SpecHear::AllPlayers;
+	}
+
+	// no one else can hear spectators
+	if ( ( iSpeakerTeam != TEAM_TERRORIST ) &&
+		( iSpeakerTeam != TEAM_CT ) )
+		return false;
+
+	// are enemy teams prevented from hearing each other by sv_alltalk/sv_allchat?
+	if ( (bTeamOnly || !bHearEnemies) && iSpeakerTeam != iListenerTeam )
+		return false;
+
+	// living players can only hear dead players if sv_deadtalk is enabled
+	if ( pListener->IsAlive() && !pSpeaker->IsAlive() )
+	{
+		return sv_deadtalk.GetBool();
+	}
+
+	return true;
+}
+
+bool CCSGameRules::CanPlayerHearTalker( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly  )
+{
+	bool bHearEnemy = false;
+	
+	if ( sv_talk_enemy_living.GetBool() && sv_talk_enemy_dead.GetBool() )
+	{
+		bHearEnemy = true;
+	}
+	else if ( !pListener->IsAlive() && !pSpeaker->IsAlive() )
+	{
+		bHearEnemy = sv_talk_enemy_dead.GetBool();
+	}
+	else if ( pListener->IsAlive() && pSpeaker->IsAlive() )
+	{
+		bHearEnemy = sv_talk_enemy_living.GetBool();
+	}
+
+	return CanPlayerHear( pListener, pSpeaker, bTeamOnly, bHearEnemy );
+}
+
+extern ConVar sv_allchat;
+bool CCSGameRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly  )
+{
+	return CanPlayerHear( pListener, pSpeaker, bTeamOnly, sv_allchat.GetBool() );
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Init CS ammo definitions

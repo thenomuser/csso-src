@@ -28,6 +28,10 @@ static int team_scores[MAX_TEAMS];
 static int num_teams = 0;
 
 extern bool		g_fGameOver;
+extern ConVar sv_allchat;
+
+// [jason] Used to allow dead chat as well
+extern ConVar sv_deadtalk;
 
 REGISTER_GAMERULES_CLASS( CTeamplayRules );
 
@@ -390,8 +394,18 @@ int CTeamplayRules::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarg
 //			*pSpeaker - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CTeamplayRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker )
+bool CTeamplayRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly )
 {
+	if ( !bTeamOnly && sv_allchat.GetBool() )
+	{
+		if ( !pSpeaker->IsAlive() )
+		{
+			// [jason] convar allows the dead to speak/chat with the living
+			return ( ( !pListener->IsAlive() || sv_deadtalk.GetBool() ) &&
+					 ( PlayerRelationship( pListener, pSpeaker ) == GR_TEAMMATE ) );
+		}
+	}
+
 	return ( PlayerRelationship( pListener, pSpeaker ) == GR_TEAMMATE );
 }
 

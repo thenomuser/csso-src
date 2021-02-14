@@ -484,9 +484,9 @@ bool CSingleplayRules::Damage_ShouldNotBleed( int iDmgType )
 
 	//=========================================================
 	//=========================================================
-	bool CSingleplayRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker )
+	bool CSingleplayRules::PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly )
 	{
-		return ( PlayerRelationship( pListener, pSpeaker ) == GR_TEAMMATE );
+		return !bTeamOnly || PlayerRelationship( pListener, pSpeaker ) == GR_TEAMMATE;
 	}
 
 	//=========================================================

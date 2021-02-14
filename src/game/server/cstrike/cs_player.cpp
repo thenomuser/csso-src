@@ -156,6 +156,8 @@ extern ConVar mp_respawn_immunitytime;
 
 ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
+static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
+
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED, "Determines whether a player can early-out of the deathcam." );
 
 #define THROWGRENADE_COUNTER_BITS 3
@@ -4998,31 +5000,28 @@ void CCSPlayer::ConstructRadioFilter( CRecipientFilter& filter )
 {
 	filter.MakeReliable();
 
-	int localTeam = GetTeamNumber();
-
-	int i;
-	for ( i = 1; i <= gpGlobals->maxClients; ++i )
+	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 	{
 		CCSPlayer *player = static_cast<CCSPlayer *>( UTIL_PlayerByIndex( i ) );
 		if ( !player )
 			continue;
 
-		// Skip players ignoring the radio
-		if ( player->m_bIgnoreRadio )
-			continue;
-
-		if( player->GetTeamNumber() == TEAM_SPECTATOR )
+		if ( player->IsHLTV() )
 		{
-			// add spectators
-			if( player->m_iObserverMode == OBS_MODE_IN_EYE || player->m_iObserverMode == OBS_MODE_CHASE )
-			{
+			if ( tv_relayradio.GetBool() )
 				filter.AddRecipient( player );
-			}
+			else
+				continue;
 		}
-		else if( player->GetTeamNumber() == localTeam )
+		else
 		{
-			// add teammates
-			filter.AddRecipient( player );
+			// Skip players ignoring the radio
+			if ( player->m_bIgnoreRadio )
+				continue;
+
+			bool bTeamOnly = true;
+			if ( CSGameRules()->CanPlayerHearTalker( player, this, bTeamOnly ) )
+				filter.AddRecipient( player );
 		}
 	}
 }
@@ -9020,7 +9019,7 @@ void CCSPlayer::ChangeName( const char *pszNewName )
 
 	// send colored message to everyone
 	CReliableBroadcastRecipientFilter filter;
-	UTIL_SayText2Filter( filter, this, false, "#Cstrike_Name_Change", pszOldName, trimmedName );
+	UTIL_SayText2Filter( filter, this, kEUtilSayTextMessageType_AllChat, "#Cstrike_Name_Change", pszOldName, trimmedName );
 
 	// broadcast event
 	IGameEvent * event = gameeventmanager->CreateEvent( "player_changename" );

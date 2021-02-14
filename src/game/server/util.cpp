@@ -1150,7 +1150,7 @@ void ClientPrint( CBasePlayer *player, int msg_dest, const char *msg_name, const
 	UTIL_ClientPrintFilter( user, msg_dest, msg_name, param1, param2, param3, param4 );
 }
 
-void UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlayer *pPlayer, bool bChat )
+void UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlayer *pPlayer, EUtilSayTextMessageType_t eMessageType )
 {
 	UserMessageBegin( filter, "SayText" );
 		if ( pPlayer ) 
@@ -1162,11 +1162,11 @@ void UTIL_SayTextFilter( IRecipientFilter& filter, const char *pText, CBasePlaye
 			WRITE_BYTE( 0 ); // world, dedicated server says
 		}
 		WRITE_STRING( pText );
-		WRITE_BYTE( bChat );
+		WRITE_BYTE( ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat ) );
 	MessageEnd();
 }
 
-void UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, bool bChat, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
+void UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, EUtilSayTextMessageType_t eMessageType, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
 {
 	UserMessageBegin( filter, "SayText2" );
 		if ( pEntity )
@@ -1178,7 +1178,7 @@ void UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, bool b
 			WRITE_BYTE( 0 ); // world, dedicated server says
 		}
 
-		WRITE_BYTE( bChat );
+		WRITE_BYTE( ( eMessageType == kEUtilSayTextMessageType_TeamonlyChat ) || ( eMessageType == kEUtilSayTextMessageType_AllChat ) );
 
 		WRITE_STRING( msg_name );
 
@@ -1213,13 +1213,13 @@ void UTIL_SayText( const char *pText, CBasePlayer *pToPlayer )
 	CSingleUserRecipientFilter user( pToPlayer );
 	user.MakeReliable();
 
-	UTIL_SayTextFilter( user, pText, pToPlayer, false );
+	UTIL_SayTextFilter( user, pText, pToPlayer, kEUtilSayTextMessageType_Default );
 }
 
-void UTIL_SayTextAll( const char *pText, CBasePlayer *pPlayer, bool bChat )
+void UTIL_SayTextAll( const char *pText, CBasePlayer *pPlayer, EUtilSayTextMessageType_t eMessageType )
 {
 	CReliableBroadcastRecipientFilter filter;
-	UTIL_SayTextFilter( filter, pText, pPlayer, bChat );
+	UTIL_SayTextFilter( filter, pText, pPlayer, eMessageType );
 }
 
 void UTIL_ShowMessage( const char *pString, CBasePlayer *pPlayer )

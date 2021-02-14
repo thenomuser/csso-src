@@ -56,6 +56,7 @@ extern CBaseEntity*	FindPickerEntity( CBasePlayer* pPlayer );
 extern bool IsInCommentaryMode( void );
 
 ConVar  *sv_cheats = NULL;
+static ConVar tv_relaytextchat( "tv_relaytextchat", "1", 0, "Relay text chat data: 0=off, 1=say, 2=say+say_team" );
 
 enum eAllowPointServerCommand {
 	eAllowNever,
@@ -276,25 +277,38 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 		if ( !(client->IsNetClient()) )	// Not a client ? (should never be true)
 			continue;
 
-		if ( teamonly && g_pGameRules->PlayerCanHearChat( client, pPlayer ) != GR_TEAMMATE )
-			continue;
+		if ( client->IsHLTV() )
+		{
+			if ( !tv_relaytextchat.GetInt() )
+				continue; // chat is not relayed to TV
+			else if ( teamonly && ( tv_relaytextchat.GetInt() < 2 ) )
+				continue; // team-only chat, in mode that TV doesn't relay
+		}
+		else
+		{
+			if ( pPlayer && !g_pGameRules->PlayerCanHearChat( client, pPlayer, teamonly ) )
+				continue;
 
-		if ( pPlayer && !client->CanHearAndReadChatFrom( pPlayer ) )
-			continue;
+			if ( pPlayer && !client->CanHearAndReadChatFrom( pPlayer ) )
+				continue;
 
-		if ( pPlayer && GetVoiceGameMgr() && GetVoiceGameMgr()->IsPlayerIgnoringPlayer( pPlayer->entindex(), i ) )
-			continue;
+			if ( pPlayer && GetVoiceGameMgr() && GetVoiceGameMgr()->IsPlayerIgnoringPlayer( pPlayer->entindex(), i ) )
+				continue;
+		}
 
 		CSingleUserRecipientFilter user( client );
 		user.MakeReliable();
 
 		if ( pszFormat )
 		{
-			UTIL_SayText2Filter( user, pPlayer, true, pszFormat, pszPlayerName, p, pszLocation );
+			UTIL_SayText2Filter( user, pPlayer,
+				teamonly ? kEUtilSayTextMessageType_TeamonlyChat : kEUtilSayTextMessageType_AllChat,
+				pszFormat, pszPlayerName, p, pszLocation );
 		}
 		else
 		{
-			UTIL_SayTextFilter( user, text, pPlayer, true );
+			UTIL_SayTextFilter( user, text, pPlayer,
+				teamonly ? kEUtilSayTextMessageType_TeamonlyChat : kEUtilSayTextMessageType_AllChat );
 		}
 	}
 
@@ -306,11 +320,14 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 
 		if ( pszFormat )
 		{
-			UTIL_SayText2Filter( user, pPlayer, true, pszFormat, pszPlayerName, p, pszLocation );
+			UTIL_SayText2Filter( user, pPlayer,
+				teamonly ? kEUtilSayTextMessageType_TeamonlyChat : kEUtilSayTextMessageType_AllChat,
+				pszFormat, pszPlayerName, p, pszLocation );
 		}
 		else
 		{
-			UTIL_SayTextFilter( user, text, pPlayer, true );
+			UTIL_SayTextFilter( user, text, pPlayer,
+				teamonly ? kEUtilSayTextMessageType_TeamonlyChat : kEUtilSayTextMessageType_AllChat );
 		}
 	}
 
