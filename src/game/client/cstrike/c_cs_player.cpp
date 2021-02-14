@@ -1072,11 +1072,7 @@ C_CSPlayer::~C_CSPlayer()
 
 	m_PlayerAnimState->Release();
 
-	if ( m_pGlovesModel )
-	{
-		m_pGlovesModel->Remove();
-		m_pGlovesModel = NULL;
-	}
+	RemoveGlovesModel();
 }
 
 
@@ -1586,33 +1582,45 @@ void C_CSPlayer::UpdateAddonModels()
 	}
 }
 
-void C_CSPlayer::UpdateGloveModel()
+void C_CSPlayer::UpdateGlovesModel()
 {
 	if ( !IsAlive() || (GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) || IsDormant() || !IsVisible() )
 	{
-		if ( m_pGlovesModel )
-		{
-			m_pGlovesModel->Remove();
-			m_pGlovesModel = NULL;
-		}
+		RemoveGlovesModel();
 		return;
 	}
 
 	// add a separate gloves model if needed
 	// PiMoN; I dont like that its gonna remove and add the model every tick, but seems
 	// like there is no other way or im just too sleepy to come up with one, 4:54 AM here
-	if ( DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
+	if ( DoesModelSupportGloves() )
 	{
-		// hide the gloves first
-		//SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // seems not to work here so moved to server
+		if ( CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
+		{
+			// hide the gloves first
+			//SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // seems not to work here so moved to server
 
-		if ( m_pGlovesModel )
-			m_pGlovesModel->Remove();
+			if ( m_pGlovesModel )
+				m_pGlovesModel->Remove();
 
-		m_pGlovesModel = new C_BaseAnimating;
-		m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-		m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-		m_pGlovesModel->FollowEntity( this ); // attach to player model
+			m_pGlovesModel = new C_BaseAnimating;
+			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+			m_pGlovesModel->FollowEntity( this ); // attach to player model
+		}
+		else
+		{
+			RemoveGlovesModel();
+		}
+	}
+}
+
+void C_CSPlayer::RemoveGlovesModel()
+{
+	if ( m_pGlovesModel )
+	{
+		m_pGlovesModel->Remove();
+		m_pGlovesModel = NULL;
 	}
 }
 
@@ -1693,7 +1701,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-			UpdateGloveModel();
+			UpdateGlovesModel();
 
 			m_pViewmodelArmConfig = NULL;
 		}
@@ -1769,7 +1777,7 @@ void C_CSPlayer::ClientThink()
 
 	UpdateAddonModels();
 
-	UpdateGloveModel();
+	UpdateGlovesModel();
 
 	UpdateFlashBangEffect();
 

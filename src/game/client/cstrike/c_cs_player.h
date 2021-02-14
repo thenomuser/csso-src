@@ -420,7 +420,8 @@ private:
 	void UpdateAddonModels();
 	void UpdateHostageCarryModels();
 
-	void UpdateGloveModel();
+	void UpdateGlovesModel();
+	void RemoveGlovesModel();
 	C_BaseAnimating* m_pGlovesModel;
 
 	void PushawayThink();
