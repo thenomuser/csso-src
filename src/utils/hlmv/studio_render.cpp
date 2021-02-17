@@ -699,50 +699,66 @@ outputs:
 */
 void StudioModel::SetupLighting ( )
 {
-	LightDesc_t light[2];
-
-	light[0].m_Type = MATERIAL_LIGHT_DIRECTIONAL;
-	light[0].m_Attenuation0 = 1.0f;
-	light[0].m_Attenuation1 = 0.0;
-	light[0].m_Attenuation2 = 0.0;
-	light[0].m_Color[0] = g_viewerSettings.lColor[0];
-	light[0].m_Color[1] = g_viewerSettings.lColor[1];
-	light[0].m_Color[2] = g_viewerSettings.lColor[2];
-	light[0].m_Range = 2000;
-
 	// DEBUG: Spin the light around the head for debugging
-//	g_viewerSettings.lightrot = QAngle( 0, 0, 0 );
-//	g_viewerSettings.lightrot.y = fmod( (90 * GetTickCount( ) / 1000.0), 360.0);
+	//	g_viewerSettings.lightrot = QAngle( 0, 0, 0 );
+	//	g_viewerSettings.lightrot.y = fmod( (90 * GetTickCount( ) / 1000.0), 360.0);
 
-	AngleVectors( g_viewerSettings.lightrot, &light[0].m_Direction, NULL, NULL );
-	g_pStudioRender->SetLocalLights( 1, light );
+	if (g_viewerSettings.secondaryLights)
+	{
+		LightDesc_t light[3];
 
-#if 0
-	light[1].m_Type = MATERIAL_LIGHT_DIRECTIONAL;
-	light[1].m_Attenuation0 = 1.0f;
-	light[1].m_Attenuation1 = 0.0;
-	light[1].m_Attenuation2 = 0.0;
-	light[1].m_Range = 2000;
-	light[1].m_Color[0] = g_viewerSettings.lColor[2];
-	light[1].m_Color[1] = g_viewerSettings.lColor[1];
-	light[1].m_Color[2] = g_viewerSettings.lColor[0];
-	light[1].m_Direction.x = -light[0].m_Direction.y;
-	light[1].m_Direction.y = light[0].m_Direction.x;
-	light[1].m_Direction.z = light[0].m_Direction.z;
-	g_pStudioRender->SetLocalLights( 2, light );
-#endif
+		for ( int i=0; i < 3; i++ )
+		{
+			light[i].m_Type = MATERIAL_LIGHT_DIRECTIONAL;
+			light[i].m_Attenuation0 = 1.0f;
+			light[i].m_Attenuation1 = 0.0;
+			light[i].m_Attenuation2 = 0.0;
+			light[i].m_Color[0] = g_viewerSettings.lColor[0];
+			light[i].m_Color[1] = g_viewerSettings.lColor[1];
+			light[i].m_Color[2] = g_viewerSettings.lColor[2];
+			light[i].m_Range = 2000;
 
-	int i;
-	for( i = 0; i < g_pStudioRender->GetNumAmbientLightSamples(); i++ )
+			AngleVectors(g_viewerSettings.lightrot, &light[i].m_Direction, NULL, NULL);
+		}
+
+		light[1].m_Color[0] = 0.3f;
+		light[1].m_Color[1] = 0.4f;
+		light[1].m_Color[2] = 0.5f;
+		AngleVectors(g_viewerSettings.lightrot + QAngle(180, 0, 0), &light[1].m_Direction, NULL, NULL);
+
+		light[2].m_Color[0] = 0.5f;
+		light[2].m_Color[1] = 0.4f;
+		light[2].m_Color[2] = 0.3f;
+		AngleVectors(g_viewerSettings.lightrot + QAngle(0, 90, 0), &light[2].m_Direction, NULL, NULL);
+
+		g_pStudioRender->SetLocalLights(3, light);
+	}
+	else
+	{
+		LightDesc_t light[1];
+
+		light[0].m_Type = MATERIAL_LIGHT_DIRECTIONAL;
+		light[0].m_Attenuation0 = 1.0f;
+		light[0].m_Attenuation1 = 0.0;
+		light[0].m_Attenuation2 = 0.0;
+		light[0].m_Color[0] = g_viewerSettings.lColor[0];
+		light[0].m_Color[1] = g_viewerSettings.lColor[1];
+		light[0].m_Color[2] = g_viewerSettings.lColor[2];
+		light[0].m_Range = 2000;
+
+		light[0].m_Position = Vector( 0, 0, 0 );
+
+		AngleVectors(g_viewerSettings.lightrot, &light[0].m_Direction, NULL, NULL);
+
+		g_pStudioRender->SetLocalLights(1, light);
+	}
+
+	for( int i = 0; i < g_pStudioRender->GetNumAmbientLightSamples(); i++ )
 	{
 		m_AmbientLightColors[i][0] = g_viewerSettings.aColor[0];
 		m_AmbientLightColors[i][1] = g_viewerSettings.aColor[1];
 		m_AmbientLightColors[i][2] = g_viewerSettings.aColor[2];
 	}
-
-	//m_AmbientLightColors[0][0] = 1.0;
-	//m_AmbientLightColors[0][1] = 1.0;
-	//m_AmbientLightColors[0][2] = 1.0;
 
 	g_pStudioRender->SetAmbientLightColors( m_AmbientLightColors );
 }

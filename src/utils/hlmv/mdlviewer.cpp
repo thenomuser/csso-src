@@ -315,6 +315,7 @@ MDLViewer::MDLViewer ()
 	menuOptions->add ("Ground Color...", IDC_OPTIONS_COLORGROUND);
 	menuOptions->add ("Light Color...", IDC_OPTIONS_COLORLIGHT);
 	menuOptions->add ("Ambient Color...", IDC_OPTIONS_COLORAMBIENT);
+	menuOptions->add ("Secondary Lights", IDC_OPTIONS_SECONDARYLIGHTS );
 	menuOptions->add ("Reset Lighting", IDC_OPTIONS_RESETLIGHTING);
 	menuOptions->addSeparator ();
 	menuOptions->add ("Center View", IDC_OPTIONS_CENTERVIEW);
@@ -817,6 +818,11 @@ MDLViewer::handleEvent (mxEvent *event)
 			g_viewerSettings.lightrot[2] = 0.0f;
 		}
 		break;
+
+		case IDC_OPTIONS_SECONDARYLIGHTS:
+			g_viewerSettings.secondaryLights = !g_viewerSettings.secondaryLights;
+			menuOptions->setChecked( IDC_OPTIONS_SECONDARYLIGHTS, g_viewerSettings.secondaryLights );
+			break;
 
 		case IDC_OPTIONS_CENTERVIEW:
 			d_cpl->centerView ();
