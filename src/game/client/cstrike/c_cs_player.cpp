@@ -554,6 +554,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->FollowEntity( this ); // attach to player model
+			m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
 		}
 	}
 	else
@@ -1607,6 +1608,7 @@ void C_CSPlayer::UpdateGlovesModel()
 			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->FollowEntity( this ); // attach to player model
+			m_pGlovesModel->m_nSkin = m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
 		}
 		else
 		{
