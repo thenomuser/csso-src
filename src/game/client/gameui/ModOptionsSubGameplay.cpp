@@ -19,6 +19,7 @@
 #include <vgui/ISystem.h>
 #include <vgui/ISurface.h>
 #include <vgui_controls/ComboBox.h>
+#include "vgui_controls/QueryBox.h"
 
 #include "CvarTextEntry.h"
 #include "CvarToggleCheckButton.h"
@@ -36,6 +37,58 @@
 
 using namespace vgui;
 
+const char* szMusicStrings[] =
+{
+	"valve_csgo_01", // the default one should be on top
+	"amontobin_01",
+	"austinwintory_01",
+	"austinwintory_02",
+	"awolnation_01",
+	"beartooth_01",
+	"beartooth_02",
+	"blitzkids_01",
+	"damjanmravunac_01",
+	"danielsadowski_01",
+	"danielsadowski_02",
+	"danielsadowski_03",
+	"danielsadowski_04",
+	"darude_01",
+	"dren_01",
+	"dren_02",
+	"feedme_01",
+	"halflife_alyx_01",
+	"halo_01",
+	"hotlinemiami_01",
+	"hundredth_01",
+	"ianhultquist_01",
+	"kellybailey_01",
+	"kitheory_01",
+	"lenniemoore_01",
+	"mateomessina_01",
+	"mattlange_01",
+	"mattlevine_01",
+	"michaelbross_01",
+	"midnightriders_01",
+	"mordfustang_01",
+	"neckdeep_01",
+	"newbeatfund_01",
+	"noisia_01",
+	"proxy_01",
+	"roam_01",
+	"robertallaire_01",
+	"sammarshall_01",
+	"sasha_01",
+	"scarlxrd_01",
+	"seanmurray_01",
+	"skog_01",
+	"skog_02",
+	"skog_03",
+	"theverkkars_01",
+	"timhuling_01",
+	"treeadams_benbromfield_01",
+	"troelsfolmann_01",
+	"twinatlantic_01"
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
@@ -67,6 +120,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelFOVLabel = new Label( this, "ViewmodelFOVLabel", "" );
 	m_pViewbobStyle = new CLabeledCommandComboBox( this, "ViewbobStyleComboBox" );
 	m_pWeaponPos = new CLabeledCommandComboBox( this, "WeaponPositionComboBox" );
+	m_pMusicSelection = new CLabeledCommandComboBox( this, "MusicSelectionComboBox" );
 
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_1", "viewmodel_presetpos 1" );
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_2", "viewmodel_presetpos 2" );
@@ -78,6 +132,15 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Left", "cl_righthand 0" );
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Right", "cl_righthand 1" );
 
+	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
+	{
+		char command[128];
+		char string[128];
+		Q_snprintf( command, sizeof( command ), "snd_music_selection %s", szMusicStrings[i] );
+		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%d", i );
+		m_pMusicSelection->AddItem( string, command );
+	}
+
 	m_pCloseOnBuy->AddActionSignalTarget( this );
 	m_pUseOpensBuyMenu->AddActionSignalTarget( this );
 	m_pAddBotPrefix->AddActionSignalTarget( this );
@@ -88,8 +151,11 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetPreset->AddActionSignalTarget( this );
 	m_pViewbobStyle->AddActionSignalTarget( this );
 	m_pWeaponPos->AddActionSignalTarget( this );
+	m_pMusicSelection->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubGameplay.res" );
+
+	m_bNeedToWarnAboutMusic = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -185,6 +251,17 @@ void CModOptionsSubGameplay::OnResetData()
 	ConVarRef cl_righthand( "cl_righthand" );
 	if ( cl_righthand.IsValid() )
 		m_pWeaponPos->SetInitialItem( cl_righthand.GetInt() );
+
+	ConVarRef snd_music_selection( "snd_music_selection" );
+	const char *pMusicName = snd_music_selection.GetString();
+	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
+	{
+		if ( !Q_strcmp( pMusicName, szMusicStrings[i] ) )
+		{
+			m_pMusicSelection->SetInitialItem( i );
+			break;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -202,4 +279,16 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pViewmodelFOV->ApplyChanges();
 	m_pViewbobStyle->ApplyChanges();
 	m_pWeaponPos->ApplyChanges();
+	m_pMusicSelection->ApplyChanges();
+
+	ConVarRef snd_music_selection( "snd_music_selection" );
+	if ( m_bNeedToWarnAboutMusic && Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+	{
+		// Bring up the confirmation dialog
+		MessageBox *box = new MessageBox( "#GameUI_OptionsRestartRequired_Title", "#GameUI_Gameplay_MusicRestartHint", this );
+		box->MoveToFront();
+		box->DoModal();
+		m_bNeedToWarnAboutMusic = false;
+	}
+	m_pMusicSelection->ApplyChanges();
 }

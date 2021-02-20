@@ -1154,12 +1154,9 @@ void CGameUI::UpdateBackgroundMusic( void )
 {
 	if ( m_bBackgroundMusicDesired )
 	{	
-		const char * pNewMusicExtension = "";
-		
 		static ConVarRef snd_musicvolume( "snd_musicvolume" );
 		static ConVarRef snd_music_selection( "snd_music_selection" );
-		if ( snd_music_selection.IsValid() )
-			pNewMusicExtension = snd_music_selection.GetString();
+		const char * pNewMusicExtension = snd_music_selection.GetString();
 
 		if ( !IsBackgroundMusicPlaying() )
 		{
@@ -1200,11 +1197,7 @@ void CGameUI::UpdateBackgroundMusic( void )
 				enginesound->SetVolumeByGuid( m_nBackgroundMusicGUID, m_flMasterMusicVolume );
 			}
 
-			if ( !FStrEq( pNewMusicExtension, m_pMusicExtension ) )
-			{
-				ReleaseBackgroundMusic();
-			}
-			else if( ( m_flBackgroundMusicStopTime > -1.0 ) )
+			if( ( m_flBackgroundMusicStopTime > -1.0 ) )
 			{
 				float flDelta = gpGlobals->curtime - m_flBackgroundMusicStopTime;
 				float flFadeAmount = 1.0 - ( flDelta / MENUMUSIC_FADETIME );
