@@ -406,6 +406,8 @@ public:
 	void InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
 	void VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
 
+	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
+
 	virtual bool IsLookingAtWeapon( void ) const { return m_bIsLookingAtWeapon; }
 	virtual bool IsHoldingLookAtWeapon( void ) const { return m_bIsHoldingLookAtWeapon; }
 	virtual void StopLookingAtWeapon( void ) { m_bIsLookingAtWeapon = false; m_bIsHoldingLookAtWeapon = false; }

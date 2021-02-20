@@ -1178,12 +1178,9 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	int useableContents = MASK_SOLID | CONTENTS_DEBRIS | CONTENTS_PLAYERCLIP;
 
 #ifdef CSTRIKE_DLL
-	useableContents = MASK_NPCSOLID_BRUSHONLY | MASK_OPAQUE_AND_NPCS;
+	useableContents = (MASK_NPCSOLID_BRUSHONLY | MASK_OPAQUE_AND_NPCS) & ~CONTENTS_OPAQUE;
 #endif
 
-#ifdef HL1_DLL
-	useableContents = MASK_SOLID;
-#endif
 #ifndef CLIENT_DLL
 	CBaseEntity *pFoundByTrace = NULL;
 #endif
@@ -1196,10 +1193,16 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	CBaseEntity *pNearest = NULL;
 
 	const int NUM_TANGENTS = 8;
+
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+	const int NUM_TRACES = 1;
+#else
+	const int NUM_TRACES = NUM_TANGENTS;
+#endif
 	// trace a box at successive angles down
 	//							forward, 45 deg, 30 deg, 20 deg, 15 deg, 10 deg, -10, -15
 	const float tangents[NUM_TANGENTS] = { 0, 1, 0.57735026919f, 0.3639702342f, 0.267949192431f, 0.1763269807f, -0.1763269807f, -0.267949192431f };
-	for ( int i = 0; i < NUM_TANGENTS; i++ )
+	for ( int i = 0; i < NUM_TRACES; i++ )
 	{
 		if ( i == 0 )
 		{
@@ -1229,9 +1232,14 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 			float centerZ = CollisionProp()->WorldSpaceCenter().z;
 			delta.z = IntervalDistance( tr.endpos.z, centerZ + CollisionProp()->OBBMins().z, centerZ + CollisionProp()->OBBMaxs().z );
 			float dist = delta.Length();
+#if defined( CSTRIKE_DLL )
 			CCSPlayer *pPlayer = dynamic_cast<CCSPlayer*>( pObject );
 			if ( (pPlayer && pPlayer->IsBot() && dist < PLAYER_USE_BOT_RADIUS) || dist < PLAYER_USE_RADIUS )
 			{
+#else
+			if ( dist < PLAYER_USE_RADIUS )
+			{
+#endif
 #ifndef CLIENT_DLL
 
 				if ( sv_debug_player_use.GetBool() )
@@ -1280,6 +1288,11 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 		}
 	}
 
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+	CCSPlayer* pPlayer = ToCSPlayer( this );
+	const float MIN_DOT_FOR_WEAPONS = 0.99f;
+#endif
+
 	for ( CEntitySphereQuery sphere( searchCenter, PLAYER_USE_RADIUS ); ( pObject = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
 	{
 		if ( !pObject )
@@ -1292,12 +1305,26 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 		Vector point;
 		pObject->CollisionProp()->CalcNearestPoint( searchCenter, &point );
 
+		float fMinimumDot = 0.8f; // pObject->GetUseLookAtAngle()
+
+#if defined( CSTRIKE_DLL ) && defined( GAME_DLL )
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( pObject );
+		CSWeaponType nWepType = WEAPONTYPE_UNKNOWN;
+		if ( pWeapon )
+		{
+			nWepType = pWeapon->GetWeaponType();
+
+			if ( pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
+				fMinimumDot = MIN_DOT_FOR_WEAPONS;
+		}
+#endif
+
 		Vector dir = point - searchCenter;
 		VectorNormalize(dir);
 		float dot = DotProduct( dir, forward );
 
 		// Need to be looking at the object more or less
-		if ( dot < 0.8 )
+		if ( dot < fMinimumDot )
 			continue;
 
 		float dist = CalcDistanceToLine( point, searchCenter, forward );
@@ -1484,8 +1511,7 @@ void CBasePlayer::PlayerUse ( void )
 				bOpenBuyWithUse = false;
 		}
 
-		if ( pWeapon && (pWeapon->IsKindOf( WEAPONTYPE_PISTOL ) || pWeapon->IsKindOf( WEAPONTYPE_SUBMACHINEGUN ) || pWeapon->IsKindOf( WEAPONTYPE_RIFLE ) ||
-						pWeapon->IsKindOf( WEAPONTYPE_SHOTGUN ) || pWeapon->IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) || pWeapon->IsKindOf( WEAPONTYPE_MACHINEGUN )) )
+		if ( pWeapon && pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
 		{
 			bool bPickupIsSecondary = pWeapon->IsKindOf( WEAPONTYPE_PISTOL );
 			CBaseCombatWeapon *pPlayerWeapon = NULL;

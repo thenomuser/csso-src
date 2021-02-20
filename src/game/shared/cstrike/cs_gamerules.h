@@ -39,6 +39,8 @@
 #define WINNER_TER		TEAM_TERRORIST
 #define WINNER_CT		TEAM_CT
 
+#define MAX_WEAPON_NAME_POPUP_RANGE 128.0
+
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Forward declaration so we can track bot suicides in the game rules.

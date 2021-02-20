@@ -220,6 +220,17 @@ float CCSPlayer::GetPlayerMaxSpeed()
 	return speed;
 }
 
+bool CCSPlayer::IsPrimaryOrSecondaryWeapon( CSWeaponType nType )
+{
+	if ( nType == WEAPONTYPE_PISTOL || nType == WEAPONTYPE_SUBMACHINEGUN || nType == WEAPONTYPE_RIFLE ||  
+		nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_SNIPER_RIFLE || nType == WEAPONTYPE_MACHINEGUN )
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 {
 	CCSPlayer *pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( nEntIndex );

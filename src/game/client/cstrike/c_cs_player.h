@@ -212,6 +212,7 @@ public:
 // Implemented in shared code.
 public:
 	virtual float GetPlayerMaxSpeed();
+	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
 
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg );
 	bool GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity );

@@ -8066,6 +8066,27 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 
 	entity = GetUsableHighPriorityEntity();
 
+	if ( entity== NULL )
+	{
+		Vector aimDir;
+		AngleVectors( EyeAngles(), &aimDir );
+
+		trace_t result;
+		UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_ALL, this, COLLISION_GROUP_NONE, &result );
+
+		if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
+		{
+
+				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.m_pEnt );
+				CSWeaponType nType = pWeapon->GetWeaponType();
+				if ( IsPrimaryOrSecondaryWeapon( nType ) )
+				{
+					entity = pWeapon;
+				}
+
+		}
+	}
+
 	if ( entity == NULL )
 	{
 		entity = BaseClass::FindUseEntity();
