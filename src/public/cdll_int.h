@@ -573,6 +573,9 @@ public:
 	// Is App Active 
 	virtual bool IsActiveApp() = 0;
 
+	// is this client running inside the same process as an active server?
+	virtual bool IsClientLocalToActiveServer() = 0;
+
 	virtual void DisconnectInternal() = 0;
 
 	virtual int GetInstancesRunningCount( ) = 0;
