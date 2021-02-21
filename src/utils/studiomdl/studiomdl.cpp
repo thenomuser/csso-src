@@ -6243,6 +6243,10 @@ void Cmd_BBox (void)
 	GetToken (false);
 	bbox[1][2] = verify_atof( token );
 
+	// apply $scale
+	scale_vertex( bbox[0] );
+	scale_vertex( bbox[1] );
+
 	g_wrotebbox = true;
 }
 
@@ -6269,6 +6273,10 @@ void Cmd_CBox (void)
 
 	GetToken (false);
 	cbox[1][2] = verify_atof( token );
+
+	// apply $scale
+	scale_vertex( cbox[0] );
+	scale_vertex( cbox[1] );
 
 	g_wrotecbox = true;
 }
