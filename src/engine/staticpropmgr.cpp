@@ -479,7 +479,7 @@ CStaticProp::~CStaticProp()
 //-----------------------------------------------------------------------------
 bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 {
-	m_EntHandle.Init(index, STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS);
+	m_EntHandle.Init(index, STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS);
 	m_Partition = PARTITION_INVALID_HANDLE;
 	m_flForcedFadeScale = lump.m_flForcedFadeScale;
 	VectorCopy( lump.m_Origin, m_Origin );
@@ -1782,12 +1782,12 @@ void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vecto
 //-----------------------------------------------------------------------------
 bool CStaticPropMgr::IsStaticProp( IHandleEntity *pHandleEntity ) const
 {
-	return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS) ) != 0 );
+	return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS) ) != 0 );
 }
 
 bool CStaticPropMgr::IsStaticProp( CBaseHandle handle ) const
 {
-	return (handle.GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_ENT_ENTRY_BITS));
+	return (handle.GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS));
 }
 
 int CStaticPropMgr::GetStaticPropIndex( IHandleEntity *pHandleEntity ) const
