@@ -408,6 +408,8 @@ ConVar sv_talk_enemy_living( "sv_talk_enemy_living", "0", FCVAR_REPLICATED, "Liv
 
 ConVar sv_spec_hear( "sv_spec_hear", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Determines who spectators can hear: 0: only spectators; 1: all players; 2: spectated team; 3: self only; 4: nobody" );
 
+ConVar mp_c4timer( "mp_c4timer", "40", FCVAR_REPLICATED | FCVAR_NOTIFY, "how long from when the C4 is armed until it blows", true, 10, true, 90	);
+
 #ifdef CLIENT_DLL
 
 ConVar cl_autowepswitch(
@@ -661,15 +663,6 @@ ConVar snd_music_selection(
 		"how many seconds to keep players frozen when the round starts",
 		true, 0,	// min value
 		true, 60	// max value
-		);
-
-	ConVar mp_c4timer( 
-		"mp_c4timer", 
-		"40", 
-		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"how long from when the C4 is armed until it blows",
-		true, 10,	// min value
-		true, 90	// max value
 		);
 
 	ConVar mp_limitteams( 

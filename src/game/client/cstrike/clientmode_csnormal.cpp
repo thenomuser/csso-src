@@ -769,8 +769,15 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	{
 		//C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 
+		wchar_t wszLocalized[100];
+		wchar_t seconds[4];
+
+		V_swprintf_safe( seconds, L"%d", mp_c4timer.GetInt() );
+
+		g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Bomb_Planted" ), 1, seconds );
+
 		// show centerprint message
-		internalCenterPrint->Print( "#Cstrike_TitlesTXT_Bomb_Planted" );
+		internalCenterPrint->Print( wszLocalized );
 
 		PlayMusicSelection( filter, CSMUSIC_BOMB );
 
