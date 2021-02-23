@@ -90,6 +90,9 @@
 
 ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_REPLICATED, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
 
+ConVar view_punch_decay( "view_punch_decay", "18", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor exponent for view punch" );
+ConVar view_recoil_tracking( "view_recoil_tracking", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "How closely the view tracks with the aim punch from weapon recoil" );
+
 #ifdef CLIENT_DLL
 ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", NULL, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
 #endif
@@ -1167,7 +1170,8 @@ float IntervalDistance( float x, float x0, float x1 )
 CBaseEntity *CBasePlayer::FindUseEntity()
 {
 	Vector forward, up;
-	EyeVectors( &forward, NULL, &up );
+	// NOTE: This doesn't handle the case when the player is in a vehicle.
+	AngleVectors( GetFinalAimAngle(), &forward, NULL, &up );
 
 	trace_t tr;
 	// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
@@ -1678,7 +1682,7 @@ void CBasePlayer::ViewPunch( const QAngle &angleOffset )
 	if ( IsInAVehicle() )
 		return;
 
-	m_Local.m_vecPunchAngleVel += angleOffset * 20;
+	m_Local.m_viewPunchAngle += angleOffset;
 }
 
 //-----------------------------------------------------------------------------
@@ -1689,12 +1693,11 @@ void CBasePlayer::ViewPunchReset( float tolerance )
 	if ( tolerance != 0 )
 	{
 		tolerance *= tolerance;	// square
-		float check = m_Local.m_vecPunchAngleVel->LengthSqr() + m_Local.m_vecPunchAngle->LengthSqr();
+		float check = m_Local.m_viewPunchAngle->LengthSqr();
 		if ( check > tolerance )
 			return;
 	}
-	m_Local.m_vecPunchAngle = vec3_angle;
-	m_Local.m_vecPunchAngleVel = vec3_angle;
+	m_Local.m_viewPunchAngle = vec3_angle;
 }
 
 #if defined( CLIENT_DLL )
@@ -1882,9 +1885,12 @@ void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& f
 	CalcViewRoll( eyeAngles );
 
 	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
+	
+	// Apply punch angles
+	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
 
-	// Apply punch angle
-	VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
+	// TODO[pmf]: apply a scaling factor to this
+	VectorAdd( eyeAngles, GetAimPunchAngle() * view_recoil_tracking.GetFloat(), eyeAngles );
 
 #if defined( CLIENT_DLL )
 	if ( !prediction->InPrediction() )
@@ -1942,7 +1948,7 @@ void CBasePlayer::CalcVehicleView(
 	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
 
 	// Apply punch angle
-	VectorAdd( eyeAngles, m_Local.m_vecPunchAngle, eyeAngles );
+	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
 
 #if defined( CLIENT_DLL )
 	if ( !prediction->InPrediction() )

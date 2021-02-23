@@ -62,20 +62,6 @@ void CAK47::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, Primary_Mode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
 		return;
-
-	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
-	pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	if (pPlayer->GetAbsVelocity().Length2D() > 5 )
-		pPlayer->KickBack ( 1.5, 0.45, 0.225, 0.05, 6.5, 2.5, 7 );
-	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack ( 2, 1.0, 0.5, 0.35, 9, 6, 5 );
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack ( 0.9, 0.35, 0.15, 0.025, 5.5, 1.5, 9 );
-	else
-		pPlayer->KickBack ( 1, 0.375, 0.175, 0.0375, 5.75, 1.75, 8 );
 }

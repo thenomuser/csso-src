@@ -5800,7 +5800,7 @@ ConVar snd_music_selection(
 
 		// Move the player to the place it said.
 		pPlayer->Teleport( &pSpawnSpot->GetAbsOrigin(), &pSpawnSpot->GetLocalAngles(), &vec3_origin );
-		pPlayer->m_Local.m_vecPunchAngle = vec3_angle;
+		pPlayer->m_Local.m_viewPunchAngle = vec3_angle;
 		
 		return pSpawnSpot;
 	}

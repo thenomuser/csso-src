@@ -63,22 +63,8 @@ void CWeaponMP9::PrimaryAttack( void )
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, Primary_Mode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
 		return;
-
-	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
-	pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack (1.1, 0.5, 0.35, 0.045, 4.5, 3.5, 6);
-	else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-		pPlayer->KickBack (0.8, 0.4, 0.2, 0.03, 3, 2.5, 7);
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack (0.7, 0.35, 0.125, 0.025, 2.5, 2, 10);
-	else
-		pPlayer->KickBack (0.725, 0.375, 0.15, 0.025, 2.75, 2.25, 9);
 }
 
 void CWeaponMP9::Spawn()

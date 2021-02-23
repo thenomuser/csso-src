@@ -87,7 +87,10 @@ protected:
 
 	virtual float	CalcRoll( const QAngle &angles, const Vector &velocity, float rollangle, float rollspeed );
 
-	virtual	void	DecayPunchAngle( void );
+	// helper function for decaying punch angles over time with exponential and linear terms
+	void			DecayAngles( QAngle& v, float fExp, float fLin, float dT );
+
+	virtual	void	DecayViewPunchAngle( void );
 
 	virtual void	CheckWaterJump(void );
 

@@ -78,18 +78,14 @@ void CRevolver::PrimaryAttack()
 		return;
 	}
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 	m_weaponMode = Primary_Mode;
 	UpdateAccuracyPenalty();
 
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
 		return;
 
-	QAngle punchAngle = pPlayer->GetPunchAngle();
-	punchAngle.x -= 3;
-	pPlayer->SetPunchAngle( punchAngle );
-
-	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime;
+	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
 }
 
 void CRevolver::SecondaryAttack()
@@ -103,21 +99,17 @@ void CRevolver::SecondaryAttack()
 
 	if ( m_flNextSecondaryAttack < gpGlobals->curtime )
 	{
-		float flCycleTimeAlt = GetCSWpnData().m_flCycleTimeAlt;
 		m_weaponMode = Secondary_Mode;
+		float flCycleTimeAlt = GetCSWpnData().m_flCycleTime[m_weaponMode];
 		UpdateAccuracyPenalty();
 		
 		if ( !CSBaseGunFire( flCycleTimeAlt, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
 			return;
 
-		QAngle punchAngle = pPlayer->GetPunchAngle();
-		punchAngle.x -= 3;
-		pPlayer->SetPunchAngle( punchAngle );
-
 		return;
 	}
 
-	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTimeAlt;
+	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
 }
 
 bool CRevolver::Deploy()

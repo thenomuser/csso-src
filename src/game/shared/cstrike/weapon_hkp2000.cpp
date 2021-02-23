@@ -74,7 +74,6 @@ void CWeaponHKP2000::Spawn()
 	BaseClass::Spawn();
 
 	//m_iDefaultAmmo = 12;
-	m_flAccuracy = 0.88;
 
 	//FallInit();// get ready to fall down.
 }
@@ -82,8 +81,6 @@ void CWeaponHKP2000::Spawn()
 
 bool CWeaponHKP2000::Deploy()
 {
-	m_flAccuracy = 0.88;
-
 	return BaseClass::Deploy();
 }
 
@@ -92,14 +89,6 @@ void CWeaponHKP2000::PrimaryAttack()
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
-
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy -= (0.3)*(0.325 - (gpGlobals->curtime - m_flLastFire));
-
-	if (m_flAccuracy > 0.9)
-		m_flAccuracy = 0.9;
-	else if (m_flAccuracy < 0.6)
-		m_flAccuracy = 0.6;
 
 	m_flLastFire = gpGlobals->curtime;
 	
@@ -131,14 +120,14 @@ void CWeaponHKP2000::PrimaryAttack()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
 		GetInaccuracy(),
 		GetSpread());
 	
-	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime;
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	if (!m_iClip1 && pPlayer->GetAmmoCount( m_iPrimaryAmmoType ) <= 0)
 	{
@@ -153,19 +142,14 @@ void CWeaponHKP2000::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
-	pPlayer->SetPunchAngle( angle );
+	// table driven recoil
+	Recoil( m_weaponMode );
 }
 
 
 bool CWeaponHKP2000::Reload()
 {
-	if ( !DefaultPistolReload() )
-		return false;
-
-	m_flAccuracy = 0.88;
-	return true;
+	return DefaultPistolReload();
 }
 
 void CWeaponHKP2000::WeaponIdle()

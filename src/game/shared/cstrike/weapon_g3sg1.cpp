@@ -70,7 +70,6 @@ CWeaponG3SG1::CWeaponG3SG1()
 void CWeaponG3SG1::Spawn()
 {
 	BaseClass::Spawn();
-	m_flAccuracy = 0.98;
 }
 
 
@@ -133,23 +132,11 @@ void CWeaponG3SG1::PrimaryAttack()
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
-	
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy = 0.55 + (0.3) * (gpGlobals->curtime - m_flLastFire);	
-
-	if (m_flAccuracy > 0.98)
-		m_flAccuracy = 0.98;
 
 	m_flLastFire = gpGlobals->curtime;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
 		return;
-
-	// Adjust the punch angle.
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= SharedRandomFloat("G3SG1PunchAngleX", 0.75, 1.75 ) + ( angle.x / 4 );
-	angle.y += SharedRandomFloat("G3SG1PunchAngleY", -0.75, 0.75 );
-	pPlayer->SetPunchAngle( angle );
 }
 
 
@@ -157,7 +144,6 @@ bool CWeaponG3SG1::Reload()
 {
 	bool ret = BaseClass::Reload();
 	
-	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
@@ -167,7 +153,6 @@ bool CWeaponG3SG1::Deploy()
 {
 	bool ret = BaseClass::Deploy();
 	
-	m_flAccuracy = 0.98;
 	m_weaponMode = Primary_Mode;
 	
 	return ret;

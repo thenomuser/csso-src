@@ -313,7 +313,7 @@ inline void CBot<T>::Walk( void )
 template < class T >
 inline bool CBot<T>::IsActiveWeaponRecoilHigh( void ) const
 {
-	const QAngle &angles = const_cast< CBot<T> * >( this )->GetPunchAngle();
+	const QAngle &angles = const_cast< CBot<T> * >( this )->GetAimPunchAngle();
 	const float highRecoil = -1.5f;
 	return (angles.x < highRecoil);
 }
@@ -357,7 +357,7 @@ inline bool CBot<T>::IsPlayerFacingMe( CBasePlayer *other ) const
 	Vector toOther = other->GetAbsOrigin() - this->GetAbsOrigin();
 
 	Vector otherForward;
-	AngleVectors( other->EyeAngles() + other->GetPunchAngle(), &otherForward );
+	AngleVectors( other->EyeAngles() + other->GetViewPunchAngle(), &otherForward );
 
 	if (DotProduct( otherForward, toOther ) < 0.0f)
 		return true;
@@ -373,7 +373,7 @@ inline bool CBot<T>::IsPlayerLookingAtMe( CBasePlayer *other, float cosTolerance
 	toOther.NormalizeInPlace();
 
 	Vector otherForward;
-	AngleVectors( other->EyeAngles() + other->GetPunchAngle(), &otherForward );
+	AngleVectors( other->EyeAngles() + other->GetViewPunchAngle(), &otherForward );
 
 	// other player must be pointing nearly right at us to be "looking at" us
 	if (DotProduct( otherForward, toOther ) < -cosTolerance)
@@ -386,7 +386,7 @@ inline bool CBot<T>::IsPlayerLookingAtMe( CBasePlayer *other, float cosTolerance
 template < class T >
 inline const Vector &CBot<T>::GetViewVector( void )
 {
-	AngleVectors( this->EyeAngles() + this->GetPunchAngle(), &m_viewForward );
+	AngleVectors( this->EyeAngles() + this->GetViewPunchAngle(), &m_viewForward );
 	return m_viewForward;
 }
 

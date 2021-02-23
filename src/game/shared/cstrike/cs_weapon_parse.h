@@ -10,10 +10,14 @@
 #pragma once
 #endif
 
+#ifdef CLIENT_DLL
+	#define CWeaponCSBase C_WeaponCSBase
+#endif
 
 #include "weapon_parse.h"
 #include "networkvar.h"
 
+class CWeaponCSBase;
 
 //--------------------------------------------------------------------------------------------------------
 enum CSWeaponType
@@ -119,6 +123,36 @@ enum CSWeaponID
 
 void PrepareEquipmentInfo( void );
 
+class WeaponRecoilData
+{
+public:
+
+	WeaponRecoilData();
+	~WeaponRecoilData();
+
+	void GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int iIndex, float& fAngle, float &fMagnitude );
+	void GenerateRecoilPattern( CSWeaponID id );
+
+private:
+
+	struct RecoilOffset
+	{
+		float	fAngle;
+		float	fMagnitude;
+	};
+
+	struct RecoilData
+	{
+		CSWeaponID					iWeaponID;
+		RecoilOffset				recoilTable[2][64];
+	};
+
+	CUtlMap< CSWeaponID, RecoilData* > m_mapRecoilTables;
+
+	void GenerateRecoilTable( RecoilData *data );
+
+};
+
 //--------------------------------------------------------------------------------------------------------
 const char * WeaponClassAsString( CSWeaponType weaponType );
 
@@ -189,14 +223,14 @@ public:
 	float	m_flRange;
 	float	m_flRangeModifier;
 	int		m_iBullets;
-	float	m_flCycleTime;
-	float	m_flCycleTimeAlt;
+	float	m_flCycleTime[2];
 
 	// variables for new accuracy model
 	float m_fSpread[2];
 	float m_fInaccuracyCrouch[2];
 	float m_fInaccuracyStand[2];
 	float m_fInaccuracyJump[2];
+	float m_fInaccuracyJumpInitial;
 	float m_fInaccuracyLand[2];
 	float m_fInaccuracyLadder[2];
 	float m_fInaccuracyImpulseFire[2];
@@ -205,6 +239,11 @@ public:
 	float m_fRecoveryTimeCrouch;
 	float m_fInaccuracyReload;
 	float m_fInaccuracyAltSwitch;
+	float m_fRecoilAngle[2];
+	float m_fRecoilAngleVariance[2];
+	float m_fRecoilMagnitude[2];
+	float m_fRecoilMagnitudeVariance[2];
+	int   m_iRecoilSeed;
 
 	// Delay until the next idle animation after shooting.
 	float	m_flTimeToIdleAfterFire;
@@ -249,11 +288,12 @@ public:
 	int		GetWeaponPrice( void ) const;
 	int		GetDefaultPrice( void );
 	int		GetPrevousPrice( void );
-	void	GenerateRecoilTable();
 	void	GetRecoilOffsets( int iMode, int iIndex, float& fAngle, float &fMagnitude ) const;
 	void	SetWeaponPrice( int iPrice ) { m_iWeaponPrice = iPrice; }
 	void	SetDefaultPrice( int iPrice ) { m_iDefaultPrice = iPrice; }
 	void	SetPreviousPrice( int iPrice ) { m_iPreviousPrice = iPrice; }
+
+	void GenerateRecoilTable();
     
 private:
 

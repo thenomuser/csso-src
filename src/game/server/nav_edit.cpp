@@ -160,11 +160,11 @@ void CNavMesh::GetEditVectors( Vector *pos, Vector *forward )
 	}
 	else
 	{
-		AngleVectors( player->EyeAngles() + player->GetPunchAngle(), forward );
+		AngleVectors( player->EyeAngles() + player->GetViewPunchAngle(), forward );
 	}
 #else
 	Vector dir;
-	AngleVectors( player->EyeAngles() + player->GetPunchAngle(), forward );
+	AngleVectors( player->EyeAngles() + player->GetViewPunchAngle(), forward );
 #endif
 
 	*pos = player->EyePosition();

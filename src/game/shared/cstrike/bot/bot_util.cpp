@@ -539,7 +539,7 @@ bool IsCrossingLineOfFire( const Vector &start, const Vector &finish, CBaseEntit
 
 		// compute player's unit aiming vector 
 		Vector viewForward;
-		AngleVectors( player->EyeAngles() + player->GetPunchAngle(), &viewForward );
+		AngleVectors( player->GetFinalAimAngle(), &viewForward );
 
 		const float longRange = 5000.0f;
 		Vector playerOrigin = GetCentroid( player );

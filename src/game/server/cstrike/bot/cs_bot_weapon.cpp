@@ -313,7 +313,7 @@ void CCSBot::UpdateAimPrediction( void )
 	// adjust aim angle for recoil
 	float fSkill = GetProfile()->GetSkill();	// 0.0 .. 1.0
 	float fPunchAngleCorrectionFactor = 1.0f + (1.f - fSkill) * .8f * SlowNoise( 6.f );
-	const QAngle &punchAngles = GetPunchAngle();
+	const QAngle &punchAngles = GetAimPunchAngle();
 	m_aimGoal -= punchAngles * fPunchAngleCorrectionFactor;
 	m_aimGoal[PITCH] = clamp(m_aimGoal[PITCH], -89.0f, +89.0f);
 }

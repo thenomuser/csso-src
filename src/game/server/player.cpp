@@ -1371,8 +1371,9 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		else
 			flPunch = RandomFloat( -5, -7 );
 	}
-
-	m_Local.m_vecPunchAngle.SetX( flPunch );
+	
+	m_Local.m_viewPunchAngle.SetX( flPunch );
+	m_Local.m_viewPunchAngle.SetY( RandomFloat( 1, -1 ) );
 
 	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
 	{
@@ -4633,9 +4634,8 @@ void CBasePlayer::PostThink()
 		if ( m_bForceOrigin )
 		{
 			SetLocalOrigin( m_vForcedOrigin );
-			SetLocalAngles( m_Local.m_vecPunchAngle );
-			m_Local.m_vecPunchAngle = RandomAngle( -25, 25 );
-			m_Local.m_vecPunchAngleVel.Init();
+			SetLocalAngles( m_Local.m_viewPunchAngle );
+			m_Local.m_viewPunchAngle = RandomAngle( -25, 25 );
 		}
 
 		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-PostThinkVPhysics" );
@@ -6996,12 +6996,8 @@ void CBasePlayer::GetAutoaimVector( autoaim_params_t &params )
 	if ( ( ShouldAutoaim() == false ) || ( params.m_fScale == AUTOAIM_SCALE_DIRECT_ONLY ) )
 	{
 		Vector	forward;
-		AngleVectors( EyeAngles() + m_Local.m_vecPunchAngle, &forward );
-
+		AngleVectors( EyeAngles() + m_Local.m_viewPunchAngle, &forward );
 		params.m_vecAutoAimDir = forward;
-		params.m_hAutoAimEntity.Set(NULL);
-		params.m_vecAutoAimPoint = vec3_invalid;
-		params.m_bAutoAimAssisting = false;
 		return;
 	}
 
@@ -7044,7 +7040,7 @@ void CBasePlayer::GetAutoaimVector( autoaim_params_t &params )
 	{
 		// always use non-sticky autoaim
 		m_vecAutoAim = angles * 0.9f;
-		AngleVectors( EyeAngles() + m_Local.m_vecPunchAngle + m_vecAutoAim, &forward );
+		AngleVectors( EyeAngles() + m_Local.m_viewPunchAngle + m_vecAutoAim, &forward );
 	}
 
 	params.m_vecAutoAimDir = forward;
@@ -7108,7 +7104,7 @@ QAngle CBasePlayer::AutoaimDeflection( Vector &vecSrc, autoaim_params_t &params 
 	}
 
 	eyeAngles = EyeAngles();
-	AngleVectors( eyeAngles + m_Local.m_vecPunchAngle + m_vecAutoAim, &v_forward, &v_right, &v_up );
+	AngleVectors( eyeAngles + m_Local.m_viewPunchAngle + m_vecAutoAim, &v_forward, &v_right, &v_up );
 
 	// try all possible entities
 	bestdir = v_forward;
@@ -7280,7 +7276,7 @@ QAngle CBasePlayer::AutoaimDeflection( Vector &vecSrc, autoaim_params_t &params 
 			}
 			else
 			{
-				bestang -= EyeAngles() - m_Local.m_vecPunchAngle;
+				bestang -= EyeAngles() - m_Local.m_viewPunchAngle;
 			}
 
 			m_fOnTarget = true;
@@ -8586,27 +8582,70 @@ void CBasePlayer::ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set )
 }
 
 
-const QAngle& CBasePlayer::GetPunchAngle()
+QAngle CBasePlayer::GetViewPunchAngle()
 {
-	return m_Local.m_vecPunchAngle.Get();
+	return m_Local.m_viewPunchAngle.Get();
 }
 
-
-void CBasePlayer::SetPunchAngle( const QAngle &punchAngle )
+void CBasePlayer::SetViewPunchAngle( const QAngle &punchAngle )
 {
-	m_Local.m_vecPunchAngle = punchAngle;
+	m_Local.m_viewPunchAngle = punchAngle;
+	PropagatePunchAnglesToObservers();
+}
 
+void CBasePlayer::SetViewPunchAngle( int axis, float value )
+{
+	m_Local.m_viewPunchAngle.Set( axis, value );
+	PropagatePunchAnglesToObservers();
+}
+
+QAngle CBasePlayer::GetAimPunchAngle()
+{
+	return m_Local.m_aimPunchAngle.Get();
+}
+
+void CBasePlayer::SetAimPunchAngle( const QAngle &punchAngle )
+{
+	m_Local.m_aimPunchAngle = punchAngle;
+	PropagatePunchAnglesToObservers();
+}
+
+void CBasePlayer::SetAimPunchAngleVelocity( const QAngle &punchAngleVelocity )
+{
+	m_Local.m_aimPunchAngleVel = punchAngleVelocity;
+	PropagatePunchAnglesToObservers();
+}
+
+QAngle CBasePlayer::GetFinalAimAngle()
+{
+	return EyeAngles() + GetAimPunchAngle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: If someone is observing this player, we set their punch angle
+//			as well.
+//-----------------------------------------------------------------------------
+void CBasePlayer::PropagatePunchAnglesToObservers()
+{
 	if ( IsAlive() )
 	{
 		int index = entindex();
 
 		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 		{
+			if ( i == index )
+				continue;
+
 			CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
 
-			if ( pPlayer && i != index && pPlayer->GetObserverTarget() == this && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+			if ( NULL == pPlayer )
+				continue;
+
+			if ( pPlayer->GetObserverTarget() == this && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
 			{
-				pPlayer->SetPunchAngle( punchAngle );
+				pPlayer->m_Local.m_viewPunchAngle = m_Local.m_viewPunchAngle.Get();
+				pPlayer->m_Local.m_aimPunchAngle = m_Local.m_aimPunchAngle.Get();
+				pPlayer->m_Local.m_aimPunchAngleVel = m_Local.m_aimPunchAngleVel.Get();
 			}
 		}
 	}

@@ -298,13 +298,13 @@ void CDecoyProjectile::GunfireThink( void )
 
 	if ( --m_shotsRemaining > 0 )
 	{
-		SetNextThink( gpGlobals->curtime + pWeaponInfo->m_flCycleTime  + RandomFloat( 0.0f, m_pProfile->extraDelay) );
+		SetNextThink( gpGlobals->curtime + pWeaponInfo->m_flCycleTime[Primary_Mode] + RandomFloat( 0.0f, m_pProfile->extraDelay) );
 		return;
 	}
 
 	if ( gpGlobals->curtime < m_fExpireTime )
 	{
-		SetNextThink( gpGlobals->curtime + pWeaponInfo->m_flCycleTime + RandomFloat( m_pProfile->pauseMin, m_pProfile->pauseMax ) );
+		SetNextThink( gpGlobals->curtime + pWeaponInfo->m_flCycleTime[Primary_Mode] + RandomFloat( m_pProfile->pauseMin, m_pProfile->pauseMax ) );
 	}
 	else
 	{

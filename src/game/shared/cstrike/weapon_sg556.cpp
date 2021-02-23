@@ -163,27 +163,13 @@ void CWeaponSG556::PrimaryAttack()
 
 	// bool bZoomed = pPlayer->GetFOV() < pPlayer->GetDefaultFOV();
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	/*if ( bZoomed )
 		flCycleTime = 0.135f;*/
 
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )
 		return;
-
-	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
-	pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	if (pPlayer->GetAbsVelocity().Length2D() > 5)
-		pPlayer->KickBack (1, 0.45, 0.28, 0.04, 4.25, 2.5, 7);
-	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack (1.25, 0.45, 0.22, 0.18, 6, 4, 5);
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack (0.6, 0.35, 0.2, 0.0125, 3.7, 2, 10);
-	else
-		pPlayer->KickBack (0.625, 0.375, 0.25, 0.0125, 4, 2.25, 9);
 }
 
 

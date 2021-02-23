@@ -267,7 +267,6 @@ public:
 
 
 	bool	m_bDelayFire;			// This variable is used to delay the time between subsequent button pressing.
-	float	m_flAccuracy;
 
 	// [pfreese] new accuracy model
 	CNetworkVar( CSWeaponMode, m_weaponMode);
@@ -310,6 +309,7 @@ public:
 protected:
 
 	float	CalculateNextAttackTime( float flCycleTime );
+	void Recoil( CSWeaponMode weaponMode );
 
 private:
 
@@ -354,5 +354,9 @@ public:
 };
 
 extern ConVar weapon_accuracy_model;
+extern ConVar weapon_recoil_decay2_exp;
+extern ConVar weapon_recoil_decay2_lin;
+extern ConVar weapon_recoil_vel_decay;
+extern ConVar weapon_recoil_scale;
 
 #endif // WEAPON_CSBASE_H

@@ -37,18 +37,22 @@ BEGIN_SEND_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 	SendPropFloat	(SENDINFO(m_flFallVelocity), 32, SPROP_NOSCALE ),
 
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngle, 0), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngle, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngle, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_viewPunchAngle, 0), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_viewPunchAngle, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_viewPunchAngle, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
 
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngleVel, 0), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngleVel, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
-	SendPropFloat		( SENDINFO_VECTORELEM(m_vecPunchAngleVel, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngle, 0), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngle, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngle, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngleVel, 0), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngleVel, 1), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
+	SendPropFloat		( SENDINFO_VECTORELEM(m_aimPunchAngleVel, 2), 32, SPROP_NOSCALE|SPROP_CHANGES_OFTEN ),
 
 #else
-	SendPropFloat	(SENDINFO(m_flFallVelocity), 17, SPROP_CHANGES_OFTEN, -4096.0f, 4096.0f ),
-	SendPropVector	(SENDINFO(m_vecPunchAngle),      -1,  SPROP_COORD|SPROP_CHANGES_OFTEN),
-	SendPropVector	(SENDINFO(m_vecPunchAngleVel),      -1,  SPROP_COORD),
+	SendPropVector	(SENDINFO(m_viewPunchAngle),		-1,  SPROP_COORD|SPROP_CHANGES_OFTEN),
+	SendPropVector	(SENDINFO(m_aimPunchAngle),			-1,  SPROP_COORD|SPROP_CHANGES_OFTEN),
+	SendPropVector	(SENDINFO(m_aimPunchAngleVel),      -1,  SPROP_COORD|SPROP_CHANGES_OFTEN),
 #endif
 	SendPropInt		(SENDINFO(m_bDrawViewmodel), 1, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_bWearingSuit), 1, SPROP_UNSIGNED ),
@@ -150,8 +154,9 @@ BEGIN_SIMPLE_DATADESC( CPlayerLocalData )
 	DEFINE_FIELD( m_nStepside, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flFallVelocity, FIELD_FLOAT ),
 	DEFINE_FIELD( m_nOldButtons, FIELD_INTEGER ),
-	DEFINE_FIELD( m_vecPunchAngle, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecPunchAngleVel, FIELD_VECTOR ),
+	DEFINE_FIELD( m_viewPunchAngle, FIELD_VECTOR ),
+	DEFINE_FIELD( m_aimPunchAngle, FIELD_VECTOR ),
+	DEFINE_FIELD( m_aimPunchAngleVel, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bDrawViewmodel, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bWearingSuit, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bPoisoned, FIELD_BOOLEAN ),
@@ -187,6 +192,11 @@ CPlayerLocalData::CPlayerLocalData()
 	m_audio.ent.Set( NULL );
 	m_pOldSkyCamera = NULL;
 	m_bDrawViewmodel = true;
+
+	// $$$REI What's the safe way to initialize these things in constructor?
+	m_viewPunchAngle.m_Value.Init();
+	m_aimPunchAngle.m_Value.Init();
+	m_aimPunchAngleVel.m_Value.Init();
 
 	m_flLastDuckTime = -1.0f;
 }

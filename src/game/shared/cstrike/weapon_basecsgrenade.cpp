@@ -447,7 +447,7 @@ void CBaseCSGrenade::ItemPostFrame()
 			return;
 		}
 
-		QAngle angThrow = pPlayer->LocalEyeAngles();
+		QAngle angThrow = pPlayer->GetFinalAimAngle();
 
 		Vector vForward, vRight, vUp;
 

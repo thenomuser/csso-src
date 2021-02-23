@@ -27,11 +27,13 @@ public:
 	DECLARE_EMBEDDED_NETWORKVAR();
 
 	CPlayerLocalData() :
-		m_iv_vecPunchAngle( "CPlayerLocalData::m_iv_vecPunchAngle" ),
-		m_iv_vecPunchAngleVel( "CPlayerLocalData::m_iv_vecPunchAngleVel" )
+		m_iv_viewPunchAngle( "CPlayerLocalData::m_iv_viewPunchAngle" ),
+		m_iv_aimPunchAngle( "CPlayerLocalData::m_iv_aimPunchAngle" ),
+		m_iv_aimPunchAngleVel( "CPlayerLocalData::m_iv_aimPunchAngleVel" )
 	{
-		m_iv_vecPunchAngle.Setup( &m_vecPunchAngle.m_Value, LATCH_SIMULATION_VAR );
-		m_iv_vecPunchAngleVel.Setup( &m_vecPunchAngleVel.m_Value, LATCH_SIMULATION_VAR );
+		m_iv_viewPunchAngle.Setup( &m_viewPunchAngle, LATCH_SIMULATION_VAR );
+		m_iv_aimPunchAngle.Setup( &m_aimPunchAngle, LATCH_SIMULATION_VAR );
+		m_iv_aimPunchAngleVel.Setup( &m_aimPunchAngleVel, LATCH_SIMULATION_VAR );
 		m_flFOVRate = 0;
 
 		m_flOldFallVelocity = 0.0;
@@ -63,12 +65,13 @@ public:
 	int						m_nOldButtons;
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
-	Vector					m_vecClientBaseVelocity;  
-	CNetworkQAngle( m_vecPunchAngle );		// auto-decaying view angle adjustment
-	CInterpolatedVar< QAngle >	m_iv_vecPunchAngle;
-
-	CNetworkQAngle( m_vecPunchAngleVel );		// velocity of auto-decaying view angle adjustment
-	CInterpolatedVar< QAngle >	m_iv_vecPunchAngleVel;
+	Vector					m_vecClientBaseVelocity;
+	CNetworkQAngle( m_viewPunchAngle );			// auto-decaying view angle adjustment
+	CInterpolatedVar< QAngle >	m_iv_viewPunchAngle;
+	CNetworkQAngle( m_aimPunchAngle );			// auto-decaying aim angle adjustment
+	CInterpolatedVar< QAngle >	m_iv_aimPunchAngle;
+	CNetworkQAngle( m_aimPunchAngleVel );		// velocity of auto-decaying aim angle adjustment
+	CInterpolatedVar< QAngle >	m_iv_aimPunchAngleVel;
 	bool					m_bDrawViewmodel;
 	bool					m_bWearingSuit;
 	bool					m_bPoisoned;

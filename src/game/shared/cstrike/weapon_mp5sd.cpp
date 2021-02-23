@@ -68,27 +68,17 @@ void CWeaponMP5SD::Spawn()
 {
 	SetClassname( "weapon_mp5sd" ); // for backwards compatibility
 	BaseClass::Spawn();
-
-	m_flAccuracy = 0.0;
 }
 
 
 bool CWeaponMP5SD::Deploy()
 {
-	bool ret = BaseClass::Deploy();
-
-	m_flAccuracy = 0.0;
-
-	return ret;
+	return BaseClass::Deploy();
 }
 
 bool CWeaponMP5SD::Reload()
 {
-	bool ret = BaseClass::Reload();
-
-	m_flAccuracy = 0.0;
-
-	return ret;
+	return BaseClass::Reload();
 }
 
 void CWeaponMP5SD::PrimaryAttack( void )
@@ -97,23 +87,8 @@ void CWeaponMP5SD::PrimaryAttack( void )
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, Primary_Mode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
 		return;
-
-	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
-	pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	// Kick the gun based on the state of the player.
-	if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack (0.9, 0.475, 0.35, 0.0425, 5, 3, 6);	
-	else if (pPlayer->GetAbsVelocity().Length2D() > 5)
-		pPlayer->KickBack (0.5, 0.275, 0.2, 0.03, 3, 2, 10);
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack (0.225, 0.15, 0.1, 0.015, 2, 1, 10);
-	else
-		pPlayer->KickBack (0.25, 0.175, 0.125, 0.02, 2.25, 1.25, 10);
 }
 
 void CWeaponMP5SD::DoFireEffects( void )

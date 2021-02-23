@@ -324,8 +324,14 @@ public:
 	int CurrentCommandNumber() const;
 	const CUserCmd *GetCurrentUserCommand() const;
 
-	const QAngle& GetPunchAngle();
-	void SetPunchAngle( const QAngle &angle );
+	virtual QAngle			GetViewPunchAngle();
+	void					SetViewPunchAngle( const QAngle &angle );
+	virtual QAngle			GetAimPunchAngle();
+	void					SetAimPunchAngle( const QAngle &angle );
+	void					SetAimPunchAngleVelocity( const QAngle &punchAngleVelocity );
+
+	// Returns the eye or pointer angle plus the punch angle.
+	QAngle					GetFinalAimAngle();
 
 	float					GetWaterJumpTime() const;
 	void					SetWaterJumpTime( float flWaterJumpTime );

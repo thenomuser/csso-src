@@ -170,7 +170,7 @@ void CWeaponAWP::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, m_weaponMode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], m_weaponMode ) )
 		return;
 
 	if ( m_weaponMode == Secondary_Mode )
@@ -195,9 +195,8 @@ void CWeaponAWP::PrimaryAttack()
 		#endif
 	}
 
-	QAngle angle = pPlayer->GetPunchAngle();
-	angle.x -= 2;
-	pPlayer->SetPunchAngle( angle );
+	// table driven recoil
+	Recoil( m_weaponMode );
 }
 
 #ifdef AWP_UNZOOM

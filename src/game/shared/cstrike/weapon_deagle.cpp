@@ -94,13 +94,11 @@ CDEagle::CDEagle()
 void CDEagle::Spawn()
 {
 	BaseClass::Spawn();
-	m_flAccuracy = 0.9;
 }
 
 
 bool CDEagle::Deploy()
 {
-	m_flAccuracy = 0.9;
 	return BaseClass::Deploy();
 }
 
@@ -109,14 +107,6 @@ void CDEagle::PrimaryAttack()
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return;
-		
-	// Mark the time of this shot and determine the accuracy modifier based on the last shot fired...
-	m_flAccuracy -= (0.35)*(0.4 - ( gpGlobals->curtime - m_flLastFire ) );
-
-	if (m_flAccuracy > 0.9)
-		m_flAccuracy = 0.9;
-	else if (m_flAccuracy < 0.55)
-		m_flAccuracy = 0.55;
 
 	m_flLastFire = gpGlobals->curtime;
 
@@ -154,14 +144,14 @@ void CDEagle::PrimaryAttack()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Primary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
 		GetInaccuracy(),
 		GetSpread());
 
-	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime;
+	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	if ( !m_iClip1 && pPlayer->GetAmmoCount( GetPrimaryAmmoType() ) <= 0 )
 	{
@@ -174,9 +164,8 @@ void CDEagle::PrimaryAttack()
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Primary_Mode];
 
-	QAngle punchAngle = pPlayer->GetPunchAngle();
-	punchAngle.x -= 2;
-	pPlayer->SetPunchAngle( punchAngle );
+	// table driven recoil
+	Recoil( m_weaponMode );
 
 	//ResetPlayerShieldAnim();
 }
@@ -184,11 +173,7 @@ void CDEagle::PrimaryAttack()
 
 bool CDEagle::Reload()
 {
-	if ( !DefaultPistolReload() )
-		return false;
-
-	m_flAccuracy = 0.9;
-	return true;
+	return DefaultPistolReload();
 }
 
 void CDEagle::WeaponIdle()

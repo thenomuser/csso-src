@@ -85,7 +85,6 @@ bool CWeaponFamas::Deploy( )
 {
 	m_iBurstShotsRemaining = 0;
 	m_fNextBurstShot = 0.0f;
-	m_flAccuracy = 0.9f;
 
 	return BaseClass::Deploy();
 }
@@ -147,7 +146,7 @@ void CWeaponFamas::FireRemaining()
 	FX_FireBullets(
 		pPlayer->entindex(),
 		pPlayer->Weapon_ShootPosition(),
-		pPlayer->EyeAngles() + 2.0f * pPlayer->GetPunchAngle(),
+		pPlayer->GetFinalAimAngle(),
 		GetWeaponID(),
 		Secondary_Mode,
 		CBaseEntity::GetPredictionRandomSeed() & 255,
@@ -170,6 +169,9 @@ void CWeaponFamas::FireRemaining()
 
 	// update accuracy
 	m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyImpulseFire[Secondary_Mode];
+
+	// table driven recoil
+	Recoil( Secondary_Mode );
 }
 
 
@@ -191,7 +193,7 @@ void CWeaponFamas::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime;
+	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
 
 	// change a few things if we're in burst mode
 	if ( m_bBurstMode )
@@ -203,18 +205,6 @@ void CWeaponFamas::PrimaryAttack()
 
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )
 		return;
-	
-	if ( pPlayer->GetAbsVelocity().Length2D() > 5 )
-		pPlayer->KickBack ( 1, 0.45, 0.275, 0.05, 4, 2.5, 7 );
-	
-	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )
-		pPlayer->KickBack ( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
-	
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
-		pPlayer->KickBack ( 0.575, 0.325, 0.2, 0.011, 3.25, 2, 8 );
-	
-	else
-		pPlayer->KickBack ( 0.625, 0.375, 0.25, 0.0125, 3.5, 2.25, 8 );
 }
 
 

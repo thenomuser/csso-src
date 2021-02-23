@@ -62,25 +62,17 @@ CWeaponMAC10::CWeaponMAC10()
 void CWeaponMAC10::Spawn( )
 {
 	BaseClass::Spawn();
-
-	m_flAccuracy = 0.15;
 }
 
 
 bool CWeaponMAC10::Deploy()
 {
-	bool ret = BaseClass::Deploy();
-	
-	m_flAccuracy = 0.15;
-
-	return ret;
+	return BaseClass::Deploy();
 }
 
 bool CWeaponMAC10::Reload()
 {
 	bool ret = BaseClass::Reload();
-	
-	m_flAccuracy = 0.15;
 
 	return ret;
 }
@@ -91,20 +83,6 @@ void CWeaponMAC10::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime, Primary_Mode ) )
+	if ( !CSBaseGunFire( GetCSWpnData().m_flCycleTime[m_weaponMode], Primary_Mode ) )
 		return;
-
-	// CSBaseGunFire can kill us, forcing us to drop our weapon, if we shoot something that explodes
-	pPlayer = GetPlayerOwner();
-	if ( !pPlayer )
-		return;
-
-	if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )	// jumping
-		pPlayer->KickBack (1.3, 0.55, 0.4, 0.05, 4.75, 3.75, 5);
-	else if (pPlayer->GetAbsVelocity().Length2D() > 5)				// running
-		pPlayer->KickBack (0.9, 0.45, 0.25, 0.035, 3.5, 2.75, 7);
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )	// ducking
-		pPlayer->KickBack (0.75, 0.4, 0.175, 0.03, 2.75, 2.5, 10);
-	else														// standing
-		pPlayer->KickBack (0.775, 0.425, 0.2, 0.03, 3, 2.75, 9);
 }

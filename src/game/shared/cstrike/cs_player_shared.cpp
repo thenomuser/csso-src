@@ -1527,50 +1527,33 @@ void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigi
 	BaseClass::UpdateStepSound( psurface, vecOrigin, vecVelocity  );
 }
 
+ConVar weapon_recoil_view_punch_extra( "weapon_recoil_view_punch_extra", "0.055", FCVAR_CHEAT | FCVAR_REPLICATED, "Additional (non-aim) punch added to view from recoil" );
 
-// GOOSEMAN : Kick the view..
-void CCSPlayer::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change )
+void CCSPlayer::KickBack( float fAngle, float fMagnitude )
 {
-	float flKickUp;
-	float flKickLateral;
+	QAngle angleVelocity(0,0,0);
+	angleVelocity[YAW] = -sinf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity[PITCH] = -cosf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity += m_Local.m_aimPunchAngleVel.Get();
+	SetAimPunchAngleVelocity( angleVelocity );
 
-	if (m_iShotsFired == 1) // This is the first round fired
-	{
-		flKickUp = up_base;
-		flKickLateral = lateral_base;
-	}
-	else
-	{
-		flKickUp = up_base + m_iShotsFired*up_modifier;
-		flKickLateral = lateral_base + m_iShotsFired*lateral_modifier;
-	}
-
-
-	QAngle angle = GetPunchAngle();
-
-	angle.x -= flKickUp;
-	if ( angle.x < -1 * up_max )
-		angle.x = -1 * up_max;
-
-	if ( m_iDirection == 1 )
-	{
-		angle.y += flKickLateral;
-		if (angle.y > lateral_max)
-			angle.y = lateral_max;
-	}
-	else
-	{
-		angle.y -= flKickLateral;
-		if ( angle.y < -1 * lateral_max )
-			angle.y = -1 * lateral_max;
-	}
-
-	if ( !SharedRandomInt( "KickBack", 0, direction_change ) )
-		m_iDirection = 1 - m_iDirection;
-
-	SetPunchAngle( angle );
+	// this bit gives additional punch to the view (screen shake) to make the kick back a bit more visceral
+	QAngle viewPunch = GetViewPunchAngle();
+	float fViewPunchMagnitude = fMagnitude * weapon_recoil_view_punch_extra.GetFloat();
+	viewPunch[YAW] -= sinf(DEG2RAD(fAngle)) * fViewPunchMagnitude;
+	viewPunch[PITCH] -= cosf(DEG2RAD(fAngle)) * fViewPunchMagnitude;
+	SetViewPunchAngle(viewPunch);
 }
 
+QAngle CCSPlayer::GetAimPunchAngle()
+{
+	return m_Local.m_aimPunchAngle.Get() * weapon_recoil_scale.GetFloat();
+}
+
+QAngle CCSPlayer::GetRawAimPunchAngle() const
+{
+	return m_Local.m_aimPunchAngle.Get();
+}
 
 bool CCSPlayer::CanMove() const
 {

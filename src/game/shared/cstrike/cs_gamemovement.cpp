@@ -63,6 +63,7 @@ public:
 	virtual void WalkMove( void );
 	virtual void AirMove( void );
 	virtual bool LadderMove( void );
+	virtual void DecayAimPunchAngle( void );
 	virtual void CheckParameters( void );
 
 	// allow overridden versions to respond to jumping
@@ -322,13 +323,14 @@ void CCSGameMovement::CheckParameters( void )
 		}
 	}
 
-	DecayPunchAngle();
+	DecayViewPunchAngle();
+	DecayAimPunchAngle();
 
 	// Take angles from command.
 	if ( !IsDead() )
 	{
 		v_angle = mv->m_vecAngles;
-		v_angle = v_angle + player->m_Local.m_vecPunchAngle;
+		v_angle = v_angle + player->m_Local.m_viewPunchAngle;
 
 		// Now adjust roll angle
 		if ( player->GetMoveType() != MOVETYPE_ISOMETRIC  &&
@@ -789,6 +791,27 @@ void HybridDecay( QAngle& v, float fExp, float fLin, float dT )
 	{
 		v.Init(0.0f, 0.0f, 0.0f);
 	}
+}
+
+void CCSGameMovement::DecayAimPunchAngle( void )
+{
+	QAngle punchAngle = m_pCSPlayer->m_Local.m_aimPunchAngle;
+	QAngle punchAngleVel = m_pCSPlayer->m_Local.m_aimPunchAngleVel;
+
+	// decay the punch angle
+	HybridDecay(punchAngle, weapon_recoil_decay2_exp.GetFloat(), weapon_recoil_decay2_lin.GetFloat(), TICK_INTERVAL);
+
+	// add in the velocity
+	punchAngle += punchAngleVel * TICK_INTERVAL * 0.5f;
+
+	// decay the punch angle velocity
+	punchAngleVel *= expf(TICK_INTERVAL * -weapon_recoil_vel_decay.GetFloat());
+
+	punchAngle += punchAngleVel * TICK_INTERVAL * 0.5f;
+
+	// save off the new values
+	m_pCSPlayer->m_Local.m_aimPunchAngle = punchAngle;
+	m_pCSPlayer->m_Local.m_aimPunchAngleVel = punchAngleVel;
 }
 
 void CCSGameMovement::HandleDuckingSpeedCrop( float duckFraction )

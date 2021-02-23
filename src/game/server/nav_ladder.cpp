@@ -286,7 +286,7 @@ void CNavLadder::DrawLadder( void ) const
 
 	Vector dir;
 	const Vector &eye = player->EyePosition();
-	AngleVectors( player->EyeAngles() + player->GetPunchAngle(), &dir );
+	AngleVectors( player->EyeAngles() + player->GetViewPunchAngle(), &dir );
 
 	float dx = eye.x - m_bottom.x;
 	float dy = eye.y - m_bottom.y;

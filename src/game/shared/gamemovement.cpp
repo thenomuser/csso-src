@@ -1048,13 +1048,13 @@ void CGameMovement::CheckParameters( void )
 		mv->m_flUpMove      = 0;
 	}
 
-	DecayPunchAngle();
+	DecayViewPunchAngle();
 
 	// Take angles from command.
 	if ( !IsDead() )
 	{
 		v_angle = mv->m_vecAngles;
-		v_angle = v_angle + player->m_Local.m_vecPunchAngle;
+		v_angle = v_angle + player->m_Local.m_viewPunchAngle;
 
 		// Now adjust roll angle
 		if ( player->GetMoveType() != MOVETYPE_ISOMETRIC  &&
@@ -1205,40 +1205,66 @@ void CGameMovement::FinishMove( void )
 										// currently the system will overshoot, with larger damping values it won't
 #define PUNCH_SPRING_CONSTANT	65.0f	// bigger number increases the speed at which the view corrects
 
+void CGameMovement::DecayAngles( QAngle& v, float fExp, float fLin, float dT )
+{
+	fExp *= dT;
+	fLin *= dT;
+
+	v *= expf(-fExp);
+
+	float fMag = v.Length();
+	if ( fMag > fLin )
+	{
+		v *= (1.0f - fLin / fMag);
+	}
+	else
+	{
+		v.Init(0.0f, 0.0f, 0.0f);
+	}
+}
+
+extern ConVar view_punch_decay;
+
 //-----------------------------------------------------------------------------
 // Purpose: Decays the punchangle toward 0,0,0.
 //			Modelled as a damped spring
 //-----------------------------------------------------------------------------
-void CGameMovement::DecayPunchAngle( void )
+void CGameMovement::DecayViewPunchAngle( void )
 {
-	if ( player->m_Local.m_vecPunchAngle->LengthSqr() > 0.001 || player->m_Local.m_vecPunchAngleVel->LengthSqr() > 0.001 )
+	QAngle punchAngle = player->m_Local.m_viewPunchAngle;
+	DecayAngles(punchAngle, view_punch_decay.GetFloat(), 0.0f, TICK_INTERVAL);
+	player->m_Local.m_viewPunchAngle = punchAngle;
+
+/*
+	if ( player->m_Local.m_viewPunchAngle->LengthSqr() > 0.001 || player->m_Local.m_vecPunchAngleVel->LengthSqr() > 0.001 )
 	{
-		player->m_Local.m_vecPunchAngle += player->m_Local.m_vecPunchAngleVel * gpGlobals->frametime;
+		player->m_Local.m_viewPunchAngle += player->m_Local.m_viewPunchAngleVel * gpGlobals->frametime;
 		float damping = 1 - (PUNCH_DAMPING * gpGlobals->frametime);
 		
 		if ( damping < 0 )
 		{
 			damping = 0;
 		}
-		player->m_Local.m_vecPunchAngleVel *= damping;
+		player->m_Local.m_viewPunchAngleVel *= damping;
 		 
 		// torsional spring
 		// UNDONE: Per-axis spring constant?
 		float springForceMagnitude = PUNCH_SPRING_CONSTANT * gpGlobals->frametime;
-		springForceMagnitude = clamp(springForceMagnitude, 0.f, 2.f );
-		player->m_Local.m_vecPunchAngleVel -= player->m_Local.m_vecPunchAngle * springForceMagnitude;
+		springForceMagnitude = clamp(springForceMagnitude, 0, 2 );
+		player->m_Local.m_viewPunchAngleVel -= player->m_Local.m_vecPunchAngle * springForceMagnitude;
 
 		// don't wrap around
 		player->m_Local.m_vecPunchAngle.Init( 
-			clamp(player->m_Local.m_vecPunchAngle->x, -89.f, 89.f ), 
-			clamp(player->m_Local.m_vecPunchAngle->y, -179.f, 179.f ),
-			clamp(player->m_Local.m_vecPunchAngle->z, -89.f, 89.f ) );
+			clamp(player->m_Local.m_viewPunchAngle->x, -89, 89 ), 
+			clamp(player->m_Local.m_viewPunchAngle->y, -179, 179 ),
+			clamp(player->m_Local.m_viewPunchAngle->z, -89, 89 ) );
 	}
 	else
 	{
-		player->m_Local.m_vecPunchAngle.Init( 0, 0, 0 );
-		player->m_Local.m_vecPunchAngleVel.Init( 0, 0, 0 );
+		player->m_Local.m_viewPunchAngle.Init( 0, 0, 0 );
+		player->m_Local.m_viewPunchAngleVel.Init( 0, 0, 0 );
 	}
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -3961,13 +3987,13 @@ void CGameMovement::CheckFalling( void )
 	if ( flFallVel > 16.0f && flFallVel <= PLAYER_FATAL_FALL_SPEED )
 	{
 		// punch view when we hit the ground
-		QAngle punchAngle = player->GetPunchAngle();
+		QAngle punchAngle = player->GetViewPunchAngle();
 		punchAngle.x = (flFallVel * 0.001);
 	
 		if ( punchAngle.x < 0.75 )
 			punchAngle.x = 0.75;
 
-		player->SetPunchAngle( punchAngle );
+		player->SetViewPunchAngle( punchAngle );
 	}
 	
 	//
@@ -3990,11 +4016,11 @@ void CGameMovement::PlayerRoughLandingEffects( float fvol )
 		//
 		// Knock the screen around a little bit, temporary effect.
 		//
-		player->m_Local.m_vecPunchAngle.Set( ROLL, player->m_Local.m_flFallVelocity * 0.013 );
+		player->m_Local.m_viewPunchAngle.Set( ROLL, (player->m_Local.m_flFallVelocity - PLAYER_MAX_SAFE_FALL_SPEED) * 0.013 );
 
-		if ( player->m_Local.m_vecPunchAngle[PITCH] > 8 )
+		if ( player->m_Local.m_viewPunchAngle[PITCH] > 8 )
 		{
-			player->m_Local.m_vecPunchAngle.Set( PITCH, 8 );
+			player->m_Local.m_viewPunchAngle.Set( PITCH, 8 );
 		}
 
 #if !defined( CLIENT_DLL )

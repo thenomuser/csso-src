@@ -38,9 +38,28 @@
 
 #endif
 
+// CS-PRO TEST CHANGE: instant movement inaccuracy, curve exponent x^0.25
+#define MOVEMENT_ACCURACY_DECAYED	0
+#define MOVEMENT_CURVE01_EXPONENT   0.25
+
+extern WeaponRecoilData g_WeaponRecoilData;
+
 extern ConVar cl_righthand;
+extern ConVar sv_jump_impulse;
 
 ConVar weapon_accuracy_model( "weapon_accuracy_model", "2", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_ARCHIVE );
+
+ConVar weapon_recoil_decay2_exp( "weapon_recoil_decay2_exp", "8", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor exponent for weapon recoil" );
+ConVar weapon_recoil_decay2_lin( "weapon_recoil_decay2_lin", "18", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor (linear term) for weapon recoil" );
+ConVar weapon_recoil_vel_decay( "weapon_recoil_vel_decay", "4.5", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor for weapon recoil velocity" );
+
+ConVar weapon_accuracy_nospread( "weapon_accuracy_nospread", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Disable weapon inaccuracy spread" );
+ConVar weapon_recoil_scale( "weapon_recoil_scale", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Overall scale factor for recoil. Used to reduce recoil on specific platforms" );
+ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Scale factor for jumping inaccuracy, set to 0 to make jumping accuracy equal to standing", true, 0.0f, false, 1.0f );
+
+ConVar weapon_legacy_recoiltable( "weapon_legacy_recoiltable", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
+
+ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
 
 
 // ----------------------------------------------------------------------------- //
@@ -348,7 +367,6 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_bDelayFire, FIELD_BOOLEAN, 0 ),
-	DEFINE_PRED_FIELD( m_flAccuracy, FIELD_FLOAT, 0 ),
 	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
@@ -878,7 +896,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 	{
 		// we just fired.
 		// there's a bit of a cool-off before you can alt-fire at normal alt-fire rate
-		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTimeAlt * 1.7f);
+		m_flNextSecondaryAttack = gpGlobals->curtime + (GetCSWpnData().m_flCycleTime[Secondary_Mode] * 1.7f);
 	}
 
 #ifndef CLIENT_DLL
@@ -1142,6 +1160,9 @@ float CWeaponCSBase::GetInaccuracy() const
 	if ( !pPlayer )
 		return 0.0f;
 
+	if ( weapon_accuracy_nospread.GetBool() )
+		return 0.0f;
+
 	const CCSWeaponInfo& weaponInfo = GetCSWpnData();
 
 	float fMaxSpeed = GetMaxSpeed();
@@ -1155,23 +1176,18 @@ float CWeaponCSBase::GetInaccuracy() const
 #if !MOVEMENT_ACCURACY_DECAYED
 	float flVerticalSpeed = abs( pPlayer->GetAbsVelocity().z );
 
-	float flMovementInaccuracyScale = RemapValClamped( pPlayer->GetAbsVelocity().Length2D(),
-													   fMaxSpeed * CS_PLAYER_SPEED_DUCK_MODIFIER,
-													   fMaxSpeed * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
-													   0.0f, 1.0f );
+	float flMovementInaccuracyScale = RemapValClamped(pPlayer->GetAbsVelocity().Length2D(), 
+		fMaxSpeed * CS_PLAYER_SPEED_DUCK_MODIFIER, 
+		fMaxSpeed * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
+		0.0f, 1.0f );
 
 	if ( flMovementInaccuracyScale > 0.0f )
 	{
-		// power curve only applies at speeds greater than walk
-		if ( pPlayer->m_bIsWalking )
+		if ( !pPlayer->m_bIsWalking )
 		{
-			//flMovementInaccuracyScale *= 1.0;	// reduce inaccuracy when walking or slower. This is commented out because at 1.0, it's a noop but preserved in case a different value is desired.
-			//flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( 0.85 ) );
+			flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( MOVEMENT_CURVE01_EXPONENT ));
 		}
-		else
-		{
-			flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( 0.25 ));
-		}
+
 
 		fAccuracy += flMovementInaccuracyScale * weaponInfo.m_fInaccuracyMove[m_weaponMode];
 	}
@@ -1179,23 +1195,23 @@ float CWeaponCSBase::GetInaccuracy() const
 	// If we are in the air/on ladder, add inaccuracy based on vertical speed (maximum accuracy at apex of jump)
 	if ( pPlayer->GetGroundEntity() == nullptr )
 	{
-		float flInaccuracyJumpInitial = weaponInfo.m_fInaccuracyJump[m_weaponMode];
+		float flInaccuracyJumpInitial = weaponInfo.m_fInaccuracyJumpInitial * weapon_air_spread_scale.GetFloat();
 		static const float kMaxFallingPenalty = 2.0f;	// Accuracy is never worse than 2x starting penalty
 
 		// Use sqrt here to make the curve more "sudden" around the accurate point at the apex of the jump
-		float fSqrtMaxJumpSpeed = sqrtf( 301.993377f );
+		float fSqrtMaxJumpSpeed = sqrtf( sv_jump_impulse.GetFloat() );
 		float fSqrtVerticalSpeed = sqrtf( flVerticalSpeed );
 
 		float flAirSpeedInaccuracy = RemapVal( fSqrtVerticalSpeed,
-											   fSqrtMaxJumpSpeed * 0.25f,	// Anything less than 6.25% of maximum speed has no additional accuracy penalty for z-motion (6.25% = .25 * .25)
-											   fSqrtMaxJumpSpeed,			// Penalty at max jump speed
-											   0.0f,						// No movement-related penalty when close to stopped
-											   flInaccuracyJumpInitial );	// Movement-penalty at start of jump
+			fSqrtMaxJumpSpeed * 0.25f,	// Anything less than 6.25% of maximum speed has no additional accuracy penalty for z-motion (6.25% = .25 * .25)
+			fSqrtMaxJumpSpeed,			// Penalty at max jump speed
+			0.0f,						// No movement-related penalty when close to stopped
+			flInaccuracyJumpInitial );	// Movement-penalty at start of jump
 
 		// Clamp to min/max values.  (Don't use RemapValClamped because it makes clamping to > kJumpMovePenalty hard)
 		if ( flAirSpeedInaccuracy < 0 )
 			flAirSpeedInaccuracy = 0;
-		else if ( flAirSpeedInaccuracy >( kMaxFallingPenalty * flInaccuracyJumpInitial ) )
+		else if ( flAirSpeedInaccuracy > ( kMaxFallingPenalty * flInaccuracyJumpInitial ) )
 			flAirSpeedInaccuracy = kMaxFallingPenalty * flInaccuracyJumpInitial;
 
 		// Apply air velocity inaccuracy penalty
@@ -1313,6 +1329,9 @@ void CWeaponCSBase::Precache( void )
 	m_IronSightController = NULL;
 	UpdateIronSightController();
 #endif //IRONSIGHT
+
+	extern void GenerateWeaponRecoilPattern( CSWeaponID id );
+	GenerateWeaponRecoilPattern( GetCSWeaponID() );
 }
 
 Activity CWeaponCSBase::GetDeployActivity( void )
@@ -1673,9 +1692,9 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		// [jpaquin] changed to only bump up the crosshair size if the player is still shooting or is spectating someone else
 		if ( pPlayer->m_iShotsFired > m_iAmmoLastCheck && (pPlayer->m_nButtons & (IN_ATTACK | IN_ATTACK2)) && m_iClip1 >= 0 )
 		{
-			/*if ( cl_crosshairstyle.GetInt() == 5 )
-				m_flCrosshairDistance += (GetRecoilMagnitude( m_weaponMode ) / 3.5);
-			else*/ if ( cl_crosshairstyle.GetInt() != 4 )
+			if ( cl_crosshairstyle.GetInt() == 5 )
+				m_flCrosshairDistance += (GetCSWpnData().m_fRecoilMagnitude[m_weaponMode] / 3.5);
+			else if ( cl_crosshairstyle.GetInt() != 4 )
 				fCrosshairDistanceGoal += iDeltaDistance;
 		}
 
@@ -3161,7 +3180,7 @@ void CWeaponCSBase::OnLand( float fVelocity )
 {
 	float fPenalty = GetCSWpnData().m_fInaccuracyLand[m_weaponMode] * fVelocity;
 	m_fAccuracyPenalty += fPenalty;
-	/*fPenalty = clamp( fPenalty, -1.0f, 1.0f );
+	fPenalty = clamp( fPenalty, -1.0f, 1.0f );
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
@@ -3169,14 +3188,38 @@ void CWeaponCSBase::OnLand( float fVelocity )
 
 	// NOTE: do NOT call GetAimPunchAngle() here because it may be adjusted by some recoil scalar.
 	// We just want to update the raw punch angle.
-	QAngle angle = pPlayer->GetPunchAngle();
-	float fVKick = RAD2DEG( asinf( fPenalty ) ) * 0.2f;
-	float fHKick = SharedRandomFloat( "LandPunchAngleYaw", -1.0f, +1.0f ) * fVKick * 0.1f;
+	QAngle angle = pPlayer->GetRawAimPunchAngle();
+	float fVKick = RAD2DEG(asinf(fPenalty)) * 0.2f;
+	float fHKick = SharedRandomFloat("LandPunchAngleYaw", -1.0f, +1.0f) * fVKick * 0.1f;
 
 	angle.x += fVKick;	// pitch
 	angle.y += fHKick;	// yaw
 
-	pPlayer->SetPunchAngle( angle );*/
+	pPlayer->SetAimPunchAngle( angle );
+}
+
+void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
+{
+	// PiMoN: huge thanks to https://github.com/SwagSoftware/Kisak-Strike/!
+	//lwss - rebuilt this function from reversing retail bins
+	CCSPlayer *pPlayer = GetPlayerOwner();
+	if ( !pPlayer )
+		return;
+
+	int seed = GetPredictionRandomSeed();
+	float angle;
+	float magnitude;
+	if( weapon_legacy_recoiltable.GetBool() )
+    {
+        GetCSWpnData().GetRecoilOffsets( weaponMode, seed, angle, magnitude );
+    }
+    else
+    {
+        g_WeaponRecoilData.GetRecoilOffsets( this, weaponMode, seed, angle, magnitude );
+    }
+
+	pPlayer->KickBack( angle, magnitude );
+	//lwss end
 }
 
 #if IRONSIGHT

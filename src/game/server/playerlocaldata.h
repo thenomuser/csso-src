@@ -66,8 +66,9 @@ public:
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
 	// auto-decaying view angle adjustment
-	CNetworkQAngle( m_vecPunchAngle );		
-	CNetworkQAngle( m_vecPunchAngleVel );
+	CNetworkQAngle( m_viewPunchAngle );
+	CNetworkQAngle( m_aimPunchAngle );
+	CNetworkQAngle( m_aimPunchAngleVel );
 	// Draw view model for the player
 	CNetworkVar( bool, m_bDrawViewmodel );
 
