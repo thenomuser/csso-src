@@ -195,10 +195,6 @@ float CCSPlayer::GetPlayerMaxSpeed()
 	{
 		speed = MIN(speed, CS_PLAYER_SPEED_VIP);
 	}
-	else if ( m_hCarriedHostage != NULL )
-	{
-		speed = CS_PLAYER_SPEED_HAS_HOSTAGE;
-	}
 	else
 	{
 
@@ -215,6 +211,11 @@ float CCSPlayer::GetPlayerMaxSpeed()
 				speed = MIN(speed, pWeapon->GetMaxSpeed());
 			}
 		}
+	}
+
+	if ( m_hCarriedHostage != NULL )
+	{
+		speed = MIN(speed, CS_PLAYER_SPEED_HAS_HOSTAGE);
 	}
 
 	return speed;
