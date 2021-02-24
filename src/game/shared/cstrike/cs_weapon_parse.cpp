@@ -444,7 +444,12 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_fInaccuracyAltSwitch		= pKeyValuesData->GetFloat("InaccuracyAltSwitch", 0.0f);
 
 	m_fRecoveryTimeCrouch		= pKeyValuesData->GetFloat("RecoveryTimeCrouch", 1.0f);
+	m_fRecoveryTimeCrouchFinal	= pKeyValuesData->GetFloat("RecoveryTimeCrouchFinal", m_fRecoveryTimeCrouch);
 	m_fRecoveryTimeStand		= pKeyValuesData->GetFloat("RecoveryTimeStand", 1.0f);
+	m_fRecoveryTimeStandFinal	= pKeyValuesData->GetFloat("RecoveryTimeStandFinal", m_fRecoveryTimeStand);
+
+	m_iRecoveryTransitionStartBullet	= pKeyValuesData->GetInt("RecoveryTransitionStartBullet", 0);
+	m_iRecoveryTransitionEndBullet		= pKeyValuesData->GetInt("RecoveryTransitionEndBullet", 0);
 
 	m_flTimeToIdleAfterFire	= pKeyValuesData->GetFloat( "TimeToIdle", 2 );
 	m_flIdleInterval	= pKeyValuesData->GetFloat( "IdleInterval", 20 );
@@ -644,7 +649,6 @@ void WeaponRecoilData::GenerateRecoilTable( RecoilData *data )
 		return;
 
 	CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( data->iWeaponID );
-	Assert( pEconItemDefinition );
 
 	// Walk the attributes to determine all things that we need
 	int iSeed = 0;
@@ -734,7 +738,6 @@ void WeaponRecoilData::GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int 
 	{
 		wepData = m_mapRecoilTables.Element( iMapLocation );
 		Assert( wepData );
-		Assert( wepData->iItemDefIndex == iDefIndex );
 	}
 
 	iIndex = iIndex % ARRAYSIZE( wepData->recoilTable[iMode] );

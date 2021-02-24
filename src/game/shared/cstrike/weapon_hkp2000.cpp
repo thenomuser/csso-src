@@ -144,6 +144,8 @@ void CWeaponHKP2000::PrimaryAttack()
 
 	// table driven recoil
 	Recoil( m_weaponMode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 

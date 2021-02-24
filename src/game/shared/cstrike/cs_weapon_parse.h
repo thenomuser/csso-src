@@ -236,7 +236,9 @@ public:
 	float m_fInaccuracyImpulseFire[2];
 	float m_fInaccuracyMove[2];
 	float m_fRecoveryTimeStand;
+	float m_fRecoveryTimeStandFinal;
 	float m_fRecoveryTimeCrouch;
+	float m_fRecoveryTimeCrouchFinal;
 	float m_fInaccuracyReload;
 	float m_fInaccuracyAltSwitch;
 	float m_fRecoilAngle[2];
@@ -244,6 +246,9 @@ public:
 	float m_fRecoilMagnitude[2];
 	float m_fRecoilMagnitudeVariance[2];
 	int   m_iRecoilSeed;
+
+	int   m_iRecoveryTransitionStartBullet;
+	int   m_iRecoveryTransitionEndBullet;
 
 	// Delay until the next idle animation after shooting.
 	float	m_flTimeToIdleAfterFire;

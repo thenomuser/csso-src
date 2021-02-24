@@ -338,6 +338,7 @@ BEGIN_NETWORK_TABLE( CWeaponCSBase, DT_WeaponCSBase )
 SendPropInt( SENDINFO( m_weaponMode ), 1, SPROP_UNSIGNED ),
 SendPropFloat( SENDINFO( m_fAccuracyPenalty ), 0, SPROP_CHANGES_OFTEN ),
 SendPropFloat( SENDINFO( m_fLastShotTime ) ),
+SendPropFloat( SENDINFO( m_flRecoilIndex ) ),
 SendPropBool( SENDINFO( m_bReloadVisuallyComplete ) ),
 SendPropTime( SENDINFO( m_flDoneSwitchingSilencer ) ),
 // world weapon models have no aminations
@@ -352,6 +353,7 @@ SendPropInt( SENDINFO( m_iIronSightMode ), 2, SPROP_UNSIGNED ),
 RecvPropInt( RECVINFO( m_weaponMode ) ),
 RecvPropFloat( RECVINFO( m_fAccuracyPenalty ) ),
 RecvPropFloat( RECVINFO( m_fLastShotTime ) ),
+RecvPropFloat( RECVINFO( m_flRecoilIndex ) ),
 RecvPropBool( RECVINFO( m_bReloadVisuallyComplete ) ),
 RecvPropTime( RECVINFO( m_flDoneSwitchingSilencer ) ),
 RecvPropTime( RECVINFO( m_flPostponeFireReadyTime ) ),
@@ -370,6 +372,7 @@ BEGIN_PREDICTION_DATA( CWeaponCSBase )
 	DEFINE_PRED_FIELD( m_weaponMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_fAccuracyPenalty, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.00005f ),
 	DEFINE_PRED_FIELD( m_fLastShotTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flRecoilIndex, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flPostponeFireReadyTime, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK ),
 #if IRONSIGHT
 	DEFINE_PRED_FIELD( m_iIronSightMode, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
@@ -486,6 +489,8 @@ CWeaponCSBase::CWeaponCSBase()
 	m_bReloadVisuallyComplete = false;
 
 	m_flDoneSwitchingSilencer = 0.0f;
+
+	m_flRecoilIndex = 0.0f;
 
 	ResetGunHeat();
 }
@@ -2277,6 +2282,8 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 					// Add them to the clip
 					m_iClip1 += j;
 					GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
+
+					m_flRecoilIndex = 0;
 				}
 			}
 			else if ( nEvent == AE_BEGIN_TAUNT_LOOP )
@@ -3120,36 +3127,63 @@ void CWeaponCSBase::UpdateAccuracyPenalty( )
 
 		m_fAccuracyPenalty = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), fNewPenalty, ( float ) m_fAccuracyPenalty );
 	}
+
+
+#define WEAPON_RECOIL_DECAY_THRESHOLD 1.10	
+	// Decay the recoil index if a little more than cycle time has elapsed since the last shot. In other words,
+	// don't decay if we're firing full-auto.
+	if ( gpGlobals->curtime > m_fLastShotTime + ( GetCSWpnData().m_flCycleTime[m_weaponMode] * WEAPON_RECOIL_DECAY_THRESHOLD ) )
+	{
+		float fDecayFactor = logf( 10.0f ) * weapon_recoil_decay_coefficient.GetFloat( );
+
+		m_flRecoilIndex = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), 0.0f, ( float ) m_flRecoilIndex );
+	}
 }
 
 float CWeaponCSBase::GetRecoveryTime( void )
 {
-	CCSPlayer *pPlayer = GetPlayerOwner();
+	CCSPlayer *pPlayer = GetPlayerOwner( );
 	if ( !pPlayer )
 		return -1.0f;
 
-	const CCSWeaponInfo& weaponInfo = GetCSWpnData();
+	const CCSWeaponInfo& weaponInfo = GetCSWpnData( );
 
-	if ( pPlayer->GetMoveType() == MOVETYPE_LADDER )
+	if ( pPlayer->GetMoveType( ) == MOVETYPE_LADDER )
 	{
 		return weaponInfo.m_fRecoveryTimeStand;
 	}
-	else if ( !FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) )	// in air
+	else if ( !FBitSet( pPlayer->GetFlags( ), FL_ONGROUND ) )	// in air
 	{
 		// enforce a large recovery speed penalty (400%) for players in the air; this helps to provide
 		// comparable in-air accuracy to the old weapon model
-
+		
 		return weaponInfo.m_fRecoveryTimeCrouch * 4.0f;
 	}
-	else if ( FBitSet( pPlayer->GetFlags(), FL_DUCKING ) )
+	else if ( FBitSet( pPlayer->GetFlags( ), FL_DUCKING ) )
 	{
 		float flRecoveryTime = weaponInfo.m_fRecoveryTimeCrouch;
+		float flRecoveryTimeFinal = weaponInfo.m_fRecoveryTimeCrouchFinal;
+
+		if ( flRecoveryTimeFinal != -1.0f )	// uninitialized final recovery values are set to -1.0 from the weapon_base prefab in schema
+		{
+			int nRecoilIndex = m_flRecoilIndex;
+
+			flRecoveryTime = RemapValClamped( nRecoilIndex, weaponInfo.m_iRecoveryTransitionStartBullet, weaponInfo.m_iRecoveryTransitionEndBullet, flRecoveryTime, flRecoveryTimeFinal );
+		}
 
 		return flRecoveryTime;
 	}
 	else
 	{
 		float flRecoveryTime = weaponInfo.m_fRecoveryTimeStand;
+		float flRecoveryTimeFinal = weaponInfo.m_fRecoveryTimeStandFinal;
+
+		if ( flRecoveryTimeFinal != -1.0f )	// uninitialized final recovery values are set to -1.0 from the weapon_base prefab in schema
+		{
+			int nRecoilIndex = m_flRecoilIndex;
+
+			flRecoveryTime = RemapValClamped( nRecoilIndex, weaponInfo.m_iRecoveryTransitionStartBullet, weaponInfo.m_iRecoveryTransitionEndBullet, flRecoveryTime, flRecoveryTimeFinal );
+		}
 
 		return flRecoveryTime;
 	}

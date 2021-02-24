@@ -172,6 +172,8 @@ void CWeaponFamas::FireRemaining()
 
 	// table driven recoil
 	Recoil( Secondary_Mode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 

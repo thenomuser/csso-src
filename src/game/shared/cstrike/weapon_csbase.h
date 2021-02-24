@@ -277,6 +277,7 @@ public:
 	virtual void UpdateAccuracyPenalty();
 
 	CNetworkVar( float, m_fAccuracyPenalty );
+	CNetworkVar( float, m_flRecoilIndex );
 
 	CNetworkVar( float, m_flPostponeFireReadyTime );
 	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }

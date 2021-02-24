@@ -219,6 +219,8 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 	// table driven recoil
 	Recoil( weaponMode );
 
+	m_flRecoilIndex += 1.0f;
+
 	return true;
 }
 

@@ -206,6 +206,8 @@ void CWeaponGlock::PrimaryAttack()
 
 	// table driven recoil
 	Recoil( m_weaponMode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 
@@ -263,6 +265,8 @@ void CWeaponGlock::FireRemaining( float fSpread )
 
 	// table driven recoil
 	Recoil( Secondary_Mode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 

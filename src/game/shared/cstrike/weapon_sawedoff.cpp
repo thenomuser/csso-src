@@ -143,6 +143,8 @@ void CWeaponSawedOff::PrimaryAttack()
 
 	// table driven recoil
 	Recoil( Primary_Mode );
+
+	m_flRecoilIndex += 1.0f;
 }
 
 
