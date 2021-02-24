@@ -116,6 +116,7 @@ public:
 	bool IsBackgroundMusicPlaying( void );
 	void SetBackgroundMusicDesired( bool bPlayMusic );
 	void StartBackgroundMusicFade( void );
+	void ReleaseBackgroundMusic( void );
 
 private:
 	void SendConnectedToGameMessage();
@@ -134,8 +135,6 @@ private:
 	void ValidateCDKey();
 
 	void UpdateBackgroundMusic( void );
-
-	void ReleaseBackgroundMusic( void );
 
 	CreateInterfaceFn m_GameFactory;
 

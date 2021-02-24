@@ -28,6 +28,8 @@
 #include "EngineInterface.h"
 #include "tier1/convar.h"
 
+#include "GameUI_Interface.h"
+
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
@@ -155,7 +157,9 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 
 	LoadControlSettings( "Resource/ModOptionsSubGameplay.res" );
 
+#if !INSTANT_MUSIC_CHANGE
 	m_bNeedToWarnAboutMusic = true;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -282,13 +286,21 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pMusicSelection->ApplyChanges();
 
 	ConVarRef snd_music_selection( "snd_music_selection" );
+#if INSTANT_MUSIC_CHANGE
+	if ( Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+#else
 	if ( m_bNeedToWarnAboutMusic && Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+#endif
 	{
 		// Bring up the confirmation dialog
+#if INSTANT_MUSIC_CHANGE
+		m_pMusicSelection->ApplyChanges();
+		GameUI().ReleaseBackgroundMusic();
+#else
 		MessageBox *box = new MessageBox( "#GameUI_OptionsRestartRequired_Title", "#GameUI_Gameplay_MusicRestartHint", this );
 		box->MoveToFront();
 		box->DoModal();
 		m_bNeedToWarnAboutMusic = false;
+#endif
 	}
-	m_pMusicSelection->ApplyChanges();
 }
