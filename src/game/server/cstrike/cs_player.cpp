@@ -813,7 +813,6 @@ void CCSPlayer::Precache()
 	PrecacheModel ( "sprites/glow01.vmt" );
 	PrecacheModel ( "models/items/cs_gift.mdl" );
 
-	PrecacheParticleSystem( "csblood" );
 	PrecacheParticleSystem( "impact_helmet_headshot" );
 
 	BaseClass::Precache();
