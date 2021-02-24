@@ -861,8 +861,8 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 		m_AvgLatency = 0.0f;
 
 	int textTall = surface()->GetFontTall( font );
-
-	Q_snprintf( sz, sizeof( sz ), "fps: %5i  ping: %i ms", (int)(1.0f / m_Framerate), (int)(m_AvgLatency*1000.0f) );
+	
+	Q_snprintf( sz, sizeof( sz ), "fps: %5i  var: %4.1f ms  ping: %i ms", (int)(1.0f / m_Framerate), m_flServerFramerateStdDeviation*1000.0f, (int)(m_AvgLatency*1000.0f) );
 	DrawColoredText( font, x, y, textColorDefault, sz );
 
 	// Draw update rate
@@ -956,10 +956,10 @@ void CNetGraphPanel::DrawTextFields( int graphvalue, int x, int y, int w, netban
 	color servercolor = textColorDefault;
 	if ( m_flServerFrameComputationTime > ( 1/fTickRate ) + 0.0001 )
 		servercolor = GetColorFromVariance( m_flServerFrameComputationTime, 1/fTickRate, 0.25f, 0.5f, 0.75f);
-
-	Q_snprintf( sz, sizeof( sz ), "sv:%5.1f %s%4.1f ms", m_flServerFrameComputationTime*1000.0f,
+	
+	Q_snprintf( sz, sizeof( sz ), "sv:%5.1f %s%4.1f ms   var: %6.3f ms", m_flServerFrameComputationTime*1000.0f,
 		( net_graphholdsvframerate.GetBool() ? "~/" : "+-" ),
-		m_flServerFramerateStdDeviation * 1000.0f );
+		m_flServerFramerateStdDeviation * 1000.0f, m_flServerFramerateStdDeviation * 1000.0f );
 	DrawColoredText( font, x + tickTextWide, y, servercolor, sz );
 
 	y += textTall;
