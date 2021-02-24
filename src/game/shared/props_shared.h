@@ -180,10 +180,10 @@ public:
 	void ParsePropDataFile( void );
 
 	// Parse a keyvalues section into the prop
-	int ParsePropFromKV( CBaseEntity *pProp, KeyValues *pSection, KeyValues *pInteractionSection );
+	int ParsePropFromKV( CBaseEntity *pProp, IBreakableWithPropData *pBreakableInterface, KeyValues *pSection, KeyValues *pInteractionSection );
 
 	// Fill out a prop's with base data parsed from the propdata file
-	int ParsePropFromBase( CBaseEntity *pProp, const char *pszPropData );
+	int ParsePropFromBase( CBaseEntity *pProp, IBreakableWithPropData *pBreakableInterface, const char *pszPropData );
 
 	// Get a random chunk in the specified breakable section
 	const char *GetRandomChunkModel( const char *pszBreakableSection, int iMaxSize = -1 );

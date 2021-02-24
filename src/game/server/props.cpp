@@ -342,7 +342,7 @@ int CBaseProp::ParsePropData( void )
 		return PARSE_FAILED_NO_DATA;
 	}
 
-	int iResult = g_PropDataSystem.ParsePropFromKV( this, pkvPropData, modelKeyValues );
+	int iResult = g_PropDataSystem.ParsePropFromKV( this, dynamic_cast<IBreakableWithPropData *>(this), pkvPropData, modelKeyValues );
 	modelKeyValues->deleteThis();
 	return iResult;
 }
@@ -816,6 +816,8 @@ CBreakableProp::CBreakableProp()
 	m_flFadeScale = 1;
 	m_flDefaultFadeScale = 1;
 	m_mpBreakMode = MULTIPLAYER_BREAK_DEFAULT;
+	// this is the default unless we are a prop_physics_multiplayer
+	SetPhysicsMode( PHYSICS_MULTIPLAYER_SOLID );
 	
 	// This defaults to on. Most times mapmakers won't specify a punt sound to play.
 	m_bUsePuntSound = true;
@@ -834,12 +836,6 @@ void CBreakableProp::Spawn()
 	m_flDmgModClub = 1.0;
 	m_flDmgModExplosive = 1.0;
 	
-	//jmd: I am guessing that the call to Spawn will set any flags that should be set anyway; this
-	//clears flags we don't want (specifically the FL_ONFIRE for explosive barrels in HL2MP)]
-#ifdef HL2MP
-	ClearFlags();
-#endif 
-
 	BaseClass::Spawn();
 	
 	if ( IsMarkedForDeletion() )
@@ -921,6 +917,11 @@ void CBreakableProp::Spawn()
 	m_hBreaker = NULL;
 
 	SetTouch( &CBreakableProp::BreakablePropTouch );
+}
+
+void CBreakableProp::UpdateOnRemove()
+{
+	BaseClass::UpdateOnRemove();
 }
 
 
@@ -1051,9 +1052,22 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	{
 		m_hLastAttacker.Set( info.GetAttacker() );
 	}
+	else if ( info.GetAttacker() )
+	{
+		CBaseEntity *attacker = info.GetAttacker();
+		CBaseEntity *attackerOwner = attacker->GetOwnerEntity();
+		if ( attackerOwner && attackerOwner->MyCombatCharacterPointer() )
+		{
+			m_hLastAttacker.Set( attackerOwner );
+		}
+	}
 
 	float flPropDamage = GetBreakableDamage( info, assert_cast<IBreakableWithPropData*>(this) );
 	info.SetDamage( flPropDamage );
+
+	// If attacker can't do at least the MIN required damage to us, don't take any damage from them
+	if ( info.GetDamage() < m_iMinHealthDmg )
+		return 0;
 
 	// UNDONE: Do this?
 #if 0
@@ -2087,7 +2101,7 @@ bool CDynamicProp::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& 
 			}
 		}
 	}
-	return false;
+	return BaseClass::TestCollision( ray, mask, trace );
 }
 
 
@@ -3459,14 +3473,12 @@ int PropBreakablePrecacheAll( string_t modelName )
 	return iBreakables;
 }
 
-bool PropBreakableCapEdictsOnCreateAll(int modelindex, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 )
+bool PropBreakableCapEdictsOnCreateAll( CUtlVector<breakmodel_t> &list, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 )
 {
 	// @Note (toml 10-07-03): this is stop-gap to prevent this function from crashing the engine
 	const int BREATHING_ROOM = 64;
+	int nCurrentEntityCount = engine->GetEntityCount();
 
-	CUtlVector<breakmodel_t> list;
-	BreakModelList( list, modelindex, params.defBurstScale, params.defCollisionGroup );
-	
 	int numToCreate = 0;
 
 	if ( iPrecomputedBreakableCount != -1 )
@@ -3477,12 +3489,21 @@ bool PropBreakableCapEdictsOnCreateAll(int modelindex, IPhysicsObject *pPhysics,
 	{
 		if ( list.Count() ) 
 		{
-			for ( int i = 0; i < list.Count(); i++ )
+			// if there are enough don't bother checking each piece
+			int nCurrentAvailable = MAX_EDICTS - (nCurrentEntityCount + BREATHING_ROOM);
+			if ( nCurrentAvailable > list.Count() )
 			{
-				int modelIndex = modelinfo->GetModelIndex( list[i].modelName );
-				if ( modelIndex <= 0 )
-					continue;
-				numToCreate++;
+				numToCreate = list.Count();
+			}
+			else
+			{
+				for ( int i = 0; i < list.Count(); i++ )
+				{
+					int modelIndex = modelinfo->GetModelIndex( list[i].modelName );
+					if ( modelIndex <= 0 )
+						continue;
+					numToCreate++;
+				}
 			}
 		}
 		// Then see if the propdata specifies any breakable pieces
@@ -3496,7 +3517,7 @@ bool PropBreakableCapEdictsOnCreateAll(int modelindex, IPhysicsObject *pPhysics,
 		}
 	}
 
-	return ( !numToCreate || ( engine->GetEntityCount() + numToCreate + BREATHING_ROOM < MAX_EDICTS ) );
+	return ( !numToCreate || ( nCurrentEntityCount + numToCreate + BREATHING_ROOM < MAX_EDICTS ) );
 }
 
 
@@ -3578,9 +3599,35 @@ BEGIN_DATADESC(CBasePropDoor)
 	DEFINE_THINKFUNC(DoorOpenMoveDone),
 	DEFINE_THINKFUNC(DoorCloseMoveDone),
 	DEFINE_THINKFUNC(DoorAutoCloseThink),
+	DEFINE_THINKFUNC(DisableAreaPortalThink),
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST(CBasePropDoor, DT_BasePropDoor)
+	//--------------------------------------------------------------------------------------------------------
+	// Datatable reduction
+	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
+	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),	
+	//SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+	//SendPropExclude( "DT_BaseAnimating", "m_nNewSequenceParity" ),
+	//SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
+	SendPropExclude( "DT_BaseAnimating", "m_nMuzzleFlashParity" ),
+	//SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
+	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
+	SendPropExclude( "DT_BaseFlex", "m_flexWeight" ),
+	SendPropExclude( "DT_BaseFlex", "m_blinktoggle" ),
+
+	// calc mins/maxs on the client, since we have all the info
+	//SendPropExclude( "DT_CollisionProperty", "m_vecMins" ),
+	//SendPropExclude( "DT_CollisionProperty", "m_vecMaxs" ),
+
+	//SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),	
+
+#ifdef TERROR
+	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
+#endif
+	//--------------------------------------------------------------------------------------------------------
+
+//	SendPropInt( SENDINFO(m_spawnflags), 16, SPROP_UNSIGNED ),
 END_SEND_TABLE()
 
 CBasePropDoor::CBasePropDoor( void )
@@ -3734,7 +3781,10 @@ void CBasePropDoor::HandleAnimEvent(animevent_t *pEvent)
 	if (pEvent->event == AE_DOOR_OPEN)
 	{
 		DoorActivate();
+		return;
 	}
+
+	BaseClass::HandleAnimEvent( pEvent );
 }
 
 
@@ -3846,6 +3896,13 @@ void CBasePropDoor::CalcDoorSounds()
 	PrecacheScriptSound( STRING( m_ls.sUnlockedSound ) );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Delay closing of area portals
+//-----------------------------------------------------------------------------
+void CBasePropDoor::DisableAreaPortalThink( void )
+{
+	UpdateAreaPortals( false );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -4294,7 +4351,9 @@ void CBasePropDoor::DoorCloseMoveDone(void)
 	SetDoorState( DOOR_STATE_CLOSED );
 
 	m_OnFullyClosed.FireOutput(m_hActivator, this);
-	UpdateAreaPortals(false);
+
+	// Close the area portals just after the door closes, to prevent visual artifacts in multiplayer games
+	SetContextThink( &CBasePropDoor::DisableAreaPortalThink, gpGlobals->curtime + 0.5f, "AreaPortal" );
 
 	// Let the leaf class do its thing.
 	OnDoorClosed();
@@ -4610,8 +4669,12 @@ public:
 	DECLARE_CLASS_NOBASE( CTraceFilterDoor );
 	
 	CTraceFilterDoor( const IHandleEntity *pDoor, const IHandleEntity *passentity, int collisionGroup )
-		: m_pDoor(pDoor), m_pPassEnt(passentity), m_collisionGroup(collisionGroup)
+		: m_pDoor(pDoor), m_collisionGroup(collisionGroup)
 	{
+		if ( passentity )
+		{
+			m_pPassEnts.AddToTail( passentity );
+		}
 	}
 	
 	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
@@ -4622,14 +4685,22 @@ public:
 		if ( !PassServerEntityFilter( pHandleEntity, m_pDoor ) )
 			return false;
 
-		if ( !PassServerEntityFilter( pHandleEntity, m_pPassEnt ) )
-			return false;
+		for ( int i=0; i<m_pPassEnts.Count(); ++i )
+		{
+			if ( !PassServerEntityFilter( pHandleEntity, m_pPassEnts[i] ) )
+				return false;
+		}
 
 		// Don't test if the game code tells us we should ignore this collision...
 		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
 		
 		if ( pEntity )
 		{
+			// If this entity is parented to the door, then we don't want to collide with it.
+			const CBaseEntity *pDoorEntity = EntityFromEntityHandle( m_pDoor );
+			if ( pEntity->GetMoveParent() == pDoorEntity )
+				return false;
+
 			if ( !pEntity->ShouldCollide( m_collisionGroup, contentsMask ) )
 				return false;
 			
@@ -4651,10 +4722,15 @@ public:
 		return true;
 	}
 
+	void AddPassEnt( CBaseEntity *pEntity )
+	{
+		m_pPassEnts.AddToTail( pEntity );
+	}
+
 private:
 
+	CUtlVector< const IHandleEntity * > m_pPassEnts;
 	const IHandleEntity *m_pDoor;
-	const IHandleEntity *m_pPassEnt;
 	int m_collisionGroup;
 };
 

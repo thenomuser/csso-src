@@ -225,7 +225,7 @@ int C_PhysPropClientside::ParsePropData( void )
 		return PARSE_FAILED_NO_DATA;
 	}
 
-	int iResult = g_PropDataSystem.ParsePropFromKV( this, pkvPropData, modelKeyValues );
+	int iResult = g_PropDataSystem.ParsePropFromKV( this, this, pkvPropData, modelKeyValues );
 	modelKeyValues->deleteThis();
 	return iResult;
 }

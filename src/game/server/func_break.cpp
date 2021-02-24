@@ -315,7 +315,7 @@ void CBreakable::ParsePropData( void )
 	if ( !Q_strncmp( STRING(m_iszPropData), "None", 4 ) )
 		return;
 
-	g_PropDataSystem.ParsePropFromBase( this, STRING(m_iszPropData) );
+	g_PropDataSystem.ParsePropFromBase( this, this, STRING(m_iszPropData) );
 }
 
 //-----------------------------------------------------------------------------
