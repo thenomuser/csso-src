@@ -64,6 +64,8 @@ private:
 	CLabeledCommandComboBox*	m_pViewmodelOffsetPreset;
 	CCvarSlider*				m_pViewmodelFOV;
 	vgui::Label*				m_pViewmodelFOVLabel;
+	CCvarSlider*				m_pViewmodelRecoil;
+	vgui::Label*				m_pViewmodelRecoilLabel;
 	CLabeledCommandComboBox*	m_pViewbobStyle;
 	CLabeledCommandComboBox*	m_pWeaponPos;
 	CLabeledCommandComboBox*	m_pMusicSelection;

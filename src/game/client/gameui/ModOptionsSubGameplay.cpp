@@ -120,6 +120,8 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetPreset = new CLabeledCommandComboBox( this, "ViewmodelOffsetPreset" );
 	m_pViewmodelFOV = new CCvarSlider( this, "ViewmodelFOVSlider", "", 54.0f, 68.0f, "viewmodel_fov" );
 	m_pViewmodelFOVLabel = new Label( this, "ViewmodelFOVLabel", "" );
+	m_pViewmodelRecoil = new CCvarSlider( this, "ViewmodelRecoilSlider", "", 0.0f, 1.0f, "viewmodel_recoil" );
+	m_pViewmodelRecoilLabel = new Label( this, "ViewmodelRecoilLabel", "" );
 	m_pViewbobStyle = new CLabeledCommandComboBox( this, "ViewbobStyleComboBox" );
 	m_pWeaponPos = new CLabeledCommandComboBox( this, "WeaponPositionComboBox" );
 	m_pMusicSelection = new CLabeledCommandComboBox( this, "MusicSelectionComboBox" );
@@ -150,6 +152,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetY->AddActionSignalTarget( this );
 	m_pViewmodelOffsetZ->AddActionSignalTarget( this );
 	m_pViewmodelFOV->AddActionSignalTarget( this );
+	m_pViewmodelRecoil->AddActionSignalTarget( this );
 	m_pViewmodelOffsetPreset->AddActionSignalTarget( this );
 	m_pViewbobStyle->AddActionSignalTarget( this );
 	m_pWeaponPos->AddActionSignalTarget( this );
@@ -180,6 +183,8 @@ void CModOptionsSubGameplay::UpdateViewmodelSliderLabels()
 	m_pViewmodelOffsetZLabel->SetText( strValue );
 	Q_snprintf( strValue, sizeof( strValue ), "%2.1f", m_pViewmodelFOV->GetSliderValue() );
 	m_pViewmodelFOVLabel->SetText( strValue );
+	Q_snprintf( strValue, sizeof( strValue ), "%2.1f", m_pViewmodelRecoil->GetSliderValue() );
+	m_pViewmodelRecoilLabel->SetText( strValue );
 }
 
 //-----------------------------------------------------------------------------
@@ -226,7 +231,7 @@ void CModOptionsSubGameplay::OnSliderMoved( KeyValues *data )
 {
 	vgui::Panel* pPanel = static_cast<vgui::Panel*>(data->GetPtr( "panel" ));
 
-	if ( pPanel == m_pViewmodelOffsetX || pPanel == m_pViewmodelOffsetY || pPanel == m_pViewmodelOffsetZ || pPanel == m_pViewmodelFOV )
+	if ( pPanel == m_pViewmodelOffsetX || pPanel == m_pViewmodelOffsetY || pPanel == m_pViewmodelOffsetZ || pPanel == m_pViewmodelFOV || pPanel == m_pViewmodelRecoil )
 	{
 		UpdateViewmodelSliderLabels();
 	}
@@ -244,6 +249,7 @@ void CModOptionsSubGameplay::OnResetData()
 	m_pViewmodelOffsetY->Reset();
 	m_pViewmodelOffsetZ->Reset();
 	m_pViewmodelFOV->Reset();
+	m_pViewmodelRecoil->Reset();
 	UpdateViewmodelSliderLabels();
 	
 	ConVarRef viewmodel_presetpos( "viewmodel_presetpos" );
@@ -281,6 +287,7 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pViewmodelOffsetY->ApplyChanges();
 	m_pViewmodelOffsetZ->ApplyChanges();
 	m_pViewmodelFOV->ApplyChanges();
+	m_pViewmodelRecoil->ApplyChanges();
 	m_pViewbobStyle->ApplyChanges();
 	m_pWeaponPos->ApplyChanges();
 	m_pMusicSelection->ApplyChanges();

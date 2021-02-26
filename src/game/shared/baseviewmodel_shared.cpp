@@ -40,6 +40,8 @@ extern ConVar in_forceuser;
 ConVar viewmodel_offset_x( "viewmodel_offset_x", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in X
 ConVar viewmodel_offset_y( "viewmodel_offset_y", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Y
 ConVar viewmodel_offset_z( "viewmodel_offset_z", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in Z
+
+ConVar viewmodel_recoil( "viewmodel_recoil", "1.0", FCVAR_ARCHIVE, "Amount of weapon recoil/aimpunch to display on viewmodel", true, 0.0f, true, 1.0f );
 #endif
 
 //-----------------------------------------------------------------------------
@@ -464,6 +466,7 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 		}
 #endif
 		vmorigin += ( viewmodel_offset_y.GetFloat() * vecForward ) + ( viewmodel_offset_z.GetFloat() * vecUp ) + ( viewmodel_offset_x.GetFloat() * vecRight );
+		vmangles += (owner->m_Local.m_aimPunchAngle * viewmodel_recoil.GetFloat() * 0.5f); // PiMoN: Valve are probably multiplying it by 0.5 as well... right? I mean it makes it look exactly like in CS:GO
 	}
 
 	CBaseCombatWeapon *pWeapon = m_hWeapon.Get();
