@@ -3227,16 +3227,21 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 	if ( !pPlayer )
 		return;
 
-	int seed = GetPredictionRandomSeed();
+	int index;
+	if ( true ) // PiMoN TODO: what should be here?
+		index = m_flRecoilIndex;
+	else
+		index = GetPredictionRandomSeed();
+
 	float angle;
 	float magnitude;
 	if( weapon_legacy_recoiltable.GetBool() )
     {
-        GetCSWpnData().GetRecoilOffsets( weaponMode, seed, angle, magnitude );
+		GetCSWpnData().GetRecoilOffsets( weaponMode, index, angle, magnitude );
     }
     else
     {
-        g_WeaponRecoilData.GetRecoilOffsets( this, weaponMode, seed, angle, magnitude );
+		g_WeaponRecoilData.GetRecoilOffsets( this, weaponMode, index, angle, magnitude );
     }
 
 	pPlayer->KickBack( angle, magnitude );
