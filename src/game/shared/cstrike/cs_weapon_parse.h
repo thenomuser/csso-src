@@ -281,24 +281,14 @@ public:
 	float	m_flIronsightFOV;
 	float	m_flIronsightPivotForward;
 	char	m_szIronsightDotMaterial[MAX_WEAPON_STRING];
-
-	struct RecoilOffset
-	{
-		float	fAngle;
-		float	fMagnitude;
-	};
-	RecoilOffset	m_recoilTable[2][64];
    
 	int		GetKillAward( void ) const;
 	int		GetWeaponPrice( void ) const;
 	int		GetDefaultPrice( void );
 	int		GetPrevousPrice( void );
-	void	GetRecoilOffsets( int iMode, int iIndex, float& fAngle, float &fMagnitude ) const;
 	void	SetWeaponPrice( int iPrice ) { m_iWeaponPrice = iPrice; }
 	void	SetDefaultPrice( int iPrice ) { m_iDefaultPrice = iPrice; }
 	void	SetPreviousPrice( int iPrice ) { m_iPreviousPrice = iPrice; }
-
-	void GenerateRecoilTable();
     
 private:
 

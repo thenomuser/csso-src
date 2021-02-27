@@ -57,8 +57,6 @@ ConVar weapon_accuracy_nospread( "weapon_accuracy_nospread", "0", FCVAR_CHEAT | 
 ConVar weapon_recoil_scale( "weapon_recoil_scale", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Overall scale factor for recoil. Used to reduce recoil on specific platforms" );
 ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Scale factor for jumping inaccuracy, set to 0 to make jumping accuracy equal to standing", true, 0.0f, false, 1.0f );
 
-ConVar weapon_legacy_recoiltable( "weapon_legacy_recoiltable", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
-
 ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
 
 
@@ -3235,14 +3233,7 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 
 	float angle;
 	float magnitude;
-	if( weapon_legacy_recoiltable.GetBool() )
-    {
-		GetCSWpnData().GetRecoilOffsets( weaponMode, index, angle, magnitude );
-    }
-    else
-    {
-		g_WeaponRecoilData.GetRecoilOffsets( this, weaponMode, index, angle, magnitude );
-    }
+	g_WeaponRecoilData.GetRecoilOffsets( this, weaponMode, index, angle, magnitude );
 
 	pPlayer->KickBack( angle, magnitude );
 	//lwss end

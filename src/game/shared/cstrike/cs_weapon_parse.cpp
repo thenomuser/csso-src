@@ -336,8 +336,6 @@ CCSWeaponInfo::CCSWeaponInfo()
 	ZeroObject(m_fRecoilMagnitude);
 	ZeroObject(m_fRecoilMagnitudeVariance);
 	m_iRecoilSeed = 0;
-
-	ZeroObject(m_recoilTable);
 }
 
 int	CCSWeaponInfo::GetKillAward( void ) const
@@ -570,63 +568,11 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 		engine->ForceModelBounds( m_szSilencerModel, Vector( -20, -12, -18 ), Vector( 50, 16, 19 ) );
 	}*/
 #endif // !CLIENT_DLL
-
-	// generate the recoil table after everything else has been loaded (since it depends on other script parameters)
-	GenerateRecoilTable();
 }
 
 ConVar weapon_recoil_suppression_shots( "weapon_recoil_suppression_shots", "4", FCVAR_CHEAT |  FCVAR_REPLICATED, "Number of shots before weapon uses full recoil" );
 ConVar weapon_recoil_suppression_factor( "weapon_recoil_suppression_factor", "0.75", FCVAR_CHEAT |  FCVAR_REPLICATED, "Initial recoil suppression factor (first suppressed shot will use this factor * standard recoil, lerping to 1 for later shots" );
 ConVar weapon_recoil_variance("weapon_recoil_variance", "0.55", FCVAR_CHEAT | FCVAR_REPLICATED, "Amount of variance per recoil impulse", true, 0.0f, true, 1.0f );
-
-void CCSWeaponInfo::GenerateRecoilTable()
-{
-	const int iSuppressionShots = weapon_recoil_suppression_shots.GetInt();
-	const float fBaseSuppressionFactor = weapon_recoil_suppression_factor.GetFloat();
-	const float fRecoilVariance = weapon_recoil_variance.GetFloat();
-	CUniformRandomStream recoilRandom;
-
-	for ( int iMode = 0; iMode < 2; ++iMode )
-	{
-		recoilRandom.SetSeed( m_iRecoilSeed );
-
-		float fAngle = 0.0f;
-		float fMagnitude = 0.0f;
-
-		for ( int j = 0; j < ARRAYSIZE( m_recoilTable[iMode] ); ++j )
-		{
-			float fAngleNew = m_fRecoilAngle[iMode] + recoilRandom.RandomFloat(-m_fRecoilAngleVariance[iMode], +m_fRecoilAngleVariance[iMode]);
-			float fMagnitudeNew = m_fRecoilMagnitude[iMode] + recoilRandom.RandomFloat(-m_fRecoilMagnitudeVariance[iMode], +m_fRecoilMagnitudeVariance[iMode]);
-
-			if ( m_bFullAuto && j > 0 )
-			{
-				fAngle = Lerp( fRecoilVariance, fAngle, fAngleNew );
-				fMagnitude = Lerp( fRecoilVariance, fMagnitude, fMagnitudeNew );
-			}
-			else
-			{
-				fAngle = fAngleNew;
-				fMagnitude = fMagnitudeNew;
-			}
-
-			if ( m_bFullAuto && j < iSuppressionShots )
-			{
-				float fSuppressionFactor = Lerp( (float)j / (float)iSuppressionShots, fBaseSuppressionFactor, 1.0f );
-				fMagnitude *= fSuppressionFactor;
-			}
-
-			m_recoilTable[iMode][j].fAngle = fAngle;
-			m_recoilTable[iMode][j].fMagnitude = fMagnitude;
-		}
-	}
-}
-
-void CCSWeaponInfo::GetRecoilOffsets( int iMode, int iIndex, float& fAngle, float &fMagnitude ) const
-{
-	iIndex = iIndex % ARRAYSIZE( m_recoilTable[iMode] );
-	fAngle = m_recoilTable[iMode][iIndex].fAngle;
-	fMagnitude = m_recoilTable[iMode][iIndex].fMagnitude;
-}
 
 WeaponRecoilData::WeaponRecoilData()
 {
