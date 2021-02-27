@@ -3228,7 +3228,7 @@ void CWeaponCSBase::Recoil( CSWeaponMode weaponMode )
 		return;
 
 	int index;
-	if ( true ) // PiMoN TODO: what should be here?
+	if ( IsFullAuto() )
 		index = m_flRecoilIndex;
 	else
 		index = GetPredictionRandomSeed();
