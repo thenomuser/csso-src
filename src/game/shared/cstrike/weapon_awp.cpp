@@ -194,11 +194,6 @@ void CWeaponAWP::PrimaryAttack()
 			m_weaponMode = Primary_Mode;
 		#endif
 	}
-
-	// table driven recoil
-	Recoil( m_weaponMode );
-
-	m_flRecoilIndex += 1.0f;
 }
 
 #ifdef AWP_UNZOOM
