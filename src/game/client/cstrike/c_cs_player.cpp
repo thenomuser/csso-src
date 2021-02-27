@@ -545,17 +545,17 @@ void C_CSRagdoll::CreateCSRagdoll()
 		}
 
 		// add a separate gloves model if needed
-		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		/*if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
 			// hide the gloves first
 			SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
 
 			m_pGlovesModel = new C_BaseAnimating;
 			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->FollowEntity( this ); // attach to player model
+			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
-		}
+		}*/
 	}
 	else
 	{
@@ -1585,7 +1585,7 @@ void C_CSPlayer::UpdateAddonModels()
 
 void C_CSPlayer::UpdateGlovesModel()
 {
-	if ( !IsAlive() || (GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) || IsDormant() || !IsVisible() )
+	/*if ( !IsAlive() || (GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) || IsDormant() || !IsVisible() )
 	{
 		RemoveGlovesModel();
 		return;
@@ -1606,15 +1606,15 @@ void C_CSPlayer::UpdateGlovesModel()
 
 			m_pGlovesModel = new C_BaseAnimating;
 			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->FollowEntity( this ); // attach to player model
+			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
 			m_pGlovesModel->m_nSkin = m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
 		}
 		else
 		{
 			RemoveGlovesModel();
 		}
-	}
+	}*/
 }
 
 void C_CSPlayer::RemoveGlovesModel()
