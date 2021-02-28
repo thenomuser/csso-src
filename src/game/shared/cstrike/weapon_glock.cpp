@@ -138,7 +138,7 @@ void CWeaponGlock::PrimaryAttack()
 	if ( !pPlayer )
 		return;
 
-	float flCycleTime = GetCSWpnData().m_flCycleTime[m_weaponMode];
+	float flCycleTime = m_bBurstMode ? 0.5f : GetCSWpnData().m_flCycleTime[Primary_Mode];
 
 	m_flLastFire = gpGlobals->curtime;
 
