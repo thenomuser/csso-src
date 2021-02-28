@@ -419,10 +419,6 @@ private:
 	void UpdateAddonModels();
 	void UpdateHostageCarryModels();
 
-	void UpdateGlovesModel();
-	void RemoveGlovesModel();
-	C_BaseAnimating* m_pGlovesModel;
-
 	void PushawayThink();
 
 	void FireGameEvent( IGameEvent *event );

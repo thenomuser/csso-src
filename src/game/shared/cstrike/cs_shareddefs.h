@@ -164,7 +164,8 @@ extern CUtlVectorInitialized< const char* > KnivesEntities;
 #define ADDON_PISTOL2			0x100
 #define ADDON_KNIFE				0x200
 #define ADDON_DECOY				0x400
-#define NUM_ADDON_BITS			11
+#define ADDON_GLOVES			0x800
+#define NUM_ADDON_BITS			12
 
 
 // Indices of each weapon slot.

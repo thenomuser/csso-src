@@ -440,6 +440,7 @@ public:
 	bool	HasAgentSet( int team );
 	int		GetAgentID( int team );
 	bool	m_bNeedToChangeAgent;
+	bool	m_bHasGloves;
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 

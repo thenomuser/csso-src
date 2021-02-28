@@ -2176,6 +2176,15 @@ int CBaseAnimating::GetNumBodyGroups( void )
 	return IsDynamicModelLoading() ? 0 : ::GetNumBodyGroups( GetModelPtr( ) );
 }
 
+bool CBaseAnimating::DoesModelSupportGloves()
+{
+#ifdef CSTRIKE_DLL
+	return (FindBodygroupByName( "gloves" ) > -1) ? true : false;
+#endif
+	
+	return false;
+}
+
 int CBaseAnimating::ExtractBbox( int sequence, Vector& mins, Vector& maxs )
 {
 	Assert( IsDynamicModelLoading() || GetModelPtr() );
