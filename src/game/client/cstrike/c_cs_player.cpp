@@ -545,17 +545,25 @@ void C_CSRagdoll::CreateCSRagdoll()
 		}
 
 		// add a separate gloves model if needed
-		/*if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
-			// hide the gloves first
-			SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
 
 			m_pGlovesModel = new C_BaseAnimating;
-			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-			m_pGlovesModel->FollowEntity( this ); // attach to player model
-			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-			m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
-		}*/
+			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+			{
+				// hide the gloves first
+				SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+
+				m_pGlovesModel->FollowEntity( this ); // attach to player model
+				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+				m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig ? pPlayer->m_pViewmodelArmConfig->iSkintoneIndex : 0; // set the corrent skin tone
+			}
+			else
+			{
+				m_pGlovesModel->Release();
+				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			}
+		}
 	}
 	else
 	{
@@ -1061,6 +1069,7 @@ C_CSPlayer::C_CSPlayer() :
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
 
+	m_pViewmodelArmConfig = NULL;
 	m_pGlovesModel = NULL;
 }
 
@@ -1585,14 +1594,14 @@ void C_CSPlayer::UpdateAddonModels()
 
 void C_CSPlayer::UpdateGlovesModel()
 {
-	/*if ( !IsAlive() || (GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) || IsDormant() || !IsVisible() )
+	if ( !IsAlive() || (GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST) || IsDormant() || !IsVisible() )
 	{
 		RemoveGlovesModel();
 		return;
 	}
 
 	// add a separate gloves model if needed
-	// PiMoN; I dont like that its gonna remove and add the model every tick, but seems
+	// PiMoN: I dont like that its gonna remove and add the model every tick, but seems
 	// like there is no other way or im just too sleepy to come up with one, 4:54 AM here
 	if ( DoesModelSupportGloves() )
 	{
@@ -1605,16 +1614,20 @@ void C_CSPlayer::UpdateGlovesModel()
 				m_pGlovesModel->Remove();
 
 			m_pGlovesModel = new C_BaseAnimating;
-			m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-			m_pGlovesModel->FollowEntity( this ); // attach to player model
-			m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-			m_pGlovesModel->m_nSkin = m_pViewmodelArmConfig->iSkintoneIndex; // set the corrent skin tone
+			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+			{
+				m_pGlovesModel->FollowEntity( this ); // attach to player model
+				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+				m_pGlovesModel->m_nSkin = m_pViewmodelArmConfig ? m_pViewmodelArmConfig->iSkintoneIndex : 0; // set the corrent skin tone
+			}
+			else
+				m_pGlovesModel->Release();
 		}
 		else
 		{
 			RemoveGlovesModel();
 		}
-	}*/
+	}
 }
 
 void C_CSPlayer::RemoveGlovesModel()
@@ -1778,6 +1791,9 @@ void C_CSPlayer::ClientThink()
 	UpdateSoundEvents();
 
 	UpdateAddonModels();
+
+	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
+		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
 
 	UpdateGlovesModel();
 

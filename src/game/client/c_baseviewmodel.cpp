@@ -655,12 +655,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
-
-		CStudioHdr *pHdr = pPlayer->GetModelPtr();
-		if ( pHdr )
-		{
-			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
-		}
+		return;
 	}
 
 	if ( pPlayer->m_bNeedToChangeGloves )
