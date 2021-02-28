@@ -127,7 +127,9 @@ void CWeaponGlock::SecondaryAttack()
 		m_weaponMode = Secondary_Mode;
 	}
 
+#ifndef CLIENT_DLL
 	pPlayer->EmitSound( "Weapon.AutoSemiAutoSwitch" );
+#endif
 	
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3;
 }
