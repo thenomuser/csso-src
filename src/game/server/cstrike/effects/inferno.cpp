@@ -831,10 +831,14 @@ bool CInferno::CanHarm( CBaseEntity *pEnt ) const
 		return true;
 
 	// dont damage teammates but damage the owner
-	int entUserID = static_cast<CBasePlayer*>(pEnt)->GetUserID();
-	int ownerUserID = static_cast<CBasePlayer*>(GetOwnerEntity())->GetUserID();
-	if ( !CSGameRules()->IsFriendlyFireOn() )
-		return entUserID == ownerUserID;
+	CBasePlayer *pEntPlayer = dynamic_cast<CBasePlayer*>(pEnt);
+	CBasePlayer *pOwnerPlayer = dynamic_cast<CBasePlayer*>(GetOwnerEntity());
+
+	if ( !pEntPlayer || !pOwnerPlayer )
+		return true;
+
+	if ( (pEntPlayer->GetTeamNumber() == pOwnerPlayer->GetTeamNumber()) && !CSGameRules()->IsFriendlyFireOn() )
+		return pEntPlayer->GetUserID() == pOwnerPlayer->GetUserID();
 
 	return true;
 
