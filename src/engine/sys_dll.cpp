@@ -75,7 +75,7 @@
 #define ONE_HUNDRED_TWENTY_EIGHT_MB	(128 * 1024 * 1024)
 
 ConVar mem_min_heapsize( "mem_min_heapsize", "48", 0, "Minimum amount of memory to dedicate to engine hunk and datacache (in mb)" );
-ConVar mem_max_heapsize( "mem_max_heapsize", "256", 0, "Maximum amount of memory to dedicate to engine hunk and datacache (in mb)" );
+ConVar mem_max_heapsize( "mem_max_heapsize", "512", 0, "Maximum amount of memory to dedicate to engine hunk and datacache (in mb)" );
 ConVar mem_max_heapsize_dedicated( "mem_max_heapsize_dedicated", "64", 0, "Maximum amount of memory to dedicate to engine hunk and datacache, for dedicated server (in mb)" );
 
 #define MINIMUM_WIN_MEMORY			(unsigned)(mem_min_heapsize.GetInt()*1024*1024)
