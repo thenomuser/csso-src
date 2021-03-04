@@ -124,7 +124,6 @@ CAddonInfo g_AddonInfo[] =
 	{ "eholster",	0,						"models/weapons/w_eq_eholster_elite.mdl", "models/weapons/w_eq_eholster.mdl" },
 	{ "knife",		0,						0, 0 },	// Knife addon model is looked up based on m_iKnifeAddon
 	{ "grenade4",	"weapon_decoy",			0, 0 },
-	{ "",			0,						0, 0 }, // gloves
 };
 
 bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
@@ -1080,6 +1079,8 @@ C_CSPlayer::~C_CSPlayer()
 
 	ReleaseFlashlight();
 
+	RemoveGlovesModel();
+
 	m_PlayerAnimState->Release();
 }
 
@@ -1358,17 +1359,12 @@ void C_CSPlayer::CreateAddonModel( int i )
 	// Create the model entity.
 	CAddonInfo *pAddonInfo = &g_AddonInfo[i];
 
-	int addonType = (1 << i);
-	int iAttachment;
+	int iAttachment = LookupAttachment( pAddonInfo->m_pAttachmentName );
 	float iScale = 1;
-
-	if ( addonType == ADDON_GLOVES )
-		iAttachment = 0;
-	else
-		iAttachment = LookupAttachment( pAddonInfo->m_pAttachmentName );
 
 	C_PlayerAddonModel *pEnt = new C_PlayerAddonModel;
 
+	int addonType = (1 << i);
 	if ( addonType == ADDON_PISTOL || addonType == ADDON_PRIMARY || addonType == ADDON_KNIFE )
 	{
 		CCSWeaponInfo *weaponInfo;
@@ -1406,10 +1402,6 @@ void C_CSPlayer::CreateAddonModel( int i )
 
 		iScale = weaponInfo->m_flAddonScale;
 	}
-	else if ( addonType == ADDON_GLOVES )
-	{
-		pEnt->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
 	else if( pAddonInfo->m_pModelName )
 	{
 		if ( addonType == ADDON_PISTOL2 && !(m_iAddonBits & ADDON_PISTOL ) )
@@ -1446,16 +1438,15 @@ void C_CSPlayer::CreateAddonModel( int i )
 		}
 	}
 
-	if ( addonType != ADDON_GLOVES && iAttachment <= 0 )
+	if ( iAttachment <= 0 )
 		return;
 
-	if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) || addonType == ADDON_GLOVES )
+	if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) )
 	{
-		// fade out all attached models except C4 and gloves
+		// fade out all attached models except C4
 		pEnt->SetFadeMinMax( 400, 500 );
 
-		if ( Q_strcmp( pAddonInfo->m_pAttachmentName, "c4" ) )
-			pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
+		pEnt->SetBodygroup( pEnt->FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
 	}
 
 	// Create the addon.
@@ -1463,19 +1454,11 @@ void C_CSPlayer::CreateAddonModel( int i )
 
 	pAddon->m_hEnt = pEnt;
 	pAddon->m_iAddon = i;
-	if ( addonType == ADDON_GLOVES )
-	{
-		pEnt->FollowEntity( this ); // attach to player model
-		pEnt->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-	}
-	else
-	{
-		pAddon->m_iAttachmentPoint = iAttachment;
-		pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
-		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
-		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
-		pEnt->SetModelScale( iScale );
-	}
+	pAddon->m_iAttachmentPoint = iAttachment;
+	pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
+	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
+	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	pEnt->SetModelScale( iScale );
 	if ( IsLocalPlayer() )
 	{
 		pEnt->SetSolid( SOLID_NONE );
@@ -1554,10 +1537,6 @@ void C_CSPlayer::UpdateAddonModels()
 	if ( pPlayer && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pPlayer->GetObserverTarget() == this )
 		iCurAddonBits = 0;
 
-	// remove everything if dead
-	if ( !IsAlive() )
-		iCurAddonBits = 0;
-
 	// Any changes to the attachments we should have?
 	if ( m_iLastAddonBits == iCurAddonBits &&
 		m_iLastPrimaryAddon == m_iPrimaryAddon &&
@@ -1613,10 +1592,46 @@ void C_CSPlayer::UpdateAddonModels()
 }
 
 
+void C_CSPlayer::UpdateGlovesModel()
+{
+	if ( !DoesModelSupportGloves() || !CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) || !IsAlive() )
+	{
+		RemoveGlovesModel();
+		return;
+	}
+
+	const char *pszGlovesModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szWorldModel;
+	if ( !m_pCSGloves )
+	{
+		m_pCSGloves = new CBaseCSGloves( pszGlovesModel );
+		m_pCSGloves->Equip( this );
+	}
+	
+	const char *pszModelName = m_pCSGloves->GetModelName();
+	if ( pszModelName && pszModelName[0] )
+	{
+		if ( V_stricmp( STRING( pszModelName ), pszGlovesModel ) != 0 )
+		{
+			m_pCSGloves->UpdateGlovesModel();
+		}
+	}
+}
+
+
 void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
 	UpdateAddonModels();
+}
+
+
+void C_CSPlayer::RemoveGlovesModel()
+{
+	if ( m_pCSGloves )
+	{
+		m_pCSGloves->UnEquip();
+		m_pCSGloves = NULL;
+	}
 }
 
 
@@ -1670,7 +1685,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		if ( (Q_strcmp( "bot_takeover", name ) == 0) )
 		{
 			// update viewmodel arms when taking control of bot
-			m_pViewmodelArmConfig = NULL;
+			m_pViewmodelArmConfig = NULL; // PiMoN: player model should already be updated at this time
 		}
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
@@ -1695,9 +1710,12 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-
-			m_pViewmodelArmConfig = NULL;
+			UpdateGlovesModel();
 		}
+
+		// PiMoN: eh probably this is gonna work for every player once someone spawns
+		m_pViewmodelArmConfig = NULL;
+		RemoveGlovesModel(); // making sure this bitch is updating after spawning
 	}
 }
 
@@ -1708,6 +1726,8 @@ void C_CSPlayer::NotifyShouldTransmit( ShouldTransmitState_t state )
 	if ( state == SHOULDTRANSMIT_END )
 	{
 		RemoveAddonModels();
+
+		RemoveGlovesModel();
 
 		if( m_pFlashlightBeam != NULL )
 		{
@@ -1768,16 +1788,18 @@ void C_CSPlayer::ClientThink()
 
 	UpdateSoundEvents();
 
-	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
-		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
-
 	UpdateAddonModels();
+
+	UpdateGlovesModel();
 
 	UpdateFlashBangEffect();
 
 	UpdateHostageCarryModels();
 
 	UpdateIDTarget();
+
+	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
+		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
 
 	if ( gpGlobals->curtime >= m_fNextThinkPushAway )
 	{

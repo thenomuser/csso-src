@@ -18,6 +18,7 @@
 #include "baseparticleentity.h"
 #include "beamdraw.h"
 #include "cs_gamerules.h"
+#include "weapon_basecsgloves.h"
 
 #include "cs_player_shared.h"
 
@@ -418,6 +419,10 @@ private:
 	void CreateAddonModel( int i );
 	void UpdateAddonModels();
 	void UpdateHostageCarryModels();
+
+	void UpdateGlovesModel();
+	void RemoveGlovesModel();
+	CBaseCSGloves* m_pCSGloves;
 
 	void PushawayThink();
 

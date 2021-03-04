@@ -621,7 +621,6 @@ CCSPlayer::CCSPlayer()
 
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
-	m_bHasGloves = false;
 }
 
 
@@ -1173,11 +1172,6 @@ void CCSPlayer::Spawn()
 		m_bNeedToChangeGloves = false;
 	}
 
-	if ( CSLoadout()->HasGlovesSet(this, GetTeamNumber()) && DoesModelSupportGloves() )
-		m_bHasGloves = true;
-	else
-		m_bHasGloves = false;
-
 	m_RateLimitLastCommandTimes.Purge();
 
 	// Get rid of the progress bar...
@@ -1204,6 +1198,11 @@ void CCSPlayer::Spawn()
 	SetModelFromClass();
 
 	BaseClass::Spawn();
+
+	if ( CSLoadout()->HasGlovesSet(this, GetTeamNumber()) && DoesModelSupportGloves() )
+		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // has to be here because doesn't work on client
+	else
+		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 
 	//=============================================================================
 	// HPE_BEGIN:
@@ -2059,16 +2058,6 @@ void CCSPlayer::UpdateAddonBits()
 	else
 	{
 		m_iKnifeAddon = WEAPON_NONE;
-	}
-
-	if ( m_bHasGloves )
-	{
-		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // moved from client as it is not working there
-		iNewBits |= ADDON_GLOVES;
-	}
-	else
-	{
-		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 	}
 
 	m_iAddonBits = iNewBits;
