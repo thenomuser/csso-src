@@ -7164,6 +7164,12 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 		}
 	}
 
+	// don't let AFK players catch the bomb
+	if ( bPickupC4 && !m_bHasMovedSinceSpawn && CSGameRules()->GetRoundElapsedTime() > sv_spawn_afk_bomb_drop_time.GetFloat() )
+	{
+		return false;
+	}
+
 	//	bool bPickupCarriableItem = ( pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_CARRIABLEITEM );
 	//	if ( bPickupCarriableItem && Weapon_SlotOccupied( pWeapon ) )
 	//	{
