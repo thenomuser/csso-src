@@ -5270,6 +5270,16 @@ ConVar snd_music_selection(
 			Assert( iWinnerTeam == WINNER_NONE || iWinnerTeam == WINNER_DRAW );
 		}
 
+        for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+        {
+            CCSPlayer* pPlayer = (CCSPlayer*)UTIL_PlayerByIndex( i );
+            if (pPlayer)
+            {
+                // have all players do any end of round bookkeeping
+                pPlayer->HandleEndOfRound();
+            }
+        }
+
 		//=============================================================================
 		// HPE_BEGIN:		
 		//=============================================================================
@@ -5288,7 +5298,7 @@ ConVar snd_music_selection(
 			funfact.iData2 = 0;
 			funfact.iData3 = 0;
 
-			m_pFunFactManager->GetRoundEndFunFact( iWinnerTeam, iReason, funfact);
+			m_pFunFactManager->GetRoundEndFunFact( iWinnerTeam, (e_RoundEndReason)iReason, funfact);
 
 			//Send all the info needed for the win panel
 			IGameEvent *winEvent = gameeventmanager->CreateEvent( "cs_win_panel_round" );
@@ -6900,6 +6910,11 @@ int CCSGameRules::GetStartMoney( void )
 bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
 {
 	return (m_iCurrentGamemode == GameModes::COMPETITIVE) || (m_iCurrentGamemode == GameModes::COMPETITIVE_2V2); // TODO: check if 2v2 actually belongs here
+}
+
+bool CCSGameRules::IsPlayingClassic( void ) const
+{
+	return true; // PTODO: add some if's here after adding gamemodes
 }
 
 

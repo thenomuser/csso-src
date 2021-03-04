@@ -389,7 +389,9 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
     if ( pCSPlayer )
     {
         // [dwenger] Update the player's tracking of which weapon type they fired
-        pCSPlayer->PlayerUsedFirearm( pWeapon );
+		pCSPlayer->PlayerUsedFirearm( pWeapon );
+		if ( !pWeapon->HasAnyAmmo() )
+			pCSPlayer->PlayerEmptiedAmmoForFirearm( pWeapon );
 
         //=============================================================================
         // HPE_END

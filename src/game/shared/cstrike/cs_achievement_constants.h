@@ -31,6 +31,7 @@ namespace AchievementConsts
     const int   KillEnemiesWhileBlindHard_Kills				= 2;
 	const int	SurviveGrenade_MinDamage                    = 80;
 	const int	KillWhenAtLowHealth_MaxHealth               = 1;
+	const int	KillWhenAtMediumHealth_MaxHealth            = 25;
 	const int	GrenadeMultiKill_MinKills					= 3;
 	const int	BombMultiKill_MinKills						= 5;
 	const float	FastRoundWin_Time							= 30.0f;	

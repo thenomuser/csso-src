@@ -8,6 +8,7 @@
 #include "GameEventListener.h"
 #include "funfact_cs.h"
 #include "utlmap.h"
+#include "cs_shareddefs.h"
 
 class FunFactEvaluator;
 
@@ -21,7 +22,7 @@ public:
 	virtual void Shutdown();
 	virtual void Update( float frametime );
 
-	bool GetRoundEndFunFact( int iWinningTeam, int iRoundResult, FunFact& funfact );
+	bool GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoundResult, FunFact& funfact );
 
 protected:
 	float ScoreFunFact( const FunFact& funfact );
@@ -29,7 +30,9 @@ protected:
 
 private:
 
-	float m_playerCooldown[MAX_PLAYERS];	// Weights for all players.  Updated every round
+	// Weights for all players. Updated every round
+	// index 0 is for "all players" funfacts, and has the same cooldown behavior as for individual players
+	float m_playerCooldown[MAX_PLAYERS + 1];	
 
 	struct FunFactDatabaseEntry
 	{

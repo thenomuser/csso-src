@@ -2,16 +2,21 @@
 #include "cbase.h"
 #include "usermessages.h"
 #include "funfactmgr_cs.h"
+#include "cs_shareddefs.h"
 
-const float kCooldownRatePlayer		= 0.4f;
+const float kCooldownRatePlayer		= 0.5f;
 const float kCooldownRateFunFact	= 0.2f;
 
-const float kWeightPlayerCooldown	= 0.8f;
+const float kWeightPlayerCooldown	= 0.7f;
 const float kWeightFunFactCooldown	= 1.0f;
-const float kWeightCoolness			= 2.0f;
+const float kWeightCoolness			= 1.2f;
 const float kWeightRarity			= 1.0f;
 
 #define DEBUG_FUNFACT_SCORING 0
+
+#if DEBUG_FUNFACT_SCORING
+	#include "cs_player.h"
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: constructor
@@ -20,7 +25,7 @@ CCSFunFactMgr::CCSFunFactMgr() :
 	CAutoGameSystemPerFrame( "CCSFunFactMgr" ),
 	m_funFactDatabase(0, 100, DefLessFunc(int) )
 {
-	for ( int i = 0; i < MAX_PLAYERS; ++i )
+	for ( int i = 0; i < ARRAYSIZE(m_playerCooldown); ++i )
 	{
 		m_playerCooldown[i] = 0.0f;
 	}
@@ -92,8 +97,8 @@ void CCSFunFactMgr::FireGameEvent( IGameEvent *event )
 	if ( Q_strcmp( "player_connect", eventname ) == 0 )
 	{
 		int index = event->GetInt("index");// player slot (entity index-1)
-		ASSERT( index >= 0 && index < MAX_PLAYERS );
-		if( index >= 0 && index < MAX_PLAYERS )
+		ASSERT( index >= 0 && index <= MAX_PLAYERS );
+		if( index >= 0 && index <= MAX_PLAYERS )
 		{
 			m_playerCooldown[index] = 0.0f;
 		}
@@ -103,15 +108,22 @@ void CCSFunFactMgr::FireGameEvent( IGameEvent *event )
 //-----------------------------------------------------------------------------
 // Purpose: Finds the best fun fact to display and returns all necessary information through the parameters
 //-----------------------------------------------------------------------------
-bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, int iRoundResult, FunFact& funfact )
+bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoundResult, FunFact& funfact )
 {
+
+	//No fun fact for surrender
+	/*if ( iRoundResult == CTs_Surrender || iRoundResult == Terrorists_Surrender )
+	{
+		return false;
+	}*/
+
 	FunFactVector validFunFacts;
 
 	// Generate a vector of all valid fun facts for this round
 	FOR_EACH_MAP( m_funFactDatabase, i )
 	{
 		FunFact funFact;
-		if ( m_funFactDatabase[i].pEvaluator->Evaluate(validFunFacts) )
+		if ( m_funFactDatabase[i].pEvaluator->Evaluate(iRoundResult, validFunFacts) )
 		{
 			m_funFactDatabase[i].iOccurrences++;
 		}
@@ -119,7 +131,7 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, int iRoundResult, FunF
 
 	m_numRounds++;
 
-	if (validFunFacts.Size() == 0)
+	if (validFunFacts.Count() == 0)
 		return false;
 
 	// pick the fun fact with the highest score
@@ -158,7 +170,7 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, int iRoundResult, FunF
 	funfact = validFunFacts[iFunFactIndex];
 
 	// decay player cooldowns
-	for (int i = 0; i < MAX_PLAYERS; ++i )
+	for (int i = 0; i < ARRAYSIZE(m_playerCooldown); ++i )
 	{
 		m_playerCooldown[i] *= (1.0f - kCooldownRatePlayer);
 	}
@@ -170,10 +182,7 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, int iRoundResult, FunF
 	}
 
 	// set player cooldown for player in funfact
-	if ( funfact.iPlayer )
-	{
-		m_playerCooldown[funfact.iPlayer - 1] = 1.0f;
-	}
+	m_playerCooldown[funfact.iPlayer] = 1.0f;
 
 	// set funfact cooldown for current funfact
 	m_funFactDatabase[m_funFactDatabase.Find(funfact.id)].fCooldown = 1.0f;
@@ -193,12 +202,10 @@ float CCSFunFactMgr::ScoreFunFact( const FunFact& funfact )
 	fScore -= kWeightFunFactCooldown * dbEntry.fCooldown;
 	
 	// subtract the cooldown for the player
-	if ( funfact.iPlayer ) {
-		fScore -= kWeightPlayerCooldown * m_playerCooldown[funfact.iPlayer - 1];
-	}
+	fScore -= kWeightPlayerCooldown * m_playerCooldown[funfact.iPlayer];
 
 	// add the rarity bonus
-	fScore += kWeightRarity * powf((1.0f - (float)dbEntry.iOccurrences / m_numRounds), 2.0f);
+	fScore += kWeightRarity * powf((1.0f - (float)dbEntry.iOccurrences / m_numRounds), 4.0f);
 
 	return fScore;
 }

@@ -1619,6 +1619,7 @@ void CBasePlayer::PlayerUse ( void )
 					CBaseCombatWeapon *pC4 = pBot->Weapon_OwnsThisType( "weapon_c4" );
 					if ( pC4 )
 					{
+						pBot->SetBombDroppedTime( gpGlobals->curtime );
 						pBot->CSWeaponDrop( pC4, WorldSpaceCenter(), false );
 						pBot->Radio( "Radio.YouTakeThePoint", "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
 					}

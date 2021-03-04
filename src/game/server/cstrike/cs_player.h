@@ -306,6 +306,7 @@ public:
 	virtual void		CreateViewModel( int viewmodelindex = WEAPON_VIEWMODEL );
 	virtual void		ShowViewPortPanel( const char * name, bool bShow = true, KeyValues *data = NULL );
 
+	void HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCSBase* pAttackerWeapon );
 	// This passes the event to the client's and server's CPlayerAnimState.
 	void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 );
 
@@ -478,30 +479,17 @@ public:
 	void GiveDefuser(bool bPickedUp = false);		// give the player a defuser
 	void RemoveDefuser();	// remove defuser from the player and remove the model attachment
 
-    //=============================================================================
-    // HPE_BEGIN:
     // [dwenger] Added for fun-fact support
-    //=============================================================================
-
     bool PickedUpDefuser() { return m_bPickedUpDefuser; }
     void SetDefusedWithPickedUpKit(bool bDefusedWithPickedUpKit) { m_bDefusedWithPickedUpKit = bDefusedWithPickedUpKit; }
-    bool GetDefusedWithPickedUpKit() { return m_bDefusedWithPickedUpKit; }
+	bool GetDefusedWithPickedUpKit() { return m_bDefusedWithPickedUpKit; }
+	bool AttemptedToDefuseBomb() { return m_bAttemptedDefusal; }
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+	void SetDefusedBombWithThisTimeRemaining( float flTimeRemaining ) { m_flDefusedBombWithThisTimeRemaining = flTimeRemaining; }
+	float GetDefusedBombWithThisTimeRemaining() { return m_flDefusedBombWithThisTimeRemaining; }
 
-
-	//=============================================================================
-	// HPE_BEGIN
 	// [sbodenbender] Need a different test for player blindness for the achievements
-	//=============================================================================
-
 	bool IsBlindForAchievement();	// more stringent than IsBlind; more accurately represents when the player can see again
-
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	bool IsBlind( void ) const;		// return true if this player is blind (from a flashbang)
 	virtual void Blind( float holdTime, float fadeTime, float startingAlpha = 255 );	// player blinded by a flashbang
@@ -530,6 +518,9 @@ public:
 	bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*= 0*/ );
 
 	CWeaponCSBase* GetActiveCSWeapon() const;
+
+	int GetNumTriggerPulls() { return m_triggerPulls; }
+	void LogTriggerPulls();
 
 	void PreThink();
 
@@ -667,6 +658,9 @@ public:
 	virtual void		IncrementFragCount( int nCount );
 	virtual void		IncrementDeathCount( int nCount );
 	virtual void		IncrementAssistsCount( int nCount );
+	void				ResetAssistsCount();
+
+	int GetNumConcurrentDominations( void );
 	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 
@@ -718,9 +712,20 @@ public:
     void WieldingKnifeAndKilledByGun( bool bState ) { m_bWieldingKnifeAndKilledByGun = bState; }
     bool WasWieldingKnifeAndKilledByGun() { return m_bWieldingKnifeAndKilledByGun; }
 
+	void HandleEndOfRound();
+	bool WasKilledThisRound() { return m_wasKilledThisRound; }
+	void SetWasKilledThisRound( bool wasKilled );
+	int GetCurNumRoundsSurvived() { return m_numRoundsSurvived; }
+
     // [dwenger] adding tracking for weapon used fun fact
-    void PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon );
+	void PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon );
+	void PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon );
+	void AddBurnDamageDelt( int entityIndex );
+	int GetNumPlayersDamagedWithFire();
+
 	int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
+	int GetNumFirearmsRanOutOfAmmo() { return m_WeaponTypesRunningOutOfAmmo.Count(); }
+	bool DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon );
 
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
@@ -868,10 +873,16 @@ public:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
 	int m_iSkin;
 
+	void SetPickedUpWeaponThisRound( bool pickedUp ) { m_bPickedUpWeapon = pickedUp; }
+	bool GetPickedUpWeaponThisRound( void ) { return m_bPickedUpWeapon; }
+
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield = true, bool bThrow = false );
 	bool CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool bDropShield = true );
 
 	bool HandleDropWeapon( CBaseCombatWeapon *pWeapon = NULL, bool bSwapping = false );
+
+	void DestroyWeapon( CBaseCombatWeapon *pWeapon );
+	void DestroyWeapons( bool bDropC4 = true );
 
 protected:
 	void TransferInventory( CCSPlayer* pTargetPlayer );
@@ -920,18 +931,14 @@ private:
 	int							m_lastDamageHealth;		// Last damage given to our health
 	int							m_lastDamageArmor;		// Last damage given to our armor
 
-    //=============================================================================
-    // HPE_BEGIN:
     // [dwenger] Added for fun-fact support
-    //=============================================================================
-
+	bool						m_bPickedUpWeapon;
     bool                        m_bPickedUpDefuser;         // Did player pick up the defuser kit as opposed to buying it?
     bool                        m_bDefusedWithPickedUpKit;  // Did player defuse the bomb with a picked-up defuse kit?
+	bool						m_bAttemptedDefusal;
 	int							m_nPreferredGrenadeDrop;
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
+	float						m_flDefusedBombWithThisTimeRemaining;
 
 
 	// Last usercmd we shot a bullet on.
@@ -1068,18 +1075,30 @@ public:
 	//List of weapons we have used to kill players with this round
 	CUtlVector<int>				m_killWeapons; 
 
+	int m_NumEnemiesKilledThisSpawn;
+	int m_maxNumEnemiesKillStreak;
 	int m_NumEnemiesKilledThisRound;
 	int m_NumEnemiesAtRoundStart;
 	int m_KillingSpreeStartTime;
 
 	float m_firstKillBlindStartTime; //This is the start time of the blind effect during which we got our most recent kill.
 	int m_killsWhileBlind;
+	int m_bombCarrierkills;
  
     bool m_bIsRescuing;         // tracks whether this player is currently rescuing a hostage
     bool m_bInjuredAHostage;    // tracks whether this player injured a hostage
     int  m_iNumFollowers;       // Number of hostages following this player
 	bool m_bSurvivedHeadshotDueToHelmet;
+	bool m_attemptedBombPlace;
+	int m_knifeKillsWhenOutOfAmmo;
+	bool m_triggerPulled;
+	int m_triggerPulls;
 
+	int GetKnifeKillsWhenOutOfAmmo() { return m_knifeKillsWhenOutOfAmmo; }
+	void IncrKnifeKillsWhenOutOfAmmo() { m_knifeKillsWhenOutOfAmmo++; }
+	bool HasAttemptedBombPlace() { return m_attemptedBombPlace; }
+	void SetAttemptedBombPlace() { m_attemptedBombPlace = true; }
+	int GetNumBombCarrierKills( void ) { return m_bombCarrierkills; }
     void IncrementNumFollowers() { m_iNumFollowers++; }
     void DecrementNumFollowers() { m_iNumFollowers--; if (m_iNumFollowers < 0) m_iNumFollowers = 0; }
     int GetNumFollowers() { return m_iNumFollowers; }
@@ -1087,13 +1106,20 @@ public:
     bool IsRescuing() { return m_bIsRescuing; }
     void SetInjuredAHostage(bool in_bInjured) { m_bInjuredAHostage = in_bInjured; }
     bool InjuredAHostage() { return m_bInjuredAHostage; }
-    float GetBombPickuptime() { return m_bombPickupTime; }
-    void SetBombPickupTime(float time) { m_bombPickupTime = time; }
+	float GetBombPickuptime() { return m_bombPickupTime; }
+	float GetBombPlacedTime() { return m_bombPlacedTime; }
+	float GetBombDroppedTime() { return m_bombDroppedTime; }
+	void SetBombPickupTime( float time ) { m_bombPickupTime = time; }
+	void SetBombPlacedTime( float time ) { m_bombPlacedTime = time; }
+	void SetBombDroppedTime( float time ) { m_bombDroppedTime = time; }
     CCSPlayer* GetLastFlashbangAttacker() { return m_lastFlashBangAttacker; }
     void SetLastFlashbangAttacker(CCSPlayer* attacker) { m_lastFlashBangAttacker = attacker; }
+	float GetKilledTime( void ) { return m_killedTime; }
+	void SetKilledTime( float time ); 
 
 	static CSWeaponID GetWeaponIdCausingDamange( const CTakeDamageInfo &info );
 	static void ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer *pVictim, const CTakeDamageInfo &info );
+	float GetLongestSurvivalTime( void ) { return m_longestLife; }
 
     void                        OnCanceledDefuse();
     void                        OnStartedDefuse();
@@ -1105,7 +1131,12 @@ public:
 
     bool                        m_bMadeFootstepNoise;
 
-    float                       m_bombPickupTime;
+	float                       m_bombPickupTime;
+	float						m_bombPlacedTime;
+	float						m_bombDroppedTime;
+	float						m_killedTime;
+	float						m_spawnedTime;
+	float						m_longestLife;
 
     bool                        m_bMadePurchseThisRound;
 
@@ -1142,6 +1173,9 @@ public:
     void    RemoveNemesisRelationships();
 	void	SetDeathFlags( int iDeathFlags ) { m_iDeathFlags = iDeathFlags; }
 	int		GetDeathFlags() { return m_iDeathFlags; }
+	int		GetNumBotsControlled( void ) { return m_botsControlled; }
+	int		GetNumFootsteps( void ) { return m_iFootsteps; }
+	int		GetMediumHealthKills( void ) { return m_iMediumHealthKills; }
 
 private:
     CNetworkArray( bool, m_bPlayerDominated, MAX_PLAYERS+1 );		// array of state per other player whether player is dominating other players
@@ -1156,10 +1190,19 @@ private:
 	int m_iMVPs;
 
     // [dwenger] adding tracking for fun fact
-    bool m_bWieldingKnifeAndKilledByGun;
+	bool m_bWieldingKnifeAndKilledByGun;
+	int m_botsControlled;
+	int m_iFootsteps;
+	int m_iMediumHealthKills;
+
+	// [dkorus] achievement tracking
+	bool m_wasKilledThisRound;
+	int	 m_numRoundsSurvived;
 
     // [dwenger] adding tracking for which weapons this player has used in a round
-    CUtlVector<CSWeaponID> m_WeaponTypesUsed; 
+	CUtlVector<CSWeaponID> m_WeaponTypesUsed;
+	CUtlVector<CSWeaponID> m_WeaponTypesRunningOutOfAmmo;
+	CUtlVector<int>		   m_BurnDamageDeltVec;
 
 	int m_iDeathFlags; // Flags holding revenge and domination info about a death
 

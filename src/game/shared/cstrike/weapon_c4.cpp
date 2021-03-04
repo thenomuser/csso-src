@@ -503,14 +503,11 @@ END_PREDICTION_DATA()
 			//if the defuse process has ended, kill the c4
 			if ( !m_pBombDefuser->IsDead() )
 			{
-                //=============================================================================
-                // HPE_BEGIN
+				// set down-to-the-wire defuse fun fact
+				m_pBombDefuser->SetDefusedBombWithThisTimeRemaining( m_flC4Blow - gpGlobals->curtime );
+
                 // [dwenger] Stats update for bomb defusing
-                //=============================================================================
                 CCS_GameStats.Event_BombDefused( m_pBombDefuser );
-                //=============================================================================
-                // HPE_END
-                //=============================================================================
 
 				m_pBombDefuser->AddAccountAward( PlayerCashAward::BOMB_DEFUSED );
 
@@ -1145,6 +1142,8 @@ void CC4::PrimaryAttack()
 
 
 #if !defined( CLIENT_DLL )			
+			pPlayer->SetAttemptedBombPlace();
+
 			// init the beep flags
 			int i;
 			for( i=0;i<NUM_BEEPS;i++ )
@@ -1308,7 +1307,9 @@ void CC4::PrimaryAttack()
             if ((plantingTime > 0.0f) && (plantingTime <= AchievementConsts::FastBombPlant_Time))
             {
                 pPlayer->AwardAchievement(CSPlantBombWithin25Seconds);
-            }
+			}
+
+			pPlayer->SetBombPlacedTime( gpGlobals->curtime );
 
             CCS_GameStats.Event_BombPlanted( pPlayer );
 
@@ -1581,7 +1582,10 @@ void CC4::Drop( const Vector &vecVelocity )
 		Assert( pPlayer );
 		if ( pPlayer )
 		{
-			IGameEvent * event = gameeventmanager->CreateEvent("bomb_dropped" );
+			CCSPlayer *pCCSPlayer = dynamic_cast<CCSPlayer *>( pPlayer );
+
+			pCCSPlayer->SetBombDroppedTime( gpGlobals->curtime );
+			IGameEvent * event = gameeventmanager->CreateEvent( "bomb_dropped" );
 			if ( event )
 			{
 				event->SetInt( "userid", pPlayer->GetUserID() );

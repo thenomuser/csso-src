@@ -206,6 +206,8 @@ public:
 
 	void AddHostageRescueTime( void );
 
+	bool IsPlayingClassic( void ) const;
+
 	bool IsPlayingAnyCompetitiveStrictRuleset( void ) const;
 
 	virtual bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );

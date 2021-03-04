@@ -154,6 +154,8 @@ extern ConVar mp_buy_anywhere;
 
 extern ConVar mp_respawn_immunitytime;
 
+ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
+
 ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
 static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
@@ -485,6 +487,7 @@ CCSPlayer::CCSPlayer()
 	m_PlayerAnimState = CreatePlayerAnimState( this, this, LEGANIM_9WAY, true );
 
 	UseClientSideAnimation();
+	m_numRoundsSurvived = 0;
 
 	m_iLastWeaponFireUsercmd = 0;
 	m_iAddonBits = 0;
@@ -551,17 +554,29 @@ CCSPlayer::CCSPlayer()
 
 	// [menglish] Init achievement variables
 	m_NumEnemiesKilledThisRound = 0;
+	m_NumEnemiesKilledThisSpawn = 0;
+	m_maxNumEnemiesKillStreak = 0;
 	m_NumEnemiesAtRoundStart = 0;
 	m_KillingSpreeStartTime = -1;
 	m_firstKillBlindStartTime = -1;
 	m_killsWhileBlind = 0;
+	m_bombCarrierkills = 0;
 	m_bSurvivedHeadshotDueToHelmet = false;
 	m_pGooseChaseDistractingPlayer = NULL;
 	m_gooseChaseStep = GC_NONE;
 	m_defuseDefenseStep = DD_NONE;
 	m_lastRoundResult = Invalid_Round_End_Reason;
 	m_bMadeFootstepNoise = false;
-	m_bombPickupTime = -1;
+	m_bombPickupTime = -1.0f;
+	m_knifeKillsWhenOutOfAmmo = 0;
+	m_attemptedBombPlace = false;
+	m_bombPlacedTime = -1.0f;
+	m_bombDroppedTime = -1.0f;
+	m_killedTime = -1.0f;
+	m_spawnedTime = -1.0f;
+	m_longestLife = -1.0f;
+	m_triggerPulled = false;
+	m_triggerPulls = 0;
 	m_bMadePurchseThisRound = false;
 	m_roundsWonWithoutPurchase = 0;
 	m_iDeathFlags = 0;
@@ -591,6 +606,9 @@ CCSPlayer::CCSPlayer()
 	m_bCanControlObservedBot = false;
 	m_iControlledBotEntIndex = -1;
 #endif
+	m_botsControlled = 0;
+	m_iFootsteps = 0;
+	m_iMediumHealthKills = 0;
 
 	m_iMoveState = MOVESTATE_IDLE;
 
@@ -598,6 +616,8 @@ CCSPlayer::CCSPlayer()
 	m_storedSpawnAngle.Init();
 
 	m_nPreferredGrenadeDrop = 0;
+
+	m_duckUntilOnGround = false;
 
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
@@ -1288,6 +1308,9 @@ void CCSPlayer::Spawn()
 	m_bIsInRebuy = false;
 	m_bAutoReload = false;
 
+	// reset the number of enemies killed this round
+	m_NumEnemiesKilledThisSpawn = 0;
+
 	SetContextThink( &CCSPlayer::PushawayThink, gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL, CS_PUSHAWAY_THINK_CONTEXT );
 
 	if ( GetActiveWeapon() && !IsObserver() )
@@ -1322,6 +1345,12 @@ void CCSPlayer::Spawn()
 		m_bImmunity = false;
 	}
 
+	m_knifeKillsWhenOutOfAmmo = 0;
+	m_botsControlled = 0;
+	m_iFootsteps = 0;
+	m_iMediumHealthKills = 0;
+	m_killedTime = -1.0f;
+	m_spawnedTime = gpGlobals->curtime;
 	m_bKilledByTaser = false;
 
 	StopLookingAtWeapon();
@@ -1431,6 +1460,8 @@ void CCSPlayer::GiveDefaultItems()
 
 	if ( CSGameRules()->IsArmorFree() )
 		GiveNamedItem( "item_assaultsuit" );
+
+	m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
 }
 
 void CCSPlayer::SetClanTag( const char *pTag )
@@ -1601,8 +1632,53 @@ int CCSPlayer::GetPercentageOfEnemyTeamKilled()
 	return 0;
 }
 
+void CCSPlayer::HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCSBase* pAttackerWeapon )
+{
+	if ( pAttackerWeapon && 
+		pAttackerWeapon->IsA( WEAPON_KNIFE ) )
+	{
+		// if they were out of ammo in their primary and secondary AND had a primary or secondary, log as an out of ammo knife kill
+
+		bool hasValidPrimaryOrSecondary = false; // can't really be out of ammo on anything if we don't have either a primary or a secondary
+		bool allPrimaryAndSecondariesOutOfAmmo = true;
+
+
+
+		if(	pAttackerPlayer->HasPrimaryWeapon() )
+		{
+			hasValidPrimaryOrSecondary = true;
+
+
+			CBaseCombatWeapon *pWeapon = pAttackerPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+			if( !pWeapon || !pAttackerPlayer->DidPlayerEmptyAmmoForWeapon( pWeapon ) )
+			{
+				allPrimaryAndSecondariesOutOfAmmo = false;
+			}
+		}
+		if(	pAttackerPlayer->HasSecondaryWeapon() )
+		{
+			hasValidPrimaryOrSecondary = true;
+
+
+			CBaseCombatWeapon *pWeapon = pAttackerPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+			if( !pWeapon || !pAttackerPlayer->DidPlayerEmptyAmmoForWeapon( pWeapon ) )
+			{
+				allPrimaryAndSecondariesOutOfAmmo = false;
+			}
+		}
+
+		if( hasValidPrimaryOrSecondary && allPrimaryAndSecondariesOutOfAmmo )
+		{
+			pAttackerPlayer->IncrKnifeKillsWhenOutOfAmmo();
+		}
+
+	}
+}
+
 void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 {
+	SetKilledTime( gpGlobals->curtime );
+
 	// [pfreese] Process on-death achievements
 	ProcessPlayerDeathAchievements(ToCSPlayer(info.GetAttacker()), this, info);
 
@@ -1623,6 +1699,8 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 		{
 			m_bKilledByTaser = true;
 		}
+
+		HandleOutOfAmmoKnifeKills( pAttackerPlayer, pAttackerWeapon );
 	}
 
 	//Only count the drop if it was not friendly fire
@@ -1642,8 +1720,12 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
+	m_bPickedUpWeapon = false;
+	m_bAttemptedDefusal = false;
 
 	m_nPreferredGrenadeDrop = 0;
+
+	m_flDefusedBombWithThisTimeRemaining = 0;
 
 	m_bHasHelmet = false;
 
@@ -2187,6 +2269,21 @@ void CCSPlayer::PostThink()
 	{
 		m_flFlashDuration = 0.0f;
 	}
+
+	// inactive player drops the bomb after a certain duration (afk)
+	if ( !m_bHasMovedSinceSpawn && CSGameRules()->GetRoundElapsedTime() > sv_spawn_afk_bomb_drop_time.GetFloat() )
+	{
+		// Drop the C4
+		CBaseCombatWeapon *pC4 = Weapon_OwnsThisType( "weapon_c4" );
+		if ( pC4 )
+		{
+			SetBombDroppedTime( gpGlobals->curtime );
+			CSWeaponDrop( pC4, false, false );
+			
+			//odd that the AFK player 'says' they have dropped the bomb... but it's better than nothing
+			Radio( "SpottedLooseBomb",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
+		}
+	}
 }
 
 
@@ -2514,9 +2611,8 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		// [menglish] Store whether or not the knife did this damage as knives do bullet damage,
 		// so we need to specifically check the weapon here
 		bool bKnifeDamage = false;
-		CCSPlayer *pPlayer = ToCSPlayer( info.GetAttacker() );
 
-		if ( pPlayer )
+		if ( pAttacker )
 		{
 
 			// [paquin. forest] if  this is blast damage, and we haven't opted out with a cvar,
@@ -2524,6 +2620,12 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 			if ( (info.GetDamageType() & DMG_BLAST) && !sv_legacy_grenade_damage.GetBool() )
 			{
+
+				if ( info.GetDamageType() & DMG_BURN )
+				{
+					// (DDK ) Ideally we'd use the info's weapon information instead of damage type, but this field appears to be unused and not available when passing this thru
+					pAttacker->AddBurnDamageDelt( entindex() );
+				}
 
 				// [paquin] if we know this is a grenade, use it's armor ratio, otherwise
 				// use the he grenade armor ratio
@@ -2547,7 +2649,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			}
 			else
 			{
-				CWeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
+				CWeaponCSBase *pWeapon = pAttacker->GetActiveCSWeapon();
 
 				if ( pWeapon )
 				{
@@ -2555,9 +2657,9 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 					//Knives do bullet damage, so we need to specifically check the weapon here
 					bKnifeDamage = pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_KNIFE;
 
-					if (  info.GetDamageType() & DMG_BULLET && !bKnifeDamage && pPlayer->GetTeam() != GetTeam() )
+					if ( info.GetDamageType() & DMG_BULLET && !bKnifeDamage && pAttacker->GetTeam() != GetTeam() )
 					{
-						CCS_GameStats.Event_ShotHit( pPlayer, info );
+						CCS_GameStats.Event_ShotHit( pAttacker, info );
 					}
 				}
 			}
@@ -2711,7 +2813,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		// this is the actual damage applied to the player and not the raw damage that was output from the weapon
 		int nHealthRemoved = (GetHealth() < info.GetDamage()) ? GetHealth() : info.GetDamage();
 
-		if ( pPlayer )
+		if ( pAttacker )
 		{		
 			// Record for the shooter
 			pAttacker->RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
@@ -2990,6 +3092,8 @@ void CCSPlayer::Reset()
 {
 	ResetFragCount();
 	ResetDeathCount();
+	ResetAssistsCount();
+	m_longestLife = -1.0f;
 	m_iAccount = 0;
 	AddAccount( -mp_startmoney.GetInt(), false );
 
@@ -3145,8 +3249,7 @@ bool CCSPlayer::ShouldPickupItemSilently( CBaseCombatCharacter *pNewOwner )
 	if ( !pNewCSOwner || !CSGameRules() || CSGameRules()->IsFreezePeriod() /*|| pNewCSOwner->CanPlayerBuy( false )*/ )
 		return false; // turns out that item touch calls happen in between FinishMove and the trigger touch so CanPlayerBuy always returns false in this case.....
 
-	//if ( pNewCSOwner->GetAbsVelocity().Length2D() < (CS_PLAYER_SPEED_RUN * CS_PLAYER_SPEED_WALK_MODIFIER) )
-	if ( pNewCSOwner->GetAbsVelocity().Length2D() < 150 )
+	if ( pNewCSOwner->GetAbsVelocity().Length2D() < (CS_PLAYER_SPEED_RUN * CS_PLAYER_SPEED_WALK_MODIFIER) )
 		return true;
 
 	return false;
@@ -3330,6 +3433,8 @@ void CCSPlayer::RemoveAllItems( bool removeSuit )
 	// [dwenger] Added for fun-fact support
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
+	m_bPickedUpWeapon = false;
+	m_bAttemptedDefusal = false;
 
 	m_nPreferredGrenadeDrop = 0;
 
@@ -3421,6 +3526,20 @@ CWeaponCSBase* CCSPlayer::GetActiveCSWeapon() const
 	return dynamic_cast< CWeaponCSBase* >( GetActiveWeapon() );
 }
 
+void CCSPlayer::LogTriggerPulls()
+{
+	if ( !(m_nButtons & IN_ATTACK) )
+	{
+		m_triggerPulled = false;
+	}
+	else if ( !m_triggerPulled )
+	{
+		// we are pulling a trigger, and we weren't already pulling it.
+		m_triggerPulled = true;
+		m_triggerPulls++;
+	}
+}
+
 void CCSPlayer::PreThink()
 {
 	BaseClass::PreThink();
@@ -3429,6 +3548,7 @@ void CCSPlayer::PreThink()
 		m_bAutoReload = false;
 		m_nButtons |= IN_RELOAD;
 	}
+	LogTriggerPulls();
 
 	if ( m_afButtonLast != m_nButtons )
 		m_flLastMovement = gpGlobals->curtime;
@@ -7068,6 +7188,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 		if ( !pWeapon->GetPreviousOwner() )
 			StockPlayerAmmo( pWeapon );
 
+		SetPickedUpWeaponThisRound( true );
 		pWeapon->CheckRespawn();
 
 		pWeapon->AddSolidFlags( FSOLID_NOT_SOLID );
@@ -8356,6 +8477,63 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 	return false;
 }
 
+void CCSPlayer::DestroyWeapon( CBaseCombatWeapon *pWeapon )
+{
+	if ( pWeapon )
+	{
+		pWeapon->DestroyItem();
+	}
+}
+
+void CCSPlayer::DestroyWeapons( bool bDropC4 /* = true */ )
+{
+	// Destroy the Defuser
+	if( HasDefuser() )
+	{
+		RemoveDefuser();
+	}
+
+	CBaseCombatWeapon *pWeapon = NULL;
+
+	// Destroy the primary weapon if it exists
+	pWeapon = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+	DestroyWeapon( pWeapon );
+
+	// Destroy the secondary weapon if it exists
+	pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+	DestroyWeapon( pWeapon );
+
+	// Destroy any grenades
+	const char* GrenadePriorities[] =
+	{
+		"weapon_molotov",
+		"weapon_incgrenade",
+		"weapon_smokegrenade",
+		"weapon_hegrenade",
+		"weapon_flashbang",
+		"weapon_tagrenade",
+		"weapon_decoy",
+	};
+
+	CBaseCSGrenade *pGrenade = NULL;
+	for ( int i = 0; i < ARRAYSIZE(GrenadePriorities ); ++i )
+	{
+		pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType(GrenadePriorities[i] ) );
+		if ( pGrenade && pGrenade->HasAmmo() )
+		{
+			pGrenade->DestroyItem();
+		}
+	}
+
+	CBaseCombatWeapon *pC4 = Weapon_OwnsThisType( "weapon_c4" );
+	if ( bDropC4 && pC4 )
+	{
+		// Drop the C4
+		SetBombDroppedTime( gpGlobals->curtime );
+		CSWeaponDrop( pC4, false, true );
+	}
+}
+
 //Drop the appropriate weapons:
 // Defuser if we have one
 // C4 if we have one
@@ -8378,6 +8556,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool friendlyFire )
 	CBaseCombatWeapon *pC4 = Weapon_OwnsThisType( "weapon_c4" );
 	if ( pC4 )
 	{
+		SetBombDroppedTime( gpGlobals->curtime );
 		CSWeaponDrop( pC4, false, true );
 		if( fromDeath )
 		{
@@ -8543,21 +8722,21 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 	// if this is our current team, just abort
 	if ( iTeamNum == iOldTeam )
 		return;
-
-	//=============================================================================
-	// HPE_BEGIN:	
-	//=============================================================================
 	 
-	// [tj] Added a parameter so we know if it was death that caused the drop
-	// Drop Our best weapon
-	DropWeapons(false, false);
+	if ( IsBot() && (iTeamNum == TEAM_UNASSIGNED || iTeamNum == TEAM_SPECTATOR) )
+	{
+		// Destroy weapons since bot is going away
+		DestroyWeapons();
+	}
+	else
+	{
+		// [tj] Added a parameter so we know if it was death that caused the drop
+		// Drop Our best weapon
+		DropWeapons( false, false );
+	}
 
 	// [tj] Clear out dominations
 	RemoveNemesisRelationships();
-	 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 	
 
 	// Always allow a change to spectator, and don't count it as one of our team changes.
@@ -8981,6 +9160,7 @@ void CCSPlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float
 	if ( !psurface )
 		return;
 
+	m_iFootsteps++;
 	IGameEvent * event = gameeventmanager->CreateEvent( "player_footstep" );
 	if ( event )
 	{
@@ -9156,6 +9336,8 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 		}
 	}
 	m_NumEnemiesKilledThisRound = 0;
+	m_NumEnemiesKilledThisSpawn = 0;
+	m_maxNumEnemiesKillStreak = 0;
 	if(GetTeamNumber() == TEAM_CT)
 		m_NumEnemiesAtRoundStart = numTPlayers;
 	else if(GetTeamNumber() == TEAM_TERRORIST)
@@ -9184,6 +9366,7 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 	m_enemyPlayersKilledThisRound.RemoveAll();
 
 	m_killsWhileBlind = 0;
+	m_bombCarrierkills = 0;
 
 	m_bSurvivedHeadshotDueToHelmet = false;
 
@@ -9192,8 +9375,17 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 	m_pGooseChaseDistractingPlayer = NULL;
 
 	m_bMadeFootstepNoise = false;
+	m_knifeKillsWhenOutOfAmmo = 0;
+	m_attemptedBombPlace = false;
 
-	m_bombPickupTime = -1;
+	m_bombPickupTime = -1.0f;
+	m_bombPlacedTime = -1.0f;
+	m_bombDroppedTime = -1.0f;
+	m_killedTime = -1.0f;
+	m_spawnedTime = -1.0f;
+	m_longestLife = -1.0f;
+	m_triggerPulled = false;
+	m_triggerPulls = 0;
 
 	m_bMadePurchseThisRound = false;
 
@@ -9202,21 +9394,38 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 	m_maxGrenadeKills = 0;
 	m_grenadeDamageTakenThisRound = 0;
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [dwenger] Needed for fun-fact implementation
-	//=============================================================================
-
 	WieldingKnifeAndKilledByGun(false);
+	SetWasKilledThisRound(false);
 
 	m_WeaponTypesUsed.RemoveAll();
+	m_WeaponTypesRunningOutOfAmmo.RemoveAll();
 
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
+	m_bPickedUpWeapon = false;
+	m_bAttemptedDefusal = false;
+	m_flDefusedBombWithThisTimeRemaining = 0;
+}
 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+void CCSPlayer::HandleEndOfRound()
+{
+	// store longest life time (for funfacts)
+	if ( gpGlobals->curtime - m_spawnedTime > m_longestLife )
+	{
+		m_longestLife = gpGlobals->curtime - m_spawnedTime;
+	}
+
+	AllowImmediateDecalPainting();
+}
+
+void CCSPlayer::SetKilledTime( float time )
+{ 
+	m_killedTime = time;
+	if ( m_killedTime - m_spawnedTime > m_longestLife )
+	{
+		m_longestLife = m_killedTime - m_spawnedTime;
+	}
 }
 
 
@@ -9280,6 +9489,78 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 	}
 }
 
+void CCSPlayer::AddBurnDamageDelt( int entityIndex )
+{
+	if ( m_BurnDamageDeltVec.Find( entityIndex ) == -1 )
+	{
+		// Add this index to the list 
+		m_BurnDamageDeltVec.AddToTail( entityIndex );
+	}
+
+}
+
+int CCSPlayer::GetNumPlayersDamagedWithFire()
+{
+	return m_BurnDamageDeltVec.Count();
+}
+
+void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
+{
+	if ( pBaseWeapon )
+	{
+		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
+
+		if ( pWeapon )
+		{
+			CSWeaponType weaponType = pWeapon->GetWeaponType();
+			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
+
+			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
+			{
+				if ( m_WeaponTypesRunningOutOfAmmo.Find( weaponID ) == -1 )
+				{
+					// Add this weapon to the list of weapons used by the player
+					m_WeaponTypesRunningOutOfAmmo.AddToTail( weaponID );
+				}
+			}
+		}
+	}
+}
+
+bool CCSPlayer::DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon )
+{
+	if ( pBaseWeapon )
+	{
+		CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
+
+		if ( pWeapon )
+		{
+			CSWeaponType weaponType = pWeapon->GetWeaponType();
+			CSWeaponID weaponID = static_cast<CSWeaponID>( pWeapon->GetCSWeaponID() );
+
+			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
+			{
+				if ( m_WeaponTypesRunningOutOfAmmo.Find( weaponID ) != -1 )
+				{
+					return true;
+
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+void CCSPlayer::SetWasKilledThisRound(bool wasKilled )
+{
+	m_wasKilledThisRound = wasKilled; 
+	if( wasKilled )
+	{
+		m_numRoundsSurvived = 0;
+	}
+}
+
 
 /**
  *	public CCSPlayer::ProcessPlayerDeathAchievements()
@@ -9294,7 +9575,11 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer *pVictim, const CTakeDamageInfo &info )
 {
 	Assert(pVictim != NULL);
-	CBaseEntity *pInflictor = info.GetInflictor();	
+	CBaseEntity *pInflictor = info.GetInflictor();
+	if ( pVictim )
+	{
+		pVictim->SetWasKilledThisRound( true );
+	}
   
 	// all these achievements require a valid attacker on a different team
 	if ( pAttacker != NULL && pVictim != NULL && pVictim->GetTeamNumber() != pAttacker->GetTeamNumber() )
@@ -9358,6 +9643,9 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		pAttacker->m_NumEnemiesKilledThisRound++;
+		pAttacker->m_NumEnemiesKilledThisSpawn++;
+		if ( pAttacker->m_NumEnemiesKilledThisSpawn > pAttacker->m_maxNumEnemiesKillStreak )
+			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		//store a list of kill times for spree tracking
 		pAttacker->m_killTimes.AddToTail(gpGlobals->curtime);
@@ -9503,6 +9791,11 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		{
 			pAttacker->AwardAchievement(CSKillWhenAtLowHealth);
 		}
+		//Kill a player at medium health
+		if ( pAttacker->IsAlive() && pAttacker->GetHealth() <= AchievementConsts::KillWhenAtMediumHealth_MaxHealth )
+		{
+			pAttacker->m_iMediumHealthKills++;
+		}
 
 		//Kill a player with a knife during the pistol round
 		if (CSGameRules()->IsPistolRound())
@@ -9552,6 +9845,12 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		if (pVictim->HasC4() && pVictim->GetBombPickuptime() + AchievementConsts::KillBombPickup_MaxTime > gpGlobals->curtime)
 		{
 			pAttacker->AwardAchievement(CSKillBombPickup);
+		}
+
+		// victim may have just dropped C4 or still have it...  increment kills either way
+		if ( pVictim->HasC4() || pVictim->GetBombDroppedTime() > 0.0f )
+		{
+			pAttacker->m_bombCarrierkills++;
 		}
 		
 	}
@@ -9639,7 +9938,12 @@ CBaseEntity* CCSPlayer::GetNearestSurfaceBelow(float maxTrace)
 //      It is important to note that this happens before the bomb explodes, so a player may die
 //      after this from a bomb explosion or a late kill after a defuse/detonation/rescue.
 void CCSPlayer::OnRoundEnd(int winningTeam, int reason)
-{    
+{
+	if ( IsAlive() && !m_bIsControllingBot )
+	{
+		m_numRoundsSurvived++;
+	}
+
 	if (winningTeam == WINNER_CT || winningTeam == WINNER_TER)
 	{
 		int losingTeamId = (winningTeam == TEAM_CT) ? TEAM_TERRORIST : TEAM_CT;
@@ -9755,6 +10059,8 @@ void CCSPlayer::OnCanceledDefuse()
 
 void CCSPlayer::OnStartedDefuse()
 {
+	m_bAttemptedDefusal = true;
+
 	if (m_defuseDefenseStep == DD_NONE)
 	{
 		m_defuseDefenseStep = DD_STARTED_DEFUSE;
@@ -10103,6 +10409,7 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	State_Transition( STATE_ACTIVE );
 
 	bool hasChangedTeamTemp = m_bTeamChanged;
+	int numBotsControlled = m_botsControlled;
 
 	// HACK: Bots sometimes have some roll applied when the player takes them over due to acceleration lean
 	// which gets stuck on when the player takes them over. Easiest just to clear the roll on the bot when taking over
@@ -10117,6 +10424,7 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	m_bImmunity = false;
 
 	m_bTeamChanged = hasChangedTeamTemp; // dkorus: we want m_bTeamChanged to persist past the Spawn() call.  This is how we acomplish this
+	m_botsControlled = numBotsControlled;
 
 	m_flStamina = flBotStamina;		// FROM BOT
 	State_Transition( m_iPlayerState );
@@ -10204,6 +10512,8 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	}
 
 	RefreshCarriedHostage( true );
+
+	m_botsControlled++;
 
 	IGameEvent * event = gameeventmanager->CreateEvent( "bot_takeover" );
 	if ( event )
@@ -10444,7 +10754,7 @@ void CCSPlayer::IncrementDeathCount( int nCount )
 void CCSPlayer::IncrementAssistsCount( int nCount )
 {
 #if CS_CONTROLLABLE_BOTS_ENABLED
-	// calculate death count properly for a bot-controlled player
+	// calculate assist count properly for a bot-controlled player
 	if ( IsControllingBot() )
 	{
 		CCSPlayer* controlledPlayerScorer = GetControlledBot();
@@ -10458,6 +10768,27 @@ void CCSPlayer::IncrementAssistsCount( int nCount )
 
 	m_iAssists += nCount;
 	pl.assists = m_iAssists;
+}
+
+void CCSPlayer::ResetAssistsCount()
+{
+	m_iAssists = 0;
+	pl.assists = m_iAssists;
+}
+
+int CCSPlayer::GetNumConcurrentDominations( )
+{
+	//Check concurrent dominations achievement
+	int numConcurrentDominations = 0;
+	for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+		if ( pPlayer && IsPlayerDominated( pPlayer->entindex() ) )
+		{
+			numConcurrentDominations++;
+		}
+	}
+	return numConcurrentDominations;
 }
 
 
