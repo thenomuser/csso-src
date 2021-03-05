@@ -525,24 +525,48 @@ void C_CSRagdoll::CreateCSRagdoll()
 			SetAbsAngles( pPlayer->GetRenderAngles() );
 
 			SetAbsVelocity( m_vecRagdollVelocity );
+		}
 
-			int iSeq = LookupSequence( "walk_lower" );
-			if ( iSeq == -1 )
+		// in addition to base cycle, duplicate overlay layers and pose params onto the ragdoll, 
+		// so the starting pose is as accurate as possible.
+
+		SetCycle( pPlayer->GetCycle() );
+
+		for ( int i=0; i<MAXSTUDIOPOSEPARAM; i++ )
+		{
+			//Msg( "Setting pose param %i to %.2f\n", i, pPlayer->GetPoseParameter( i ) );
+			SetPoseParameter( i, pPlayer->GetPoseParameter( i ) );
+		}
+
+		CBaseAnimatingOverlay *pPlayerOverlay = pPlayer->GetBaseAnimatingOverlay();
+		CBaseAnimatingOverlay *pRagdollOverlay = GetBaseAnimatingOverlay();
+		if ( pPlayerOverlay )
+		{
+			int layerCount = pPlayerOverlay->GetNumAnimOverlays();
+			pRagdollOverlay->SetNumAnimOverlays(layerCount);
+			for( int layerIndex = 0; layerIndex < layerCount; ++layerIndex )
 			{
-				Assert( false );	// missing walk_lower?
-				iSeq = 0;
+				CAnimationLayer *playerLayer = pPlayerOverlay->GetAnimOverlay(layerIndex);
+				CAnimationLayer *ragdollLayer = pRagdollOverlay->GetAnimOverlay(layerIndex);
+				if( playerLayer && ragdollLayer )
+				{
+					ragdollLayer->SetCycle( playerLayer->GetCycle() );
+					ragdollLayer->SetOrder( playerLayer->GetOrder() );
+					ragdollLayer->SetSequence( playerLayer->GetSequence() );
+					ragdollLayer->SetWeight( playerLayer->GetWeight() );
+				}
 			}
+		}
 
-			SetSequence( iSeq );	// walk_lower, basic pose
-			SetCycle( 0.0 );
+		m_flPlaybackRate = pPlayer->GetPlaybackRate();
 
-			// go ahead and set these on the player in case the code below decides to set up bones using
-			// that entity instead of this one.  The local player may not have valid animation
-			pPlayer->SetSequence( iSeq );	// walk_lower, basic pose
-			pPlayer->SetCycle( 0.0 );
 
+		if ( !bRemotePlayer )
+		{
 			Interp_Reset( varMap );
 		}
+
+		CopySequenceTransitions( pPlayer );
 
 		// add a separate gloves model if needed
 		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
@@ -564,6 +588,8 @@ void C_CSRagdoll::CreateCSRagdoll()
 				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
 			}
 		}
+
+		pPlayer->MoveBoneAttachments( this );
 	}
 	else
 	{
@@ -588,17 +614,12 @@ void C_CSRagdoll::CreateCSRagdoll()
 		matrix3x4_t currentBones[MAXSTUDIOBONES];
 		const float boneDt = 0.05f;
 
-		//=============================================================================
-		// [pfreese], [tj]
-		// There are visual problems with the attempted blending of the 
-		// death pose animations in C_CSRagdoll::GetRagdollInitBoneArrays. The version
-		// in C_BasePlayer::GetRagdollInitBoneArrays doesn't attempt to blend death
-		// poses, so if the player is relevant, use that one regardless of whether the 
-		// player is the local one or not.
-		//=============================================================================
-		if ( pPlayer && !pPlayer->IsDormant() )
+		// We used to get these values from the local player object when he ragdolled, but he had some bad values when using prediction.
+		// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
+		ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
+		if ( cl_ragdoll_crumple.GetBool() )
 		{
-			pPlayer->GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+			BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
 		}
 		else
 		{

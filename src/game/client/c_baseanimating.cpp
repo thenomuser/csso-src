@@ -4494,8 +4494,20 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 	pRagdoll->SetNextClientThink( CLIENT_THINK_ALWAYS );
 
 	pRagdoll->SetModelName( AllocPooledString( pModelName ) );
+	pRagdoll->CopySequenceTransitions(this);
 	pRagdoll->SetModelScale( GetModelScale() );
 	return pRagdoll;
+}
+
+void C_BaseAnimating::CopySequenceTransitions( C_BaseAnimating *pCopyFrom )
+{
+	m_SequenceTransitioner.m_animationQueue.RemoveAll();
+	int count = pCopyFrom->m_SequenceTransitioner.m_animationQueue.Count();
+	m_SequenceTransitioner.m_animationQueue.EnsureCount(count);
+	for ( int i = 0; i < count; i++ )
+	{
+		m_SequenceTransitioner.m_animationQueue[i] = pCopyFrom->m_SequenceTransitioner.m_animationQueue[i];
+	}
 }
 
 C_BaseAnimating *C_BaseAnimating::BecomeRagdollOnClient()

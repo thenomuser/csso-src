@@ -245,7 +245,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CCSRagdoll, DT_CSRagdoll )
 	SendPropEHandle( SENDINFO( m_hPlayer ) ),
 	SendPropModelIndex( SENDINFO( m_nModelIndex ) ),
 	SendPropInt		( SENDINFO(m_nForceBone), 8, 0 ),
-	SendPropVector	( SENDINFO(m_vecForce), -1, SPROP_NOSCALE ),
+	SendPropVector	( SENDINFO(m_vecForce) ),
 	SendPropVector( SENDINFO( m_vecRagdollVelocity ) ),
 	SendPropInt( SENDINFO( m_iDeathPose ), ANIMATION_SEQUENCE_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iDeathFrame ), 5 ),
@@ -1744,10 +1744,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	//update damage info with our accumulated physics force
 	CTakeDamageInfo subinfo = info;
-
-	// HACK[pfreese]: scale impulse up for visual effect
-	const float kImpulseBonusScale = 2.0f;
-	subinfo.SetDamageForce( m_vecTotalBulletForce * kImpulseBonusScale);
+	subinfo.SetDamageForce( m_vecTotalBulletForce );
 
 	//Adrian: Select a death pose to extrapolate the ragdoll's velocity.
 	SelectDeathPose( info );

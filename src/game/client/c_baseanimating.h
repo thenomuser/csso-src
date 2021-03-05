@@ -209,6 +209,8 @@ public:
 	// [menglish] Finds the bone associated with the given hitbox
 	int		GetHitboxBone( int hitboxIndex );
 
+	void	CopySequenceTransitions( C_BaseAnimating *pCopyFrom );
+
 	// Bone attachments
 	virtual void		AttachEntityToBone( C_BaseAnimating* attachTarget, int boneIndexAttached=-1, Vector bonePosition=Vector(0,0,0), QAngle boneAngles=QAngle(0,0,0) );
 	void				AddBoneAttachment( C_BaseAnimating* newBoneAttachment );
