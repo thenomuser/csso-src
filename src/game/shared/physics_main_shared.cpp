@@ -1167,7 +1167,7 @@ void CBaseEntity::UpdateWaterState()
 
 	SetWaterLevel( 0 );
 	SetWaterType( CONTENTS_EMPTY );
-	int cont = UTIL_PointContents (point);
+	int cont = UTIL_PointContents(point, MASK_WATER);
 
 	if (( cont & MASK_WATER ) == 0)
 		return;
@@ -1185,14 +1185,14 @@ void CBaseEntity::UpdateWaterState()
 		// Check the exact center of the box
 		point[2] = WorldSpaceCenter().z;
 
-		int midcont = UTIL_PointContents (point);
+		int midcont = UTIL_PointContents(point, MASK_WATER);
 		if ( midcont & MASK_WATER )
 		{
 			// Now check where the eyes are...
 			SetWaterLevel( 2 );
 			point[2] = EyePosition().z;
 
-			int eyecont = UTIL_PointContents (point);
+			int eyecont = UTIL_PointContents(point, MASK_WATER);
 			if ( eyecont & MASK_WATER )
 			{
 				SetWaterLevel( 3 );

@@ -333,8 +333,8 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 		falloff = info.GetDamage() / flRadius;
 	else
 		falloff = 1.0;
-
-	int bInWater = (UTIL_PointContents ( vecSrc ) & MASK_WATER) ? true : false;
+	
+	int bInWater = (UTIL_PointContents ( vecSrc, MASK_WATER ) & MASK_WATER) ? true : false;
 
 #ifdef HL2_DLL
 	if( bInWater )

@@ -1554,43 +1554,24 @@ ConVar snd_music_selection(
 			falloff = info.GetDamage() / flRadius;
 		else
 			falloff = 1.0;
-
-		int bInWater = (UTIL_PointContents ( vecSrc ) & MASK_WATER) ? true : false;
 		
 		vecSrc.z += 1;// in case grenade is lying on the ground
 
 		// iterate on all entities in the vicinity.
 		for ( CEntitySphereQuery sphere( vecSrc, flRadius ); ( pEntity = sphere.GetCurrentEntity() ) != NULL; sphere.NextEntity() )
 		{
-			//=============================================================================
-			// HPE_BEGIN:
-			// [tj] We have to save whether or not the player is killed so we don't give credit 
-			//		for pre-dead players.
-			//=============================================================================
 			bool wasAliveBeforeExplosion = false;
 			CCSPlayer* pCSExplosionVictim = ToCSPlayer(pEntity);
 			if (pCSExplosionVictim)
 			{
 				wasAliveBeforeExplosion = pCSExplosionVictim->IsAlive();
 			}
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
 			if ( pEntity->m_takedamage != DAMAGE_NO )
 			{
 				// UNDONE: this should check a damage mask, not an ignore
 				if ( iClassIgnore != CLASS_NONE && pEntity->Classify() == iClassIgnore )
 				{// houndeyes don't hurt other houndeyes with their attack
 					continue;
-				}
-
-				// blasts don't travel into or out of water
-				if ( !bIgnoreWorld )
-				{
-					if (bInWater && pEntity->GetWaterLevel() == 0)
-						continue;
-					if (!bInWater && pEntity->GetWaterLevel() == 3)
-						continue;
 				}
 
 				// radius damage can only be blocked by the world
