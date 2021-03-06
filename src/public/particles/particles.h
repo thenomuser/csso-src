@@ -229,6 +229,8 @@ public:
 							int collisionGroup,
 							CBaseTrace *ptr ) = 0;
 
+	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask ) = 0;
+
 	// given a possible spawn point, tries to movie it to be on or in the source object. returns
 	// true if it succeeded
 	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,

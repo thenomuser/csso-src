@@ -2881,6 +2881,11 @@ public:
 		ptr->fraction = 1.0;								// no hit
 	}
 
+	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask )
+	{
+		return false;
+	}
+
 	virtual void GetRandomPointsOnControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, 
