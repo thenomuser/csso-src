@@ -257,7 +257,7 @@ public:
 
 	int GetPlayerEntIndex() const;
 	IRagdoll* GetIRagdoll() const;
-	bool GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
+	void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
 
 	void ApplyRandomTaserForce( void );
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
@@ -330,12 +330,57 @@ C_CSRagdoll::~C_CSRagdoll()
 	}
 }
 
-bool C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
+void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
 {
-	// otherwise use the death pose to set up the ragdoll
-	ForceSetupBonesAtTime( pDeltaBones0, gpGlobals->curtime - boneDt );
-	GetRagdollCurSequenceWithDeathPose( this, pDeltaBones1, gpGlobals->curtime, m_iDeathPose, m_iDeathFrame );
-	return SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+	// turn off interp so we can setup bones in multiple positions
+	SetEffects( EF_NOINTERP );
+
+	// populate bone arrays for current positions and starting velocity positions
+	InvalidateBoneCache();
+	SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+	Plat_FastMemcpy( pDeltaBones0, pCurrentBones, sizeof( matrix3x4_t ) * MAXSTUDIOBONES );
+
+	// set death anim
+	CBaseAnimatingOverlay *pRagdollOverlay = GetBaseAnimatingOverlay();
+	int n = pRagdollOverlay->GetNumAnimOverlays();
+	if ( n > 0 )
+	{
+		CAnimationLayer *pLastRagdollLayer = pRagdollOverlay->GetAnimOverlay(n-1);
+		if ( pLastRagdollLayer )
+		{
+			pLastRagdollLayer->SetSequence( m_iDeathPose );
+			pLastRagdollLayer->SetWeight( 1 );
+		}
+	}
+
+	SetAbsOrigin( GetAbsOrigin() );
+
+	// set up bones in velocity adding positions
+	InvalidateBoneCache();
+	SetupBones( pDeltaBones1, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+
+	//fallback
+	Vector vecRagdollVelocityPush = m_vecRagdollVelocity;
+	
+	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
+	if ( pPlayer )
+	{
+		vecRagdollVelocityPush = pPlayer->m_vecLastAliveLocalVelocity * boneDt;
+	}
+
+	if ( vecRagdollVelocityPush.Length() > CS_PLAYER_SPEED_RUN * 3 )
+		vecRagdollVelocityPush = vecRagdollVelocityPush.Normalized() * CS_PLAYER_SPEED_RUN * 3;
+	
+	// apply global extra velocity manually instead of relying on prediction to do it. This means all bones get the same vel...
+	for ( int i=0; i<MAXSTUDIOBONES; i++ )
+	{
+		pDeltaBones1[i].SetOrigin( pDeltaBones0[i].GetOrigin() + vecRagdollVelocityPush );
+
+		//debugoverlay->AddBoxOverlay( pCurrentBones[i].GetOrigin(), -Vector(0.1, 0.1, 0.1), Vector(0.1, 0.1, 0.1), QAngle(0,0,0), 255,0,0,255, 5 );
+		////debugoverlay->AddBoxOverlay( pDeltaBones1[i].GetOrigin(), -Vector(0.1, 0.1, 0.1), Vector(0.1, 0.1, 0.1), QAngle(0,0,0), 0,255,0,255, 5 );
+		////debugoverlay->AddBoxOverlay( pDeltaBones0[i].GetOrigin(), -Vector(0.1, 0.1, 0.1), Vector(0.1, 0.1, 0.1), QAngle(0,0,0), 0,0,255,255, 5 );
+		//debugoverlay->AddLineOverlay( pDeltaBones0[i].GetOrigin(), pDeltaBones1[i].GetOrigin(), 255,0,0, true, 5 );
+	}
 }
 
 void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
@@ -403,34 +448,42 @@ void C_CSRagdoll::ApplyRandomTaserForce( void )
 
 void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
+	static const float RAGDOLL_IMPACT_MAGNITUDE = 8000.0f;
+
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 
 	if( !pPhysicsObject )
 		return;
 
 	Vector dir = pTrace->endpos - pTrace->startpos;
-
+	
 	if ( iDamageType == DMG_BLAST )
 	{
-		dir *= 4000;  // adjust impact strenght
-
+		VectorNormalize( dir );
+		dir *= RAGDOLL_IMPACT_MAGNITUDE;  // adjust impact strenght
+				
 		// apply force at object mass center
 		pPhysicsObject->ApplyForceCenter( dir );
 	}
 	else
 	{
-		Vector hitpos;
-
+		Vector hitpos;  
+	
 		VectorMA( pTrace->startpos, pTrace->fraction, dir, hitpos );
 		VectorNormalize( dir );
 
-		dir *= 4000;  // adjust impact strenght
+		// apply force where we hit it (shock/taser is handled with a special death type )
+		if ( (iDamageType & DMG_SHOCK ) == 0 )
+		{
+			// Blood spray!
+			float flDamage = 10.0f;
+			// This does smaller splotches on the guy and splats blood on the world.
+			TraceBleed( flDamage, dir, pTrace, iDamageType );
+			FX_CS_BloodSpray( hitpos, dir, flDamage );
 
-		// apply force where we hit it
-		pPhysicsObject->ApplyForceOffset( dir, hitpos );
-
-		// Blood spray!
-		FX_CS_BloodSpray( hitpos, dir, 10 );
+			dir *= RAGDOLL_IMPACT_MAGNITUDE;  // adjust impact strenght
+			pPhysicsObject->ApplyForceOffset( dir, hitpos );
+		}
 	}
 
 	m_pRagdoll->ResetRagdollSleepAfterTime();
@@ -1089,6 +1142,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
+
+	m_vecLastAliveLocalVelocity.Init();
 
 	m_pViewmodelArmConfig = NULL;
 }
@@ -1789,6 +1844,11 @@ static bool inSpectating_Haptics = false;
 //-----------------------------------------------------------------------------
 void C_CSPlayer::ClientThink()
 {
+	if ( IsAlive() )
+	{
+		m_vecLastAliveLocalVelocity = (m_vecLastAliveLocalVelocity * 0.8) + (GetLocalVelocity() * 0.2);
+	}
+
 	BaseClass::ClientThink();
 
 	// velocity music handling

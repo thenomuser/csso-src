@@ -324,6 +324,23 @@ int GetShellForAmmoType( const char *ammoname )
 }
 #endif
 
+bool IsGunWeapon( CSWeaponType weaponType )
+{
+	switch ( weaponType )
+	{
+	case WEAPONTYPE_PISTOL:
+	case WEAPONTYPE_SUBMACHINEGUN:
+	case WEAPONTYPE_RIFLE:
+	case WEAPONTYPE_SHOTGUN:
+	case WEAPONTYPE_SNIPER_RIFLE:
+	case WEAPONTYPE_MACHINEGUN:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 
 // ----------------------------------------------------------------------------- //
 // CWeaponCSBase tables.

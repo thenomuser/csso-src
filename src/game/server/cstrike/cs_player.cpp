@@ -154,6 +154,10 @@ extern ConVar mp_buy_anywhere;
 
 extern ConVar mp_respawn_immunitytime;
 
+
+ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
+ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
+
 ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
 
 ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
@@ -2891,6 +2895,8 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 	float flDamage = info.GetDamage();
 
+	bool hitByBullet = false;
+	bool hitByGrenadeProjectile = false;
 	bool bHeadShot = false;
 
 	if ( m_bImmunity )
@@ -2926,19 +2932,19 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	}
 	else
 	{
-//=============================================================================
-// HPE_BEGIN:
+		const CWeaponCSBase* pCSWeapon = dynamic_cast<CWeaponCSBase*>(info.GetWeapon());
+
+		if ( pCSWeapon )
+		{
+			hitByBullet = IsGunWeapon( pCSWeapon->GetWeaponType() );
+			hitByGrenadeProjectile = ((pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE) && (info.GetDamageType() & DMG_CLUB) != 0);
+		}
+
 // [menglish] Calculate the position this player was hit at in the bone space
-//=============================================================================
-		 
 		matrix3x4_t boneTransformToWorld, boneTransformToObject;
 		GetBoneTransform(GetHitboxBone(ptr->hitbox), boneTransformToWorld);
 		MatrixInvert(boneTransformToWorld, boneTransformToObject);
 		VectorTransform(ptr->endpos, boneTransformToObject, m_vLastHitLocationObjectSpace);
-		 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 		switch ( ptr->hitgroup )
 		{
@@ -2947,7 +2953,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 		case HITGROUP_HEAD:
 
-			if ( m_bHasHelmet )
+			if ( m_bHasHelmet && !hitByGrenadeProjectile )
 			{
 //				bShouldBleed = false;
 				bShouldSpark = true;
@@ -3066,8 +3072,25 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 
 		subInfo.SetDamage( flDamage );
 
-		if( bHeadShot )
-			subInfo.AddDamageType( DMG_HEADSHOT );
+		float impulseMultiplier = 1.0f;
+
+		if ( hitByBullet )
+		{
+			impulseMultiplier = phys_playerscale.GetFloat();
+			if ( bHeadShot )
+			{
+				subInfo.AddDamageType( DMG_HEADSHOT );
+				impulseMultiplier *= phys_headshotscale.GetFloat();
+			}
+		}
+
+		if ( hitByGrenadeProjectile )
+		{
+			impulseMultiplier = 0.0f;
+		}
+
+
+		subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
 
 		AddMultiDamage( subInfo, this );
 	}

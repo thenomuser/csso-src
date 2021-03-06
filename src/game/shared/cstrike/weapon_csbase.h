@@ -30,6 +30,7 @@ extern const char * GetWeaponAliasFromTranslated(const char *translatedAlias);
 extern bool	IsPrimaryWeapon( CSWeaponID id );
 extern bool IsSecondaryWeapon( CSWeaponID  id );
 extern int GetShellForAmmoType( const char *ammoname );
+extern bool IsGunWeapon( CSWeaponType weaponType );
 
 #define SHIELD_VIEW_MODEL "models/weapons/v_shield.mdl"
 #define SHIELD_WORLD_MODEL "models/weapons/w_shield.mdl"

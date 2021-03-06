@@ -531,6 +531,9 @@ private:
 private:
 	float		m_flNextMagDropTime;
 	int			m_nLastMagDropAttachmentIndex;
+
+public:
+	Vector m_vecLastAliveLocalVelocity;
 };
 
 C_CSPlayer* GetLocalOrInEyeCSPlayer( void );
