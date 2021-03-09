@@ -931,10 +931,10 @@ FORCEINLINE fltx4 UnsignedIntConvertToFltSIMD( const u32x4 &vSrcA )
 {
 	Assert(0);			/* pc has no such operation */
 	fltx4 retval;
-	SubFloat( retval, 0 ) = ( (float) SubInt( retval, 0 ) );
-	SubFloat( retval, 1 ) = ( (float) SubInt( retval, 1 ) );
-	SubFloat( retval, 2 ) = ( (float) SubInt( retval, 2 ) );
-	SubFloat( retval, 3 ) = ( (float) SubInt( retval, 3 ) );
+	SubFloat( retval, 0 ) = ( (float) SubInt( vSrcA, 0 ) );
+	SubFloat( retval, 1 ) = ( (float) SubInt( vSrcA, 1 ) );
+	SubFloat( retval, 2 ) = ( (float) SubInt( vSrcA, 2 ) );
+	SubFloat( retval, 3 ) = ( (float) SubInt( vSrcA, 3 ) );
 	return retval;
 }
 
@@ -1893,7 +1893,7 @@ FORCEINLINE fltx4 SplatZSIMD( fltx4 const &a )
 
 FORCEINLINE fltx4 SplatWSIMD( fltx4 const &a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 3, 3, 3 ) );
+	return _mm_shuffle_ps( a, a, MM_SHUFFLE_REV( 3, 3, 3, 3 ) );
 }
 
 FORCEINLINE fltx4 SetXSIMD( const fltx4& a, const fltx4& x )
@@ -1942,20 +1942,19 @@ FORCEINLINE fltx4 RotateLeft2( const fltx4 & a )
 // a b c d -> d a b c
 FORCEINLINE fltx4 RotateRight( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 0, 3, 2, 1) );
+	return _mm_shuffle_ps( a, a, MM_SHUFFLE_REV( 3, 0, 1, 2 ) );
 }
 
 // a b c d -> c d a b
 FORCEINLINE fltx4 RotateRight2( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	return _mm_shuffle_ps( a, a, MM_SHUFFLE_REV( 2, 3, 0, 1 ) );
 }
-
 
 FORCEINLINE fltx4 AddSIMD( const fltx4 & a, const fltx4 & b )				// a+b
 {
 	return _mm_add_ps( a, b );
-};
+}
 
 FORCEINLINE fltx4 SubSIMD( const fltx4 & a, const fltx4 & b )				// a-b
 {
@@ -1985,15 +1984,17 @@ FORCEINLINE fltx4 MsubSIMD( const fltx4 & a, const fltx4 & b, const fltx4 & c )	
 FORCEINLINE fltx4 Dot3SIMD( const fltx4 &a, const fltx4 &b )
 {
 	fltx4 m = MulSIMD( a, b );
-	float flDot = SubFloat( m, 0 ) + SubFloat( m, 1 ) + SubFloat( m, 2 );
-	return ReplicateX4( flDot );
+	return AddSIMD( AddSIMD( SplatXSIMD(m), SplatYSIMD(m) ), SplatZSIMD(m) );
 }
 
 FORCEINLINE fltx4 Dot4SIMD( const fltx4 &a, const fltx4 &b )
 {
-	fltx4 m = MulSIMD( a, b );
-	float flDot = SubFloat( m, 0 ) + SubFloat( m, 1 ) + SubFloat( m, 2 ) + SubFloat( m, 3 );
-	return ReplicateX4( flDot );
+	// 4 instructions, serial, order of addition varies so individual elements my differ in the LSB on some CPUs
+	fltx4 fl4Product = MulSIMD( a, b );
+	fltx4 fl4YXWZ = _mm_shuffle_ps( fl4Product, fl4Product, MM_SHUFFLE_REV(1,0,3,2) );
+	fltx4 fl4UUVV = AddSIMD( fl4Product, fl4YXWZ ); // U = X+Y; V = Z+W
+	fltx4 fl4VVUU = RotateLeft2( fl4UUVV );
+	return AddSIMD( fl4UUVV, fl4VVUU );
 }
 
 //TODO: implement as four-way Taylor series (see xbox implementation)
@@ -2608,14 +2609,14 @@ public:
 		fltx4 ty = LoadUnalignedSIMD( &b.x );
 		fltx4 tz = LoadUnalignedSIMD( &c.x );
 		fltx4 tw = LoadUnalignedSIMD( &d.x );
-		fltx4 r0 = __vmrghw(tx, tz);
-		fltx4 r1 = __vmrghw(ty, tw);
-		fltx4 r2 = __vmrglw(tx, tz);
-		fltx4 r3 = __vmrglw(ty, tw);
+		fltx4 r0 = VectorMergeHighSIMD(tx, tz);
+		fltx4 r1 = VectorMergeHighSIMD(ty, tw);
+		fltx4 r2 = VectorMergeLowSIMD(tx, tz);
+		fltx4 r3 = VectorMergeLowSIMD(ty, tw);
 
-		x = __vmrghw(r0, r1);
-		y = __vmrglw(r0, r1);
-		z = __vmrghw(r2, r3);
+		x = VectorMergeHighSIMD(r0, r1);
+		y = VectorMergeLowSIMD(r0, r1);
+		z = VectorMergeHighSIMD(r2, r3);
 #else
 		x		= LoadUnalignedSIMD( &( a.x ));
 		y		= LoadUnalignedSIMD( &( b.x ));
@@ -2639,14 +2640,14 @@ public:
 		fltx4 ty = LoadAlignedSIMD(b);
 		fltx4 tz = LoadAlignedSIMD(c);
 		fltx4 tw = LoadAlignedSIMD(d);
-		fltx4 r0 = __vmrghw(tx, tz);
-		fltx4 r1 = __vmrghw(ty, tw);
-		fltx4 r2 = __vmrglw(tx, tz);
-		fltx4 r3 = __vmrglw(ty, tw);
+		fltx4 r0 = VectorMergeHighSIMD(tx, tz);
+		fltx4 r1 = VectorMergeHighSIMD(ty, tw);
+		fltx4 r2 = VectorMergeLowSIMD(tx, tz);
+		fltx4 r3 = VectorMergeLowSIMD(ty, tw);
 
-		x = __vmrghw(r0, r1);
-		y = __vmrglw(r0, r1);
-		z = __vmrghw(r2, r3);
+		x = VectorMergeHighSIMD(r0, r1);
+		y = VectorMergeLowSIMD(r0, r1);
+		z = VectorMergeHighSIMD(r2, r3);
 #else
 		x		= LoadAlignedSIMD( a );
 		y		= LoadAlignedSIMD( b );

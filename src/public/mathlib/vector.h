@@ -1563,6 +1563,8 @@ public:
 	bool operator==( const Quaternion &src ) const;
 	bool operator!=( const Quaternion &src ) const;
 
+	inline Quaternion Conjugate() const { return Quaternion( -x, -y, -z, w );  }
+
 	vec_t* Base() { return (vec_t*)this; }
 	const vec_t* Base() const { return (vec_t*)this; }
 
@@ -1572,6 +1574,12 @@ public:
 
 	vec_t x, y, z, w;
 };
+
+
+inline const Quaternion Conjugate( const Quaternion &q )
+{
+	return Quaternion( -q.x, -q.y, -q.z, q.w );
+}
 
 
 //-----------------------------------------------------------------------------

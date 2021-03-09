@@ -111,6 +111,11 @@ $Project "studiomdl"
 	"utils\studiomdl\studiomdl.vpc" [$WIN32]
 }
 
+$Project "studiorender"
+{
+	"studiorender\studiorender.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
 $Project "vbsp"
 {
 	"utils\vbsp\vbsp.vpc" [$WIN32]

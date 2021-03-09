@@ -256,13 +256,16 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 
 
 // transform in1 by the matrix in2
-void VectorTransform (const float *in1, const matrix3x4_t& in2, float *out)
+void VectorTransform (const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out)
 {
 	Assert( s_bMathlibInitialized );
-	Assert( in1 != out );
-	out[0] = DotProduct(in1, in2[0]) + in2[0][3];
-	out[1] = DotProduct(in1, in2[1]) + in2[1][3];
-	out[2] = DotProduct(in1, in2[2]) + in2[2][3];
+	float x = DotProduct(in1, in2[0]) + in2[0][3];
+	float y = DotProduct(in1, in2[1]) + in2[1][3];
+	float z = DotProduct(in1, in2[2]) + in2[2][3];
+
+	out[ 0 ] = x;
+	out[ 1 ] = y;
+	out[ 2 ] = z;
 }
 
 
@@ -276,20 +279,27 @@ void VectorITransform (const float *in1, const matrix3x4_t& in2, float *out)
 	in1t[1] = in1[1] - in2[1][3];
 	in1t[2] = in1[2] - in2[2][3];
 
-	out[0] = in1t[0] * in2[0][0] + in1t[1] * in2[1][0] + in1t[2] * in2[2][0];
-	out[1] = in1t[0] * in2[0][1] + in1t[1] * in2[1][1] + in1t[2] * in2[2][1];
-	out[2] = in1t[0] * in2[0][2] + in1t[1] * in2[1][2] + in1t[2] * in2[2][2];
+	float x = in1t[0] * in2[0][0] + in1t[1] * in2[1][0] + in1t[2] * in2[2][0];
+	float y = in1t[0] * in2[0][1] + in1t[1] * in2[1][1] + in1t[2] * in2[2][1];
+	float z = in1t[0] * in2[0][2] + in1t[1] * in2[1][2] + in1t[2] * in2[2][2];
+
+	out[ 0 ] = x;
+	out[ 1 ] = y;
+	out[ 2 ] = z;
 }
 
 
 // assume in2 is a rotation and rotate the input vector
-void VectorRotate( const float *in1, const matrix3x4_t& in2, float *out )
+void VectorRotate( const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out )
 {
 	Assert( s_bMathlibInitialized );
-	Assert( in1 != out );
-	out[0] = DotProduct( in1, in2[0] );
-	out[1] = DotProduct( in1, in2[1] );
-	out[2] = DotProduct( in1, in2[2] );
+	float x = DotProduct( in1, in2[ 0 ] );
+	float y = DotProduct( in1, in2[ 1 ] );
+	float z = DotProduct( in1, in2[ 2 ] );
+
+	out[ 0 ] = x;
+	out[ 1 ] = y;
+	out[ 2 ] = z;
 }
 
 // assume in2 is a rotation and rotate the input vector
@@ -303,14 +313,35 @@ void VectorRotate( const Vector &in1, const QAngle &in2, Vector &out )
 // assume in2 is a rotation and rotate the input vector
 void VectorRotate( const Vector &in1, const Quaternion &in2, Vector &out )
 {
+#if WE_WANT_OUR_CODE_TO_BE_POINTLESSLY_SLOW
 	matrix3x4_t matRotate;
 	QuaternionMatrix( in2, matRotate );
 	VectorRotate( in1, matRotate, out );
+#else
+	// rotation is  q * v * q^-1
+
+	Quaternion conjugate = in2.Conjugate();
+
+
+	// do the rotation as unrolled flop code ( QuaternionMult is a function call, which murders instruction scheduling )
+	// first q*v
+	Quaternion temp;
+	temp.x =  in2.y * in1.z - in2.z * in1.y + in2.w * in1.x;
+	temp.y = -in2.x * in1.z + in2.z * in1.x + in2.w * in1.y;
+	temp.z =  in2.x * in1.y - in2.y * in1.x + in2.w * in1.z;
+	temp.w = -in2.x * in1.x - in2.y * in1.y - in2.z * in1.z;
+
+	// now  (qv)(q*)
+	out.x =  temp.x * conjugate.w + temp.y * conjugate.z - temp.z * conjugate.y + temp.w * conjugate.x;
+	out.y = -temp.x * conjugate.z + temp.y * conjugate.w + temp.z * conjugate.x + temp.w * conjugate.y;
+	out.z =  temp.x * conjugate.y - temp.y * conjugate.x + temp.z * conjugate.w + temp.w * conjugate.z;
+	Assert( fabs(-temp.x * conjugate.x - temp.y * conjugate.y - temp.z * conjugate.z + temp.w * conjugate.w) < 0.0001 );
+#endif
 }
 
 
 // rotate by the inverse of the matrix
-void VectorIRotate( const float *in1, const matrix3x4_t& in2, float *out )
+void VectorIRotate( const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out )
 {
 	Assert( s_bMathlibInitialized );
 	Assert( in1 != out );
@@ -500,7 +531,7 @@ void VectorVectors( const Vector &forward, Vector &right, Vector &up )
 	Assert( s_bMathlibInitialized );
 	Vector tmp;
 
-	if (forward[0] == 0 && forward[1] == 0)
+	if ( fabs( forward[0] ) < 1e-6 && fabs( forward[1] ) < 1e-6 )
 	{
 		// pitch 90 degrees up/down from identity
 		right[0] = 0;	
@@ -1220,16 +1251,12 @@ void AngleMatrix( const QAngle &angles, matrix3x4_t& matrix )
 	matrix[1][0] = cp*sy;
 	matrix[2][0] = -sp;
 
-	float crcy = cr*cy;
-	float crsy = cr*sy;
-	float srcy = sr*cy;
-	float srsy = sr*sy;
-	matrix[0][1] = sp*srcy-crsy;
-	matrix[1][1] = sp*srsy+crcy;
+	// NOTE: Do not optimize this to reduce multiplies! optimizer bug will screw this up.
+	matrix[0][1] = sr*sp*cy+cr*-sy;
+	matrix[1][1] = sr*sp*sy+cr*cy;
 	matrix[2][1] = sr*cp;
-
-	matrix[0][2] = (sp*crcy+srsy);
-	matrix[1][2] = (sp*crsy-srcy);
+	matrix[0][2] = (cr*sp*cy+-sr*-sy);
+	matrix[1][2] = (cr*sp*sy+-sr*cy);
 	matrix[2][2] = cr*cp;
 
 	matrix[0][3] = 0.0f;
@@ -1286,8 +1313,8 @@ void AngleIMatrix (const QAngle &angles, const Vector &position, matrix3x4_t &ma
 void ClearBounds (Vector& mins, Vector& maxs)
 {
 	Assert( s_bMathlibInitialized );
-	mins[0] = mins[1] = mins[2] = 99999;
-	maxs[0] = maxs[1] = maxs[2] = -99999;
+	mins[0] = mins[1] = mins[2] = FLT_MAX;
+	maxs[0] = maxs[1] = maxs[2] = -FLT_MAX;
 }
 
 void AddPointToBounds (const Vector& v, Vector& mins, Vector& maxs)
@@ -1461,9 +1488,7 @@ float Bias( float x, float biasAmt )
 	{
 		lastExponent = log( biasAmt ) * -1.4427f; // (-1.4427 = 1 / log(0.5))
 	}
-	float fRet = pow( x, lastExponent );
-	Assert ( !IS_NAN( fRet ) );
-	return fRet;
+	return pow( x, lastExponent );
 }
 
 
@@ -1479,9 +1504,7 @@ float Gain( float x, float biasAmt )
 
 float SmoothCurve( float x )
 {
-	// Actual smooth curve. Visualization:
-	// http://www.wolframalpha.com/input/?i=plot%5B+0.5+*+%281+-+cos%5B2+*+pi+*+x%5D%29+for+x+%3D+%280%2C+1%29+%5D
-	return 0.5f * (1 - cos( 2.0f * M_PI * x ) );
+	return (1 - cos( x * M_PI )) * 0.5f;
 }
 
 
@@ -1860,10 +1883,7 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	if ( !HushAsserts() )
-	{
-		Assert( pos.IsValid() );
-	}
+	Assert( pos.IsValid() );
 
 	QuaternionMatrix( q, matrix );
 
@@ -1875,10 +1895,7 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
 	Assert( s_bMathlibInitialized );
-	if ( !HushAsserts() )
-	{
-		Assert( q.IsValid() );
-	}
+	Assert( q.IsValid() );
 
 #ifdef _VPROF_MATHLIB
 	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );
@@ -2926,6 +2943,8 @@ void TransformAABB( const matrix3x4_t& transform, const Vector &vecMinsIn, const
 
 	VectorSubtract( worldCenter, worldExtents, vecMinsOut );
 	VectorAdd( worldCenter, worldExtents, vecMaxsOut );
+	// sanity check
+	Assert( vecMinsOut.LengthSqr()  + vecMaxsOut.LengthSqr() < 1e+12 ); 
 }
 
 
@@ -3139,7 +3158,7 @@ void CalcClosestPointOnLineSegment( const Vector &P, const Vector &vLineA, const
 {
 	Vector vDir;
 	float t = CalcClosestPointToLineT( P, vLineA, vLineB, vDir );
-	t = clamp( t, 0.f, 1.f );
+	t = clamp( t, 0, 1 );
 	if ( outT ) 
 	{
 		*outT = t;
@@ -3211,7 +3230,7 @@ void CalcClosestPointOnLineSegment2D( const Vector2D &P, const Vector2D &vLineA,
 {
 	Vector2D vDir;
 	float t = CalcClosestPointToLineT2D( P, vLineA, vLineB, vDir );
-	t = clamp( t, 0.f, 1.f );
+	t = clamp( t, 0, 1 );
 	if ( outT )
 	{
 		*outT = t;
@@ -3286,12 +3305,15 @@ bool CalcLineToLineIntersectionSegment(
    *t1 = numer / denom;
    *t2 = (d1343 + d4321 * (*t1)) / d4343;
 
-   s1->x = p1.x + *t1 * p21.x;
-   s1->y = p1.y + *t1 * p21.y;
-   s1->z = p1.z + *t1 * p21.z;
-   s2->x = p3.x + *t2 * p43.x;
-   s2->y = p3.y + *t2 * p43.y;
-   s2->z = p3.z + *t2 * p43.z;
+   if ( s1 != NULL && s2 != NULL )
+   {
+	   s1->x = p1.x + *t1 * p21.x;
+	   s1->y = p1.y + *t1 * p21.y;
+	   s1->z = p1.z + *t1 * p21.z;
+	   s2->x = p3.x + *t2 * p43.x;
+	   s2->y = p3.y + *t2 * p43.y;
+	   s2->z = p3.z + *t2 * p43.z;
+   }
 
    return true;
 }
@@ -4113,7 +4135,7 @@ void HSVtoRGB( const Vector &hsv, Vector &rgb )
 		hue = 0.0F;
 	}
 	hue /= 60.0F;
-	int     i = hue;        // integer part
+	int     i = Float2Int( hue );        // integer part
 	float32 f = hue - i;    // fractional part
 	float32 p = hsv.z * (1.0F - hsv.y);
 	float32 q = hsv.z * (1.0F - hsv.y * f);
