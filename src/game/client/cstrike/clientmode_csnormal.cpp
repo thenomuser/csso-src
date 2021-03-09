@@ -1204,7 +1204,7 @@ void UpdateClassImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
-	if ( pGlovesModel )
+	if ( bCreateGloves && pGlovesModel )
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
@@ -1437,7 +1437,7 @@ void UpdateBuyMenuImageEntity(
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
 	}
-	if ( pGlovesModel )
+	if ( bCreateGloves && pGlovesModel )
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
