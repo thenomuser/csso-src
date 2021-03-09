@@ -43,7 +43,7 @@ class CDmeCombinationOperator;
 
 #define MAXSTUDIOANIMFRAMES		5000	// max frames per animation
 #define MAXSTUDIOANIMS			2000	// total animations
-#define MAXSTUDIOSEQUENCES		1524	// total sequences
+#define MAXSTUDIOSEQUENCES		4096	// total sequences
 #define MAXSTUDIOSRCBONES		512		// bones allowed at source movement
 #define MAXSTUDIOMODELS			32		// sub-models per model
 #define MAXSTUDIOBODYPARTS		32
