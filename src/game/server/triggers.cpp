@@ -2163,6 +2163,232 @@ int CChangeLevel::ChangeList( levellist_t *pLevelList, int maxList )
 
 
 //-----------------------------------------------------------------------------
+// Purpose: A trigger volume that gently slows players traveling in a particular direction.
+// Useful for 'softly' stopping players without them feeling like they've hit an invisible wall.
+//-----------------------------------------------------------------------------
+
+struct softbarrierplane_t
+{
+	cplane_t m_plane;
+	Vector m_vecWorldPointOnPlane;
+};
+
+class CTriggerSoftBarrier : public CBaseTrigger
+{
+public:
+	DECLARE_CLASS( CTriggerSoftBarrier, CBaseTrigger );
+
+	void Spawn( void );
+	void Activate( void );
+	void Touch( CBaseEntity *pOther );
+	void Untouch( CBaseEntity *pOther );
+	void InputSetPushDirection( inputdata_t &inputdata );
+
+	Vector m_vecPushDir;
+
+	DECLARE_DATADESC();
+
+	void SetupFrontAndBackPlanes( void );
+	float GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos );
+
+	softbarrierplane_t m_planes[2];
+	bool m_bInitialized;
+};
+
+BEGIN_DATADESC( CTriggerSoftBarrier )
+	DEFINE_KEYFIELD( m_vecPushDir, FIELD_VECTOR, "pushdir" ),
+	DEFINE_INPUTFUNC( FIELD_VECTOR, "SetPushDirection", InputSetPushDirection ),
+END_DATADESC()
+
+LINK_ENTITY_TO_CLASS( trigger_softbarrier, CTriggerSoftBarrier );
+
+#define SOFTPLANE_FRONT 0
+#define SOFTPLANE_BACK 1
+
+void CTriggerSoftBarrier::SetupFrontAndBackPlanes()
+{
+	// find and save the brush faces that are most in line and opposite the push vector
+	m_bInitialized = false;
+	if ( IsBSPModel() )
+	{
+		// Transform the push dir into global space
+		Vector vecAbsDir;
+		VectorRotate( m_vecPushDir, EntityToWorldTransform(), vecAbsDir );
+
+		float flFaceIdxFrontDot = 0;
+		float flFaceIdxBackDot = 0;
+
+		bool bFoundFront = false;
+		bool bFoundBack = false;
+
+		const model_t *pModel = GetModel();
+		int nCount = modelinfo->GetBrushModelPlaneCount( pModel );
+		for ( int i = 0; i < nCount; ++i )
+		{
+			cplane_t localPlane;
+			Vector vecTemp;
+			modelinfo->GetBrushModelPlane( pModel, i, localPlane, &vecTemp );
+
+			cplane_t worldPlane;
+			MatrixTransformPlane( EntityToWorldTransform(), localPlane, worldPlane );
+
+			float flDot = DotProduct( worldPlane.normal, vecAbsDir );
+
+			if ( flDot > flFaceIdxFrontDot )
+			{
+				flFaceIdxFrontDot = flDot;
+				m_planes[SOFTPLANE_FRONT].m_plane = worldPlane;
+				m_planes[SOFTPLANE_FRONT].m_plane.normal = -m_planes[SOFTPLANE_FRONT].m_plane.normal;
+				VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_FRONT].m_vecWorldPointOnPlane );
+				bFoundFront = true;
+				continue;
+			}
+
+			if ( flDot < flFaceIdxBackDot && flDot != flFaceIdxFrontDot )
+			{
+				flFaceIdxBackDot = flDot;
+				m_planes[SOFTPLANE_BACK].m_plane = worldPlane;
+				m_planes[SOFTPLANE_BACK].m_plane.normal = -m_planes[SOFTPLANE_BACK].m_plane.normal;
+				VectorTransform( vecTemp, EntityToWorldTransform(), m_planes[SOFTPLANE_BACK].m_vecWorldPointOnPlane );
+				bFoundBack = true;
+				continue;
+			}
+		}
+
+		if ( bFoundBack == false || bFoundFront == false )
+		{
+			Warning( "Warning: Softbarrier trigger couldn't find front or back planes. Removing!\n" );
+			UTIL_Remove( this );
+		}
+
+		m_bInitialized = true;
+
+	}
+	else
+	{
+		Warning( "Warning: Softbarrier trigger is NOT a bsp model. Removing!\n" );
+		UTIL_Remove( this );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called when spawning, after keyvalues have been handled.
+//-----------------------------------------------------------------------------
+void CTriggerSoftBarrier::Spawn()
+{
+	// Convert pushdir from angles to a vector
+	Vector vecAbsDir;
+	QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
+	AngleVectors(angPushDir, &vecAbsDir);
+
+	// Transform the vector into entity space
+	VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
+
+	BaseClass::Spawn();
+
+	InitTrigger();
+
+	SetupFrontAndBackPlanes();
+}
+
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void CTriggerSoftBarrier::Activate()
+{
+	BaseClass::Activate();
+}
+
+float CTriggerSoftBarrier::GetDistanceToPlane( int nPlaneIdx, Vector vecWorldPos )
+{
+	Vector vToPlane = ( vecWorldPos - m_planes[nPlaneIdx].m_vecWorldPointOnPlane );
+	float flDistToPlane = DotProduct( m_planes[nPlaneIdx].m_plane.normal, vToPlane );
+	
+	//// draw debug arrows
+	//Vector vTouchPos = vecWorldPos + flDistToPlane * -m_planes[nPlaneIdx].m_plane.normal;
+	//if ( nPlaneIdx == 0 )
+	//{
+	//	NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 0, 255, 0, 0, true, 0.1 );
+	//}
+	//else
+	//{
+	//	NDebugOverlay::HorzArrow( vTouchPos, vTouchPos - m_planes[nPlaneIdx].m_plane.normal * -100, 10, 255, 0, 0, 0, true, 0.1 );
+	//}
+	
+	return flDistToPlane;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pOther - 
+//-----------------------------------------------------------------------------
+void CTriggerSoftBarrier::Touch( CBaseEntity *pOther )
+{
+	if ( !pOther->IsSolid() || (pOther->GetMoveType() == MOVETYPE_PUSH || pOther->GetMoveType() == MOVETYPE_NONE ) )
+		return;
+
+	if (!PassesTriggerFilters(pOther))
+		return;
+
+	// FIXME: If something is hierarchically attached, should we try to push the parent?
+	if (pOther->GetMoveParent())
+		return;
+
+	// only for players for the time being
+	if ( pOther->IsPlayer() && pOther->IsAlive() && m_bInitialized )
+	{
+		MoveType_t playerMoveType = pOther->GetMoveType();
+		if ( playerMoveType == MOVETYPE_NONE || playerMoveType == MOVETYPE_PUSH || playerMoveType == MOVETYPE_NOCLIP )
+			return;
+
+		// get the player distance to the front plane
+		float flDistToFront = GetDistanceToPlane( SOFTPLANE_FRONT, pOther->GetAbsOrigin() );
+
+		// get the player distance to the back plane
+		float flDistToBack = GetDistanceToPlane( SOFTPLANE_BACK, pOther->GetAbsOrigin() );
+
+		// get how far between the planes we are (and apply some nonlinear bias)
+		float flDistRatio = Bias( clamp( flDistToFront / MAX( flDistToFront + flDistToBack, 0.0001f ), 0, 1 ), 0.2f );
+
+		Vector vecPushNormal = Lerp( flDistRatio, -m_planes[SOFTPLANE_FRONT].m_plane.normal, m_planes[SOFTPLANE_BACK].m_plane.normal ).Normalized();
+		Vector vecPlayerVel = pOther->GetAbsVelocity();
+
+		float flVelDot = DotProduct( vecPlayerVel.Normalized(), vecPushNormal );
+		if ( flVelDot < 0 )
+		{
+			// get the component of velocity that's pointing into the soft barrier
+			float flNormal = DotProduct( vecPlayerVel, vecPushNormal );
+
+			Vector vecCross;
+			VectorScale( vecPushNormal, flNormal, vecCross );
+
+			// this is the player's velocity if they were on the back plane
+			Vector vecLateral;
+			VectorSubtract( vecPlayerVel, vecCross, vecLateral );
+
+			// lerp the velocity to the lateral velocity, depending on how close we are to the back plane
+			pOther->SetAbsVelocity( Lerp( flDistRatio, vecPlayerVel, vecLateral ) );
+		}
+	}
+}
+
+void CTriggerSoftBarrier::InputSetPushDirection( inputdata_t &inputdata )
+{
+	inputdata.value.Vector3D( m_vecPushDir );
+
+	// Convert pushdir from angles to a vector
+	Vector vecAbsDir;
+	QAngle angPushDir = QAngle(m_vecPushDir.x, m_vecPushDir.y, m_vecPushDir.z);
+	AngleVectors(angPushDir, &vecAbsDir);
+
+	// Transform the vector into entity space
+	VectorIRotate( vecAbsDir, EntityToWorldTransform(), m_vecPushDir );
+
+	SetupFrontAndBackPlanes();
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: A trigger that pushes the player, NPCs, or objects.
 //-----------------------------------------------------------------------------
 class CTriggerPush : public CBaseTrigger
