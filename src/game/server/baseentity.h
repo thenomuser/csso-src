@@ -1019,7 +1019,7 @@ public:
 	void					PhysicsImpact( CBaseEntity *other, trace_t &trace );
  	void					PhysicsMarkEntitiesAsTouching( CBaseEntity *other, trace_t &trace );
 	void					PhysicsMarkEntitiesAsTouchingEventDriven( CBaseEntity *other, trace_t &trace );
-	void					PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = NULL );
+	virtual void			PhysicsTouchTriggers( const Vector *pPrevAbsOrigin = NULL );
 
 	// Physics helper
 	static void				PhysicsRemoveTouchedList( CBaseEntity *ent );
