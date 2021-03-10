@@ -88,6 +88,7 @@ int GetSIMDRandContext( void )
 				// try to take it!
 				if ( ThreadInterlockedAssignIf( &( s_nRandContextsInUse[i]), 1, 0 ) )
 				{
+					ThreadMemoryBarrier();
 					return i;								// done!
 				}
 			}
@@ -99,6 +100,7 @@ int GetSIMDRandContext( void )
 
 void ReleaseSIMDRandContext( int nContext )
 {
+	ThreadMemoryBarrier();
 	s_nRandContextsInUse[ nContext ] = 0;
 }
 

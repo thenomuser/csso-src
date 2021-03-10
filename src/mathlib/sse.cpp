@@ -890,7 +890,6 @@ float _SSE2_cos(float x)
 }
 #endif // PLATFORM_WINDOWS_PC32
 
-#if 0
 // SSE Version of VectorTransform
 void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1)
 {
@@ -948,9 +947,7 @@ void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1)
 	#error "Not Implemented"
 #endif
 }
-#endif
 
-#if 0
 void VectorRotateSSE( const float *in1, const matrix3x4_t& in2, float *out1 )
 {
 	Assert( s_bMathlibInitialized );
@@ -1004,7 +1001,6 @@ void VectorRotateSSE( const float *in1, const matrix3x4_t& in2, float *out1 )
 	#error "Not Implemented"
 #endif
 }
-#endif
 
 #ifdef _WIN32
 void _declspec(naked) _SSE_VectorMA( const float *start, float scale, const float *direction, float *dest )

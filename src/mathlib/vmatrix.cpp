@@ -160,6 +160,18 @@ VMatrix SetupMatrixOrgAngles(const Vector &origin, const QAngle &vAngles)
 #endif // VECTOR_NO_SLOW_OPERATIONS
 
 
+#if 1
+bool PlaneIntersection( const VPlane &vp1, const VPlane &vp2, const VPlane &vp3, Vector &vOut )
+{
+	Vector v2Cross3 = CrossProduct( vp2.m_Normal, vp3.m_Normal );
+	float flDenom = DotProduct( vp1.m_Normal, v2Cross3 );
+	if ( fabs( flDenom ) < FLT_EPSILON )
+		return false;
+	Vector vRet = vp1.m_Dist * v2Cross3 + vp2.m_Dist * CrossProduct( vp3.m_Normal, vp1.m_Normal ) + vp3.m_Dist * CrossProduct( vp1.m_Normal, vp2.m_Normal );
+	vOut = vRet * ( 1.0 / flDenom );
+	return true;
+}
+#else  // old slow innaccurate code
 bool PlaneIntersection( const VPlane &vp1, const VPlane &vp2, const VPlane &vp3, Vector &vOut )
 {
 	VMatrix mMat, mInverse;
@@ -170,7 +182,7 @@ bool PlaneIntersection( const VPlane &vp1, const VPlane &vp2, const VPlane &vp3,
 		vp3.m_Normal.x, vp3.m_Normal.y, vp3.m_Normal.z, -vp3.m_Dist,
 		0.0f, 0.0f, 0.0f, 1.0f
 		);
-	
+
 	if(mMat.InverseGeneral(mInverse))
 	{
 		//vOut = mInverse * Vector(0.0f, 0.0f, 0.0f);
@@ -182,6 +194,7 @@ bool PlaneIntersection( const VPlane &vp1, const VPlane &vp2, const VPlane &vp3,
 		return false;
 	}
 }
+#endif
 
 
 
@@ -304,7 +317,7 @@ bool MatrixInverseGeneral(const VMatrix& src, VMatrix& dst)
 	for(iRow=0; iRow < 4; iRow++)
 	{
 		// Find the row with the largest element in this column.
-		fLargest = 0.00001f;
+		fLargest = 1e-6f;
 		iLargest = -1;
 		for(iTest=iRow; iTest < 4; iTest++)
 		{
@@ -1261,33 +1274,29 @@ void MatrixBuildPerspectiveZRange( VMatrix& dst, double flZNear, double flZFar )
 
 void MatrixBuildPerspectiveX( VMatrix& dst, double flFovX, double flAspect, double flZNear, double flZFar )
 {
-	float flWidthScale = 1.0f / tanf( flFovX * M_PI / 360.0f );
-	float flHeightScale = flAspect * flWidthScale;
-	dst.Init(   flWidthScale,				0.0f,							0.0f,										0.0f,
-				0.0f,						flHeightScale,					0.0f,										0.0f,
-				0.0f,						0.0f,							0.0f,										0.0f,
+	float flWidth = 2.0f * flZNear * tanf( flFovX * M_PI / 360.0f );
+	float flHeight = flWidth / flAspect;
+	dst.Init(   2.0f * flZNear / flWidth,						0.0f,							0.0f,										0.0f,
+				0.0f,  2.0f  * flZNear/ flHeight,							0.0f,										0.0f,
+				0.0f,						0.0f,  flZFar / ( flZNear - flZFar ),	 flZNear * flZFar / ( flZNear - flZFar ),
 				0.0f,						0.0f,						   -1.0f,										0.0f );
-
-	MatrixBuildPerspectiveZRange ( dst, flZNear, flZFar );
 }
 
 void MatrixBuildPerspectiveOffCenterX( VMatrix& dst, double flFovX, double flAspect, double flZNear, double flZFar, double bottom, double top, double left, double right )
 {
-	float flWidth = tanf( flFovX * M_PI / 360.0f );
+	float flWidth = 2.0f * flZNear * tanf( flFovX * M_PI / 360.0f );
 	float flHeight = flWidth / flAspect;
 
 	// bottom, top, left, right are 0..1 so convert to -<val>/2..<val>/2
-	float flLeft   = -(flWidth/2.0f)  * (1.0f - left)   + left   * (flWidth/2.0f);
-	float flRight  = -(flWidth/2.0f)  * (1.0f - right)  + right  * (flWidth/2.0f);
-	float flBottom = -(flHeight/2.0f) * (1.0f - bottom) + bottom * (flHeight/2.0f);
-	float flTop    = -(flHeight/2.0f) * (1.0f - top)    + top    * (flHeight/2.0f);
+	float flLeft = -(flWidth / 2.0f)  * (1.0f - left) + left   * (flWidth / 2.0f);
+	float flRight = -(flWidth / 2.0f)  * (1.0f - right) + right  * (flWidth / 2.0f);
+	float flBottom = -(flHeight / 2.0f) * (1.0f - bottom) + bottom * (flHeight / 2.0f);
+	float flTop = -(flHeight / 2.0f) * (1.0f - top) + top    * (flHeight / 2.0f);
 
-	dst.Init(   1.0f / (flRight-flLeft),        0.0f,                           (flLeft+flRight)/(flRight-flLeft),  0.0f,
-				0.0f,                           1.0f /(flTop-flBottom),         (flTop+flBottom)/(flTop-flBottom),  0.0f,
-				0.0f,                           0.0f,							0.0f,								0.0f,
-				0.0f,                           0.0f,                           -1.0f,								0.0f );
-
-	MatrixBuildPerspectiveZRange ( dst, flZNear, flZFar );
+	dst.Init( (2.0f * flZNear) / (flRight - flLeft), 0.0f, (flLeft + flRight) / (flRight - flLeft), 0.0f,
+			  0.0f, 2.0f*flZNear / (flTop - flBottom), (flTop + flBottom) / (flTop - flBottom), 0.0f,
+			  0.0f, 0.0f, flZFar / (flZNear - flZFar), flZNear*flZFar / (flZNear - flZFar),
+			  0.0f, 0.0f, -1.0f, 0.0f );
 }
 #endif // !_STATIC_LINKED || _SHARED_LIB
 
