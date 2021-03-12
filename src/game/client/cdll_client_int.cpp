@@ -337,8 +337,6 @@ static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display num
 static ConVar s_cl_team("cl_team", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default team when joining a game");
 static ConVar s_cl_class("cl_class", "default", FCVAR_USERINFO|FCVAR_ARCHIVE, "Default class when joining a game");
 
-static ConVar mod_version( "mod_version", "0.7", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-
 // Discord RPC
 static ConVar cl_discord_appid("cl_discord_appid", "731229035065245739", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT);
 static int64_t startTimestamp = time(0);
@@ -1152,6 +1150,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	sprintf( appid, "%d", engine->GetAppID() );
 	Discord_Initialize( cl_discord_appid.GetString(), &handlers, 1, appid );
 
+	ConVarRef mod_version( "mod_version" );
 	if ( !g_bTextMode )
 	{
 		DiscordRichPresence discordPresence;
@@ -1718,6 +1717,7 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 		//char buffer2[256];
 		//sprintf( buffer2, "Server: %s", engine->GetConnectedIP() ); -- test it later, for now its always "LAN"
 		//discordPresence.details = buffer2;
+		ConVarRef mod_version( "mod_version" );
 		discordPresence.state = VarArgs( "Version %2.1f", mod_version.GetFloat() );
 		discordPresence.largeImageKey = "icon_huge_square";
 		Discord_UpdatePresence( &discordPresence );
@@ -1820,6 +1820,7 @@ void CHLClient::LevelShutdown( void )
 		DiscordRichPresence discordPresence;
 		memset( &discordPresence, 0, sizeof( discordPresence ) );
 
+		ConVarRef mod_version( "mod_version" );
 		discordPresence.state = VarArgs( "Version %2.1f", mod_version.GetFloat() );
 		discordPresence.details = "Main Menu";
 		discordPresence.startTimestamp = startTimestamp;

@@ -1265,6 +1265,7 @@ void CConPanel::Paint()
 	DrawNotify();	// only draw notify in game
 }
 
+static ConVar mod_version( "mod_version", "0.7", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1275,7 +1276,11 @@ void CConPanel::PaintBackground()
 
 	int wide = GetWide();
 	char ver[ 100 ];
-	Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
+
+	if ( !Q_stricmp( "csso", GetCurrentMod() ) ) // weird hardcode but works
+		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
+	else
+		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
 	wchar_t unicode[ 200 ];
 	g_pVGuiLocalize->ConvertANSIToUnicode( ver, unicode, sizeof( unicode ) );
 
