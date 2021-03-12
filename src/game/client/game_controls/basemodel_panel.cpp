@@ -17,7 +17,7 @@ using namespace vgui;
 // Purpose: Keeps a global clock to autoplay sequences to run from
 //			Also deals with speedScale changes
 //-----------------------------------------------------------------------------
-float GetAutoPlayTime( void )
+float GetAutoPlayTime2( void )
 {
 	static int g_prevTicks;
 	static float g_time;
@@ -422,7 +422,7 @@ void CBaseModelPanel::OnTick()
 	// to run our default
 	if ( m_nActiveSequence != ACT_INVALID )
 	{
-		float flElapsedTime = GetAutoPlayTime() - m_RootMDL.m_flCycleStartTime;
+		float flElapsedTime = GetAutoPlayTime2() - m_RootMDL.m_flCycleStartTime;
 		if ( flElapsedTime >= m_flActiveSequenceDuration )
 		{
 			m_nActiveSequence = ACT_INVALID;

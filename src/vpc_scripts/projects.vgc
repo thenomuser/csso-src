@@ -8,6 +8,31 @@
 // Project definitions //
 /////////////////////////
 
+$Project "appframework"
+{
+	"appframework\appframework.vpc" 	[$WINDOWS||$X360||$POSIX]
+}
+
+$Project "datacache"
+{
+	"datacache\datacache.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "datamodel"
+{
+	"datamodel\datamodel.vpc" [$WIN32]
+}
+
+$Project "dedicated"
+{
+	"dedicated\dedicated.vpc" [$WIN32||$POSIX]
+}
+
+$Project "inputsystem"
+{
+	"inputsystem\inputsystem.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
 $Project "captioncompiler"
 {
 	"utils\captioncompiler\captioncompiler.vpc" [$WIN32]
@@ -96,9 +121,24 @@ $Project "tgadiff"
 	"utils\tgadiff\tgadiff.vpc" [$WIN32]
 }
 
+$Project "tier0"
+{
+	"tier0\tier0.vpc" 	[$WINDOWS || $X360||$POSIX]
+}
+
 $Project "tier1"
 {
 	"tier1\tier1.vpc" 	[$WINDOWS || $X360||$POSIX]
+}
+
+$Project "tier2"
+{
+	"tier2\tier2.vpc" 	[$WINDOWS || $X360||$POSIX]
+}
+
+$Project "tier3"
+{
+	"tier3\tier3.vpc" 	[$WINDOWS || $X360||$POSIX]
 }
 
 $Project "particles"
@@ -121,10 +161,19 @@ $Project "vbsp"
 	"utils\vbsp\vbsp.vpc" [$WIN32]
 }
 
+//VGUI
+
 $Project "vgui_controls"
 {
 	"vgui2\vgui_controls\vgui_controls.vpc" [$WIN32||$X360||$POSIX]
 }
+
+$Project "matsys_controls"
+{
+	"vgui2\matsys_controls\matsys_controls.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+//VGUI
 
 $Project "vice"
 {
@@ -161,3 +210,133 @@ $Project "vvis_launcher"
 	"utils\vvis_launcher\vvis_launcher.vpc" [$WIN32]
 }
 
+$Project "filesystem_stdio"
+{
+        "filesystem\filesystem_stdio.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+//MATERIAL SYSTEM
+
+$Project "materialsystem"
+{
+	"materialsystem\materialsystem.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "shaderapidx9"
+{
+	"materialsystem\shaderapidx9\shaderapidx9.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "shaderapidx10"
+{
+	"materialsystem\shaderapidx9\shaderapidx10.vpc" [$WIN32]
+}
+
+$Project "shaderapiempty"
+{
+	"materialsystem\shaderapiempty\shaderapiempty.vpc" [$WINDOWS||$POSIX]
+}
+
+$Project "shaderapigl"
+{
+	"materialsystem\shaderapigl\shaderapigl.vpc" [$WIN32||$POSIX]
+}
+
+$Project "stdshader_dbg"
+{
+	"materialsystem\stdshaders\stdshader_dbg.vpc" [$WIN32||$X360||$POSIX]
+}
+
+$Project "stdshader_dx6"
+{
+	"materialsystem\stdshaders\stdshader_dx6.vpc" [$WIN32]
+}
+
+$Project "stdshader_dx7"
+{
+	"materialsystem\stdshaders\stdshader_dx7.vpc" [$WIN32]
+}
+
+$Project "stdshader_dx8"
+{
+	"materialsystem\stdshaders\stdshader_dx8.vpc" [$WIN32]
+}
+
+$Project "stdshader_dx9"
+{
+	"materialsystem\stdshaders\stdshader_dx9.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+//VGUI + MATERIALSYSTEM
+
+$Project "vguimatsurface"
+{
+	"vguimatsurface\vguimatsurface.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "vgui_dll"
+{
+	"vgui2\src\vgui_dll.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "vgui_surfacelib"
+{
+	"vgui2\vgui_surfacelib\vgui_surfacelib.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+//VGUI + MATERIALSYSTEM
+
+//MATERIAL SYSTEM
+
+//VIDEO
+
+$Project "video_services"
+{
+	"video\video_services.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "video_bink"
+{
+	"video\video_bink.vpc" [($WINDOWS||$LINUX)]
+}
+
+$Project "video_quicktime"
+{
+	"video\video_quicktime.vpc" [$WINDOWS||$OSXALL]
+}
+
+$Project "video_webm"
+{
+	"video\video_webm.vpc" [$LINUX]
+}
+
+//VIDEO
+
+//LAUNCHER
+
+$Project "launcher"
+{
+	"launcher\launcher.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+//LAUNCHER
+
+$Project "sourcevr"
+{
+	"sourcevr\sourcevr.vpc"
+}
+
+$Project "vtf"
+{
+	"vtf\vtf.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
+$Project "coroutine_osx"
+{
+	"vstdlib\coroutine_osx.vpc"						[$OSXALL]
+}
+
+$Project "vstdlib"
+{
+	"vstdlib\vstdlib.vpc"		[$WINDOWS || $X360||$POSIX]
+}

@@ -449,7 +449,7 @@ inline vec_t RoundInt (vec_t in)
 	return floor(in + 0.5f);
 }
 
-int Q_log2(int val);
+int Q_log2(unsigned int val);
 
 // Math routines done in optimized assembly math package routines
 void inline SinCos( float radians, float * RESTRICT sine, float * RESTRICT cosine )

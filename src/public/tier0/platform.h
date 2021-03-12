@@ -38,6 +38,9 @@
 	#undef _XBOX
 #endif
 
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
+
 #include "wchartypes.h"
 #include "basetypes.h"
 #include "tier0/valve_off.h"
@@ -325,8 +328,6 @@ typedef unsigned int		uint;
 // you might typically want to use RAND_MAX
 #define VALVE_RAND_MAX 0x7fff
 
-
-
 /*
 FIXME: Enable this when we no longer fear change =)
 
@@ -388,6 +389,7 @@ typedef void * HINSTANCE;
 
 #endif // defined(_WIN32) && !defined(WINDED)
 
+#define MAX_FILEPATH 512 
 
 // Defines MAX_PATH
 #ifndef MAX_PATH
@@ -402,14 +404,13 @@ typedef void * HINSTANCE;
 
 #define MAX_UNICODE_PATH_IN_UTF8 MAX_UNICODE_PATH*4
 
-#ifdef GNUC
-#undef offsetof
-//#define offsetof( type, var ) __builtin_offsetof( type, var ) 
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#else
-#undef offsetof
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#endif
+#if !defined( offsetof )
+	#ifdef __GNUC__
+		#define offsetof( type, var ) __builtin_offsetof( type, var )
+	#else
+		#define offsetof(s,m)	(size_t)&(((s *)0)->m)
+	#endif
+#endif // !defined( offsetof )
 
 
 #define ALIGN_VALUE( val, alignment ) ( ( val + alignment - 1 ) & ~( alignment - 1 ) ) //  need macro for constant expression
@@ -1131,8 +1132,23 @@ PLATFORM_INTERFACE bool				Plat_IsInBenchmarkMode();
 
 
 PLATFORM_INTERFACE double			Plat_FloatTime();		// Returns time in seconds since the module was loaded.
-PLATFORM_INTERFACE unsigned int		Plat_MSTime();			// Time in milliseconds.
+PLATFORM_INTERFACE uint32			Plat_MSTime();			// Time in milliseconds.
+PLATFORM_INTERFACE uint64			Plat_USTime();			// Time in microseconds.
 PLATFORM_INTERFACE char *			Plat_ctime( const time_t *timep, char *buf, size_t bufsize );
+PLATFORM_INTERFACE void				Plat_GetModuleFilename( char *pOut, int nMaxBytes );
+
+PLATFORM_INTERFACE void				Plat_ExitProcess( int nCode );
+
+//called to exit the process due to a fatal error. This allows for the application to handle providing a hook as well which can be called
+//before exiting
+PLATFORM_INTERFACE void				Plat_ExitProcessWithError( int nCode, bool bGenerateMinidump = false );
+
+//sets the callback that will be triggered by Plat_ExitProcessWithError. NULL is valid. The return value true indicates that
+//the exit has been handled and no further processing should be performed. False will cause a minidump to be generated, and the process
+//to be terminated
+typedef bool (*ExitProcessWithErrorCBFn)( int nCode );
+PLATFORM_INTERFACE void				Plat_SetExitProcessWithErrorCB( ExitProcessWithErrorCBFn pfnCB );
+
 PLATFORM_INTERFACE struct tm *		Plat_gmtime( const time_t *timep, struct tm *result );
 PLATFORM_INTERFACE time_t			Plat_timegm( struct tm *timeptr );
 PLATFORM_INTERFACE struct tm *		Plat_localtime( const time_t *timep, struct tm *result );
@@ -1222,6 +1238,28 @@ struct CPUInformation
 // Have to return a pointer, not a reference, because references are not compatible with the
 // extern "C" implied by PLATFORM_INTERFACE.
 PLATFORM_INTERFACE const CPUInformation* GetCPUInformation();
+
+#define MEMORY_INFORMATION_VERSION 0
+
+struct MemoryInformation
+{
+	int m_nStructVersion;
+
+	uint m_nPhysicalRamMbTotal;
+	uint m_nPhysicalRamMbAvailable;
+	
+	uint m_nVirtualRamMbTotal;
+	uint m_nVirtualRamMbAvailable;
+
+	inline MemoryInformation()
+	{
+		memset( this, 0, sizeof( *this ) );
+		m_nStructVersion = MEMORY_INFORMATION_VERSION;
+	}
+};
+
+// Returns true if the passed in MemoryInformation structure was filled out, otherwise false.
+PLATFORM_INTERFACE bool GetMemoryInformation( MemoryInformation *pOutMemoryInfo );
 
 PLATFORM_INTERFACE float GetCPUUsage();
 
@@ -1376,37 +1414,37 @@ inline const char *GetPlatformExt( void )
 template <class T>
 inline T* Construct( T* pMemory )
 {
-	return ::new( pMemory ) T;
+	return reinterpret_cast<T*>(::new( pMemory ) T);
 }
 
 template <class T, typename ARG1>
 inline T* Construct( T* pMemory, ARG1 a1 )
 {
-	return ::new( pMemory ) T( a1 );
+	return reinterpret_cast<T*>(::new( pMemory ) T( a1 ));
 }
 
 template <class T, typename ARG1, typename ARG2>
 inline T* Construct( T* pMemory, ARG1 a1, ARG2 a2 )
 {
-	return ::new( pMemory ) T( a1, a2 );
+	return reinterpret_cast<T*>(::new( pMemory ) T( a1, a2 ));
 }
 
 template <class T, typename ARG1, typename ARG2, typename ARG3>
 inline T* Construct( T* pMemory, ARG1 a1, ARG2 a2, ARG3 a3 )
 {
-	return ::new( pMemory ) T( a1, a2, a3 );
+	return reinterpret_cast<T*>(::new( pMemory ) T( a1, a2, a3 ));
 }
 
 template <class T, typename ARG1, typename ARG2, typename ARG3, typename ARG4>
 inline T* Construct( T* pMemory, ARG1 a1, ARG2 a2, ARG3 a3, ARG4 a4 )
 {
-	return ::new( pMemory ) T( a1, a2, a3, a4 );
+	return reinterpret_cast<T*>(::new( pMemory ) T( a1, a2, a3, a4 ));
 }
 
 template <class T, typename ARG1, typename ARG2, typename ARG3, typename ARG4, typename ARG5>
 inline T* Construct( T* pMemory, ARG1 a1, ARG2 a2, ARG3 a3, ARG4 a4, ARG5 a5 )
 {
-	return ::new( pMemory ) T( a1, a2, a3, a4, a5 );
+	return reinterpret_cast<T*>(::new( pMemory ) T( a1, a2, a3, a4, a5 ));
 }
 
 template <class T, class P>
@@ -1430,7 +1468,7 @@ inline void ConstructThreeArg( T* pMemory, P1 const& arg1, P2 const& arg2, P3 co
 template <class T>
 inline T* CopyConstruct( T* pMemory, T const& src )
 {
-	return ::new( pMemory ) T(src);
+	return reinterpret_cast<T*>(::new( pMemory ) T(src));
 }
 
 template <class T>
@@ -1440,6 +1478,21 @@ inline void Destruct( T* pMemory )
 
 #ifdef _DEBUG
 	memset( reinterpret_cast<void*>( pMemory ), 0xDD, sizeof(T) );
+#endif
+}
+
+// The above will error when binding to a type of: foo(*)[] -- there is no provision in c++ for knowing how many objects
+// to destruct without preserving the count and calling the necessary destructors.
+template <class T, size_t N>
+inline void Destruct( T (*pMemory)[N] )
+{
+	for ( size_t i = 0; i < N; i++ )
+	{
+		(pMemory[i])->~T();
+	}
+
+#ifdef _DEBUG
+	memset( reinterpret_cast<void*>( pMemory ), 0xDD, sizeof(*pMemory) );
 #endif
 }
 
