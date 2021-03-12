@@ -220,6 +220,7 @@ int VTFFileHeaderSize( int nMajorVersion, int nMinorVersion )
 			return sizeof( VTFFileHeaderV7_2_t );
 		case 3:
 			return sizeof( VTFFileHeaderV7_3_t ) + sizeof( ResourceEntryInfo ) * MAX_RSRC_DICTIONARY_ENTRIES;
+		case 4:
 		case VTF_MINOR_VERSION:
 			int size1 = sizeof( VTFFileHeader_t );
 			int size2 = sizeof( ResourceEntryInfo ) * MAX_RSRC_DICTIONARY_ENTRIES;
@@ -657,6 +658,12 @@ bool CVTFTexture::LoadLowResData( CUtlBuffer &buf )
 //-----------------------------------------------------------------------------
 bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header, int nSkipMipLevels )
 {
+	if ( IsCubeMap() && header.version[1] == VTF_MINOR_VERSION )
+	{
+		Warning( "*** VTF 7.5 is currently not supported on cubemaps!\n" );
+		return false;
+	}
+
 	// Fix up the mip count + size based on how many mip levels we skip...
 	if (nSkipMipLevels > 0)
 	{
@@ -726,6 +733,23 @@ bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header,
 
 	// NOTE: The mip levels are stored ascending from smallest (1x1) to largest (NxN)
 	// in order to allow for truncated reads of the minimal required data
+
+	// NOTE: I checked in a bad version 4 where it stripped out the spheremap.
+	// To make it all work, need to check for that bad case.
+	bool bNoSkip = false;
+	if ( IsCubeMap() && ( header.version[0] == 7 ) && ( header.version[1] == 4 ) )
+	{
+		int nBytesRemaining = buf.TellMaxPut() - buf.TellGet();
+		int nFileSize = ComputeFaceSize( nSkipMipLevels ) * m_nFaceCount * m_nFrameCount;
+		if ( nBytesRemaining == nFileSize )
+		{
+			bNoSkip = true;
+		}
+	}
+
+	int nGet = buf.TellGet();
+
+retryCubemapLoad:
 	for (int iMip = m_nMipCount; --iMip >= 0; )
 	{
 		// NOTE: This is for older versions...
@@ -755,10 +779,27 @@ bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header,
 				unsigned char *pMipBits = ImageData( iFrame, iFace, iMip );
 				buf.Get( pMipBits, iMipSize );
 			}
+
+			// Strip out the spheremap in older versions
+			if ( IsCubeMap() && !bNoSkip && ( header.version[0] == 7 ) && ( header.version[1] >= 1 ) && ( header.version[1] < 5 ) )
+			{
+				buf.SeekGet( CUtlBuffer::SEEK_CURRENT, iMipSize );
+			}
 		}
 	}
 
-	return buf.IsValid();
+	bool bOk = buf.IsValid();
+	if ( !bOk && IsCubeMap() && ( header.version[0] == 7 ) && ( header.version[1] <= 4 ) )
+	{
+		if ( !bNoSkip )
+		{
+			bNoSkip = true;
+			buf.SeekGet( CUtlBuffer::SEEK_HEAD, nGet );
+			goto retryCubemapLoad;
+		}
+		Warning( "** Encountered stale cubemap! Please rebuild the following vtf:\n" );
+	}
+	return bOk;
 }
 
 void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNumBytes )
@@ -912,7 +953,7 @@ bool CVTFTexture::SetupByteSwap( CUtlBuffer &buf )
 static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 {
 	unsigned char *pBuf = (unsigned char*)(&header) + sizeof(VTFFileBaseHeader_t);
-	if ( header.version[1] == VTF_MINOR_VERSION )
+	if ( header.version[1] <= VTF_MINOR_VERSION && header.version[1] >= 4 )
 	{
 		buf.Get( pBuf, sizeof(VTFFileHeader_t) - sizeof(VTFFileBaseHeader_t) );
 	}
@@ -974,7 +1015,7 @@ bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 			{
 				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeaderV7_3_t*)buf.PeekGet() );
 			}
-			else if ( baseHeader.version[1] == VTF_MINOR_VERSION )
+			else if ( baseHeader.version[1] >= 4 && baseHeader.version[1] <= VTF_MINOR_VERSION )
 			{
 				m_Swap.SwapFieldsToTargetEndian( (VTFFileHeader_t*)buf.PeekGet() );
 			}
@@ -1021,6 +1062,7 @@ bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 	case 3:
 		header.flags &= VERSIONED_VTF_FLAGS_MASK_7_3;
 		// fall-through
+	case 4:
 	case VTF_MINOR_VERSION:
 		break;
 	}

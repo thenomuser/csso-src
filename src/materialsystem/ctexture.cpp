@@ -3442,16 +3442,7 @@ void CTexture::GetDownloadFaceCount( int &nFirstFace, int &nFaceCount )
 	nFirstFace = 0;
 	if ( IsCubeMap() )
 	{
-		if ( HardwareConfig()->SupportsCubeMaps() )
-		{
-			nFaceCount = CUBEMAP_FACE_COUNT-1;
-		}
-		else
-		{
-			// This will cause us to use the spheremap instead of the cube faces
-			// in the case where we don't support cubemaps
-			nFirstFace = CUBEMAP_FACE_SPHEREMAP;
-		}
+		nFaceCount = CUBEMAP_FACE_COUNT;
 	}
 }
 
