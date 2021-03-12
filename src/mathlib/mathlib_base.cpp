@@ -508,12 +508,17 @@ void CrossProduct (const float* v1, const float* v2, float* cross)
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
-int Q_log2(int val)
+int Q_log2( unsigned int val )
 {
+#ifdef _X360 // use hardware
+	// both zero and one return zero (per old implementation)
+	return ( val == 0 ) ? 0 : 31 - _CountLeadingZeros( val );
+#else // use N. Compoop's algorithm ( inherited from days of yore )
 	int answer=0;
 	while (val>>=1)
 		answer++;
 	return answer;
+#endif
 }
 
 // Matrix is right-handed x=forward, y=left, z=up.  We a left-handed convention for vectors in the game code (forward, right, up)
