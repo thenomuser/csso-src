@@ -5198,9 +5198,9 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 		}
 	}
 
-	if ( ( strncmp( pszRadioSound, "Radio", 5 ) == 0 ) )
+	if ( ( strncmp( pszRadioSound, "Radio.", 6 ) == 0 ) )
 	{
-		pszRadioSound += 5;
+		pszRadioSound += 6;
 	}
 
 	// god damm this looks like a 3 year old's code
@@ -5210,12 +5210,12 @@ void CCSPlayer::Radio( const char *pszRadioSound, const char *pszRadioText, bool
 	if ( HasAgentSet( GetTeamNumber() ) && !IsBotOrControllingBot() )
 	{
 		if ( GetTeamNumber() == TEAM_CT )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoCT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
 		if ( GetTeamNumber() == TEAM_TERRORIST )
-			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
+			Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSAgentInfoT( GetAgentID( GetTeamNumber() ) )->m_szRadioPrefix, pszRadioSound );
 	}
 	else
-		Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s%s", GetCSClassInfo( m_iClass )->m_szRadioPrefix, pszRadioSound );
+		Q_snprintf( strRadioSound, sizeof( strRadioSound ), "%s.%s", GetCSClassInfo( m_iClass )->m_szRadioPrefix, pszRadioSound );
 
 	UserMessageBegin ( filter, "SendAudio" );
 		WRITE_STRING( strRadioSound );
