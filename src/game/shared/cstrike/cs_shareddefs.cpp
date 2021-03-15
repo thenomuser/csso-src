@@ -69,6 +69,7 @@ static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
 	{ "models/weapons/v_models/arms/glove_sas_old/v_glove_sas_old.mdl",						"models/weapons/w_models/arms/w_glove_sas_old.mdl"					},
 	{ "models/weapons/v_models/arms/glove_fbi_old/v_glove_fbi_old.mdl",						"models/weapons/w_models/arms/w_glove_fbi_old.mdl"					},
 	{ "models/weapons/v_models/arms/glove_phoenix_old/v_glove_phoenix_old.mdl",				"models/weapons/w_models/arms/w_glove_phoenix_old.mdl"				},
+	{ "models/weapons/v_models/arms/bare/v_bare_hands.mdl",									"models/weapons/w_models/arms/w_glove_bare_hands.mdl"				},
 };
 
 const PlayerGloves* GetGlovesInfo( int i )
