@@ -52,22 +52,6 @@ CCvarSlider::CCvarSlider( Panel *parent, const char *panelName, char const *capt
 //-----------------------------------------------------------------------------
 void CCvarSlider::SetupSlider( float minValue, float maxValue, const char *cvarname, bool bAllowOutOfRange )
 {
-	// make sure min/max don't go outside cvar range if there's one
-	ConVarRef var( cvarname, true );
-	if ( var.IsValid() )
-	{
-		float flCVarMin;
-		if ( var.GetMin( flCVarMin ) )
-		{
-			minValue = m_bUseConVarMinMax ? flCVarMin : MAX( minValue, flCVarMin );
-		}
-		float flCVarMax;
-		if ( var.GetMax( flCVarMax ) )
-		{
-			maxValue = m_bUseConVarMinMax ? flCVarMax : MIN( maxValue, flCVarMax );
-		}
-	}
-
 	m_flMinValue = minValue;
 	m_flMaxValue = maxValue;
 
@@ -110,7 +94,7 @@ void CCvarSlider::ApplySettings( KeyValues *inResourceData )
 		float minValue = inResourceData->GetFloat( "minvalue", 0 );
 		float maxValue = inResourceData->GetFloat( "maxvalue", 1 );
 		const char *cvarname = inResourceData->GetString( "cvar_name", "" );
-		bool bAllowOutOfRange = inResourceData->GetInt( "allowoutofrange", 0 ) != 0;
+		bool bAllowOutOfRange = inResourceData->GetBool( "allowoutofrange", false );
 		SetupSlider( minValue, maxValue, cvarname, bAllowOutOfRange );
 
 		if ( GetParent() )
@@ -140,7 +124,7 @@ void CCvarSlider::GetSettings( KeyValues *outResourceData )
 		outResourceData->SetFloat( "minvalue", m_flMinValue );
 		outResourceData->SetFloat( "maxvalue", m_flMaxValue );
 		outResourceData->SetString( "cvar_name", m_szCvarName );
-		outResourceData->SetInt( "allowoutofrange", m_bAllowOutOfRange );
+		outResourceData->SetBool( "allowoutofrange", m_bAllowOutOfRange );
 	}
 }
 
@@ -186,7 +170,7 @@ void CCvarSlider::Paint()
 {
 	// Get engine's current value
 //	float curvalue = engine->pfnGetCvarFloat( m_szCvarName );
-	ConVarRef var( m_szCvarName, true );
+	ConVarRef var( m_szCvarName );
 	if ( !var.IsValid() )
 		return;
 	float curvalue = var.GetFloat();
@@ -223,9 +207,7 @@ void CCvarSlider::ApplyChanges()
         }
     
 		//engine->Cvar_SetValue( m_szCvarName, m_fStartValue );
-		ConVarRef var( m_szCvarName, true );
-		if ( !var.IsValid() )
-			return;
+		ConVarRef var( m_szCvarName );
 		var.SetValue( (float)m_fStartValue );
 	}
 }
@@ -270,11 +252,11 @@ void CCvarSlider::Reset()
 {
 	// Set slider to current value
 //	m_fStartValue = engine->pfnGetCvarFloat( m_szCvarName );
-	ConVarRef var( m_szCvarName, true );
+	ConVarRef var( m_szCvarName );
 	if ( !var.IsValid() )
 	{
 	    m_fCurrentValue = m_fStartValue = 0.0f;
-		SetValue( 0, false );
+		SetValue( 0 );
 		m_iStartValue = GetValue();
 	    m_iLastSliderValue = m_iStartValue;
 		return;
@@ -283,7 +265,7 @@ void CCvarSlider::Reset()
     m_fCurrentValue = m_fStartValue;
 
     int value = (int)( CVARSLIDER_SCALE_FACTOR * m_fStartValue );
-	SetValue( value, false );
+	SetValue( value );
 
 	m_iStartValue = GetValue();
     m_iLastSliderValue = m_iStartValue;
@@ -325,7 +307,7 @@ void CCvarSlider::OnSliderMoved()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CCvarSlider::OnSliderDragEnd( void )
+void CCvarSlider::OnApplyChanges( void )
 {
 	if ( !m_bCreatedInCode )
 	{
