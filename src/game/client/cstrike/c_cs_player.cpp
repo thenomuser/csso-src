@@ -1777,6 +1777,10 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_spawn", name ) == 0 )
 	{
+		// PiMoN: eh probably this is gonna work for every player once someone spawns
+		m_pViewmodelArmConfig = NULL;
+		RemoveGlovesModel(); // making sure this bitch is updating after spawning
+
 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
 		{
 			// we've just spawned, so reset our entity id stuff
@@ -1788,10 +1792,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			UpdateAddonModels();
 			UpdateGlovesModel();
 		}
-
-		// PiMoN: eh probably this is gonna work for every player once someone spawns
-		m_pViewmodelArmConfig = NULL;
-		RemoveGlovesModel(); // making sure this bitch is updating after spawning
 	}
 }
 
