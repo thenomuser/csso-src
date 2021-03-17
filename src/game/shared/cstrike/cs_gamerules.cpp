@@ -2963,13 +2963,6 @@ ConVar snd_music_selection(
 		
 		//ClearBodyQue();
 
-		// Hardlock the player accelaration to 5.0
-		//CVAR_SET_FLOAT( "sv_accelerate", 5.0 );
-		//CVAR_SET_FLOAT( "sv_friction", 4.0 );
-		//CVAR_SET_FLOAT( "sv_stopspeed", 75 );
-
-		sv_stopspeed.SetValue( 75.0f );
-
 		// Tabulate the number of players on each team.
 		int NumDeadCT, NumDeadTerrorist, NumAliveTerrorist, NumAliveCT;
 		InitializePlayerCounts( NumAliveTerrorist, NumAliveCT, NumDeadTerrorist, NumDeadCT );
