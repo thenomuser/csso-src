@@ -315,7 +315,7 @@ void ZeroObject( T* p )
 
 CCSWeaponInfo::CCSWeaponInfo()
 {
-	m_flMaxSpeed = 1; // This should always be set in the script.
+	m_flMaxSpeed[0] = m_flMaxSpeed[1] = 1; // This should always be set in the script.
 	m_szAddonModel[0] = 0;
 	m_szMagModel[0] = 0;
 	m_szAddonLocation[0] = '\0';
@@ -363,7 +363,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 {
 	BaseClass::Parse( pKeyValuesData, szWeaponName );
 
-	m_flMaxSpeed = (float)pKeyValuesData->GetInt( "MaxPlayerSpeed", 1 );
+	m_flMaxSpeed[0] = (float)pKeyValuesData->GetInt( "MaxPlayerSpeed", 1 );
+	m_flMaxSpeed[1] = (float)pKeyValuesData->GetInt( "MaxPlayerSpeedAlt", m_flMaxSpeed[0] );
 
 	m_iKillAward = pKeyValuesData->GetInt( "KillAward", 300 );
 

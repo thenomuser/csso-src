@@ -1186,7 +1186,7 @@ float CWeaponCSBase::GetInaccuracy() const
 
 	float fMaxSpeed = GetMaxSpeed();
 	if ( fMaxSpeed == 0.0f )
-		fMaxSpeed = GetCSWpnData().m_flMaxSpeed;
+		fMaxSpeed = GetCSWpnData().m_flMaxSpeed[m_weaponMode];
 
 	float fAccuracy = m_fAccuracyPenalty;
 
@@ -1258,7 +1258,7 @@ float CWeaponCSBase::GetSpread() const
 float CWeaponCSBase::GetMaxSpeed() const
 {
 	// The weapon should have set this in its constructor.
-	float flRet = GetCSWpnData().m_flMaxSpeed;
+	float flRet = GetCSWpnData().m_flMaxSpeed[m_weaponMode];
 	Assert( flRet > 1 );
 	return flRet;
 }

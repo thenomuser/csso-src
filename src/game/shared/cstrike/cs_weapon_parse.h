@@ -184,7 +184,7 @@ public:
 
 public:
 
-	float m_flMaxSpeed;			// How fast the player can run while this is his primary weapon.
+	float m_flMaxSpeed[2];	// How fast the player can run while this is his primary weapon.
 
 	CSWeaponType m_WeaponType;
 

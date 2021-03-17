@@ -36,8 +36,6 @@ public:
 	virtual bool Reload();
 	virtual bool Deploy();
 
-	virtual float GetMaxSpeed() const;
-
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_SCAR20; }
 
 
@@ -161,14 +159,4 @@ bool CWeaponSCAR20::Deploy()
 	m_weaponMode = Primary_Mode;
 	
 	return ret;
-}
-
-float CWeaponSCAR20::GetMaxSpeed() const
-{
-	CCSPlayer *pPlayer = GetPlayerOwner();
-
-	if ( !pPlayer || pPlayer->GetFOV() == 90 )
-		return BaseClass::GetMaxSpeed();
-	else
-		return 150; // zoomed in
 }
