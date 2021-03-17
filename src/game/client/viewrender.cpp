@@ -805,10 +805,6 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffects )
 	CLIENTEFFECT_MATERIAL( "dev/pyro_vignette" )
 	CLIENTEFFECT_MATERIAL( "dev/pyro_post" )
 #endif
-#if IRONSIGHT
-	CLIENTEFFECT_MATERIAL( "models/weapons/shared/scope/scope_dot_green" )
-	CLIENTEFFECT_MATERIAL( "models/weapons/shared/scope/scope_dot_red" )
-#endif
 
 CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() >= 90 )
 

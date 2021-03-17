@@ -1347,6 +1347,13 @@ void CWeaponCSBase::Precache( void )
 	m_iIronSightMode = IronSight_should_approach_unsighted;
 	m_IronSightController = NULL;
 	UpdateIronSightController();
+
+#ifdef CLIENT_DLL
+	// PiMoN: precache the texture
+	IMaterial *dotMaterial = materials->FindMaterial( GetCSWpnData().m_szIronsightDotMaterial, TEXTURE_GROUP_CLIENT_EFFECTS );
+	if ( !IsErrorMaterial( dotMaterial ) )
+		dotMaterial->IncrementReferenceCount();
+#endif
 #endif //IRONSIGHT
 
 	extern void GenerateWeaponRecoilPattern( CSWeaponID id );
