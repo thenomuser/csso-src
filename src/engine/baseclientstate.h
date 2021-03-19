@@ -31,7 +31,7 @@
 
 // In release, send commands at least this many times per second
 #define MIN_CMD_RATE				10.0f
-#define MAX_CMD_RATE				100.0f
+#define MAX_CMD_RATE				128.0f
 
 extern ConVar cl_name;
 

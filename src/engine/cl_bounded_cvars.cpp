@@ -119,7 +119,7 @@ public:
 	CBoundedCvar_UpdateRate() :
 	  ConVar_ServerBounded( 
 		  "cl_updaterate",
-		  "20", 
+		  "64", 
 		  FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
 		  "Number of packets per second of updates you are requesting from the server" )
 	{
