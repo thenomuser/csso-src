@@ -58,6 +58,7 @@ const char* szMusicStrings[] =
 	"dren_01",
 	"dren_02",
 	"feedme_01",
+	"hades_01",
 	"halflife_alyx_01",
 	"halo_01",
 	"hotlinemiami_01",
@@ -73,6 +74,7 @@ const char* szMusicStrings[] =
 	"midnightriders_01",
 	"mordfustang_01",
 	"neckdeep_01",
+	"neckdeep_02",
 	"newbeatfund_01",
 	"noisia_01",
 	"proxy_01",
@@ -81,6 +83,7 @@ const char* szMusicStrings[] =
 	"sammarshall_01",
 	"sasha_01",
 	"scarlxrd_01",
+	"scarlxrd_02",
 	"seanmurray_01",
 	"skog_01",
 	"skog_02",
@@ -141,7 +144,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 		char command[128];
 		char string[128];
 		Q_snprintf( command, sizeof( command ), "snd_music_selection %s", szMusicStrings[i] );
-		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%d", i );
+		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%s", szMusicStrings[i] );
 		m_pMusicSelection->AddItem( string, command );
 	}
 
