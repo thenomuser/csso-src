@@ -2491,6 +2491,7 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
 	}
 
+#if 0
 	// Brass Eject Effect.
 	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeapon );
 	pszEffect = pWeapon->GetCSWpnData().m_szEjectBrassEffect;
@@ -2498,6 +2499,7 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	{
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
 	}
+#endif
 }
 
 const QAngle& C_CSPlayer::EyeAngles()

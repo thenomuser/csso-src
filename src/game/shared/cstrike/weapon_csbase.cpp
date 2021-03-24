@@ -1315,8 +1315,10 @@ void CWeaponCSBase::Precache( void )
 	if ( GetCSWpnData().m_szAddonModel[0] != 0 )
 		PrecacheModel( GetCSWpnData().m_szAddonModel );
 
+#if 0
 	if ( GetCSWpnData().m_szEjectBrassEffect[0] != 0 )
 		PrecacheParticleSystem( GetCSWpnData().m_szEjectBrassEffect );
+#endif
 
 	if ( GetTracerType()[0] != 0 )
 		PrecacheParticleSystem( GetTracerType() );
@@ -2064,6 +2066,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 			return true;
 		}
+#if 0
 		else if ( event == AE_CLIENT_EJECT_BRASS )
 		{
 			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
@@ -2097,6 +2100,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 			return true;
 		}
+#endif
 		else if ( event == AE_WPN_NEXTCLIP_TO_POSEPARAM )
 		{
 			// sets the given pose param to a 0..1 value representing the clip amount after an impending reload

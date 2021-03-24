@@ -456,9 +456,11 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// grenade parameters
 	m_fThrowVelocity	= pKeyValuesData->GetFloat( "ThrowVelocity", 0.0f );
 
+#if 0
 	// eject brass variables
 	const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
 	Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
+#endif
 
 	// tracer variables
 	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );
