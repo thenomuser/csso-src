@@ -13,6 +13,11 @@ $Project "appframework"
 	"appframework\appframework.vpc" 	[$WINDOWS||$X360||$POSIX]
 }
 
+$Project "commedit"
+{
+	"tools\commedit\commedit.vpc" [$WIN32]
+}
+
 $Project "datacache"
 {
 	"datacache\datacache.vpc" [$WINDOWS||$X360||$POSIX]
@@ -26,6 +31,11 @@ $Project "datamodel"
 $Project "dedicated"
 {
 	"dedicated\dedicated.vpc" [$WIN32||$POSIX]
+}
+
+$Project "dme_controls"
+{
+	"vgui2\dme_controls\dme_controls.vpc" [$WIN32]
 }
 
 $Project "inputsystem"
@@ -96,6 +106,11 @@ $Project "motionmapper"
 	"utils\motionmapper\motionmapper.vpc" [$WIN32]
 }
 
+$Project "pet"
+{
+	"tools\pet\pet.vpc" [$WIN32]
+}
+
 $Project "phonemeextractor"
 {
 	"utils\phonemeextractor\phonemeextractor.vpc" [$WIN32]
@@ -141,6 +156,11 @@ $Project "tier3"
 	"tier3\tier3.vpc" 	[$WINDOWS || $X360||$POSIX]
 }
 
+$Project "toolutils"
+{
+	"tools\toolutils\toolutils.vpc" [$WIN32]
+}
+
 $Project "particles"
 {
 	"particles\particles.vpc"
@@ -159,6 +179,11 @@ $Project "studiorender"
 $Project "vbsp"
 {
 	"utils\vbsp\vbsp.vpc" [$WIN32]
+}
+
+$Project "vmt"
+{
+	"tools\vmt\vmt.vpc" [$WIN32]
 }
 
 //VGUI
@@ -208,6 +233,11 @@ $Project "vvis_dll"
 $Project "vvis_launcher"
 {
 	"utils\vvis_launcher\vvis_launcher.vpc" [$WIN32]
+}
+
+$Project "sfmobjects"
+{
+	"sfmobjects\sfmobjects.vpc" [$WIN32]
 }
 
 $Project "filesystem_stdio"
