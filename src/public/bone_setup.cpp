@@ -2690,6 +2690,8 @@ void debugLine(const Vector& origin, const Vector& dest, int r, int g, int b, bo
 //-----------------------------------------------------------------------------
 bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4_t *pBoneToWorld )
 {
+#if 0
+	// FIXME: something with the CS models breaks this, why?
 	if (pikchain->pLink(0)->kneeDir.LengthSqr() > 0.0)
 	{
 		Vector targetKneeDir, targetKneePos;
@@ -2700,6 +2702,7 @@ bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4_t
 		return Studio_SolveIK( pikchain->pLink( 0 )->bone, pikchain->pLink( 1 )->bone, pikchain->pLink( 2 )->bone, targetFoot, targetKneePos, targetKneeDir, pBoneToWorld );
 	}
 	else
+#endif
 	{
 		return Studio_SolveIK( pikchain->pLink( 0 )->bone, pikchain->pLink( 1 )->bone, pikchain->pLink( 2 )->bone, targetFoot, pBoneToWorld );
 	}
@@ -2734,6 +2737,13 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, matri
 
 	// leg too straight to figure out knee?
 	if (l3 > (l1 + l2) * KNEEMAX_EPSILON)
+	{
+		return false;
+	}
+
+	// If any of the thigh to knee to foot bones are co-positional, then solving ik doesn't make sense. 
+	// We're probably looking at uninitialized bones or something
+	if ( l1 <= 0 || l2 <= 0 || l3 <= 0 )
 	{
 		return false;
 	}
@@ -4063,7 +4073,7 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 		int bone = pchain->pLink( 2 )->bone;
 
 		pChainResult->target = -1;
-		pChainResult->flWeight = 0.0;
+		pChainResult->flWeight = 0.0f;
 
 		// don't bother with chain if the bone isn't going to be calculated
 		if ( !(m_pStudioHdr->boneFlags( bone ) & m_boneMask))
@@ -4103,7 +4113,7 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 					}
 			
 					float flWeight = pRule->flWeight * pRule->flRuleWeight;
-					pChainResult->flWeight = pChainResult->flWeight * (1 - flWeight) + flWeight;
+					pChainResult->flWeight = pChainResult->flWeight * (1.0f - flWeight) + flWeight;
 
 					Vector p2;
 					Quaternion q2;
@@ -4114,7 +4124,7 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 					// debugLine( pChainResult->pos, p2, 0, 0, 255, true, 0.1 );
 
 					// blend in position and angles
-					pChainResult->pos = pChainResult->pos * (1.0 - flWeight) + p2 * flWeight;
+					pChainResult->pos = pChainResult->pos * (1.0f - flWeight) + p2 * flWeight;
 					QuaternionSlerp( pChainResult->q, q2, flWeight, pChainResult->q );
 				}
 				break;
@@ -4171,9 +4181,9 @@ void CIKContext::SolveDependencies( Vector pos[], Quaternion q[], matrix3x4_t bo
 			//mstudioikchain_t *pchain = m_pStudioHdr->pIKChain( m_target[i].chain );
 			ikchainresult_t *pChainResult = &chainResult[ pTarget->chain ];
 
-			AngleMatrix(pTarget->offset.q, pTarget->offset.pos, local );
+			AngleMatrix( RadianEuler(pTarget->offset.q), pTarget->offset.pos, local );
 
-			AngleMatrix( pTarget->est.q, pTarget->est.pos, worldFootpad );
+			AngleMatrix( RadianEuler(pTarget->est.q), pTarget->est.pos, worldFootpad );
 
 			ConcatTransforms( worldFootpad, local, worldTarget );
 
