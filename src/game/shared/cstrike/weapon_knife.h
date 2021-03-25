@@ -50,10 +50,6 @@ public:
 	DECLARE_CLASS( CKnife, CWeaponCSBase );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
-	
-	#ifndef CLIENT_DLL
-		DECLARE_DATADESC();
-	#endif
 
 	
 	CKnife();
@@ -65,31 +61,17 @@ public:
 	virtual void Precache();
 
 	void Spawn();
-	void Smack();
-	//void Smack( trace_t *pTr, float delay );
 	bool SwingOrStab( CSWeaponMode weaponMode );
 	void PrimaryAttack();
 	void SecondaryAttack();
 
-	virtual void ItemPostFrame( void );
+	virtual bool Deploy();
 
-// 	virtual float GetSpread() const;
-
-	bool Deploy();
-	void Holster( int skiplocal = 0 );
 	bool CanDrop();
 
 	void WeaponIdle();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE; }
-
-public:
-	
-	trace_t m_trHit;
-	EHANDLE m_pTraceHitEnt;
-
-	CNetworkVar( float, m_flSmackTime );
-	bool	m_bStab;
 
 private:
 	CKnife( const CKnife & ) {}
@@ -110,12 +92,7 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_T; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
+	
 	CKnifeT() {}
 
 private:
@@ -131,12 +108,7 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_CSS; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
+	
 	CKnifeCSS() {}
 
 private:
@@ -152,12 +124,7 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_KARAMBIT; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
+	
 	CKnifeKarambit() {}
 
 private:
@@ -173,11 +140,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_FLIP; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeFlip() {}
 
@@ -195,11 +157,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_BAYONET; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeBayonet() {}
 
 private:
@@ -215,11 +172,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_M9_BAYONET; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeM9Bayonet() {}
 
@@ -237,11 +189,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_BUTTERFLY; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeButterfly() {}
 
 private:
@@ -257,11 +204,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_GUT; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeGut() {}
 
@@ -279,11 +221,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_TACTICAL; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeTactical() {}
 
 private:
@@ -299,11 +236,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_FALCHION; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeFalchion() {}
 
@@ -321,11 +253,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_SURVIVAL_BOWIE; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeSurvivalBowie() {}
 
 private:
@@ -341,11 +268,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_CANIS; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeCanis() {}
 
@@ -363,11 +285,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_CORD; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeCord() {}
 
 private:
@@ -383,11 +300,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_GYPSY; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeGypsy() {}
 
@@ -405,11 +317,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_OUTDOOR; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeOutdoor() {}
 
 private:
@@ -425,11 +332,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_SKELETON; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeSkeleton() {}
 
@@ -447,11 +349,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_STILETTO; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeStiletto() {}
 
 private:
@@ -468,11 +365,6 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_URSUS; }
 
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
-
 	CKnifeUrsus() {}
 
 private:
@@ -488,11 +380,6 @@ public:
 	DECLARE_PREDICTABLE();
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_WIDOWMAKER; }
-
-#ifndef CLIENT_DLL
-	DECLARE_DATADESC();
-#endif
-
 
 	CKnifeWidowmaker() {}
 
