@@ -653,6 +653,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	}
 
 	CStudioHdr *pHdr = pPlayer->GetModelPtr();
+#if 0
 	if ( pHdr )
 	{
 		// PiMoN: help me
@@ -662,6 +663,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		if ( pPlayer->m_pViewmodelArmConfig != GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() ) )
 			pPlayer->m_pViewmodelArmConfig = NULL;
 	}
+#endif
 
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
