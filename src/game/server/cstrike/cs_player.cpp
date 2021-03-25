@@ -6149,6 +6149,12 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team )
 	// Switch their actual team...
 	ChangeTeam( team );
 
+	// If a player joined at halftime he would have missed the requirement to switch teams at round reset,
+	// cause him to pick up that rule here:
+	if ( CSGameRules() && CSGameRules()->IsSwitchingTeamsAtRoundReset() && !WillSwitchTeamsAtRoundReset() &&
+		( ( GetTeamNumber() == TEAM_CT ) || ( GetTeamNumber() == TEAM_TERRORIST ) ) )
+		SwitchTeamsAtRoundReset();
+
 	return true;
 }
 
@@ -10059,6 +10065,37 @@ void CCSPlayer::OnPreResetRound()
 		if (numberOfEnemyDamagers >= AchievementConsts::SurviveManyAttacks_NumberDamagingPlayers)
 		{
 			AwardAchievement(CSSurviveManyAttacks);
+		}
+	}
+
+	if ( m_switchTeamsOnNextRoundReset )
+	{
+		m_switchTeamsOnNextRoundReset = false;
+		if ( GetTeamNumber() == TEAM_TERRORIST )
+		{
+			SwitchTeam( TEAM_CT );
+		}
+		else if ( GetTeamNumber() == TEAM_CT )
+		{			
+			SwitchTeam( TEAM_TERRORIST );
+		}
+
+		// Remove all weapons
+		RemoveAllItems( true );
+
+		// Reset money
+		m_iAccount = CSGameRules()->GetStartMoney();
+
+		// Make sure player doesn't receive any winnings from the prior round
+		MarkAsNotReceivingMoneyNextRound();
+
+		// send a message to client indicating that they need to update viewmodel
+		// arms config
+		IGameEvent *event = gameeventmanager->CreateEvent( "player_update_viewmodel" );
+		if ( event )
+		{
+			event->SetInt( "userid", GetUserID() );
+			gameeventmanager->FireEvent( event );
 		}
 	}
 }

@@ -196,6 +196,8 @@ public:
 	bool IsArmorFree();
 #endif
 
+	bool HasHalfTime( void ) const;
+
 	virtual int	DefaultFOV();
 
 	// Get the view vectors for this mod.
@@ -236,6 +238,10 @@ private:
 	int		m_iMapFactionT;
 
 	bool		m_bDontUploadStats;
+	
+	void SetPhase( GamePhase phase );
+	GamePhase GetPhase( void ) const { return m_gamePhase; }
+	GamePhase m_gamePhase;
 
 public:
 
@@ -271,7 +277,10 @@ public:
 	virtual void PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info );
 	virtual void Think();
 
+	void SwitchTeamsAtRoundReset( void );
+
 	void FreezePlayers( void );
+	void UnfreezeAllPlayers( void );
 
 	// Called at the end of GameFrame (i.e. after all game logic has run this frame)
 	virtual void EndGameFrame( void );
@@ -464,6 +473,10 @@ public:
 
 	bool IsFriendlyFireOn();
 
+	bool	IsLastRoundBeforeHalfTime( void );
+
+	int		GetRoundsPlayed() { return m_iNumCTWins + m_iNumTerroristWins; }
+
 	virtual void	SetAllowWeaponSwitch( bool allow );
 	virtual bool	GetAllowWeaponSwitch( void );
 
@@ -622,6 +635,8 @@ public:
 
 	void SetBlackMarketPrices( bool bSetDefaults );
 
+	bool IsSwitchingTeamsAtRoundReset( void ) { return m_bSwitchingTeamsAtRoundReset; }
+
 	float CheckTotalSmokedLength( float flRadius, Vector vecGrenadePos, Vector from, Vector to );
 
 	// Black market
@@ -630,6 +645,9 @@ public:
 
 protected:
 	bool m_bHasTriggeredRoundStartMusic;
+
+private:
+	bool m_bSwitchingTeamsAtRoundReset;
 };
 
 //-----------------------------------------------------------------------------

@@ -633,7 +633,18 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 				m_pGlovesModel->FollowEntity( this ); // attach to player model
 				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
-				m_pGlovesModel->m_nSkin = pPlayer->m_pViewmodelArmConfig ? pPlayer->m_pViewmodelArmConfig->iSkintoneIndex : 0; // set the corrent skin tone
+
+				int skin = 0;
+				if ( pPlayer->m_pViewmodelArmConfig )
+					skin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
+				else
+				{
+					CStudioHdr *pHdr = pPlayer->GetModelPtr();
+					if ( pHdr )
+						skin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+				}
+
+				m_pGlovesModel->m_nSkin = skin; // set the corrent skin tone
 			}
 			else
 			{
@@ -1129,6 +1140,7 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "cs_pre_restart" );
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
+	ListenForGameEvent( "player_update_viewmodel" );
 
 	m_bPlayingHostageCarrySound = false;
 
@@ -1757,12 +1769,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				}
 			}
 		}
-
-		if ( (Q_strcmp( "bot_takeover", name ) == 0) )
-		{
-			// update viewmodel arms when taking control of bot
-			m_pViewmodelArmConfig = NULL; // PiMoN: player model should already be updated at this time
-		}
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
@@ -1777,10 +1783,6 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_spawn", name ) == 0 )
 	{
-		// PiMoN: eh probably this is gonna work for every player once someone spawns
-		m_pViewmodelArmConfig = NULL;
-		RemoveGlovesModel(); // making sure this bitch is updating after spawning
-
 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
 		{
 			// we've just spawned, so reset our entity id stuff
@@ -1790,7 +1792,16 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-			UpdateGlovesModel();
+			RemoveGlovesModel();
+
+			m_pViewmodelArmConfig = NULL;
+		}
+	}
+	else if ( Q_strcmp( "player_update_viewmodel", name ) == 0 )
+	{
+		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
+		{
+			m_pViewmodelArmConfig = NULL;
 		}
 	}
 }
@@ -1878,9 +1889,6 @@ void C_CSPlayer::ClientThink()
 	UpdateHostageCarryModels();
 
 	UpdateIDTarget();
-
-	if ( m_pViewmodelArmConfig == NULL && GetModelPtr() )
-		m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( GetModelPtr()->pszName() );
 
 	if ( gpGlobals->curtime >= m_fNextThinkPushAway )
 	{

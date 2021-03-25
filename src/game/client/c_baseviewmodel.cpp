@@ -652,10 +652,25 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		return;
 	}
 
+	CStudioHdr *pHdr = pPlayer->GetModelPtr();
+	if ( pHdr )
+	{
+		// PiMoN: help me
+		// p.s. I bet this thing will fucking destroy everyone's performance
+		// BUT I HAVE NO OTHER CHOICE BECAUSE FUCK THOSE ASSHOLES AT VALVE
+		// WHY IS A FUCKING player_spawn EVENT NOT BEING RECEIVED BY CLIENT
+		if ( pPlayer->m_pViewmodelArmConfig != GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() ) )
+			pPlayer->m_pViewmodelArmConfig = NULL;
+	}
+
 	if ( pPlayer->m_pViewmodelArmConfig == NULL )
 	{
 		RemoveViewmodelArmModels();
-		return;
+
+		if ( pHdr )
+		{
+			pPlayer->m_pViewmodelArmConfig = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() );
+		}
 	}
 
 	if ( pPlayer->m_bNeedToChangeGloves )

@@ -107,5 +107,9 @@ void CBaseCSGloves::UpdateGlovesModel()
 #endif
 	const char *pszModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayerOwner, pPlayerOwner->GetTeamNumber() ) )->szWorldModel;
 	SetModel( pszModel );
+
+	CStudioHdr *pHdr = pPlayerOwner->GetModelPtr();
+	if ( pHdr )
+		m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
 }
 

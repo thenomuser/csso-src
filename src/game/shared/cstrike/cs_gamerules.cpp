@@ -267,6 +267,14 @@ ConVar mp_round_restart_delay(
 	true, 0.0f,
 	true, 10.0f );
 
+ConVar mp_halftime_duration(
+	"mp_halftime_duration",
+	"15.0",
+	FCVAR_REPLICATED,
+	"Number of seconds that halftime lasts",
+	true, 0.0f,
+	true, 300.0f );
+
 ConVar mp_hostages_takedamage(
 	"mp_hostages_takedamage",
 	"0",
@@ -352,6 +360,18 @@ ConVar mp_warmup_pausetimer(
 	"0",
 	FCVAR_REPLICATED,
 	"Set to 1 to stay in warmup indefinitely. Set to 0 to resume the timer." );
+
+ConVar mp_halftime_pausetimer(
+	"mp_halftime_pausetimer",
+	"0",
+	FCVAR_REPLICATED,
+	"Set to 1 to stay in halftime indefinitely. Set to 0 to resume the timer." );
+
+ConVar mp_halftime_pausematch(
+	"mp_halftime_pausematch",
+	"0",
+	FCVAR_REPLICATED,
+	"Set to 1 to pause match after halftime countdown elapses. Match must be resumed by vote or admin." );
 
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
@@ -704,12 +724,6 @@ ConVar snd_music_selection(
 		FCVAR_REPLICATED,
 		"Ignore conditions which would end the current round" );
 
-	ConVar mp_free_armor(
-		"mp_free_armor",
-		"0",
-		FCVAR_REPLICATED,
-		"Determines whether armor and helmet are given automatically." );
-
 	ConVar mp_use_official_map_factions(
 		"mp_use_official_map_factions",
 		"0",
@@ -1024,6 +1038,7 @@ ConVar snd_music_selection(
 		m_flLastThinkTime = gpGlobals->curtime;
 
 		m_iRoundTime = 0;
+		m_gamePhase = GAMEPHASE_PLAYING_STANDARD;
 		m_iRoundWinStatus = WINNER_NONE;
 		m_iFreezeTime = 0;
 
@@ -1124,6 +1139,8 @@ ConVar snd_music_selection(
 
 		ReadMultiplayCvars();
 
+		m_bSwitchingTeamsAtRoundReset = false;
+
 		m_pPrices = NULL;
 		m_bBlackMarket = false;
 		m_bDontUploadStats = false;
@@ -1167,7 +1184,26 @@ ConVar snd_music_selection(
 		m_bWarmupPeriod = mp_do_warmup_period.GetBool();
 		m_fWarmupNextChatNoticeTime = 0;
 		m_fWarmupPeriodStart = gpGlobals->curtime;
+
+		if ( HasHalfTime() )
+			SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+		else
+			SetPhase( GAMEPHASE_PLAYING_STANDARD );
 	}
+
+	void CCSGameRules::SetPhase( GamePhase phase )
+	{
+		if ( ( GetPhase() == GAMEPHASE_HALFTIME ) && mp_halftime_pausematch.GetInt() )
+		{	// when halftime is over, we pause the match if needed
+			if ( !IsMatchWaitingForResume() )
+			{
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Match_Will_Pause" );
+			}
+			SetMatchWaitingForResume( true );
+		}
+
+        m_gamePhase = phase;
+    }
 
 	void CCSGameRules::LoadMapProperties()
 	{
@@ -2929,10 +2965,7 @@ ConVar snd_music_selection(
 			}
 		}
 #endif
-		//=============================================================================
-		// HPE_BEGIN:
 		// [tj] Notify players that the round is about to be reset
-		//=============================================================================
         for ( int clientIndex = 1; clientIndex <= gpGlobals->maxClients; clientIndex++ )
 		{
 			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( clientIndex );
@@ -2941,10 +2974,6 @@ ConVar snd_music_selection(
 				pPlayer->OnPreResetRound();
 			}
 		}
-
-		//=============================================================================
-		// HPE_END
-		//=============================================================================    
 
 		if ( !IsFinite( gpGlobals->curtime ) )
 		{
@@ -2973,6 +3002,42 @@ ConVar snd_music_selection(
 		if ( GetHumanTeam() != TEAM_UNASSIGNED )
 		{
 			MoveHumansToHumanTeam();
+		}
+
+		//If this is the first restart since halftime, do the appropriate bookkeeping.
+		bool bClearAccountsAfterHalftime = false;
+		if ( GetPhase() == GAMEPHASE_HALFTIME )
+		{
+			// Regulation halftime or 1st half of overtime finished, swap the CT and T scores so the scoreboard will be correct
+			int temp = m_iNumCTWins;
+			m_iNumCTWins = m_iNumTerroristWins;
+			m_iNumTerroristWins = temp;
+			UpdateTeamScores();
+			SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
+
+			// hide scoreboard
+			for ( int i = 1; i <= MAX_PLAYERS; i++ )
+			{
+				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+				if ( !pPlayer )
+					continue;
+
+				pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD, false );
+			}
+
+			// Ensure everyone is given only the starting money
+			bClearAccountsAfterHalftime = true;
+
+			// Remove all items at halftime or before overtime when teams aren't switching sides
+			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+			{
+				CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+				if ( !pPlayer )
+					continue;
+
+				pPlayer->RemoveAllItems( true );
+			}
 		}
 
 		/*************** AUTO-BALANCE CODE *************/
@@ -3029,6 +3094,15 @@ ConVar snd_music_selection(
 			m_iNumCTWins					= 0;
 			m_iNumConsecutiveTerroristLoses	= 0;
 			m_iNumConsecutiveCTLoses		= 0;
+
+			if ( HasHalfTime() )
+			{
+				SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+			}
+			else
+			{
+				SetPhase( GAMEPHASE_PLAYING_STANDARD );
+			}
 
 
 			// Reset team scores
@@ -3705,6 +3779,39 @@ ConVar snd_music_selection(
 	
 		UploadGameStats();
 
+		if ( bClearAccountsAfterHalftime && IsPlayingClassic() && HasHalfTime() )
+		{
+			// Loop through all players and give them only the starting money
+			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+			{
+				CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
+				if ( !pPlayer )
+					continue;
+
+				if ( pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+				{
+					int amount_to_assign = -pPlayer->m_iAccount + GetStartMoney();
+
+					pPlayer->AddAccount( amount_to_assign, false );
+				}
+			}
+
+			m_iNumConsecutiveTerroristLoses = 0;
+			m_iNumConsecutiveCTLoses = 0;
+			m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
+		}
+
+		m_bSwitchingTeamsAtRoundReset = false;
+
+		// Unfreeze all players now that the round is starting
+		UnfreezeAllPlayers();
+
+		// should we show an announcement to declare that this round might be the last round?
+		if ( IsLastRoundBeforeHalfTime() )
+		{
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Last_Round_Half" );
+		}
+
 		//=============================================================================
 		// HPE_BEGIN:
 		// [pfreese] I commented out this call to CreateWeaponManager, as the 
@@ -3797,6 +3904,16 @@ ConVar snd_music_selection(
 	{
 		CGameRules::Think();
 
+		//Update replicated variable for time till next match or half
+		if ( GetPhase() == GAMEPHASE_HALFTIME )
+		{
+			if ( mp_halftime_pausetimer.GetBool() )
+			{
+				//Delay m_flRestartRoundTime for as long as we're paused.
+				m_flRestartRoundTime += gpGlobals->curtime - m_flLastThinkTime;
+			}
+		}
+
 		for ( int i = 0; i < GetNumberOfTeams(); i++ )
 		{
 			GetGlobalTeam( i )->Think();
@@ -3823,6 +3940,51 @@ ConVar snd_music_selection(
 		if ( CheckWinLimit() )
 		{
 			return;
+		}
+
+		//Check for halftime switching
+		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
+		{
+			//The number of rounds before halftime depends on the mode and the associated convar
+			int numRoundsBeforeHalftime = (mp_maxrounds.GetInt() / 2);
+
+			//Finally, check for halftime
+
+			bool bhalftime = false;
+			if ( numRoundsBeforeHalftime > 0 )
+			{
+				if ( GetRoundsPlayed() >= numRoundsBeforeHalftime )
+				{
+					bhalftime = true;
+				}
+			}
+			else if ( mp_timelimit.GetFloat() > 0.0f )
+			{
+				// if maxrounds is 0 then the server is relying on mp_timelimit rather than mp_maxrounds.
+				if ( (GetMapRemainingTime() <= ((mp_timelimit.GetInt() * 60) / 2)) && m_iRoundWinStatus != WINNER_NONE )
+				{
+					bhalftime = true;
+				}
+			}
+
+			if ( bhalftime )
+			{
+				SetPhase( GAMEPHASE_HALFTIME );
+				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
+				SwitchTeamsAtRoundReset();
+				FreezePlayers();
+
+				// show scoreboard
+				for ( int i = 1; i <= MAX_PLAYERS; i++ )
+				{
+					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+					if ( !pPlayer )
+						continue;
+
+					pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
+				}
+			}
 		}
 
 		if ( IsWarmupPeriod() )
@@ -5343,11 +5505,6 @@ ConVar snd_music_selection(
 			// Perform round-related processing at the point when a round winner has been determined
 			RoundWin();
 		}
-
-		if ( iReason == Game_Commencing )
-		{
-			m_bWarmupPeriod = true;
-		}
 	}
 
 	//=============================================================================
@@ -6179,6 +6336,8 @@ void CCSGameRules::EndWarmup( void )
 }
 #endif
 
+ConVar mp_free_armor("mp_free_armor", "0", FCVAR_REPLICATED, "Determines whether armor and helmet are given automatically." );
+ConVar mp_halftime("mp_halftime", "0", FCVAR_REPLICATED, "Determines whether the match switches sides in a halftime event.");
 ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
 ConVar mp_randomspawn_los("mp_randomspawn_los", "1", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test Line of Sight when spawning." );
 ConVar mp_randomspawn_dist( "mp_randomspawn_dist", "0", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test distance when selecting this spot." );
@@ -6238,6 +6397,12 @@ bool CCSGameRules::IsArmorFree()
 	return mp_free_armor.GetBool();
 }
 #endif
+
+// Returns true if the game is to be split into two halves.
+bool CCSGameRules::HasHalfTime( void ) const
+{
+	return mp_halftime.GetBool();
+}
 
 int CCSGameRules::DefaultFOV()
 {
@@ -6618,6 +6783,23 @@ bool CCSGameRules::IsFriendlyFireOn( void )
 	return friendlyfire.GetBool();
 }
 
+bool CCSGameRules::IsLastRoundBeforeHalfTime( void )
+{
+    if ( HasHalfTime() )
+    {
+		int numRoundsBeforeHalftime = -1;
+		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
+			numRoundsBeforeHalftime = ( mp_maxrounds.GetInt() / 2 );
+
+        if ( ( numRoundsBeforeHalftime > 0 ) && ( m_iTotalRoundsPlayed == (numRoundsBeforeHalftime-1) ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 CON_COMMAND( map_showspawnpoints, "Shows player spawn points (red=invalid)" )
 {
@@ -6820,8 +7002,6 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		break;
 	}
 
-	bool bTeamHasClinchedVictory = false;
-
 	char strAmount[8];
 	Q_snprintf( strAmount, sizeof( strAmount ), "%s$%d", amount >= 0 ? "+" : "-", abs( amount ) );
 
@@ -6854,7 +7034,8 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		}
 		else
 		{
-			if ( !bTeamHasClinchedVictory )
+			if ( !IsLastRoundBeforeHalfTime() && ( GetPhase() != GAMEPHASE_HALFTIME ) &&
+				( m_iTotalRoundsPlayed != mp_maxrounds.GetInt() ) )
 			{
 				// TODO: This code assumes on there only being 2 possible reasons for DoesPlayerGetRoundStartMoney returning false: Suicide or Running down the clock as T.
 				// This code should not make that assumption and the awardReasonToken should probably be plumbed to express those properly.
@@ -6893,11 +7074,8 @@ bool CCSGameRules::IsPlayingClassic( void ) const
 
 
 
-//=============================================================================
-// HPE_BEGIN:
 // [menglish] Set up anything for all players that changes based on new players spawning mid-game
 //				Find and return fun fact data
-//=============================================================================
  
 //-----------------------------------------------------------------------------
 // Purpose: Called when a player joins the game after it's started yet can still spawn in
@@ -6919,31 +7097,15 @@ void CCSGameRules::SpawningLatePlayer( CCSPlayer* pLatePlayer )
 	}
 }
 
-//=============================================================================
-// HPE_END
-//=============================================================================
-
-//=============================================================================
-// HPE_BEGIN:
 // [pfreese] Test for "pistol" round, defined as the default starting round
 // when players cannot purchase anything primary weapons
-//=============================================================================
-
 bool CCSGameRules::IsPistolRound()
 {
 	return m_iTotalRoundsPlayed == 0 && GetStartMoney() <= 800;
 }
 
-//=============================================================================
-// HPE_END
-//=============================================================================
-
-//=============================================================================
-// HPE_BEGIN:
 // [tj] So game rules can react to damage taken
 // [menglish]
-//=============================================================================
-
 void CCSGameRules::PlayerTookDamage(CCSPlayer* player, const CTakeDamageInfo &damageInfo)
 {
 	CBaseEntity *pInflictor = damageInfo.GetInflictor();
@@ -6983,10 +7145,35 @@ void CCSGameRules::FreezePlayers( void )
 	}
 }
 
+void CCSGameRules::UnfreezeAllPlayers( void )
+{
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
 
-//=============================================================================
-// HPE_END
-//=============================================================================
+		if ( pPlayer )
+		{
+			pPlayer->RemoveFlag( FL_FROZEN );
+		}
+	}
+}
+
+void CCSGameRules::SwitchTeamsAtRoundReset( void )
+{
+	m_bSwitchingTeamsAtRoundReset = true;
+
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+		if ( pPlayer )
+		{
+			if ( pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST )
+			{
+				pPlayer->SwitchTeamsAtRoundReset();
+			}
+		}
+	}
+}
 #endif
 
 bool CCSGameRules::IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer )

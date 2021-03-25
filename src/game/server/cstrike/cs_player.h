@@ -667,19 +667,13 @@ private:
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
 
-//=============================================================================
-// HPE_BEGIN:
-// [menglish] Freeze cam function and variable declarations
-//=============================================================================
-	 
+	bool m_switchTeamsOnNextRoundReset;
+
+// [menglish] Freeze cam function and variable declarations	 
 	bool m_bAbortFreezeCam;
 
 protected:
 	void AttemptToExitFreezeCam( void );
-	 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 public:
 
@@ -838,6 +832,9 @@ public:
 	bool CanGrabLadder( const Vector& pos, const Vector& normal );
 
 	void ClearImmunity( void );
+
+	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
+	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
 
 	CNetworkVar( bool, m_bDetected );
 
