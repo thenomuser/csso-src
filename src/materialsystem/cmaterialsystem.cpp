@@ -1917,6 +1917,11 @@ void CMaterialSystem::ReadConfigFromConVars( MaterialSystem_Config_t *pConfig )
 		pConfig->m_bShadowDepthTexture = false;
 		pConfig->m_bMotionBlur = false;
 		pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_ENABLE_HDR, false );
+		
+		// PiMoN: if we're running DX8 or maybe below (wtf?),
+		// get rid of cubemaps because they aren't working
+		mat_specular.SetValue( 0 );
+		pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_SPECULAR, true );
 	}
 
 	// VR mode adapter will generally be -1 if VR mode is not disabled
