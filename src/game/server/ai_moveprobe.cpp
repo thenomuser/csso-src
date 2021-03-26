@@ -142,7 +142,7 @@ CAI_MoveProbe::CAI_MoveProbe(CAI_BaseNPC *pOuter)
 
 CAI_MoveProbe::~CAI_MoveProbe()
 {
-	delete m_pTraceListData;
+	enginetrace->FreeTraceListData( m_pTraceListData );
 }
 
 //-----------------------------------------------------------------------------
@@ -162,7 +162,7 @@ void CAI_MoveProbe::TraceHull(
 		enginetrace->TraceRay( ray, mask, &traceFilter, pResult );
 	else
 	{
-		enginetrace->TraceRayAgainstLeafAndEntityList( ray, *(const_cast<CAI_MoveProbe *>(this)->m_pTraceListData), mask, &traceFilter, pResult );
+		enginetrace->TraceRayAgainstLeafAndEntityList( ray, (const_cast<CAI_MoveProbe *>(this)->m_pTraceListData), mask, &traceFilter, pResult );
 #if 0
 		trace_t verificationTrace;
 		enginetrace->TraceRay( ray, mask, &traceFilter, &verificationTrace );
@@ -222,9 +222,9 @@ void CAI_MoveProbe::SetupCheckStepTraceListData( const CheckStepArgs_t &args ) c
 
 		if ( !m_pTraceListData )
 		{
-			const_cast<CAI_MoveProbe *>(this)->m_pTraceListData = new CTraceListData;
+			const_cast<CAI_MoveProbe *>(this)->m_pTraceListData = enginetrace->AllocTraceListData();
 		}
-		enginetrace->SetupLeafAndEntityListRay( ray, *(const_cast<CAI_MoveProbe *>(this)->m_pTraceListData) );
+		enginetrace->SetupLeafAndEntityListRay( ray, (const_cast<CAI_MoveProbe *>(this)->m_pTraceListData) );
 	}
 }
 

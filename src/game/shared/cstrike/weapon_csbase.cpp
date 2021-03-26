@@ -57,6 +57,8 @@ ConVar weapon_accuracy_nospread( "weapon_accuracy_nospread", "0", FCVAR_CHEAT | 
 ConVar weapon_recoil_scale( "weapon_recoil_scale", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Overall scale factor for recoil. Used to reduce recoil on specific platforms" );
 ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Scale factor for jumping inaccuracy, set to 0 to make jumping accuracy equal to standing", true, 0.0f, false, 1.0f );
 
+ConVar weapon_auto_cleanup_time( "weapon_auto_cleanup_time", "0", FCVAR_NONE, "If set to non-zero, weapons will delete themselves after the specified time (in seconds) if no players are near." );
+
 ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
 
 
@@ -401,10 +403,15 @@ LINK_ENTITY_TO_CLASS( weapon_cs_base, CWeaponCSBase );
 
 #ifdef GAME_DLL
 
+#define REMOVEUNOWNEDWEAPON_THINK_CONTEXT			"WeaponCSBase_RemoveUnownedWeaponThink"
+#define REMOVEUNOWNEDWEAPON_THINK_INTERVAL			0.2
+#define REMOVEUNOWNEDWEAPON_THINK_REMOVE			3
+
 	BEGIN_DATADESC( CWeaponCSBase )
 
 		//DEFINE_FUNCTION( DefaultTouch ),
-		DEFINE_THINKFUNC( FallThink )
+		DEFINE_THINKFUNC( FallThink ),
+		DEFINE_THINKFUNC( RemoveUnownedWeaponThink )
 
 	END_DATADESC()
 
@@ -485,6 +492,7 @@ CWeaponCSBase::CWeaponCSBase()
 {
 	SetPredictionEligible( true );
 	m_bDelayFire = true;
+	m_nextOwnerTouchTime = 0.0f;
 	m_nextPrevOwnerTouchTime = 0.0;
 	m_prevOwner = NULL;
 	AddSolidFlags( FSOLID_TRIGGER ); // Nothing collides with these but it gets touches.
@@ -494,6 +502,7 @@ CWeaponCSBase::CWeaponCSBase()
 	m_flGunAccuracyPosition = 0;
 #else
 	m_iDefaultExtraAmmo = 0;
+	m_numRemoveUnownedWeaponThink = 0;
 #endif
 
 	m_fAccuracyPenalty = 0.0f;
@@ -1520,7 +1529,7 @@ bool CWeaponCSBase::IsRemoveable()
 {
 	if ( BaseClass::IsRemoveable() == true )
 	{
-		if ( m_nextPrevOwnerTouchTime > gpGlobals->curtime )
+		if ( m_nextPrevOwnerTouchTime > gpGlobals->curtime || m_nextOwnerTouchTime > gpGlobals->curtime )
 		{
 			return false;
 		}
@@ -1528,8 +1537,62 @@ bool CWeaponCSBase::IsRemoveable()
 
 	return BaseClass::IsRemoveable();
 }
+
+void CWeaponCSBase::RemoveUnownedWeaponThink()
+{
+	// Keep thinking in case we need to remove ourselves
+	SetContextThink( &CWeaponCSBase::RemoveUnownedWeaponThink, gpGlobals->curtime + REMOVEUNOWNEDWEAPON_THINK_INTERVAL, REMOVEUNOWNEDWEAPON_THINK_CONTEXT );
+
+	if ( GetOwner() )	// owned weapons don't get deleted, reset counter
+	{
+		if ( m_numRemoveUnownedWeaponThink )
+		{
+			m_numRemoveUnownedWeaponThink = 0;
+		}
+		return;
+	}
+
+	if ( weapon_auto_cleanup_time.GetFloat() > 0  )
+	{
+		if ( !GetGroundEntity() )
+			return; // gun is falling, and might land near a player - don't remove until we're on the ground
+
+		float flSpawnTime = m_nextOwnerTouchTime;
+//		if ( m_nextOwnerTouchTime > flSpawnTime )
+//			flSpawnTime = m_nextOwnerTouchTime;
+
+		float flTime = weapon_auto_cleanup_time.GetFloat();
+
+		// check if it's out of ammo, if so clean it up super quick
+		if ( m_iClip1 == 0  )
+			flTime = MIN( 5, flTime ) ;
+
+		if ( flSpawnTime > 0 && (gpGlobals->curtime - flSpawnTime) < flTime )
+			return;
+
+		// check to see if any players are close
+		for ( int i = 1; i <= MAX_PLAYERS; i++ )
+		{
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+			if ( !pPlayer )
+				continue;
+
+			if ( (GetAbsOrigin() - pPlayer->GetAbsOrigin()).Length() < 1200 )
+				return;
+		}
+	}
+	else if ( m_numRemoveUnownedWeaponThink <= REMOVEUNOWNEDWEAPON_THINK_REMOVE )
+	{
+		++ m_numRemoveUnownedWeaponThink;
+		return; // let the server think a few frames while the owner might acquire this weapon
+	}
+
+	// Schedule this weapon to be removed
+	UTIL_Remove( this );
+}
 #endif
 
+ConVar mp_weapon_prev_owner_touch_time( "mp_weapon_prev_owner_touch_time", "1.5", FCVAR_CHEAT | FCVAR_REPLICATED );
 void CWeaponCSBase::Drop(const Vector &vecVelocity)
 {
 
@@ -1556,7 +1619,11 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	m_bInReload = false; // stop reloading
 
 	SetThink( NULL );
-	m_nextPrevOwnerTouchTime = gpGlobals->curtime + 0.8f;
+	m_nextPrevOwnerTouchTime = gpGlobals->curtime + mp_weapon_prev_owner_touch_time.GetFloat();
+	// [msmith] There is an issue where the model index does not get updated on the client if we let a player
+	// pick up a weapon in the same frame that it is thrown down by a different player.
+	// The m_nextOwnerTouchTime delay fixes that.
+	m_nextOwnerTouchTime = gpGlobals->curtime + 0.1f;
 	m_prevOwner = GetPlayerOwner();
 
 	SetTouch(&CWeaponCSBase::DefaultTouch);
@@ -1591,12 +1658,24 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 // for a little while.  But if they throw it at someone else, the other player should get it immediately.
 void CWeaponCSBase::DefaultTouch(CBaseEntity *pOther)
 {
-	if ((m_prevOwner != NULL) && (pOther == m_prevOwner) && (gpGlobals->curtime < m_nextPrevOwnerTouchTime))
+	if ( pOther->GetFlags() & FL_CONVEYOR )
+	{
+		pOther->StartTouch( this );
+	}
+
+	// Add a small delay in general so the networking has a chance to update the values on the client side before someone
+	// picks up the weapon.
+	if ( gpGlobals->curtime < m_nextOwnerTouchTime )
 	{
 		return;
 	}
 
-	BaseClass::DefaultTouch(pOther);
+	if ( ( m_prevOwner != NULL ) && ( pOther == m_prevOwner ) && ( gpGlobals->curtime < m_nextPrevOwnerTouchTime ) )
+	{
+		return;
+	}
+
+	BaseClass::DefaultTouch( pOther );
 }
 
 #if defined( CLIENT_DLL )
@@ -2550,6 +2629,13 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 #if IRONSIGHT
 		UpdateIronSightController();
 #endif //IRONSIGHT
+
+#ifndef CLIENT_DLL
+		if ( mp_death_drop_gun.GetInt() == 0 && !IsA( WEAPON_C4 ) )
+		{
+			SetContextThink( &CWeaponCSBase::RemoveUnownedWeaponThink, gpGlobals->curtime + REMOVEUNOWNEDWEAPON_THINK_INTERVAL, REMOVEUNOWNEDWEAPON_THINK_CONTEXT );
+		}
+#endif
 	}
 
 	bool CWeaponCSBase::DefaultReload( int iClipSize1, int iClipSize2, int iActivity )

@@ -27,7 +27,7 @@ class CVirtualTerrain;
 
 //csurface_t dispSurf = { "terrain", 0, 0 };
 
-void CM_PreStab( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, Vector &vStabDir, int collisionMask, int &contents );
+void CM_PreStab( TraceInfo_t *pTraceInfo, const unsigned short *pDispList, int dispListCount, Vector &vStabDir, int collisionMask, int &contents );
 void CM_Stab( TraceInfo_t *pTraceInfo, Vector const &start, Vector const &vStabDir, int contents );
 void CM_PostStab( TraceInfo_t *pTraceInfo );
 
@@ -350,7 +350,7 @@ void CM_DestroyDispPhysCollide()
 //-----------------------------------------------------------------------------
 // New Collision!
 //-----------------------------------------------------------------------------
-void CM_TestInDispTree( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, const Vector &traceStart,
+void CM_TestInDispTree( TraceInfo_t *pTraceInfo, const unsigned short *pDispList, int dispListCount, const Vector &traceStart,
 					   const Vector &boxMin, const Vector &boxMax, int collisionMask, trace_t *pTrace )
 {
 	bool bIsBox = ( ( boxMin.x != 0.0f ) || ( boxMin.y != 0.0f ) || ( boxMin.z != 0.0f ) ||
@@ -366,9 +366,9 @@ void CM_TestInDispTree( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, const Vector &t
 		// Test box against all displacements in the leaf.
 		TraceCounter_t *pCounters = pTraceInfo->GetDispCounters();
 		int count = pTraceInfo->GetCount();
-		for( int i = 0; i < pLeaf->dispCount; i++ )
+		for( int i = 0; i < dispListCount; i++ )
 		{
-			int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
+			int dispIndex = pDispList[i];
 			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
 
 			// Respect trace contents
@@ -399,7 +399,7 @@ void CM_TestInDispTree( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, const Vector &t
 	//
 	Vector stabDir;
 	int    contents;
-	CM_PreStab( pTraceInfo, pLeaf, stabDir, collisionMask, contents );
+	CM_PreStab( pTraceInfo, pDispList, dispListCount, stabDir, collisionMask, contents );
 	CM_Stab( pTraceInfo, traceStart, stabDir, contents );
 	CM_PostStab( pTraceInfo );
 }
@@ -408,14 +408,14 @@ void CM_TestInDispTree( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, const Vector &t
 //-----------------------------------------------------------------------------
 // New Collision!
 //-----------------------------------------------------------------------------
-void CM_PreStab( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, Vector &vStabDir, int collisionMask, int &contents )
+void CM_PreStab( TraceInfo_t *pTraceInfo, const unsigned short *pDispList, int dispListCount, Vector &vStabDir, int collisionMask, int &contents )
 {
-	if( !pLeaf->dispCount )
+	if( !dispListCount )
 		return;
 
 	// if the point wasn't in the bounded area of any of the displacements -- stab in any
 	// direction and set contents to "solid"
-	int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart];
+	int dispIndex = pDispList[0];
 	CDispCollTree *pDispTree = &g_pDispCollTrees[dispIndex];
 	pDispTree->GetStabDirection( vStabDir );
 	contents = CONTENTS_SOLID;
@@ -424,9 +424,9 @@ void CM_PreStab( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, Vector &vStabDir, int 
 	// if the point is inside a displacement's (in the leaf) bounded area
 	// then get the direction to stab from it
 	//
-	for( int i = 0; i < pLeaf->dispCount; i++ )
+	for( int i = 0; i < dispListCount; i++ )
 	{
-		dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
+		int dispIndex = pDispList[i];
 		pDispTree = &g_pDispCollTrees[dispIndex];
 
 		// Respect trace contents

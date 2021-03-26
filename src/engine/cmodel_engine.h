@@ -54,7 +54,7 @@ int			CM_BoxLeafnums( const Vector& mins, const Vector& maxs, int *list,
 // Versions that accept rays...
 void		CM_TransformedBoxTrace (const Ray_t& ray, int headnode, int brushmask, const Vector& origin, QAngle const& angles, trace_t& tr );
 void		CM_BoxTrace (const Ray_t& ray, int headnode, int brushmask, bool computeEndpt, trace_t& tr );
-void		CM_BoxTraceAgainstLeafList( const Ray_t &ray, int *pLeafList, int nLeafCount, int nBrushMask, bool bComputeEndpoint, trace_t &trace );
+void		CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceData, int nBrushMask, trace_t &trace );
 
 void		CM_RayLeafnums( const Ray_t &ray, int *pLeafList, int nMaxLeafCount, int &nLeafCount );
 

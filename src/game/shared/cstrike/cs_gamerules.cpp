@@ -109,6 +109,7 @@ static CViewVectors g_CSViewVectors(
 LINK_ENTITY_TO_CLASS(info_player_terrorist, CPointEntity);
 LINK_ENTITY_TO_CLASS(info_player_counterterrorist,CPointEntity);
 LINK_ENTITY_TO_CLASS(info_player_logo,CPointEntity);
+LINK_ENTITY_TO_CLASS(info_deathmatch_spawn,CPointEntity);
 #endif
 
 REGISTER_GAMERULES_CLASS( CCSGameRules );
@@ -132,7 +133,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropBool( RECVINFO( m_bBlackMarket ) ),
 		RecvPropBool( RECVINFO( m_bBombDropped ) ),
 		RecvPropBool( RECVINFO( m_bBombPlanted ) ),
-		RecvPropInt( RECVINFO( m_iRoundWinStatus ) )
+		RecvPropInt( RECVINFO( m_iRoundWinStatus ) ),
+		RecvPropInt( RECVINFO( m_iCurrentGamemode ) )
 	#else
 		SendPropBool( SENDINFO( m_bFreezePeriod ) ),
 		SendPropBool( SENDINFO( m_bMatchWaitingForResume ) ),
@@ -150,7 +152,8 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropBool( SENDINFO( m_bBlackMarket ) ),
 		SendPropBool( SENDINFO( m_bBombDropped ) ),
 		SendPropBool( SENDINFO( m_bBombPlanted ) ),
-		SendPropInt( SENDINFO( m_iRoundWinStatus ) )
+		SendPropInt( SENDINFO( m_iRoundWinStatus ) ),
+		SendPropInt( SENDINFO( m_iCurrentGamemode ) )
 	#endif
 END_NETWORK_TABLE()
 
@@ -225,6 +228,14 @@ ConVar mp_buytime(
 	true, 0.25,
 	false, 0 );
 
+ConVar mp_buy_allow_grenades(
+	"mp_buy_allow_grenades",
+	"1",
+	FCVAR_REPLICATED,
+	"Whether players can purchase grenades from the buy menu or not.",
+	true, 0,
+	true, 1 );
+
 ConVar mp_do_warmup_period(
 	"mp_do_warmup_period",
 	"1",
@@ -274,6 +285,30 @@ ConVar mp_halftime_duration(
 	"Number of seconds that halftime lasts",
 	true, 0.0f,
 	true, 300.0f );
+
+ConVar mp_death_drop_gun(
+	"mp_death_drop_gun",
+	"1",
+	FCVAR_REPLICATED,
+	"Which gun to drop on player death: 0=none, 1=best, 2=current or best",
+	true, 0,
+	true, 2 );
+
+ConVar mp_death_drop_grenade(
+	"mp_death_drop_grenade",
+	"2",
+	FCVAR_REPLICATED,
+	"Which grenade to drop on player death: 0=none, 1=best, 2=current or best, 3=all grenades",
+	true, 0,
+	true, 3 );
+
+ConVar mp_death_drop_defuser(
+	"mp_death_drop_defuser",
+	"1",
+	FCVAR_REPLICATED,
+	"Drop defuser on player death",
+	true, 0,
+	true, 1 );
 
 ConVar mp_hostages_takedamage(
 	"mp_hostages_takedamage",
@@ -673,7 +708,7 @@ ConVar snd_music_selection(
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
 		"How many minutes each round takes.",
 		true, 1,	// min value
-		true, 9		// max value
+		true, 60	// max value
 		);
 
 	ConVar mp_freezetime( 
@@ -3880,8 +3915,11 @@ ConVar snd_music_selection(
 
 			Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
 
-			pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
-			pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
+			if ( GetGamemode() != GameModes::DEATHMATCH )
+			{
+				pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
+				pPlayer->SelectItem( WEAPON_C4_CLASSNAME );
+			}
 			m_pLastBombGuy = pPlayer;
 
 			//pPlayer->SetBombIcon();
@@ -4168,6 +4206,10 @@ ConVar snd_music_selection(
 					engine->ServerCommand( "exec gamemode_competitive2v2.cfg\n" );
 					engine->ServerExecute();
 					break;
+				case GameModes::DEATHMATCH:
+					engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
+					engine->ServerExecute();
+					break;
 			}
 		}
 
@@ -4386,7 +4428,44 @@ ConVar snd_music_selection(
 
 		// New code to get rid of round draws!!
 
-		if ( m_bMapHasBombTarget )
+		if ( GetGamemode() == GameModes::DEATHMATCH )
+		{
+			// TODO: make this a shared function so playercount runs the same code
+			CCSPlayer *pWinner = NULL;
+			for ( int i = 1; i <= MAX_PLAYERS; i++ )
+			{
+				CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+				if ( pPlayer )
+				{
+					if ( pWinner == NULL )
+						pWinner = pPlayer;
+
+					if ( pWinner != pPlayer )
+					{
+						// TODO: Change this to score!!!
+						if ( pWinner->FragCount() > pPlayer->FragCount() )
+							continue;
+						else if ( pWinner->FragCount() < pPlayer->FragCount() )
+							pWinner = pPlayer;
+						else
+							pWinner = (pWinner->entindex() > pPlayer->entindex()) ? pWinner : pPlayer;
+					}
+				}
+			}
+
+			if ( pWinner )
+			{
+				if ( pWinner->GetTeamNumber() == TEAM_CT )
+					TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+				else
+					TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+			}
+			else
+			{
+				TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
+			}
+		}
+		else if ( m_bMapHasBombTarget )
 		{
 			//If the bomb is planted, don't let the round timer end the round.
 			//keep going until the bomb explodes or is defused
@@ -4800,6 +4879,18 @@ ConVar snd_music_selection(
 			if ( IsSpawnPointValid( ent, NULL ) ) 
 			{
 				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+			}
+			else
+			{
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+			}
+		}
+
+		while ( ( ent = gEntList.FindEntityByClassname( ent, "info_deathmatch_spawn" ) ) != NULL )
+		{
+			if ( IsSpawnPointValid( ent, NULL ) )
+			{
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
 			}
 			else
 			{
@@ -5957,6 +6048,23 @@ ConVar snd_music_selection(
 		return UTIL_IsSpaceEmpty( pPlayer, vTestMins, vTestMaxs );
 	}
 
+	bool CCSGameRules::IsSpawnPointHiddenFromOtherPlayers( CBaseEntity *pSpot, CBasePlayer *pPlayer, int nHideFromTeam )
+	{
+		Vector vecSpot = pSpot->GetAbsOrigin() + Vector( 0, 0, 32 );
+		if ( nHideFromTeam > 0 )
+		{
+			if ( nHideFromTeam == TEAM_CT && UTIL_IsVisibleToTeam( vecSpot, TEAM_CT ) )
+				return false;
+			else if ( nHideFromTeam == TEAM_TERRORIST && UTIL_IsVisibleToTeam( vecSpot, TEAM_TERRORIST ) )
+				return false;
+		}
+		else if ( nHideFromTeam == 0 && ( UTIL_IsVisibleToTeam( vecSpot, TEAM_CT ) ) || 
+			( UTIL_IsVisibleToTeam( vecSpot, TEAM_TERRORIST ) ) )
+			return false;
+
+		return true;
+	}
+
 
 	bool CCSGameRules::IsThereABomb()
 	{
@@ -6336,11 +6444,18 @@ void CCSGameRules::EndWarmup( void )
 }
 #endif
 
+ConVar mp_solid_teammates("mp_solid_teammates", "1", FCVAR_DEVELOPMENTONLY | FCVAR_REPLICATED, "Determines whether teammates are solid or not." ); // TODO: make this shit work properly and make it FCVAR_REPLICATED!
 ConVar mp_free_armor("mp_free_armor", "0", FCVAR_REPLICATED, "Determines whether armor and helmet are given automatically." );
 ConVar mp_halftime("mp_halftime", "0", FCVAR_REPLICATED, "Determines whether the match switches sides in a halftime event.");
 ConVar mp_randomspawn("mp_randomspawn", "0", FCVAR_REPLICATED, "Determines whether players are to spawn. 0 = default; 1 = both teams; 2 = Terrorists; 3 = CTs." );
 ConVar mp_randomspawn_los("mp_randomspawn_los", "1", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test Line of Sight when spawning." );
 ConVar mp_randomspawn_dist( "mp_randomspawn_dist", "0", FCVAR_REPLICATED, "If using mp_randomspawn, determines whether to test distance when selecting this spot." );
+
+// Returns true if teammates are solid obstacles in the current game mode
+bool CCSGameRules::IsTeammateSolid( void ) const
+{
+	return mp_solid_teammates.GetBool();
+}
 
 bool CCSGameRules::IsVIPMap() const
 {

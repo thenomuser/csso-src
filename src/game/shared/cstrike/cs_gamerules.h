@@ -59,6 +59,9 @@ extern ConVar mp_c4timer;
 extern ConVar mp_buytime;
 extern ConVar mp_freezetime;
 extern ConVar mp_playerid;
+extern ConVar mp_death_drop_gun;
+extern ConVar mp_death_drop_grenade;
+extern ConVar mp_death_drop_defuser;
 extern ConVar ammo_grenade_limit_total;
 
 #ifndef CLIENT_DLL
@@ -113,6 +116,7 @@ namespace GameModes
 		CASUAL,
 		COMPETITIVE,
 		COMPETITIVE_2V2,
+		DEATHMATCH,
 		
 		NUM_GAMEMODES,
 	};
@@ -182,6 +186,7 @@ public:
 	bool IsIntermission() const;
 	bool IsLogoMap() const;
 	bool IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer );
+	bool IsSpawnPointHiddenFromOtherPlayers( CBaseEntity *pSpot, CBasePlayer *pPlayer, int nHideFromTeam = 0 );
 
 	bool IsBuyTimeElapsed();
 	bool IsMatchWaitingForResume( void );
@@ -189,12 +194,13 @@ public:
 
 	int GetGamemode( void ) { return m_iCurrentGamemode; };
 
-	int m_iCurrentGamemode;
+	CNetworkVar( int, m_iCurrentGamemode );
 	int m_iOldGamemode;
 
 #ifndef CLIENT_DLL
 	bool IsArmorFree();
 #endif
+	bool IsTeammateSolid( void ) const;				// returns true if teammates are solid obstacles in the current game mode
 
 	bool HasHalfTime( void ) const;
 

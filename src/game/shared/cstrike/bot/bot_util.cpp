@@ -23,6 +23,9 @@
 
 static int s_iBeamSprite = 0;
 
+extern ConVar mp_randomspawn_dist;
+extern ConVar mp_randomspawn_los;
+
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Return true if given name is already in use by another player
@@ -377,6 +380,46 @@ bool UTIL_IsVisibleToTeam( const Vector &spot, int team )
 
 		if (result.fraction == 1.0f)
 			return true;
+	}
+
+	return false;
+}
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Return true if anyone on the given team can see the given spot
+ */
+bool UTIL_IsRandomSpawnFarEnoughAwayFromTeam( const Vector &spot, int team )
+{
+	if ( mp_randomspawn_dist.GetInt() <= 0 )
+		return true;
+
+	if ( mp_randomspawn_los.GetInt() == 0 )
+		return true;
+
+	for( int i = 1; i <= gpGlobals->maxClients; ++i )
+	{
+		CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
+
+		if (player == NULL)
+			continue;
+
+		if (!player->IsAlive())
+			continue;
+
+		if (player->GetTeamNumber() != team)
+			continue;
+
+		if ( mp_randomspawn_dist.GetInt() > 0 && (player->GetAbsOrigin()).DistTo( spot ) < mp_randomspawn_dist.GetInt() )
+		{
+			//NDebugOverlay::Line( player->EyePosition(), spot + Vector( 0, 0, 32 ), 255, 0, 0, true, 4 );
+			//NDebugOverlay::Line( spot, spot + Vector( 0, 0, 64 ), 255, 128, 0, true, 4 );
+			continue;
+		}
+		else
+		{
+			return true;
+		}
 	}
 
 	return false;

@@ -55,6 +55,13 @@ ConVar mp_buy_anywhere(
 	"When set, players can buy anywhere, not only in buyzones. 0 = default. 1 = both teams. 2 = Terrorists. 3 = Counter-Terrorists."
 	);
 
+ConVar mp_buy_during_immunity(
+	"mp_buy_during_immunity",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"When set, players can buy when immune, ignoring buytime. 0 = default. 1 = both teams. 2 = Terrorists. 3 = Counter-Terrorists."
+	);
+
 ConVar mp_fadetoblack( 
 	"mp_fadetoblack", 
 	"0", 

@@ -459,6 +459,61 @@ struct alignedbbox_t
 		SetContents(contentsIn);
 	}
 };
+
+#define TLD_DEF_BRUSH_MAX	64
+#define TLD_DEF_DISP_MAX	32
+
+class ICollideable;
+class IHandleEntity;
+struct collideable_handleentity_t
+{
+	IHandleEntity *pEntity;
+	ICollideable *pCollideable;
+};
+
+class CTraceListData : public IPartitionEnumerator, public ITraceListData
+{
+public:
+
+	CTraceListData() 
+	{
+		m_pEngineTrace = NULL;
+		m_bFoundNonSolidLeaf = false;
+		m_mins.Init();
+		m_maxs.Init();
+	}
+	~CTraceListData() {}
+
+	void Reset()
+	{
+		m_brushList.RemoveAll();
+		m_dispList.RemoveAll();
+		m_entityList.RemoveAll();
+		m_staticPropList.RemoveAll();
+		m_mins.Init();
+		m_maxs.Init();
+		m_pEngineTrace = NULL;
+		m_bFoundNonSolidLeaf = false;
+	}
+
+	bool IsEmpty() { return m_pEngineTrace == NULL ? true : false; }
+	// For entities...
+	IterationRetval_t EnumElement( IHandleEntity *pHandleEntity );
+	bool CanTraceRay( const Ray_t &ray );
+
+public:
+
+	CUtlVectorFixedGrowable<unsigned short, TLD_DEF_BRUSH_MAX>	m_brushList;
+	CUtlVectorFixedGrowable<unsigned short, TLD_DEF_DISP_MAX>	m_dispList;
+	CUtlVectorFixedGrowable<collideable_handleentity_t, TLD_DEF_ENTITY_MAX>	m_entityList;
+	CUtlVectorFixedGrowable<collideable_handleentity_t, TLD_DEF_ENTITY_MAX>	m_staticPropList;
+
+	Vector	m_mins;
+	Vector	m_maxs;
+	class CEngineTrace *m_pEngineTrace;
+	bool	m_bFoundNonSolidLeaf;
+};
+
 extern int g_DispCollTreeCount;
 extern CDispCollTree *g_pDispCollTrees;
 extern alignedbbox_t *g_pDispBounds;
@@ -471,8 +526,8 @@ void DispCollTrees_FreeLeafList( CCollisionBSPData *pBSPData );
 void CM_DispTreeLeafnum( CCollisionBSPData *pBSPData );
 
 // collision
-void CM_TestInDispTree( TraceInfo_t *pTraceInfo, cleaf_t *pLeaf, Vector const &traceStart, 
-				Vector const &boxMin, Vector const &boxMax, int collisionMask, trace_t *pTrace );
+void CM_TestInDispTree( TraceInfo_t *pTraceInfo, const unsigned short *pDispList, int dispListCount, const Vector &traceStart, 
+				const Vector &boxMin, const Vector &boxMax, int collisionMask, trace_t *pTrace );
 template <bool IS_POINT>
 void FASTCALL CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
 void CM_PostTraceToDispTree( TraceInfo_t *pTraceInfo );
@@ -485,6 +540,7 @@ void CM_PostTraceToDispTree( TraceInfo_t *pTraceInfo );
 void CM_TestBoxInBrush ( const Vector& mins, const Vector& maxs, const Vector& p1,
 					  trace_t *trace, cbrush_t *brush, BOOL bDispSurf );
 void FASTCALL CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f );
+void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListData &traceData );
 
 
 //=============================================================================

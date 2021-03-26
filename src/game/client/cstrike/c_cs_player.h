@@ -72,6 +72,7 @@ public:
 	int PlayerClass() const;
 
 	bool IsInBuyZone();
+	bool IsInBuyPeriod();
 	bool CanShowTeamMenu() const;	// Returns true if we're allowed to show the team menu right now.
 
 	// Get the amount of armor the player has.
@@ -265,6 +266,9 @@ public:
 	// Returns true if the player is allowed to move.
 	bool CanMove() const;
 
+	// Returns the player mask which includes the solid mask plus the team mask.
+	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
+
 	void OnJump( float fImpulse );
 	void OnLand( float fVelocity );
 
@@ -406,6 +410,8 @@ public:
 
 	bool IsAbleToInstantRespawn( void );
 
+	void ToggleRandomWeapons( void );
+
 private:
 	void UpdateFlashBangEffect( void );
 
@@ -442,6 +448,8 @@ private:
 	float	m_fNextThinkPushAway;
 
     bool    m_bPlayingFreezeCamSound;
+
+	bool	m_bShouldAutobuyDMWeapons;
 
 #ifdef CS_SHIELD_ENABLED
 	bool	m_bHasShield;

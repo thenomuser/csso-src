@@ -286,11 +286,7 @@ private:
 	CSpatialPartition *					m_pOwner;
 	CUtlVector<unsigned short>			m_AvailableVisitBits;
 	unsigned short						m_nNextVisitBit;
-#if TEST_TRACE_POOL
 	CTSPool<CPartitionVisits>			m_FreeVisits;
-#else
-	CObjectPool<CPartitionVisits, 2>	m_FreeVisits;
-#endif
 	CThreadSpinRWLock					m_lock;
 };
 

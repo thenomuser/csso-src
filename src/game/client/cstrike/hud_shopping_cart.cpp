@@ -66,7 +66,7 @@ bool CHudShoppingCart::ShouldDraw()
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	// [tj] Added base class call
-	return ( pPlayer && pPlayer->IsInBuyZone() && pPlayer->GetTeamNumber() != TEAM_UNASSIGNED && !CSGameRules()->IsBuyTimeElapsed() && CHudElement::ShouldDraw() );
+	return ( pPlayer && pPlayer->IsInBuyZone() && pPlayer->GetTeamNumber() != TEAM_UNASSIGNED && !CSGameRules()->IsBuyTimeElapsed() && CHudElement::ShouldDraw() && CSGameRules()->GetGamemode() != GameModes::DEATHMATCH );
 }
 
 

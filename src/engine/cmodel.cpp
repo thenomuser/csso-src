@@ -50,31 +50,11 @@ csurface_t *CCollisionBSPData::GetSurfaceAtIndex( unsigned short surfaceIndex )
 	return &map_surfaces[surfaceIndex];
 }
 
-#if TEST_TRACE_POOL
 CTSPool<TraceInfo_t> g_TraceInfoPool;
-#else
-class CTraceInfoPool : public CTSList<TraceInfo_t *>
-{
-public:
-	CTraceInfoPool()
-	{
-	}
-};
-
-CTraceInfoPool g_TraceInfoPool;
-#endif
 
 TraceInfo_t *BeginTrace()
 {
-#if TEST_TRACE_POOL
 	TraceInfo_t *pTraceInfo = g_TraceInfoPool.GetObject();
-#else
-	TraceInfo_t *pTraceInfo;
-	if ( !g_TraceInfoPool.PopItem( &pTraceInfo ) )
-	{
-		pTraceInfo = new TraceInfo_t;
-	}
-#endif
 	if ( pTraceInfo->m_BrushCounters[0].Count() != GetCollisionBSPData()->numbrushes + 1 )
 	{
 		memset( pTraceInfo->m_Count, 0, sizeof( pTraceInfo->m_Count ) );
@@ -120,11 +100,7 @@ void EndTrace( TraceInfo_t *&pTraceInfo )
 {
 	PopTraceVisits( pTraceInfo );
 	Assert( pTraceInfo->m_nCheckDepth == -1 );
-#if TEST_TRACE_POOL
 	g_TraceInfoPool.PutObject( pTraceInfo );
-#else
-	g_TraceInfoPool.PushItem( pTraceInfo );
-#endif
 	pTraceInfo = NULL;
 }
 
@@ -1457,42 +1433,142 @@ static void FASTCALL CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t 
 	trace->contents = brush->contents;
 }
 
-#if defined(_X360)
-#define PREFETCH_ELEMENT(ofs,base) __dcbt(ofs,(void*)base)
-#else
-#define PREFETCH_ELEMENT(a,b)
-#endif
-/*
-================
-CM_TraceToLeaf
-================
-*/
-
-template <bool IS_POINT>
-void FASTCALL CM_TraceToLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, float startFrac, float endFrac )
+template<bool IS_POINT, bool CHECK_COUNTERS>
+FORCEINLINE_TEMPLATE void CM_TraceToDispList( TraceInfo_t * RESTRICT pTraceInfo, const unsigned short *pDispList, int dispListCount, float startFrac, float endFrac )
 {
-	VPROF("CM_TraceToLeaf");
-	// get the leaf
-	cleaf_t * RESTRICT pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
+	VPROF("CM_TraceToDispList");
+	//
+	// trace ray/swept box against all displacement surfaces in this leaf
+	//
+	TraceCounter_t * RESTRICT pCounters = 0;
+	TraceCounter_t count = 0;
 
+	if ( CHECK_COUNTERS )
+	{
+		pCounters = pTraceInfo->GetDispCounters();
+		count = pTraceInfo->GetCount();
+	}
+
+	if ( IsX360() || IsPS3() )
+	{
+		// set up some relatively constant variables we'll use in the loop below
+		fltx4 traceStart = LoadUnaligned3SIMD(pTraceInfo->m_start.Base());
+		fltx4 traceDelta = LoadUnaligned3SIMD(pTraceInfo->m_delta.Base());
+		fltx4 traceInvDelta = LoadUnaligned3SIMD(pTraceInfo->m_invDelta.Base());
+		static const fltx4 vecEpsilon = {DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON};
+		// only used in !IS_POINT version:
+		fltx4 extents;
+		if (!IS_POINT)
+		{
+			extents = LoadUnaligned3SIMD(pTraceInfo->m_extents.Base());
+		}
+
+		// TODO: this loop probably ought to be unrolled so that we can make a more efficient
+		// job of intersecting rays against boxes. The simple SIMD version used here,
+		// though about 6x faster than the fpu version, is slower still than intersecting
+		// against four boxes simultaneously.
+		for( int i = 0; i < dispListCount; i++ )
+		{
+			int dispIndex = pDispList[i];
+			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+
+			// only collide with objects you are interested in
+			if( !( pDispBounds->GetContents() & pTraceInfo->m_contents ) )
+				continue;
+
+			if( CHECK_COUNTERS && pTraceInfo->m_isswept )
+			{
+				// make sure we only check this brush once per trace/stab
+				if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
+					continue;
+			}
+
+			if ( IS_POINT )
+			{
+				if (!IsBoxIntersectingRay( LoadAlignedSIMD(pDispBounds->mins.Base()), LoadAlignedSIMD(pDispBounds->maxs.Base()),
+					traceStart, traceDelta, traceInvDelta, vecEpsilon ))
+					continue;
+			}
+			else
+			{
+				fltx4 mins = SubSIMD(LoadAlignedSIMD(pDispBounds->mins.Base()),extents);
+				fltx4 maxs = AddSIMD(LoadAlignedSIMD(pDispBounds->maxs.Base()),extents);
+				if (!IsBoxIntersectingRay( mins, maxs,
+					traceStart, traceDelta, traceInvDelta, vecEpsilon ))
+					continue;
+			}
+
+			CDispCollTree * RESTRICT pDispTree = &g_pDispCollTrees[dispIndex];
+			CM_TraceToDispTree<IS_POINT>( pTraceInfo, pDispTree, startFrac, endFrac );
+			if( !pTraceInfo->m_trace.fraction )
+				break;
+		}
+	}
+	else
+	{
+		// utterly nonoptimal FPU pathway
+		for( int i = 0; i < dispListCount; i++ )
+		{
+			int dispIndex = pDispList[i];
+			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+
+			// only collide with objects you are interested in
+			if( !( pDispBounds->GetContents() & pTraceInfo->m_contents ) )
+				continue;
+
+			if( CHECK_COUNTERS && pTraceInfo->m_isswept )
+			{
+				// make sure we only check this brush once per trace/stab
+				if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
+					continue;
+			}
+
+			if ( IS_POINT && !IsBoxIntersectingRay( pDispBounds->mins, pDispBounds->maxs, pTraceInfo->m_start, pTraceInfo->m_delta, pTraceInfo->m_invDelta, DISPCOLL_DIST_EPSILON ) )
+			{
+				continue;
+			}
+
+			if ( !IS_POINT && !IsBoxIntersectingRay( pDispBounds->mins - pTraceInfo->m_extents, pDispBounds->maxs + pTraceInfo->m_extents,
+				pTraceInfo->m_start, pTraceInfo->m_delta, pTraceInfo->m_invDelta, DISPCOLL_DIST_EPSILON ) )
+			{
+				continue;
+			}
+
+			CDispCollTree * RESTRICT pDispTree = &g_pDispCollTrees[dispIndex];
+			CM_TraceToDispTree<IS_POINT>( pTraceInfo, pDispTree, startFrac, endFrac );
+			if( !pTraceInfo->m_trace.fraction )
+				break;
+		}
+	}
+
+	CM_PostTraceToDispTree( pTraceInfo );
+}
+
+template <bool IS_POINT, bool CHECK_COUNTERS>
+FORCEINLINE_TEMPLATE void CM_TraceToBrushList( TraceInfo_t * RESTRICT pTraceInfo, const unsigned short *pBrushList, int brushListCount )
+{
 	//
 	// trace ray/box sweep against all brushes in this leaf
 	//
-	const int numleafbrushes = pLeaf->numleafbrushes;
-	const int lastleafbrush = pLeaf->firstleafbrush + numleafbrushes;
-	const CRangeValidatedArray<unsigned short> &map_leafbrushes = pTraceInfo->m_pBSPData->map_leafbrushes;
 	CRangeValidatedArray<cbrush_t> & 			map_brushes = pTraceInfo->m_pBSPData->map_brushes;
-	TraceCounter_t * RESTRICT pCounters = pTraceInfo->GetBrushCounters();
-	TraceCounter_t count = pTraceInfo->GetCount();
-	for( int ndxLeafBrush = pLeaf->firstleafbrush; ndxLeafBrush < lastleafbrush; ndxLeafBrush++ )
+	TraceCounter_t * RESTRICT pCounters = NULL;
+	TraceCounter_t count = 0;
+
+	if ( CHECK_COUNTERS )
+	{
+		pCounters = pTraceInfo->GetBrushCounters();
+		count = pTraceInfo->GetCount();
+	}
+
+	for( int ndxLeafBrush = 0; ndxLeafBrush < brushListCount; ndxLeafBrush++ )
 	{
 		// get the current brush
-		int ndxBrush = map_leafbrushes[ndxLeafBrush];
+		int ndxBrush = pBrushList[ndxLeafBrush];
 
 		cbrush_t * RESTRICT pBrush = &map_brushes[ndxBrush];
 
 		// make sure we only check this brush once per trace/stab
-		if ( !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
+		if ( CHECK_COUNTERS && !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
 			continue;
 
 		const int traceContents = pTraceInfo->m_contents;
@@ -1555,115 +1631,150 @@ void FASTCALL CM_TraceToLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, fl
 		if( !pTraceInfo->m_trace.fraction )
 			return;
 	}
+}
 
-	// TODO: this may be redundant
-	if( pTraceInfo->m_trace.startsolid )
-		return;
+#if defined(_X360)
+#define PREFETCH_ELEMENT(ofs,base) __dcbt(ofs,(void*)base)
+#else
+#define PREFETCH_ELEMENT(a,b)
+#endif
+/*
+================
+CM_TraceToLeaf
+================
+*/
+
+template <bool IS_POINT>
+void FASTCALL CM_TraceToLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, float startFrac, float endFrac )
+{
+	VPROF("CM_TraceToLeaf");
+	// get the leaf
+	cleaf_t * RESTRICT pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
+
+	if ( pLeaf->numleafbrushes )
+	{
+		const unsigned short *pBrushList = &pTraceInfo->m_pBSPData->map_leafbrushes[pLeaf->firstleafbrush];
+		CM_TraceToBrushList<IS_POINT, true>( pTraceInfo, pBrushList, pLeaf->numleafbrushes );
+		// TODO: this may be redundant
+		if( pTraceInfo->m_trace.startsolid )
+			return;
+	}
 
 	// Collide (test) against displacement surfaces in this leaf.
 	if( pLeaf->dispCount )
 	{
-		VPROF("CM_TraceToLeafDisps");
-		//
-		// trace ray/swept box against all displacement surfaces in this leaf
-		//
-		pCounters = pTraceInfo->GetDispCounters();
-		count = pTraceInfo->GetCount();
+		unsigned short *pDispList = &pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart];
+		CM_TraceToDispList<IS_POINT, true>( pTraceInfo, pDispList, pLeaf->dispCount, startFrac, endFrac );
+	}
+}
 
-		if (IsX360())
+void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, CTraceListData &traceData )
+{
+	// get the leaf
+	cleaf_t * RESTRICT pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
+
+	if ((pLeaf->contents & CONTENTS_SOLID) == 0)
+	{
+		traceData.m_bFoundNonSolidLeaf = true;
+	}
+
+	//
+
+	// add brushes to list
+	if ( 1 )
+	{
+		const int numleafbrushes = pLeaf->numleafbrushes;
+		const int lastleafbrush = pLeaf->firstleafbrush + numleafbrushes;
+		const CRangeValidatedArray<unsigned short> &map_leafbrushes = pTraceInfo->m_pBSPData->map_leafbrushes;
+		CRangeValidatedArray<cbrush_t> & 			map_brushes = pTraceInfo->m_pBSPData->map_brushes;
+		TraceCounter_t * RESTRICT pCounters = pTraceInfo->GetBrushCounters();
+		TraceCounter_t count = pTraceInfo->GetCount();
+		for( int ndxLeafBrush = pLeaf->firstleafbrush; ndxLeafBrush < lastleafbrush; ndxLeafBrush++ )
 		{
-			// set up some relatively constant variables we'll use in the loop below
-			fltx4 traceStart = LoadUnaligned3SIMD(pTraceInfo->m_start.Base());
-			fltx4 traceDelta = LoadUnaligned3SIMD(pTraceInfo->m_delta.Base());
-			fltx4 traceInvDelta = LoadUnaligned3SIMD(pTraceInfo->m_invDelta.Base());
-			static const fltx4 vecEpsilon = {DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_EPSILON};
-			// only used in !IS_POINT version:
-			fltx4 extents;
-			if (!IS_POINT)
-			{
-				extents = LoadUnaligned3SIMD(pTraceInfo->m_extents.Base());
-			}
+			// get the current brush
+			int ndxBrush = map_leafbrushes[ndxLeafBrush];
 
-			// TODO: this loop probably ought to be unrolled so that we can make a more efficient
-			// job of intersecting rays against boxes. The simple SIMD version used here,
-			// though about 6x faster than the fpu version, is slower still than intersecting
-			// against four boxes simultaneously.
-			for( int i = 0; i < pLeaf->dispCount; i++ )
-			{
-				int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
-				alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+			cbrush_t * RESTRICT pBrush = &map_brushes[ndxBrush];
 
-				// only collide with objects you are interested in
-				if( !( pDispBounds->GetContents() & pTraceInfo->m_contents ) )
-					continue;
+			// make sure we only add this brush once
+			if ( !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
+				continue;
+			traceData.m_brushList.AddToTail(ndxBrush);
+		}
+	}
 
-				if( pTraceInfo->m_isswept )
-				{
-					// make sure we only check this brush once per trace/stab
-					if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
-						continue;
-				}
+	// add displacements to list
+	if ( 1 )
+	{
+		TraceCounter_t *pCounters = pTraceInfo->GetDispCounters();
+		TraceCounter_t count = pTraceInfo->GetCount();
 
-				if ( IS_POINT )
-				{
-					if (!IsBoxIntersectingRay( LoadAlignedSIMD(pDispBounds->mins.Base()), LoadAlignedSIMD(pDispBounds->maxs.Base()), 
-											   traceStart, traceDelta, traceInvDelta, vecEpsilon ))
-						continue;
-				}
-				else
-				{
-					fltx4 mins = SubSIMD(LoadAlignedSIMD(pDispBounds->mins.Base()),extents);
-					fltx4 maxs = AddSIMD(LoadAlignedSIMD(pDispBounds->maxs.Base()),extents);
-					if (!IsBoxIntersectingRay( mins, maxs, 
-											   traceStart, traceDelta, traceInvDelta, vecEpsilon ))
-						continue;
-				}
+		// Collide (test) against displacement surfaces in this leaf.
+		for( int i = 0; i < pLeaf->dispCount; i++ )
+		{
+			int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
+			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+			// make sure we only add this disp once
+			if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
+				continue;
+			if ( !IsBoxIntersectingBox( pDispBounds->mins, pDispBounds->maxs, traceData.m_mins, traceData.m_maxs ) )
+				continue;
 
-				CDispCollTree * RESTRICT pDispTree = &g_pDispCollTrees[dispIndex];
-				CM_TraceToDispTree<IS_POINT>( pTraceInfo, pDispTree, startFrac, endFrac );
-				if( !pTraceInfo->m_trace.fraction )
-					break;
-			}
+			traceData.m_dispList.AddToTail(dispIndex);
+		}
+	}
+}
+
+void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListData &traceData )
+{
+	CCollisionBSPData *pBSPData = GetCollisionBSPData();
+	Vector center = (mins+maxs)*0.5f;
+	Vector extents = maxs - center;
+	int nodenum = 0;
+
+	TraceInfo_t *pTraceInfo = BeginTrace();
+	const int NODELIST_MAX = 1024;
+	int nodeList[NODELIST_MAX];
+	int nodeReadIndex = 0;
+	int nodeWriteIndex = 0;
+	cplane_t	*plane;
+	cnode_t		*node;
+
+	while (1)
+	{
+		if (nodenum < 0)
+		{
+			int leafIndex = -1 - nodenum;
+			CM_GetTraceDataForLeaf( pTraceInfo, leafIndex, traceData );
+			if ( nodeReadIndex == nodeWriteIndex )
+				break;
+			nodenum = nodeList[nodeReadIndex];
+			nodeReadIndex = (nodeReadIndex+1) & (NODELIST_MAX-1);
 		}
 		else
 		{
-			// utterly nonoptimal FPU pathway
-			for( int i = 0; i < pLeaf->dispCount; i++ )
-			{
-				int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
-				alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
-
-				// only collide with objects you are interested in
-				if( !( pDispBounds->GetContents() & pTraceInfo->m_contents ) )
-					continue;
-
-				if( pTraceInfo->m_isswept )
-				{
-					// make sure we only check this brush once per trace/stab
-					if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
-						continue;
-				}
-		
-				if ( IS_POINT && !IsBoxIntersectingRay( pDispBounds->mins, pDispBounds->maxs, pTraceInfo->m_start, pTraceInfo->m_delta, pTraceInfo->m_invDelta, DISPCOLL_DIST_EPSILON ) )
-				{
-					continue;
-				}
-
-				if ( !IS_POINT && !IsBoxIntersectingRay( pDispBounds->mins - pTraceInfo->m_extents, pDispBounds->maxs + pTraceInfo->m_extents, 
-					pTraceInfo->m_start, pTraceInfo->m_delta, pTraceInfo->m_invDelta, DISPCOLL_DIST_EPSILON ) )
-				{
-					continue;
-				}
-				
-				CDispCollTree * RESTRICT pDispTree = &g_pDispCollTrees[dispIndex];
-				CM_TraceToDispTree<IS_POINT>( pTraceInfo, pDispTree, startFrac, endFrac );
-				if( !pTraceInfo->m_trace.fraction )
-					break;
+			node = &pBSPData->map_rootnode[nodenum];
+			plane = node->plane;
+			//		s = BoxOnPlaneSide (leaf_mins, leaf_maxs, plane);
+			//		s = BOX_ON_PLANE_SIDE(*leaf_mins, *leaf_maxs, plane);
+			float d0 = DotProduct( plane->normal, center ) - plane->dist;
+			float d1 = DotProductAbs( plane->normal, extents );
+			if (d0 >= d1)
+				nodenum = node->children[0];
+			else if (d0 < -d1)
+				nodenum = node->children[1];
+			else
+			{	// go down both
+				nodeList[nodeWriteIndex] = node->children[0];
+				nodeWriteIndex = (nodeWriteIndex+1) & (NODELIST_MAX-1);
+				// check for overflow of the ring buffer
+				Assert(nodeWriteIndex != nodeReadIndex);
+				nodenum = node->children[1];
 			}
 		}
-		
-		CM_PostTraceToDispTree( pTraceInfo );
 	}
+
+	EndTrace(pTraceInfo);
 }
 
 
@@ -1714,7 +1825,8 @@ static void FASTCALL CM_TestInLeaf( TraceInfo_t *pTraceInfo, int ndxLeaf )
 	if( pLeaf->dispCount )
 	{
 		// test to see if the point/box is inside of any of the displacement surface
-		CM_TestInDispTree( pTraceInfo, pLeaf, pTraceInfo->m_start, pTraceInfo->m_mins, pTraceInfo->m_maxs, pTraceInfo->m_contents, &pTraceInfo->m_trace );
+		unsigned short *pDispList = &pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart];
+		CM_TestInDispTree( pTraceInfo, pDispList, pLeaf->dispCount, pTraceInfo->m_start, pTraceInfo->m_mins, pTraceInfo->m_maxs, pTraceInfo->m_contents, &pTraceInfo->m_trace );
 	}
 }
 
@@ -2099,26 +2211,12 @@ static inline void CM_UnsweptBoxTrace( TraceInfo_t *pTraceInfo, const Ray_t& ray
 //-----------------------------------------------------------------------------
 // Purpose: Ray/Hull trace against the world without the RecursiveHullTrace
 //-----------------------------------------------------------------------------
-void CM_BoxTraceAgainstLeafList( const Ray_t &ray, int *pLeafList, int nLeafCount, int nBrushMask,
-							     bool bComputeEndpoint, trace_t &trace )
+void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceData, int nBrushMask, trace_t &trace )
 {
-	// For multi-check avoidance.
-	TraceInfo_t *pTraceInfo = BeginTrace();		
+	VPROF("CM_BoxTraceAgainstLeafList");
+	TraceInfo_t *pTraceInfo = BeginTrace();
 
-	// Setup trace data.
-	CM_ClearTrace( &pTraceInfo->m_trace );
-
-	// Get the collision bsp tree.
-	pTraceInfo->m_pBSPData = GetCollisionBSPData();
-
-	// Check if the map is loaded.
-	if ( !pTraceInfo->m_pBSPData->numnodes )	
-	{
-		trace = pTraceInfo->m_trace;
-		EndTrace( pTraceInfo );
-		return;
-	}
-
+	CM_ClearTrace(&pTraceInfo->m_trace);
 	// Setup global trace data. (This is nasty! I hate this.)
 	pTraceInfo->m_bDispHit = false;
 	pTraceInfo->m_DispStabDir.Init();
@@ -2135,23 +2233,30 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, int *pLeafList, int nLeafCoun
 
 	if ( !ray.m_IsSwept )
 	{
-		Vector vecBoxMin( ( ray.m_Start.x - ray.m_Extents.x - 1 ), ( ray.m_Start.y - ray.m_Extents.y - 1 ), ( ray.m_Start.z - ray.m_Extents.z - 1 ) );
-		Vector vecBoxMax( ( ray.m_Start.x + ray.m_Extents.x + 1 ), ( ray.m_Start.y + ray.m_Extents.y + 1 ), ( ray.m_Start.z + ray.m_Extents.z + 1 ) );
-
-		bool bFoundNonSolidLeaf = false;
-		for ( int iLeaf = 0; iLeaf < nLeafCount; ++iLeaf )
+		for ( int i = 0; i < traceData.m_brushList.Count(); i++ )
 		{
-			if ( ( pTraceInfo->m_pBSPData->map_leafs[pLeafList[iLeaf]].contents & CONTENTS_SOLID ) == 0 )
-			{
-				bFoundNonSolidLeaf = true;
-			}
-			
-			CM_TestInLeaf( pTraceInfo, pLeafList[iLeaf] );
+			int brushIndex = traceData.m_brushList[i];
+			cbrush_t *pBrush = &pTraceInfo->m_pBSPData->map_brushes[brushIndex];
+
+			// only collide with objects you are interested in
+			if( !( pBrush->contents & pTraceInfo->m_contents ) )
+				continue;
+
+			//
+			// test to see if the point/box is inside of any solid
+			// NOTE: pTraceInfo->m_trace.fraction == 0.0f only when trace starts inside of a brush!
+			//
+			CM_TestBoxInBrush( pTraceInfo, pBrush );
+
 			if ( pTraceInfo->m_trace.allsolid )
 				break;
 		}
+		if( !pTraceInfo->m_trace.startsolid )
+		{
+			CM_TestInDispTree( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), pTraceInfo->m_start, pTraceInfo->m_mins, pTraceInfo->m_maxs, pTraceInfo->m_contents, &pTraceInfo->m_trace );
+		}
 
-		if ( !bFoundNonSolidLeaf )
+		if (!traceData.m_bFoundNonSolidLeaf)
 		{
 			pTraceInfo->m_trace.allsolid = pTraceInfo->m_trace.startsolid = 1;
 			pTraceInfo->m_trace.fraction = 0.0f;
@@ -2160,27 +2265,35 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, int *pLeafList, int nLeafCoun
 	}
 	else
 	{
-		for ( int iLeaf = 0; iLeaf < nLeafCount; ++iLeaf )
+		if ( ray.m_IsRay )
 		{
-			// NOTE: startFrac and endFrac are not really used.
-			if ( pTraceInfo->m_ispoint )
-				CM_TraceToLeaf<true>( pTraceInfo, pLeafList[iLeaf], 1.0f, 1.0f );
+			CM_TraceToBrushList<true, false>( pTraceInfo, traceData.m_brushList.Base(), traceData.m_brushList.Count() );
+		}
+		else
+		{
+			CM_TraceToBrushList<false, false>( pTraceInfo, traceData.m_brushList.Base(), traceData.m_brushList.Count() );
+		}
+		if ( pTraceInfo->m_trace.fraction > 0 && !pTraceInfo->m_trace.startsolid )
+		{
+			if ( ray.m_IsRay )
+			{
+				CM_TraceToDispList<true, false>( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), 0, 1 );
+			}
 			else
-				CM_TraceToLeaf<false>( pTraceInfo, pLeafList[iLeaf], 1.0f, 1.0f );
+			{
+				CM_TraceToDispList<false, false>( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), 0, 1 );
+			}
 		}
 	}
 
 	// Compute the trace start and end points.
-	if ( bComputeEndpoint )
-	{
-		CM_ComputeTraceEndpoints( ray, pTraceInfo->m_trace );
-	}
+	CM_ComputeTraceEndpoints( ray, pTraceInfo->m_trace );
 
 	// Copy off the results
 	trace = pTraceInfo->m_trace;
 	EndTrace( pTraceInfo );
 
-	Assert( !ray.m_IsRay || trace.allsolid || ( trace.fraction >= trace.fractionleftsolid ) );
+	Assert( !ray.m_IsRay || trace.allsolid || ((trace.fraction + kBoxCheckFloatEpsilon) >= trace.fractionleftsolid) );
 }
 
 void CM_BoxTrace( const Ray_t& ray, int headnode, int brushmask, bool computeEndpt, trace_t& tr )

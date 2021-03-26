@@ -389,6 +389,7 @@ BEGIN_DATADESC( CBasePlayer )
 	DEFINE_FIELD( m_vecWaterJumpVel, FIELD_VECTOR ),
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_TIME ),
+	DEFINE_FIELD( m_ignoreLadderJumpTime, FIELD_TIME ),
 	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
 
@@ -641,6 +642,8 @@ CBasePlayer::CBasePlayer( )
 	m_bhasHaptics = false;
 
 	m_vecConstraintCenter = vec3_origin;
+
+	m_ignoreLadderJumpTime = 0.0f;
 
 	m_flLastUserCommandTime = 0.f;
 	m_flMovementTimeForUserCmdProcessingRemaining = 0.0f;

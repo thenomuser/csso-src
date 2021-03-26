@@ -24,7 +24,7 @@ class CGameTrace;
 typedef CGameTrace trace_t;
 class ICollideable;
 class QAngle;
-class CTraceListData;
+class ITraceListData;
 class CPhysCollide;
 struct cplane_t;
 
@@ -149,9 +149,9 @@ public:
 	virtual void	TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace ) = 0;
 
 	// A version that sets up the leaf and entity lists and allows you to pass those in for collision.
-	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, CTraceListData &traceData ) = 0;
-	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, CTraceListData &traceData ) = 0;
-	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceListData &traceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace ) = 0;
+	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData ) = 0;
+	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData ) = 0;
+	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace ) = 0;
 
 	// A version that sweeps a collideable through the world
 	// abs start + abs end represents the collision origins you want to sweep the collideable through
@@ -186,6 +186,9 @@ public:
 
 	// Walks bsp to find the leaf containing the specified point
 	virtual int GetLeafContainingPoint( const Vector &ptTest ) = 0;
+
+	virtual ITraceListData *AllocTraceListData() = 0;
+	virtual void FreeTraceListData(ITraceListData *) = 0;
 };
 
 

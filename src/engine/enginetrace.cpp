@@ -83,9 +83,9 @@ public:
 	virtual void	TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sets up the leaf and entity lists and allows you to pass those in for collision.
-	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, CTraceListData &traceData );
-	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, CTraceListData &traceData );
-	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceListData &traceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
+	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData );
+	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData );
+	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sweeps a collideable through the world
 	// abs start + abs end represents the collision origins you want to sweep the collideable through
@@ -124,6 +124,9 @@ public:
 
 	// Walks bsp to find the leaf containing the specified point
 	virtual int GetLeafContainingPoint( const Vector &ptTest );
+
+	virtual ITraceListData *AllocTraceListData() { return new CTraceListData; }
+	virtual void FreeTraceListData(ITraceListData *pTraceListData) { delete pTraceListData; }
 
 	virtual const char* GetDebugName( IHandleEntity* pHandleEntity ) = 0;
 
@@ -1376,55 +1379,146 @@ void EngineTraceRenderRayCasts()
 #endif
 }
 
+static void ComputeRayBounds( const Ray_t &ray, Vector &mins, Vector &maxs )
+{
+	if ( ray.m_IsRay )
+	{
+		Vector start = ray.m_Start;
+		for ( int i = 0; i < 3; i++ )
+		{
+			if ( ray.m_Delta[i] > 0 )
+			{
+				maxs[i] = start[i] + ray.m_Delta[i];
+				mins[i] = start[i];
+			}
+			else
+			{
+				maxs[i] = start[i];
+				mins[i] = start[i] + ray.m_Delta[i];
+			}
+		}
+	}
+	else
+	{
+		Vector start = ray.m_Start;
+		for ( int i = 0; i < 3; i++ )
+		{
+			if ( ray.m_Delta[i] > 0 )
+			{
+				maxs[i] = start[i] + ray.m_Delta[i] + ray.m_Extents[i];
+				mins[i] = start[i] - ray.m_Extents[i];
+			}
+			else
+			{
+				maxs[i] = start[i] + ray.m_Extents[i];
+				mins[i] = start[i] + ray.m_Delta[i] - ray.m_Extents[i];
+			}
+		}
+	}
+}
+
+static bool IsBoxWithinBounds( const Vector &boxMins, const Vector &boxMaxs, const Vector &boundsMins, const Vector &bounsMaxs )
+{
+	if ( boxMaxs.x <= bounsMaxs.x && boxMins.x >= boundsMins.x &&
+		boxMaxs.y <= bounsMaxs.y && boxMins.y >= boundsMins.y &&
+		boxMaxs.z <= bounsMaxs.z && boxMins.z >= boundsMins.z )
+		return true;
+	return false;
+}
+
+
+bool CTraceListData::CanTraceRay( const Ray_t &ray )
+{
+	Vector rayMins, rayMaxs;
+	ComputeRayBounds( ray, rayMins, rayMaxs );
+	return IsBoxWithinBounds( rayMins, rayMaxs, m_mins, m_maxs );
+}
+
+// implementing members of CTraceListData
+IterationRetval_t CTraceListData::EnumElement( IHandleEntity *pHandleEntity )
+{
+	ICollideable *pCollideable = m_pEngineTrace->HandleEntityToCollideable( pHandleEntity );
+	// Check for error condition.
+	if ( !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
+	{
+		Assert( 0 );
+		if ( pCollideable->GetCollisionModel() )
+		{
+			Msg("%s in solid list (not solid) (%d, %04X) %.*s\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags(),
+				sizeof( pCollideable->GetCollisionModel()->strName ), pCollideable->GetCollisionModel()->strName );
+		}
+		else
+		{
+			Msg("%s in solid list (not solid) (%d, %04X)\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags() );
+		}
+	}
+	else
+	{
+		if ( StaticPropMgr()->IsStaticProp( pHandleEntity ) )
+		{
+			int index = m_staticPropList.AddToTail();
+			m_staticPropList[index].pCollideable = pCollideable;
+			m_staticPropList[index].pEntity = pHandleEntity;
+		}
+		else
+		{
+			int index = m_entityList.AddToTail();
+			m_entityList[index].pCollideable = pCollideable;
+			m_entityList[index].pEntity = pHandleEntity;
+		}
+	}
+
+	return ITERATION_CONTINUE;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CEngineTrace::SetupLeafAndEntityListRay( const Ray_t &ray, CTraceListData &traceData )
+void CEngineTrace::SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData )
 {
-	if ( !ray.m_IsSwept )
-	{
-		Vector vecMin, vecMax;
-		VectorSubtract( ray.m_Start, ray.m_Extents, vecMin );
-		VectorAdd( ray.m_Start, ray.m_Extents, vecMax );
-		SetupLeafAndEntityListBox( vecMin, vecMax, traceData );
-		return;
-	}
-
-	// Get the leaves that intersect the ray.
-	traceData.LeafCountReset();
-	CM_RayLeafnums( ray, traceData.m_aLeafList.Base(), traceData.LeafCountMax(), traceData.m_nLeafCount ); 
-
-	// Find all the entities in the voxels that intersect this ray.
-	traceData.EntityCountReset();
-	SpatialPartition()->EnumerateElementsAlongRay( SpatialPartitionMask(), ray, false, &traceData );
+	Vector mins, maxs;
+	ComputeRayBounds( ray, mins, maxs );
+	SetupLeafAndEntityListBox( mins, maxs, pTraceData );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Gives an AABB and returns a leaf and entity list.
 //-----------------------------------------------------------------------------
-void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, CTraceListData &traceData )
+void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData )
 {
+	VPROF("SetupLeafAndEntityListBox");
+	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
+	traceData.Reset();
+	traceData.m_pEngineTrace = this;
+	// increase bounds slightly to catch exact cases
+	for ( int i = 0; i < 3; i++ )
+	{
+		traceData.m_mins[i] = vecBoxMin[i] - 1;
+		traceData.m_maxs[i] = vecBoxMax[i] + 1;
+	}
 	// Get the leaves that intersect this box.
-	int iTopNode = -1;
-	traceData.LeafCountReset();
-	traceData.m_nLeafCount = CM_BoxLeafnums( vecBoxMin, vecBoxMax, traceData.m_aLeafList.Base(), traceData.LeafCountMax(), &iTopNode );
-	
+	CM_GetTraceDataForBSP( traceData.m_mins, traceData.m_maxs, traceData );
 	// Find all entities in the voxels that intersect this box.
-	traceData.EntityCountReset();
-	SpatialPartition()->EnumerateElementsInBox( SpatialPartitionMask(), vecBoxMin, vecBoxMax, false, &traceData );
+	SpatialPartition()->EnumerateElementsInBox( SpatialPartitionMask(), traceData.m_mins, traceData.m_maxs, false, &traceData );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 // NOTE: the fMask is redundant with the stuff below, what do I want to do???
 //-----------------------------------------------------------------------------
-void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceListData &traceData,
+void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData,
 										             unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace )
 {
-	// Setup the trace data.
-	CM_ClearTrace ( pTrace );
-
+	VPROF("TraceRayAgainstLeafAndEntityList");
+	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
+	Vector rayMins, rayMaxs;
+	ComputeRayBounds( ray, rayMins, rayMaxs );
+	if ( !IsBoxWithinBounds( rayMins, rayMaxs, traceData.m_mins, traceData.m_maxs ) )
+	{
+		TraceRay( ray, fMask, pTraceFilter, pTrace );
+		return;
+	}
 	// Make sure we have some kind of trace filter.
 	CTraceFilterHitAll traceFilter;
 	if ( !pTraceFilter )
@@ -1437,14 +1531,7 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 	{
 		ICollideable *pCollide = GetWorldCollideable();
 
-		// Make sure the world entity is unrotated
-		// FIXME: BAH! The !pCollide test here is because of
-		// CStaticProp::PrecacheLighting.. it's occurring too early
-		// need to fix that later
-		Assert( !pCollide || pCollide->GetCollisionOrigin() == vec3_origin );
-		Assert( !pCollide || pCollide->GetCollisionAngles() == vec3_angle );
-
-		CM_BoxTraceAgainstLeafList( ray, traceData.m_aLeafList.Base(), traceData.LeafCount(), fMask, true, *pTrace );
+		CM_BoxTraceAgainstLeafList( ray, traceData, fMask, *pTrace );
 		SetTraceEntity( pCollide, pTrace );
 
 		// Blocked by the world or early out because we only are tracing against the world.
@@ -1453,71 +1540,86 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 	}
 	else
 	{
+		// Setup the trace data.
+		CM_ClearTrace ( pTrace );
+
 		// Set initial start and endpos.  This is necessary if the world isn't traced against,
 		// because we may not trace against anything below.
 		VectorAdd( ray.m_Start, ray.m_StartOffset, pTrace->startpos );
 		VectorAdd( pTrace->startpos, ray.m_Delta, pTrace->endpos );
 	}
-
 	// Save the world collision fraction.
 	float flWorldFraction = pTrace->fraction;
+	float flWorldFractionLeftSolidScale = flWorldFraction;
 
-	// Create a ray that extends only until we hit the world and adjust the trace accordingly
+	// Create a ray that extends only until we hit the world
+	// and adjust the trace accordingly
 	Ray_t entityRay = ray;
-	VectorScale( entityRay.m_Delta, pTrace->fraction, entityRay.m_Delta );
 
-	// We know this is safe because if pTrace->fraction == 0, we would have exited above.
-	pTrace->fractionleftsolid /= pTrace->fraction;
- 	pTrace->fraction = 1.0;
+	if ( pTrace->fraction == 0 )
+	{
+		entityRay.m_Delta.Init();
+		flWorldFractionLeftSolidScale = pTrace->fractionleftsolid;
+		pTrace->fractionleftsolid = 1.0f;
+		pTrace->fraction = 1.0f;
+	}
+	else
+	{
+		// Explicitly compute end so that this computation happens at the quantization of
+		// the output (endpos).  That way we won't miss any intersections we would get
+		// by feeding these results back in to the tracer
+		// This is not the same as entityRay.m_Delta *= pTrace->fraction which happens 
+		// at a quantization that is more precise as m_Start moves away from the origin
+		Vector end;
+		VectorMA( entityRay.m_Start, pTrace->fraction, entityRay.m_Delta, end );
+		VectorSubtract(end, entityRay.m_Start, entityRay.m_Delta);
+		// We know this is safe because pTrace->fraction != 0
+		pTrace->fractionleftsolid /= pTrace->fraction;
+		pTrace->fraction = 1.0;
+	}
 
 	// Collide with entities.
 	bool bNoStaticProps = pTraceFilter->GetTraceType() == TRACE_ENTITIES_ONLY;
 	bool bFilterStaticProps = pTraceFilter->GetTraceType() == TRACE_EVERYTHING_FILTER_PROPS;
 
 	trace_t trace;
-	ICollideable *pCollideable;
-	for ( int iEntity = 0; iEntity < traceData.m_nEntityCount; ++iEntity )
+	Vector mins, maxs;
+	if ( !bNoStaticProps )
 	{
-		// Generate a collideable.
-		IHandleEntity *pHandleEntity = traceData.m_aEntityList[iEntity];
-		pCollideable = HandleEntityToCollideable( pHandleEntity );
-
-		// Check for error condition.
-		if ( !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
+		int propCount = traceData.m_staticPropList.Count();
+		for ( int iProp = 0; iProp < propCount && !pTrace->allsolid; iProp++ )
 		{
-			Assert( 0 );
-			Msg("%s in solid list (not solid)\n", GetDebugName(pHandleEntity) );
-			continue;
-		}
-
-		if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
-		{
-			if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
-				continue;
-		}
-		else
-		{
-			// FIXME: Could remove this check here by
-			// using a different spatial partition mask. Look into it
-			// if we want more speedups here.
-			if ( bNoStaticProps )
-				continue;
-
+			IHandleEntity *pHandleEntity = traceData.m_staticPropList[iProp].pEntity;
+			ICollideable *pCollideable = traceData.m_staticPropList[iProp].pCollideable;
 			if ( bFilterStaticProps )
 			{
 				if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
 					continue;
 			}
-		}
+			pCollideable->WorldSpaceSurroundingBounds( &mins, &maxs );
+			if ( !IsBoxIntersectingRay( mins, maxs, entityRay, DIST_EPSILON ) )
+				continue;
+			ClipRayToCollideable( entityRay, fMask, pCollideable, &trace );
 
+			// Make sure the ray is always shorter than it currently is
+			ClipTraceToTrace( trace, pTrace );
+		}
+	}
+	int entityCount = traceData.m_entityList.Count();
+	for ( int iEntity = 0; iEntity < entityCount && !pTrace->allsolid; ++iEntity )
+	{
+		IHandleEntity *pHandleEntity = traceData.m_entityList[iEntity].pEntity;
+		ICollideable *pCollideable = traceData.m_entityList[iEntity].pCollideable;
+		if ( !pTraceFilter->ShouldHitEntity( pHandleEntity, fMask ) )
+			continue;
+
+		pCollideable->WorldSpaceSurroundingBounds( &mins, &maxs );
+		if ( !IsBoxIntersectingRay( mins, maxs, entityRay, DIST_EPSILON ) )
+			continue;
 		ClipRayToCollideable( entityRay, fMask, pCollideable, &trace );
 
 		// Make sure the ray is always shorter than it currently is
 		ClipTraceToTrace( trace, pTrace );
-
-		// Stop if we're in allsolid
-		if ( pTrace->allsolid )
-			break;
 	}
 
 	// Fix up the fractions so they are appropriate given the original unclipped-to-world ray.
@@ -1526,9 +1628,13 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, CTraceLis
 
 	if ( !ray.m_IsRay )
 	{
-		// Make sure no fractionleftsolid can be used with box sweeps.
+		// Make sure no fractionleftsolid can be used with box sweeps
 		VectorAdd( ray.m_Start, ray.m_StartOffset, pTrace->startpos );
 		pTrace->fractionleftsolid = 0;
+
+#ifdef _DEBUG
+		pTrace->fractionleftsolid = VEC_T_NAN;
+#endif
 	}
 }
 

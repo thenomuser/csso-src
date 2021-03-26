@@ -50,6 +50,9 @@ ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "S
 
 extern ConVar mp_respawn_on_death_ct;
 extern ConVar mp_respawn_on_death_t;
+extern ConVar mp_buy_allow_grenades;
+extern ConVar mp_buy_anywhere;
+extern ConVar mp_buy_during_immunity;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
 #define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
@@ -155,6 +158,29 @@ void DispatchEffect( const char *pName, const CEffectData &data );
 	}
 
 #endif
+
+bool CCSPlayer::IsInBuyZone()
+{
+	if ( mp_buy_anywhere.GetInt() == 1 ||
+		mp_buy_anywhere.GetInt() == GetTeamNumber() )
+		return true;
+
+	return m_bInBuyZone;
+}
+
+bool CCSPlayer::IsInBuyPeriod()
+{
+	if ( mp_buy_during_immunity.GetInt() == 1 ||
+		mp_buy_during_immunity.GetInt() == GetTeamNumber() )
+	{
+		return m_bImmunity;
+	}
+	else
+	{
+
+		return CSGameRules() ? !CSGameRules()->IsBuyTimeElapsed() : false;
+	}
+}
 
 bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
@@ -1583,6 +1609,25 @@ bool CCSPlayer::CanMove() const
 	}
 }
 
+unsigned int CCSPlayer::PhysicsSolidMaskForEntity( void ) const
+{
+	if ( !CSGameRules()->IsTeammateSolid() )
+	{
+		switch ( GetTeamNumber() )
+		{
+			case TEAM_UNASSIGNED:
+				return MASK_PLAYERSOLID;
+			case LAST_SHARED_TEAM:
+				return MASK_PLAYERSOLID;
+			case TEAM_TERRORIST:
+				return MASK_PLAYERSOLID | CONTENTS_TEAM1;
+			case TEAM_CT:
+				return MASK_PLAYERSOLID | CONTENTS_TEAM2;
+		}
+	}
+
+	return MASK_PLAYERSOLID;
+}
 
 void CCSPlayer::OnJump( float fImpulse )
 {
@@ -1721,6 +1766,12 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 
 	if ( nType == WEAPONTYPE_GRENADE )
 	{
+		if ( mp_buy_allow_grenades.GetBool() == false )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
 		// make sure we aren't exceeding the ammo max for this grenade type
 		int carryLimitThisGrenade = GetCarryLimit( weaponId );
 

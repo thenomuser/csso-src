@@ -389,6 +389,7 @@ BEGIN_PREDICTION_DATA( C_BasePlayer )
 	DEFINE_FIELD( m_nImpulse, FIELD_INTEGER ),
 	DEFINE_FIELD( m_flStepSoundTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flSwimSoundTime, FIELD_FLOAT ),
+	DEFINE_FIELD( m_ignoreLadderJumpTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_vecLadderNormal, FIELD_VECTOR ),
 	DEFINE_FIELD( m_bHasWalkMovedSinceLastJump, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_flPhysics, FIELD_INTEGER ),
@@ -457,6 +458,8 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_flNextAchievementAnnounceTime = 0;
 
 	m_bFiredWeapon = false;
+
+	m_ignoreLadderJumpTime = 0.0f;
 
 	m_nForceVisionFilterFlags = 0;
 	m_nLocalPlayerVisionFlags = 0;

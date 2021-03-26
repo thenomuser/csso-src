@@ -69,7 +69,7 @@ CON_COMMAND( buyequip, "Show equipment buy menu" )
 		{
 			internalCenterPrint->Print( "#Cstrike_NotInBuyZone" );
 		}
-		else if( CSGameRules()->IsBuyTimeElapsed() )
+		else if( !pPlayer->IsInBuyPeriod() )
 		{
 			char strBuyTime[16];
 			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", (int)CSGameRules()->GetBuyTimeLength() );
@@ -107,7 +107,7 @@ CON_COMMAND( buymenu, "Show main buy menu" )
 		{
 			internalCenterPrint->Print( "#Cstrike_NotInBuyZone" );
 		}
-		else if( CSGameRules()->IsBuyTimeElapsed() )
+		else if( !pPlayer->IsInBuyPeriod() )
 		{
 			char strBuyTime[16];
 			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", (int)CSGameRules()->GetBuyTimeLength() );
