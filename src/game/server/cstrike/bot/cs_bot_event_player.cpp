@@ -30,9 +30,9 @@ void CCSBot::OnPlayerDeath( IGameEvent *event )
 	Vector playerOrigin = (player) ? GetCentroid( player ) : Vector( 0, 0, 0 );
 
 	CBasePlayer *other = UTIL_PlayerByUserId( event->GetInt( "attacker" ) );
-	CBasePlayer *victim = player;
+	CCSPlayer *victim = ToCSPlayer( player );
 
-	CBasePlayer *killer = (other && other->IsPlayer()) ? static_cast<CBasePlayer *>( other ) : NULL;
+	CCSPlayer *killer = (other && other->IsPlayer()) ? static_cast<CCSPlayer *>( other ) : NULL;
 
 	// if the human player died in the single player game, tell the team
 	if (CSGameRules()->IsCareer() && victim && !victim->IsBot() && victim->GetTeamNumber() == GetTeamNumber())
@@ -55,7 +55,7 @@ void CCSBot::OnPlayerDeath( IGameEvent *event )
 		bool m_bShouldTalkAboutFF = cv_bot_chatter_friendlyfire_from_bots.GetBool() ? true : !killer->IsBot();
 
 		// chastise friendly fire
-		if (killer && m_bShouldTalkAboutFF && killer->GetTeamNumber() == GetTeamNumber() && killer != this)
+		if (killer && m_bShouldTalkAboutFF && InSameTeam(killer) && !victim->IsOtherEnemy(killer) )
 		{
 			GetChatter()->KilledFriend();
 		}

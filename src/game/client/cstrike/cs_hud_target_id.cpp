@@ -185,8 +185,8 @@ void CTargetID::Paint()
 	// Is this an entindex sent by the server?
 	if ( iEntIndex )
 	{
-		C_BasePlayer *pPlayer = static_cast<C_BasePlayer*>(cl_entitylist->GetEnt( iEntIndex ));
-		C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+		C_CSPlayer *pPlayer = static_cast<C_CSPlayer*>(cl_entitylist->GetEnt( iEntIndex ));
+		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 		const char *printFormatString = NULL;
 		wchar_t wszClanTag[ MAX_PLAYER_NAME_LENGTH ];
@@ -226,7 +226,7 @@ void CTargetID::Paint()
 				}
 				g_pVGuiLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
 				
-				if ( pPlayer->InSameTeam(pLocalPlayer) )
+				if ( !pPlayer->IsOtherEnemy(pLocalPlayer) )
 				{
 					printFormatString = "#Cstrike_playerid_sameteam";
 					bShowHealth = true;

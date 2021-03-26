@@ -21,6 +21,7 @@
 #include "cs_client.h"
 #include "client.h"
 #include "cs_shareddefs.h"
+#include "effects/inferno.h"
 #include "shake.h"
 #include "team.h"
 #include "weapon_c4.h"
@@ -49,6 +50,7 @@
 #include "movevars_shared.h"
 #include "death_pose.h"
 #include "basecsgrenade_projectile.h"
+#include "hegrenade_projectile.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "CRagdollMagnet.h"
 #include "datacache/imdlcache.h"
@@ -156,6 +158,12 @@ extern ConVar mp_randomspawn_dist;
 
 extern ConVar mp_respawn_immunitytime;
 
+// friendly fire damage scalers
+extern ConVar ff_damage_reduction_grenade;
+extern ConVar ff_damage_reduction_grenade_self;
+extern ConVar ff_damage_reduction_bullets;
+extern ConVar ff_damage_reduction_other;
+
 
 ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
 ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
@@ -165,6 +173,9 @@ ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_R
 ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", 0, "Allows players to drop knives." );
 
 static ConVar tv_relayradio( "tv_relayradio", "0", 0, "Relay team radio commands to TV: 0=off, 1=on" );
+
+// [Jason] Allow us to turn down the frequency of the damage notification
+ConVar CS_WarnFriendlyDamageInterval( "CS_WarnFriendlyDamageInterval", "3.0", FCVAR_CHEAT, "Defines how frequently the server notifies clients that a player damaged a friend" );
 
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED, "Determines whether a player can early-out of the deathcam." );
 
@@ -1578,17 +1589,11 @@ int CCSPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		}
 		else if( strncmp( weaponName, "hegrenade", 9 ) == 0 )	//"hegrenade_projectile"
 		{
-			//=============================================================================
-			// HPE_BEGIN:
 			// [tj] Handle grenade-surviving achievement
-			//=============================================================================
-			if (info.GetAttacker()->GetTeamNumber() != GetTeamNumber())
+			if ( IsOtherEnemy( info.GetAttacker()->entindex() ) )
 			{
 				m_grenadeDamageTakenThisRound += info.GetDamage();
 			}
-			//=============================================================================
-			// HPE_END
-			//=============================================================================
 
 			weaponName = "hegrenade";
 		}
@@ -1692,7 +1697,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// [tj] Added a parameter so we know if it was death that caused the drop
 	// [menglish] Keep track of what the player has dropped for the freeze panel callouts
 	CBaseEntity* pAttacker = info.GetAttacker();
-	bool friendlyFire = pAttacker && pAttacker->GetTeamNumber() == GetTeamNumber();
+	bool friendlyFire = pAttacker && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker->entindex() );
 
 	CCSPlayer* pAttackerPlayer = ToCSPlayer( info.GetAttacker() );
 	if ( pAttackerPlayer )
@@ -2447,18 +2452,15 @@ private:
 
 int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 {
+	CTakeDamageInfo info = inputInfo;
+
 	if ( m_bImmunity )
 	{
 		// No damage if immune
 		return 0;
 	}
 
-	CTakeDamageInfo info = inputInfo;
-
 	CBaseEntity *pInflictor = info.GetInflictor();
-
-	if ( info.GetDamage() < 1 )
-		return 0;
 
 	if ( !pInflictor )
 		return 0;
@@ -2488,356 +2490,372 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	if ( ( info.GetDamageType() & DMG_BULLET ) == 0 )
 		m_LastHitGroup = HITGROUP_GENERIC;
 
-	const float flArmorBonus = 0.5f;
+	float flArmorBonus = 0.5f;
 	float flArmorRatio = 0.5f;
 	float flDamage = info.GetDamage();
 
-	bool bFriendlyFire = CSGameRules()->IsFriendlyFireOn();
+	bool bFriendlyFireEnabled = CSGameRules()->IsFriendlyFireOn();
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [tj] Added properties for goose chase achievement
-	//=============================================================================
- 
-	CSGameRules()->PlayerTookDamage(this, inputInfo);
+	CSGameRules()->PlayerTookDamage(this, info );
 
-	bool bDamageIsFromFire = !!( info.GetDamageType() & DMG_BURN ); //  check the damage type [mtw]
+	CCSPlayer *pAttacker = ToCSPlayer(info.GetAttacker() );
 
-	//Check "Goose Chase" achievement
-	CCSPlayer *pAttacker = ToCSPlayer(info.GetAttacker());
-	if (m_bIsDefusing && m_gooseChaseStep == GC_NONE && pAttacker && pAttacker->GetTeamNumber() != GetTeamNumber() )
+	// determine some useful info about the source of this damage
+	bool bDamageIsFromTeammate = pAttacker && ( pAttacker != this ) && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker );
+
+	if ( (!bFriendlyFireEnabled && bDamageIsFromTeammate) || ( bDamageIsFromTeammate && CSGameRules()->IsFreezePeriod() ) )
 	{
-
-		//Count enemies
-		int livingEnemies = 0;
-		CTeam *pAttackerTeam = GetGlobalTeam( pAttacker->GetTeamNumber() );
-		for ( int iPlayer=0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
-		{
-			CCSPlayer *pPlayer = ToCSPlayer( pAttackerTeam->GetPlayer( iPlayer ) );
-			Assert( pPlayer );
-			if ( !pPlayer )
-				continue;
-
-			Assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
-			
-			if ( pPlayer->m_lifeState == LIFE_ALIVE )
-			{
-				livingEnemies++;
-			}
-		}
-
-		//Must be last enemy alive;
-		if (livingEnemies == 1)
-		{
-			m_gooseChaseStep = GC_SHOT_DURING_DEFUSE;
-			m_pGooseChaseDistractingPlayer = pAttacker;
-		}
+		// when FF is off and that damage is from a teammate (not yourself ) never do damage
+		// this FF setting should be consistent and the behavior should match player expectations (no middle ground ) [mtw]
+		return 0;
 	}
- 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
+	bool bDamageIsFromSelf = (pAttacker == this );
+	bool bDamageIsFromGunfire = !!(info.GetDamageType() & DMG_BULLET ); //  check the damage type [mtw]
+	bool bDamageIsFromGrenade = pInflictor && !!(info.GetDamageType() & DMG_BLAST ) && dynamic_cast< CHEGrenadeProjectile* >( pInflictor ) != NULL;
+	bool bDamageIsFromFire = !!(info.GetDamageType() & DMG_BURN ); //  check the damage type [mtw]
+	bool bDamageIsFromOpponent = pAttacker != NULL && IsOtherEnemy( pAttacker );
+
+	// Check "Goose Chase" achievement
+	if ( m_bIsDefusing && ( m_gooseChaseStep == GC_NONE ) && bDamageIsFromOpponent && pAttacker )
+	{
+		CTeam *pAttackerTeam = GetGlobalTeam( pAttacker->GetTeamNumber() );
+		if ( pAttackerTeam )
+		{
+			// count enemies
+			int livingEnemies = 0;
+
+			for ( int iPlayer=0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
+			{
+				CCSPlayer *pPlayer = ToCSPlayer( pAttackerTeam->GetPlayer( iPlayer ) );
+				Assert( pPlayer );
+				if ( !pPlayer )
+					continue;
+
+				Assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
+
+				if ( pPlayer->m_lifeState == LIFE_ALIVE )
+				{
+					livingEnemies++;
+				}
+			}
+
+			//Must be last enemy alive;
+			if (livingEnemies == 1 )
+			{
+				m_gooseChaseStep = GC_SHOT_DURING_DEFUSE;
+				m_pGooseChaseDistractingPlayer = pAttacker;
+			}
+		}	
+	}
 
 	// warn about team attacks
-	if ( bFriendlyFire && pInflictor->GetTeamNumber() == GetTeamNumber() && pInflictor != this && info.GetAttacker() != this && !bDamageIsFromFire )
+	// ignoring the FF check so both players are notified that they hit their teammate [mtw]
+	// don't do this when a player is hurt by a molotov [mtw]
+	if ( bDamageIsFromTeammate && !bDamageIsFromFire && pAttacker )
 	{
-		CCSPlayer *pCSAttacker = ToCSPlayer( pInflictor );
-		if ( !pCSAttacker )
-			pCSAttacker = ToCSPlayer( info.GetAttacker() );
-
-		if ( pCSAttacker )
+		if ( !(pAttacker->m_iDisplayHistoryBits & DHF_FRIEND_INJURED ) )
 		{
-			if ( !(pCSAttacker->m_iDisplayHistoryBits & DHF_FRIEND_INJURED) )
-			{
-				pCSAttacker->HintMessage( "#Hint_try_not_to_injure_teammates", false );
-				pCSAttacker->m_iDisplayHistoryBits |= DHF_FRIEND_INJURED;
-			}
+			ClientPrint( pAttacker, HUD_PRINTCENTER, "#Hint_try_not_to_injure_teammates" );
+			
+			pAttacker->m_iDisplayHistoryBits |= DHF_FRIEND_INJURED;
+		}
 
-			if ( (pCSAttacker->m_flLastAttackedTeammate + 0.6f) < gpGlobals->curtime )
-			{
-				pCSAttacker->m_flLastAttackedTeammate = gpGlobals->curtime;
+		// [Jason] Change the constant time interval to be a convar instead (was 1.0f before )
+		if ( (pAttacker->m_flLastAttackedTeammate + CS_WarnFriendlyDamageInterval.GetInt() ) < gpGlobals->curtime )
+		{
+			pAttacker->m_flLastAttackedTeammate = gpGlobals->curtime;
 
-				// tell the rest of this player's team
-				Msg( "%s attacked a teammate\n", pCSAttacker->GetPlayerName() );
-				for ( int i=1; i<=gpGlobals->maxClients; ++i )
+			// tell the rest of this player's team
+			for ( int i=1; i<=gpGlobals->maxClients; ++i )
+			{
+				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+				if ( pPlayer && InSameTeam( pPlayer ) && !IsOtherEnemy( pPlayer->entindex() ) )
 				{
-					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-					if ( pPlayer && pPlayer->GetTeamNumber() == GetTeamNumber()	)
-					{
-						ClientPrint( pPlayer, HUD_PRINTTALK, "#Game_teammate_attack", pCSAttacker->GetPlayerName() );
-					}
+					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", CFmtStr( "#ENTNAME[%d]%s", pAttacker->entindex(), pAttacker->GetPlayerName() ) );
 				}
 			}
 		}
 	}
 
-	if ( bFriendlyFire ||
-		pInflictor->GetTeamNumber() != GetTeamNumber() ||
-		pInflictor == this ||
-		info.GetAttacker() == this )
+	float fFriendlyFireDamageReductionRatio = 1.0f;
+
+	// if a player damages them self with a grenade, scale by the convar
+	if ( bDamageIsFromSelf && bDamageIsFromGrenade )
 	{
-		if ( bFriendlyFire && (info.GetDamageType() & DMG_BLAST) == 0 )
+		fFriendlyFireDamageReductionRatio = ff_damage_reduction_grenade_self.GetFloat();
+	}
+	else if ( bDamageIsFromTeammate )
+	{
+		// reduce all other FF damage per convar settings
+		if ( bDamageIsFromGunfire )
 		{
-			if ( pInflictor->GetTeamNumber() == GetTeamNumber() )
-			{
-				if ( CSGameRules()->IsWarmupPeriod() )
-					flDamage = 0; // no friendlyfire in warmup
-				else
-					flDamage *= 0.35; // bullets hurt teammates less
-			}
+			fFriendlyFireDamageReductionRatio = ff_damage_reduction_bullets.GetFloat();
 		}
-
-		// special case for molotovs
-		if ( ( info.GetDamageType() & DMG_BURN ) == 0 )
+		else if ( bDamageIsFromGrenade )
 		{
-			if ( ShouldDoLargeFlinch( m_LastHitGroup, info.GetAttacker() ) )
-			{
-				if ( GetAbsVelocity().Length() < 300 )
-				{
-					m_flVelocityModifier = 0.65;
-				}
-			}
-			else
-			{
-				m_flVelocityModifier = 0.5;
-			}
-		}
-
-//=============================================================================
-// HPE_BEGIN:
-//=============================================================================
-		// [menglish] Store whether or not the knife did this damage as knives do bullet damage,
-		// so we need to specifically check the weapon here
-		bool bKnifeDamage = false;
-
-		if ( pAttacker )
-		{
-
-			// [paquin. forest] if  this is blast damage, and we haven't opted out with a cvar,
-			// we need to get the armor ratio out of the inflictor
-
-			if ( (info.GetDamageType() & DMG_BLAST) && !sv_legacy_grenade_damage.GetBool() )
-			{
-
-				if ( info.GetDamageType() & DMG_BURN )
-				{
-					// (DDK ) Ideally we'd use the info's weapon information instead of damage type, but this field appears to be unused and not available when passing this thru
-					pAttacker->AddBurnDamageDelt( entindex() );
-				}
-
-				// [paquin] if we know this is a grenade, use it's armor ratio, otherwise
-				// use the he grenade armor ratio
-
-				CBaseCSGrenadeProjectile *pGrenade = dynamic_cast< CBaseCSGrenadeProjectile * >( pInflictor );
-				CCSWeaponInfo* pWeaponInfo;
-
-				if ( pGrenade && pGrenade->m_pWeaponInfo )
-				{
-					pWeaponInfo = pGrenade->m_pWeaponInfo;
-				}
-				else
-				{
-					pWeaponInfo = GetWeaponInfo( WEAPON_HEGRENADE );
-				}
-
-				if ( pWeaponInfo )
-				{
-					flArmorRatio *= pWeaponInfo->m_flArmorRatio;
-				}
-			}
-			else
-			{
-				CWeaponCSBase *pWeapon = pAttacker->GetActiveCSWeapon();
-
-				if ( pWeapon )
-				{
-					flArmorRatio *= pWeapon->GetCSWpnData().m_flArmorRatio;
-					//Knives do bullet damage, so we need to specifically check the weapon here
-					bKnifeDamage = pWeapon->GetCSWpnData().m_WeaponType == WEAPONTYPE_KNIFE;
-
-					if ( info.GetDamageType() & DMG_BULLET && !bKnifeDamage && pAttacker->GetTeam() != GetTeam() )
-					{
-						CCS_GameStats.Event_ShotHit( pAttacker, info );
-					}
-				}
-			}
-		}
- 
-//=============================================================================
-// HPE_END
-//=============================================================================
-
-		// keep track of amount of damage last sustained
-		m_lastDamageAmount = flDamage;
-
-		// Deal with Armour
-		if ( ArmorValue() && !( info.GetDamageType() & (DMG_FALL | DMG_DROWN)) && IsArmored( m_LastHitGroup ) )
-		{
-			float fDamageToHealth = flDamage * flArmorRatio;
-			float fDamageToArmor = (flDamage - fDamageToHealth) * flArmorBonus;
-
-			int armorValue = ArmorValue();
-
-			// Does this use more armor than we have?
-			if (fDamageToArmor > armorValue )
-			{
-				fDamageToHealth = flDamage - armorValue / flArmorBonus;
-				fDamageToArmor = armorValue;
-				armorValue = 0;
-			}
-			else
-			{
-				if ( fDamageToArmor < 0 )
-					 fDamageToArmor = 1;
-
-				armorValue -= fDamageToArmor;
-			}
-			m_lastDamageArmor = (int)fDamageToArmor;
-			SetArmorValue(armorValue);
-
-			//=============================================================================
-			// HPE_BEGIN:
-			// [tj] Handle headshot-surviving achievement
-			//=============================================================================
-			if (m_LastHitGroup == HITGROUP_HEAD && flDamage > m_iHealth && fDamageToHealth < m_iHealth)
-			{
-				m_bSurvivedHeadshotDueToHelmet = true;
-			}			
-			//=============================================================================
-			// HPE_END			
-			//=============================================================================
-
-			flDamage = fDamageToHealth;
-
-			info.SetDamage( flDamage );
-
-			if ( ArmorValue() <= 0.0)
-				m_bHasHelmet = false;
-
-			if( !(info.GetDamageType() & DMG_FALL ) && !(info.GetDamageType() & DMG_BURN ) && !(info.GetDamageType() & DMG_BLAST ) )
-				Pain( true /*has armor*/, info.GetDamageType() );
+			fFriendlyFireDamageReductionRatio = ff_damage_reduction_grenade.GetFloat();
 		}
 		else
 		{
-			m_lastDamageArmor = 0;
-			if( !(info.GetDamageType() & DMG_FALL) )
-				Pain( false /*no armor*/, info.GetDamageType() );
+			fFriendlyFireDamageReductionRatio = ff_damage_reduction_other.GetFloat();
 		}
 
-		// round damage to integer
-		m_lastDamageHealth = (int)flDamage;
-		info.SetDamage( m_lastDamageHealth );
+		if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+			fFriendlyFireDamageReductionRatio = 0;
 
-		if ( info.GetDamage() <= 0 )
-			return 0;
+	}
 
-		CSingleUserRecipientFilter user( this );
-		user.MakeReliable();
-		UserMessageBegin( user, "Damage" );
-			WRITE_BYTE( (int)info.GetDamage() );
-			WRITE_VEC3COORD( info.GetInflictor()->WorldSpaceCenter() );
-//=============================================================================
-// HPE_BEGIN:
-// [menglish] Send the info about where the player was hit
-//=============================================================================
-			if ( !( info.GetDamageType() & DMG_BULLET ) || bKnifeDamage )
-			{
-				WRITE_LONG( -1 );
-			}
-			else
-			{
-				WRITE_LONG( m_LastHitBox );
-			}
-			WRITE_VEC3COORD( m_vLastHitLocationObjectSpace );
-			 
-//=============================================================================
-// HPE_END
-//=============================================================================
-		MessageEnd();
+	flDamage *= fFriendlyFireDamageReductionRatio;
 
-		// Do special explosion damage effect
+	// TODO[pmf]: we should be able to replace all this below with pWeapon = info.GetWeapon()
+	const CCSWeaponInfo* pFlinchInfoSource = NULL;
+	CCSPlayer *pInflictorPlayer = ToCSPlayer( info.GetInflictor() );
+	CWeaponCSBase *pInflictorWeapon = NULL;
+
+	if ( pInflictorPlayer )
+	{
+		pInflictorWeapon = pInflictorPlayer->GetActiveCSWeapon();
+
+		if ( pInflictorWeapon )
+		{
+			pFlinchInfoSource = &pInflictorWeapon->GetCSWpnData();
+		}
+	}
+
+	CBaseCSGrenadeProjectile* pGrenade = dynamic_cast< CBaseCSGrenadeProjectile* >( pInflictor );
+	if ( !pFlinchInfoSource	 )
+	{	
+		if ( pGrenade )
+		{
+			pFlinchInfoSource = pGrenade->m_pWeaponInfo;
+		}
+	}
+
+	// special case for inferno (caused by molotov projectiles )
+	if ( !pFlinchInfoSource	 )
+	{
+		if ( pInflictor->ClassMatches( "inferno" ) )
+		{
+			pFlinchInfoSource = GetWeaponInfo( WEAPON_MOLOTOV );
+		}
+	}
+
+	if ( pAttacker )
+	{
+		// [paquin. forest] if  this is blast damage, and we haven't opted out with a cvar,
+		// we need to get the armor ratio out of the inflictor
+
+		if( info.GetDamageType() & DMG_BURN )
+		{
+			// (DDK ) Ideally we'd use the info's weapon information instead of damage type, but this field appears to be unused and not available when passing this thru
+			pAttacker->AddBurnDamageDelt( entindex() );
+		}
+
 		if ( info.GetDamageType() & DMG_BLAST )
 		{
-			OnDamagedByExplosion( info );
-		}
+			// [paquin] if we know this is a grenade, use it's armor ratio, otherwise
+			// use the he grenade armor ratio
 
-// [menglish] Achievement award for kill stealing i.e. killing an enemy who was very damaged from other players
-// [Forrest] Moved this check before RecordDamageTaken so that the damage currently being dealt by this player
-//           won't disqualify them from getting the achievement.
+			const CCSWeaponInfo* pWeaponInfo;
 
-		if(m_iHealth - info.GetDamage() <= 0 && m_iHealth <= AchievementConsts::KillLowDamage_MaxHealthLeft)
-		{
-			bool onlyDamage = true;
-			CCSPlayer *pAttacker = ToCSPlayer(info.GetAttacker());
-			if(pAttacker && pAttacker->GetTeamNumber() != GetTeamNumber())
+			if ( pGrenade && pGrenade->m_pWeaponInfo )
 			{
-				//Verify that the killer has not done damage to this player beforehand
-				FOR_EACH_LL( m_DamageList, i )
-				{
-					if ( m_DamageList[i]->GetPlayerRecipientPtr() == this && m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
-					{
-						onlyDamage = false;
-						break;
-					}
-				}
-				if(onlyDamage)
-				{
-					pAttacker->AwardAchievement(CSKillLowDamage);
-				}
+				pWeaponInfo = pGrenade->m_pWeaponInfo;
 			}
-		}
-
-//=============================================================================
-// HPE_END
-//=============================================================================
-
-#if REPORT_PLAYER_DAMAGE
-		// damage output spew
-		char dmgtype[64];
-		CTakeDamageInfo::DebugGetDamageTypeString( info.GetDamageType(), dmgtype, sizeof(dmgtype) );
-
-		if ( info.GetDamageType() & DMG_HEADSHOT )
-			Q_strncat(dmgtype, "HEADSHOT", sizeof(dmgtype));
-
-		char outputString[256];
-		Q_snprintf( outputString, sizeof(outputString), "%f: Player %s incoming %f damage from %s, type %s; applied %d health and %d armor\n", 
-			gpGlobals->curtime, GetPlayerName(),
-			inputInfo.GetDamage(), info.GetInflictor()->GetDebugName(), dmgtype,
-			m_lastDamageHealth, m_lastDamageArmor);
-
-		Msg(outputString);
-#endif
-
-		// this is the actual damage applied to the player and not the raw damage that was output from the weapon
-		int nHealthRemoved = (GetHealth() < info.GetDamage()) ? GetHealth() : info.GetDamage();
-
-		if ( pAttacker )
-		{		
-			// Record for the shooter
-			pAttacker->RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
-
-			// And for the victim (don't double-record if it is the same person)
-			if ( pAttacker != this )
+			else
 			{
-				RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
+				pWeaponInfo = GetWeaponInfo( WEAPON_HEGRENADE );
+			}
+
+			if ( pWeaponInfo )
+			{
+				flArmorRatio *= pWeaponInfo->m_flArmorRatio;
 			}
 		}
 		else
 		{
-			RecordDamage( NULL, this, info.GetDamage(), nHealthRemoved ); //damaged by a null player - likely the world
+			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfoFromDamageInfo(info);
+			if ( pWeaponInfo )
+			{
+				flArmorRatio *= pWeaponInfo->m_flArmorRatio;
+
+				if ( info.GetDamageType() & DMG_BULLET && bDamageIsFromOpponent )
+				{
+					CCS_GameStats.Event_ShotHit( pAttacker, info );	// [pmf] Should this be done AFTER damage reduction?
+				}
+			}
+		}
+	}
+
+	float fDamageToHealth = flDamage;
+	float fDamageToArmor = 0;
+
+	// Deal with Armour
+	bool bDamageTypeAppliesToArmor = ( info.GetDamageType() == DMG_GENERIC ) ||
+		( info.GetDamageType() & (DMG_BULLET | DMG_BLAST | DMG_CLUB | DMG_SLASH) );
+	if ( bDamageTypeAppliesToArmor && ArmorValue() && IsArmored( m_LastHitGroup ) )
+	{
+		fDamageToHealth = flDamage * flArmorRatio;
+		fDamageToArmor = (flDamage - fDamageToHealth ) * flArmorBonus;
+
+		int armorValue = ArmorValue();
+
+		// Does this use more armor than we have?
+		if (fDamageToArmor > armorValue )
+		{
+			fDamageToHealth = flDamage - armorValue / flArmorBonus;
+			fDamageToArmor = armorValue;
+			armorValue = 0;
+		}
+		else
+		{
+
+			if ( fDamageToArmor < 0 )
+					fDamageToArmor = 1;
+
+			armorValue -= fDamageToArmor;
+		}
+		m_lastDamageArmor = (int )fDamageToArmor;
+		SetArmorValue(armorValue );
+
+		// [tj] Handle headshot-surviving achievement
+		if ( ( m_LastHitGroup == HITGROUP_HEAD ) && bDamageIsFromGunfire )
+		{
+			if ( flDamage > GetHealth() && fDamageToHealth < GetHealth() )
+			{
+				m_bSurvivedHeadshotDueToHelmet = true;
+			}
 		}
 
-		m_vecTotalBulletForce += info.GetDamageForce();
+		flDamage = fDamageToHealth;
+			
+		info.SetDamage( flDamage );
 
-		gamestats->Event_PlayerDamage( this, info );
+		if ( ArmorValue() <= 0.0 )
+		{
+			m_bHasHelmet = false;
+		}
 
-		return CBaseCombatCharacter::OnTakeDamage( info );
+		if( !(info.GetDamageType() & DMG_FALL ) && !(info.GetDamageType() & DMG_BURN ) && !(info.GetDamageType() & DMG_BLAST ) )
+		{
+
+			Pain( true /*has armor*/, info.GetDamageType() );
+		}
+	}
+	else 
+	{
+		m_lastDamageArmor = 0;
+		if( !(info.GetDamageType() & DMG_FALL ) )
+			Pain( false /*no armor*/, info.GetDamageType() );
+	}
+	
+	// keep track of amount of damage last sustained
+	m_lastDamageAmount = flDamage;
+
+	// round damage to integer
+	m_lastDamageHealth = (int )flDamage;
+	info.SetDamage( m_lastDamageHealth );
+
+#if REPORT_PLAYER_DAMAGE
+	// damage output spew
+	char dmgtype[64];
+	CTakeDamageInfo::DebugGetDamageTypeString( info.GetDamageType(), dmgtype, sizeof(dmgtype ) );
+
+	if ( info.GetDamageType() & DMG_HEADSHOT )
+		Q_strncat(dmgtype, "HEADSHOT", sizeof(dmgtype ) );
+
+	char outputString[256];
+	Q_snprintf( outputString, sizeof(outputString ), "%f: Player %s incoming %f damage from %s, type %s; applied %d health and %d armor\n", 
+		gpGlobals->curtime, GetPlayerName(),
+		inputInfo.GetDamage(), info.GetInflictor()->GetDebugName(), dmgtype,
+		m_lastDamageHealth, m_lastDamageArmor );
+
+	Msg(outputString );
+#endif
+
+	if ( info.GetDamage() <= 0 )
+		return 0;
+
+	// Do special explosion damage effect
+	if ( info.GetDamageType() & DMG_BLAST )
+	{
+		OnDamagedByExplosion( info );
+	}
+	
+	// [menglish] Achievement award for kill stealing i.e. killing an enemy who was very damaged from other players   <--- "LOL" -mtw
+	// [Forrest] Moved this check before RecordDamageTaken so that the damage currently being dealt by this player
+	//           won't disqualify them from getting the achievement.
+	if(GetHealth() - info.GetDamage() <= 0 && GetHealth() <= AchievementConsts::KillLowDamage_MaxHealthLeft )
+	{
+		bool onlyDamage = true;
+		if( pAttacker && IsOtherEnemy( pAttacker ) )
+		{
+			//Verify that the killer has not done damage to this player beforehand
+			FOR_EACH_LL( m_DamageList, i )
+			{
+				if ( m_DamageList[i]->GetPlayerRecipientPtr() == this && m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
+				{
+					onlyDamage = false;
+					break;
+				}
+			}
+			if ( onlyDamage )
+			{
+				pAttacker->AwardAchievement(CSKillLowDamage );
+			}
+		}
+	}
+
+	//
+	// this is the actual damage applied to the player and not the raw damage that was output from the weapon
+	int nHealthRemoved = (GetHealth() < info.GetDamage()) ? GetHealth() : info.GetDamage();
+
+	if ( pAttacker )
+	{
+		// Record for the shooter
+		pAttacker->RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
+
+		// And for the victim (don't double-record if it is the same person)
+		if ( pAttacker != this )
+		{
+			RecordDamage( pAttacker, this, info.GetDamage(), nHealthRemoved );
+		}
+
+		if ( bDamageIsFromTeammate )
+		{
+			// we need to check to see how much damage our attacker has done to teammates during this round and warm or kick as needed
+			int nDamageGivenThisRound = 0;
+			//CDamageRecord *pDamageList = pAttacker->GetDamageGivenList();
+			FOR_EACH_LL( pAttacker->GetDamageList(), i )
+			{
+				if ( !pAttacker->GetDamageList()[i] )
+					continue;
+
+				if ( pAttacker->GetDamageList()[i]->GetPlayerDamagerPtr() != pAttacker )
+					continue;
+
+				CCSPlayer *pDamageGivenListPlayer = pAttacker->GetDamageList()[i]->GetPlayerRecipientPtr();
+				if ( !pDamageGivenListPlayer )
+					continue;
+
+				if( ( pDamageGivenListPlayer != pAttacker ) && pAttacker->InSameTeam( pDamageGivenListPlayer ) && !IsOtherEnemy( pDamageGivenListPlayer ) )
+				{	
+					nDamageGivenThisRound += pAttacker->GetDamageList()[i]->GetActualHealthRemoved();
+				}		
+			}
+		}
 	}
 	else
 	{
-		return 0;
+		RecordDamage( NULL, this, info.GetDamage(), nHealthRemoved ); //damaged by a null player - likely the world
 	}
+
+	m_vecTotalBulletForce += info.GetDamageForce();
+
+	gamestats->Event_PlayerDamage( this, info );
+
+	return CBaseCombatCharacter::OnTakeDamage( info );
 }
 
 
@@ -2884,7 +2902,7 @@ void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, 
 	CBasePlayer *pAttacker = (CBasePlayer*)ToBasePlayer( info.GetAttacker() );
 
 	// show blood for firendly fire only if FF is on
-	if ( pAttacker && ( GetTeamNumber() == pAttacker->GetTeamNumber() ) )
+	if ( pAttacker && InSameTeam( pAttacker ) && !IsOtherEnemy( pAttacker->entindex() ) )
 		 bShouldBleed = CSGameRules()->IsFriendlyFireOn();
 
 	if ( m_takedamage != DAMAGE_YES )
@@ -9224,6 +9242,21 @@ void CCSPlayer::OutputDamageTaken( void )
 //=======================================================
 void CCSPlayer::OutputDamageGiven( void )
 {
+	int nDamageGivenThisRound = 0;
+	//CDamageRecord *pDamageList = pAttacker->GetDamageGivenList();
+	FOR_EACH_LL( m_DamageList, i )
+	{
+		if ( m_DamageList[i]->GetPlayerDamagerPtr() && 
+			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
+			m_DamageList[i]->GetPlayerRecipientPtr() &&
+			m_DamageList[i]->GetPlayerRecipientPtr() != this &&
+			InSameTeam( m_DamageList[i]->GetPlayerRecipientPtr() ) &&
+			!IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+		{	
+			nDamageGivenThisRound += m_DamageList[i]->GetActualHealthRemoved();
+		}		
+	}
+
 	bool bPrintHeader = true;
 	CDamageRecord *pRecord;
 	char buf[64];
@@ -9588,6 +9621,24 @@ void CCSPlayer::SetKilledTime( float time )
 	{
 		m_longestLife = m_killedTime - m_spawnedTime;
 	}
+}
+
+const CCSWeaponInfo* CCSPlayer::GetWeaponInfoFromDamageInfo( const CTakeDamageInfo &info )
+{
+	CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase *>( info.GetWeapon() );
+	if ( pWeapon != NULL )
+		return &pWeapon->GetCSWpnData();
+
+	// if the inflictor is a grenade, we won't have a weapon in the damageinfo structure, but we can get the weaponinfo directly from the projectile
+	CBaseCSGrenadeProjectile* pGrenade = dynamic_cast<CBaseCSGrenadeProjectile *>( info.GetInflictor() );
+	if ( pGrenade )
+		return pGrenade->m_pWeaponInfo;
+
+	CInferno* pInferno = dynamic_cast<CInferno*>( info.GetInflictor() );
+	if ( pInferno )
+		return pInferno->GetSourceWeaponInfo();
+
+	return NULL;
 }
 
 
@@ -10022,9 +10073,12 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 	if ( pAttacker != NULL && pVictim != NULL && pVictim->GetTeamNumber() == pAttacker->GetTeamNumber() && pAttacker->IsBlind())
 	{
 		CCSPlayer* flashbangAttacker = pAttacker->GetLastFlashbangAttacker();
-		if (flashbangAttacker && pAttacker->GetTeamNumber() != flashbangAttacker->GetTeamNumber())
+		if ( flashbangAttacker &&
+			 pAttacker->IsOtherEnemy( flashbangAttacker->entindex() ) &&
+			 !flashbangAttacker->HasControlledBotThisRound() &&
+			 !flashbangAttacker->HasBeenControlledThisRound() )
 		{
-			flashbangAttacker->AwardAchievement(CSCauseFriendlyFireWithFlashbang);
+			flashbangAttacker->AwardAchievement( CSCauseFriendlyFireWithFlashbang );
 		}
 	}
 
@@ -10873,6 +10927,23 @@ int CCSPlayer::GetAgentID( int team )
 		return m_iLoadoutSlotAgentT;
 
 	return 0;
+}
+
+bool CCSPlayer::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
+{
+	// can always hear the console unless we're ignoring all chat
+	if ( !pPlayer )
+		return m_iIgnoreGlobalChat != CHAT_IGNORE_ALL;
+
+	// check if we're ignoring all chat
+	if ( m_iIgnoreGlobalChat == CHAT_IGNORE_ALL )
+		return false;
+
+	// check if we're ignoring all but teammates
+	if ( m_iIgnoreGlobalChat == CHAT_IGNORE_TEAM && IsOtherEnemy( pPlayer->entindex() ) )
+		return false;
+
+	return true;
 }
 
 void CCSPlayer::ObserverUse( bool bIsPressed )

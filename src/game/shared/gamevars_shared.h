@@ -17,5 +17,6 @@ extern ConVar mp_forcecamera;
 extern ConVar mp_allowspectators;
 extern ConVar friendlyfire;
 extern ConVar mp_fadetoblack;
+extern ConVar mp_teammates_are_enemies;
 
 #endif // CS_GAMEVARS_SHARED_H

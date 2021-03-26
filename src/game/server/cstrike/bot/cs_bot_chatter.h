@@ -606,6 +606,11 @@ private:
 
 inline BotChatterInterface::VerbosityType BotChatterInterface::GetVerbosity( void ) const
 {
+	// disable bot chatter in last man standing rules
+	ConVarRef mp_teammates_are_enemies( "mp_teammates_are_enemies" );
+	if ( mp_teammates_are_enemies.GetBool() )
+		return OFF;
+
 	const char *string = cv_bot_chatter.GetString();
 
 	if (string == NULL)

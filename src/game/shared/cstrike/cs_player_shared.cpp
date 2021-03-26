@@ -48,6 +48,14 @@
 ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
 ConVar sv_showplayerhitboxes( "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
 
+// friendly fire damage scalers
+ConVar	ff_damage_reduction_grenade( "ff_damage_reduction_grenade", "0.25", FCVAR_REPLICATED, "How much to reduce damage done to teammates by a thrown grenade.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_grenade_self( "ff_damage_reduction_grenade_self", "1", FCVAR_REPLICATED, "How much to damage a player does to himself with his own grenade.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_bullets( "ff_damage_reduction_bullets", "0.1", FCVAR_REPLICATED, "How much to reduce damage done to teammates when shot.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_other( "ff_damage_reduction_other", "0.25", FCVAR_REPLICATED, "How much to reduce damage done to teammates by things other than bullets and grenades.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar  ff_damage_bullet_penetration( "ff_damage_bullet_penetration", "0", FCVAR_REPLICATED, "If friendly fire is off, this will scale the penetration power and damage a bullet does when penetrating another friendly player", true, 0.0f, true, 1.0f );
+
+extern ConVar mp_teammates_are_enemies;
 extern ConVar mp_respawn_on_death_ct;
 extern ConVar mp_respawn_on_death_t;
 extern ConVar mp_buy_allow_grenades;
@@ -276,10 +284,10 @@ bool CCSPlayer::IsOtherEnemy( int nEntIndex )
 			int nOtherTeam = pCSPR->GetTeam( nEntIndex );
 			int nTeam = GetTeamNumber();
 
-			/*if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+			if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
 			{
 				return true;
-			}*/
+			}
 
 			return nTeam != nOtherTeam;
 		}
@@ -305,10 +313,10 @@ bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
 	int nTeam = GetTeamNumber();
 
 
-	/*if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+	if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
 	{
 		return true;
-	}*/
+	}
 
 	return nTeam != nOtherTeam;
 }
@@ -1321,6 +1329,19 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 			flPenetrationModifier = 1.0f;
 
 		flDamageModifier = 0.99f;
+	}
+	else if ( iEnterMaterial == CHAR_TEX_FLESH && ff_damage_reduction_bullets.GetFloat() == 0
+			  && tr.m_pEnt && tr.m_pEnt->IsPlayer() && tr.m_pEnt->GetTeamNumber() == GetTeamNumber() )
+	{
+		if ( ff_damage_bullet_penetration.GetFloat() == 0 )
+		{
+			// don't allow penetrating players when FF is off
+			flPenetrationModifier = 0;
+			return true;
+		}
+
+		flPenetrationModifier = ff_damage_bullet_penetration.GetFloat();
+		flDamageModifier = ff_damage_bullet_penetration.GetFloat();
 	}
 	else
 	{

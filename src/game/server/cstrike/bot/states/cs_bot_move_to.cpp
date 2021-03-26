@@ -312,7 +312,7 @@ void MoveToState::OnUpdate( CCSBot *me )
 										CCSBot *player = dynamic_cast< CCSBot * >(UTIL_PlayerByIndex( i ));
 
 										if ( player == NULL || !player->IsAlive() ||
-											( me->GetTeamNumber() != player->GetTeamNumber() ) || player->entindex() == me->entindex() )
+											 me->IsOtherEnemy( player ) || player->entindex() == me->entindex() )
 											 continue;
 
 										if ( player->IsPickingupHostage() )

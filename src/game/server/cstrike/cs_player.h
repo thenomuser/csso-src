@@ -517,6 +517,8 @@ public:
 	float m_flDefusingTalkTimer;
 	float m_flC4PlantTalkTimer;
 
+	virtual bool CanHearAndReadChatFrom( CBasePlayer *pPlayer );
+
 	void EmitPrivateSound( const char *soundName );		///< emit given sound that only we can hear
 
 	bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*= 0*/ );
@@ -1118,7 +1120,8 @@ public:
     CCSPlayer* GetLastFlashbangAttacker() { return m_lastFlashBangAttacker; }
     void SetLastFlashbangAttacker(CCSPlayer* attacker) { m_lastFlashBangAttacker = attacker; }
 	float GetKilledTime( void ) { return m_killedTime; }
-	void SetKilledTime( float time ); 
+	void SetKilledTime( float time );
+	static const CCSWeaponInfo* GetWeaponInfoFromDamageInfo( const CTakeDamageInfo &info );
 
 	static CSWeaponID GetWeaponIdCausingDamange( const CTakeDamageInfo &info );
 	static void ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer *pVictim, const CTakeDamageInfo &info );

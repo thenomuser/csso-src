@@ -66,7 +66,7 @@ void BotMeme::Transmit( CCSBot *sender ) const
 {
 	for( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
+		CCSPlayer *player = static_cast<CCSPlayer *>( UTIL_PlayerByIndex( i ) );
 
 		if (player == NULL)
 			continue;
@@ -86,7 +86,7 @@ void BotMeme::Transmit( CCSBot *sender ) const
 			continue;
 
 		// ignore enemies, since we can't hear them talk
-		if (!player->InSameTeam( sender ))
+		if (sender && sender->IsOtherEnemy( player ))
 			continue;
 
 		// if not a bot, fail the test
@@ -1724,7 +1724,7 @@ BotStatement *BotChatterInterface::GetActiveStatement( void )
 
 	for( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
+		CCSPlayer *player = static_cast<CCSPlayer *>( UTIL_PlayerByIndex( i ) );
 
 		if (player == NULL)
 			continue;
@@ -1734,7 +1734,7 @@ BotStatement *BotChatterInterface::GetActiveStatement( void )
 			continue;
 
 		// ignore enemies, since we can't hear them talk
-		if (!m_me->InSameTeam( player ))
+		if (player->IsOtherEnemy( m_me->entindex() ))
 			continue;
 
 		CCSBot *bot = dynamic_cast<CCSBot *>(player);

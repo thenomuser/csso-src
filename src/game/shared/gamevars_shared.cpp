@@ -48,6 +48,13 @@ ConVar friendlyfire(
 	"Allows team members to injure other members of their team"
 	);
 
+ConVar mp_teammates_are_enemies(
+	"mp_teammates_are_enemies",
+	"0",
+	FCVAR_REPLICATED | FCVAR_NOTIFY,
+	"When set, your teammates act as enemies and all players are valid targets."
+	);
+
 ConVar mp_buy_anywhere(
 	"mp_buy_anywhere",
 	"0",

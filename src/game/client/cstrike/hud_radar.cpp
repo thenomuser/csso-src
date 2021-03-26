@@ -152,7 +152,7 @@ void CHudRadar::MsgFunc_UpdateRadar(bf_read &msg )
 		if ( !pPlayer )
 			continue;
 
-		bool bOppositeTeams = (pLocalPlayer->GetTeamNumber() != TEAM_UNASSIGNED && pCSPR->GetTeam( pPlayer->entindex() ) != pLocalPlayer->GetTeamNumber());		
+		bool bOppositeTeams = (pLocalPlayer->GetTeamNumber() != TEAM_UNASSIGNED && pLocalPlayer->IsOtherEnemy( pPlayer ));
 
 		//=============================================================================
 		// HPE_BEGIN:
@@ -284,7 +284,7 @@ void CHudRadar::DrawPlayerOnRadar( int iPlayer, C_CSPlayer *pLocalPlayer )
 	if ( !pPlayer )
 		return;
 
-	bool bOppositeTeams = (pLocalPlayer->GetTeamNumber() != TEAM_UNASSIGNED && pCSPR->GetTeam( iPlayer ) != pLocalPlayer->GetTeamNumber());
+	bool bOppositeTeams = (pLocalPlayer->GetTeamNumber() != TEAM_UNASSIGNED && pLocalPlayer->IsOtherEnemy( pPlayer ));
 
 	if ( bOppositeTeams && pPlayer->m_bDetected == false )
 		return;

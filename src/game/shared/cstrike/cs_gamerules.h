@@ -410,6 +410,9 @@ public:
 	void CheckLevelInitialized();
 	void CheckRestartRound();
 
+	virtual bool FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker, const CTakeDamageInfo &info );
+	virtual int IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled );
+
 	bool CanPlayerHearTalker( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 	virtual bool PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 

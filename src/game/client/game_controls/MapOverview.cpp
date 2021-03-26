@@ -19,6 +19,9 @@
 #include "spectatorgui.h"
 #include "c_playerresource.h"
 #include "view.h"
+#ifdef CSTRIKE_DLL
+#include "c_cs_player.h"
+#endif
 
 #include "clientmode.h"
 #include <vgui_controls/AnimationController.h>
@@ -361,7 +364,11 @@ void CMapOverview::Paint()
 
 bool CMapOverview::CanPlayerBeSeen(MapPlayer_t *player)
 {
+#ifdef CSTRIKE_DLL
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
+#else
 	C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+#endif
 
 	if ( !localPlayer || !player )
 		return false;
@@ -390,7 +397,11 @@ bool CMapOverview::CanPlayerBeSeen(MapPlayer_t *player)
 	if ( mp_forcecamera.GetInt() == OBS_ALLOW_TEAM )
 	{
 		// true if both players are on the same team
+#ifdef CSTRIKE_DLL
+		return (!localPlayer->IsOtherEnemy( dynamic_cast<C_CSPlayer*>(UTIL_PlayerByUserId( player->userid )) ));
+#else
 		return (localPlayer->GetTeamNumber() == player->team );
+#endif
 	}
 
 	// by default we can see all players
@@ -401,7 +412,11 @@ bool CMapOverview::CanPlayerBeSeen(MapPlayer_t *player)
 /// Note: index is 0-based
 bool CMapOverview::CanPlayerHealthBeSeen(MapPlayer_t *player)
 {
+#ifdef CSTRIKE_DLL
+	C_CSPlayer *localPlayer = C_CSPlayer::GetLocalCSPlayer();
+#else
 	C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
+#endif
 
 	if ( !localPlayer )
 		return false;
@@ -413,7 +428,11 @@ bool CMapOverview::CanPlayerHealthBeSeen(MapPlayer_t *player)
 	if ( mp_forcecamera.GetInt() != OBS_ALLOW_ALL )
 	{
 		// if forcecamera is on, only show health for teammates
-		return ( localPlayer->GetTeamNumber() == player->team );
+#ifdef CSTRIKE_DLL
+		return (!localPlayer->IsOtherEnemy( dynamic_cast<C_CSPlayer*>(UTIL_PlayerByUserId( player->userid )) ));
+#else
+		return (localPlayer->GetTeamNumber() == player->team );
+#endif
 	}
 
 	return true;
