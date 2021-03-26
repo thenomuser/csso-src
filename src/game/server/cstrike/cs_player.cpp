@@ -8472,7 +8472,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 		default:
 		{
 			// let dedicated servers optionally allow droppable knives
-			if ( type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( ) )
+			if ( type == WEAPONTYPE_KNIFE && mp_drop_knife_enable.GetBool( ) || pCSWeapon->GetCSWeaponID() == WEAPON_TASER )
 			{
 				if ( CSGameRules( )->GetCanDonateWeapon( ) && !pCSWeapon->GetDonated( ) )
 				{
