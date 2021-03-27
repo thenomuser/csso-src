@@ -2330,11 +2330,11 @@ bool CBasePlayer::SetObserverMode(int mode )
 #ifdef CSTRIKE_DLL
 	// Overridden here instead of in derived class to avoid duplicating the rest of this function:
 	// if we're observing the planted bomb, force the camera to be in chase view
-	/*CPlantedC4* pPlantedC4 = dynamic_cast< CPlantedC4* >( m_hObserverTarget.Get() );
+	CPlantedC4* pPlantedC4 = dynamic_cast< CPlantedC4* >( m_hObserverTarget.Get() );
 	if ( pPlantedC4 )
 	{
 		mode = OBS_MODE_CHASE;
-	}*/
+	}
 #endif
 
 	if ( m_iObserverMode > OBS_MODE_DEATHCAM )

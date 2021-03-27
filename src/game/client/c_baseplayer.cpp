@@ -1587,7 +1587,17 @@ void C_BasePlayer::CalcChaseCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	trace_t trace;
 	CTraceFilterNoNPCsOrPlayer filter( target, COLLISION_GROUP_NONE );
 	C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
-	UTIL_TraceHull( origin, viewpoint, WALL_MIN, WALL_MAX, MASK_SOLID, &filter, &trace );
+
+	Vector hullMin = WALL_MIN, hullMax = WALL_MAX;
+
+#ifdef CSTRIKE_DLL
+	if ( target && Q_strcmp( target->GetClassname(), "class C_PlantedC4" ) == 0 )
+	{
+		hullMin *= 2.f; hullMax *= 2.f;
+	}
+#endif
+
+	UTIL_TraceHull( origin, viewpoint, hullMin, hullMax, MASK_SOLID, &filter, &trace );
 	C_BaseEntity::PopEnableAbsRecomputations();
 
 	if (trace.fraction < 1.0)

@@ -1957,13 +1957,32 @@ void CCSPlayer::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, i
 	PointCameraSetupVisibility( this, area, pvs, pvssize );
 }
 
+bool CCSPlayer::IsValidObserverTarget( CBaseEntity * target )
+{
+	if ( target == NULL )
+		return false;
+
+	if ( !target->IsPlayer() )
+	{
+		// [jason] If the target is planted C4, we allow that to be observed as well
+		CPlantedC4* pPlantedC4 = dynamic_cast< CPlantedC4* >(target);
+		if ( pPlantedC4 )
+			return true;
+
+		return false;
+	}
+
+	// fall through to the base checks
+	return BaseClass::IsValidObserverTarget( target );
+}
+
 CBaseEntity* CCSPlayer::FindNextObserverTarget( bool bReverse )
 {
 	CBaseEntity* pTarget = BaseClass::FindNextObserverTarget( bReverse );
 
 	// [jason] If we have no valid targets left (eg. last teammate dies in competitive mode )
 	//	then try to place the camera near any planted bomb 
-	/*if ( !pTarget )
+	if ( !pTarget )
 	{		
 		if ( g_PlantedC4s.Count() > 0 )
 		{
@@ -1979,7 +1998,7 @@ CBaseEntity* CCSPlayer::FindNextObserverTarget( bool bReverse )
 
 			return g_PlantedC4s[0];
 		}
-	}*/
+	}
 
 	return pTarget;
 }
