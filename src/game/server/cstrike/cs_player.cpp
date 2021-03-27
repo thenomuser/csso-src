@@ -2591,7 +2591,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 				CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
 				if ( pPlayer && InSameTeam( pPlayer ) && !IsOtherEnemy( pPlayer->entindex() ) )
 				{
-					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", CFmtStr( "#ENTNAME[%d]%s", pAttacker->entindex(), pAttacker->GetPlayerName() ) );
+					ClientPrint( pPlayer, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Game_teammate_attack", pAttacker->GetPlayerName() );
 				}
 			}
 		}
