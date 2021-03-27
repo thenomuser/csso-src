@@ -1122,8 +1122,14 @@ void UpdateClassImageEntity(
 
 		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
 	}
-	else if ( pGlovesModel )
-		pGlovesModel->Remove();
+	else
+	{
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 0 );
+		if ( pGlovesModel )
+		{
+			pGlovesModel->Remove();
+		}
+	}
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
@@ -1357,8 +1363,14 @@ void UpdateBuyMenuImageEntity(
 
 		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
 	}
-	else if ( pGlovesModel )
-		pGlovesModel->Remove();
+	else
+	{
+		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 0 );
+		if ( pGlovesModel )
+		{
+			pGlovesModel->Remove();
+		}
+	}
 
 	Vector origin = pLocalPlayer->EyePosition();
 	Vector lightOrigin = origin;
