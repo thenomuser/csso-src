@@ -733,6 +733,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
 		
 		// footstep sounds
+#ifdef CSTRIKE_DLL
 		const char *pRawSoundName = physprops->GetString( stepSoundName );
 		const char *pSoundName = NULL;
 		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
@@ -752,6 +753,9 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 			DevMsg( "Can't find specific footstep sound! (%s) - Using the default instead. (%s)\n", pSoundName, pRawSoundName );
 			pSoundName = pRawSoundName;
 		}
+#else
+		const char *pSoundName = physprops->GetString( stepSoundName );
+#endif
 		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, NULL ) )
 			return;
 
@@ -831,6 +835,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 
 	EmitSound( filter, entindex(), ep );
 
+#ifdef CSTRIKE_DLL
 	CSoundParameters paramsSuitSound;
 	if (!CBaseEntity::GetParametersForSound((GetTeamNumber() == TEAM_CT) ? "CT_Default.Suit" : "T_Default.Suit", paramsSuitSound, NULL))
 		return;
@@ -838,18 +843,14 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 	EmitSound_t epSuitSound;
 	epSuitSound.m_nChannel = CHAN_AUTO;
 	epSuitSound.m_pSoundName = paramsSuitSound.soundname;
-#ifdef CSTRIKE_DLL
-	epSuitSound.m_flVolume = fvol * 0.25; // vanilla source 2013 soundsystem sucks
-#else
-	epSuitSound.m_flVolume = fvol;
-#endif
+	epSuitSound.m_flVolume = fvol * 0.1; // vanilla source 2013 soundsystem sucks
 	epSuitSound.m_SoundLevel = paramsSuitSound.soundlevel;
 	epSuitSound.m_nFlags = 0;
 	epSuitSound.m_nPitch = paramsSuitSound.pitch;
 	epSuitSound.m_pOrigin = &vecOrigin;
 
 	EmitSound(filter, entindex(), epSuitSound);
-
+#endif
 }
 
 void CBasePlayer::UpdateButtonState( int nUserCmdButtonMask )
