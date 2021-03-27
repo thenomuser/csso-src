@@ -574,7 +574,9 @@ public:
 	void SetProgressBarTime( int barTime );
 	virtual void PlayerDeathThink();
 
-	virtual bool StartObserverMode( int mode );
+	virtual bool StartObserverMode( int mode ) OVERRIDE;
+	virtual bool SetObserverTarget( CBaseEntity *target );
+	virtual void CheckObserverSettings( void );
 
 	void Weapon_Equip( CBaseCombatWeapon *pWeapon );
 	virtual bool BumpWeapon( CBaseCombatWeapon *pWeapon );
