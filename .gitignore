@@ -136,6 +136,12 @@ pet.lib
 vmt.pdb
 vmt.dll
 vmt.lib
+vtex_dll.pdb
+vtex_dll.dll
+vtex_dll.lib
+vtex.pdb
+vtex.exe
+vtex.lib
 
 # ignore this files since they have to be builded manually any way
 mathlib.lib

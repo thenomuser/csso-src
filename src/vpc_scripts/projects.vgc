@@ -215,6 +215,16 @@ $Project "vrad_launcher"
 	"utils\vrad_launcher\vrad_launcher.vpc" [$WIN32]
 }
 
+$Project "vtex_dll"
+{
+	"utils\vtex\vtex_dll.vpc" [ $WINDOWS || $POSIX ]
+}
+
+$Project "vtex_launcher"
+{
+	"utils\vtex\vtex_launcher.vpc" [$WIN32]
+}
+
 $Project "vtf2tga"
 {
 	"utils\vtf2tga\vtf2tga.vpc" [$WIN32]
