@@ -1384,6 +1384,9 @@ void CCSPlayer::Spawn()
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
 
+	m_iKillStreak = 0;
+	m_bWasGivenAHealthshot = false;
+
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
 	else
@@ -1851,6 +1854,16 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 {
 	BaseClass::Event_KilledOther(pVictim, info);
+
+	// check if we need to give this player a healtshot for kill-streak
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && m_iKillStreak >= 3 && !m_bWasGivenAHealthshot )
+	{
+		m_bWasGivenAHealthshot = true;
+		GiveNamedItem( "weapon_healthshot" );
+
+		// notify the player
+		ClientPrint( this, HUD_PRINTTALK, "#Cstrike_WasGivenAHealthshot" );
+	}
 }
 
 
@@ -8613,7 +8626,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 		}
 
 		// PiMoN: uncomment this when we have healthshots
-		/*if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
+		if ( pCSWeapon->IsA( WEAPON_HEALTHSHOT ) )
 		{
 			CItem_Healthshot* pHealth = dynamic_cast< CItem_Healthshot* >( pCSWeapon );
 			if ( pHealth )
@@ -8623,7 +8636,7 @@ bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
 				
 			}
 			return true;
-		}*/
+		}
 
 		CSWeaponType type = pCSWeapon->GetWeaponType();
 		switch ( type )
@@ -11058,6 +11071,8 @@ void CCSPlayer::IncrementFragCount( int nCount )
 
 	m_iFrags += nCount;
 	pl.frags = m_iFrags;
+
+	m_iKillStreak++;
 }
 
 void CCSPlayer::IncrementDeathCount( int nCount )

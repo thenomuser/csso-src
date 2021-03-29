@@ -72,7 +72,7 @@ bool CItem_Healthshot::CanUseOnSelf( CCSPlayer *pPlayer )
 	if ( pPlayer->GetHealth() >= pPlayer->GetMaxHealth() )
 	{
 #ifndef CLIENT_DLL
-		ClientPrint( pPlayer, HUD_PRINTCENTER, "#SFUI_Healthshot_AlreadyAtMax" );
+		ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_Healthshot_AlreadyAtMax" );
 #endif
 		return false;
 	}

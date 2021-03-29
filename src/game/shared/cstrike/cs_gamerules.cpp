@@ -1983,7 +1983,10 @@ ConVar snd_music_selection(
 			event->SetInt( "noscope", bNoScope ? 1 : 0 );
 			event->SetInt( "blind", bBlindKill ? 1 : 0 );
 			event->SetInt( "penetrated", info.GetObjectsPenetrated() );
-			event->SetInt( "priority", bHeadshot ? 8 : 7 );	// HLTV event priority, not transmitted
+			int priority = bHeadshot ? 8 : 7;
+			if ( pCSScorer )
+				priority += pCSScorer->m_iKillStreak;
+			event->SetInt( "priority", priority );	// HLTV event priority, not transmitted
 			if ( pCSVictim->GetDeathFlags() & CS_DEATH_DOMINATION )
 			{
 				event->SetInt( "dominated", 1 );

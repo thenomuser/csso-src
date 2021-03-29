@@ -938,6 +938,40 @@ void CBasePlayer::Weapon_SetLast( CBaseCombatWeapon *pWeapon )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Override to clear dropped weapon from the hud
+//-----------------------------------------------------------------------------
+void CBasePlayer::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget /* = NULL */, const Vector *pVelocity /* = NULL */ )
+{
+	bool bWasActiveWeapon = false;
+	if ( pWeapon == GetActiveWeapon() )
+	{
+		bWasActiveWeapon = true;
+	}
+
+	if ( pWeapon )
+	{
+		if ( bWasActiveWeapon )
+		{
+			pWeapon->SendWeaponAnim( ACT_VM_IDLE );
+		}
+	}
+
+#if defined( GAME_DLL )
+	BaseClass::Weapon_Drop( pWeapon, pvecTarget, pVelocity );
+#endif
+
+	if ( bWasActiveWeapon )
+	{
+		if (!SwitchToNextBestWeapon( NULL ))
+		{
+			CBaseViewModel *vm = GetViewModel();
+			if ( vm )
+				vm->AddEffects( EF_NODRAW );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Override base class so player can reset autoaim
 // Input  :
 // Output :

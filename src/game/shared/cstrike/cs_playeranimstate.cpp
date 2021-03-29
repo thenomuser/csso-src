@@ -1536,6 +1536,10 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 	if ( !pWeapon )
 		return -1;
 
+	// PiMoN: I cant be bothered to make more animations... for now
+	if ( pWeapon->GetWeaponID() == WEAPON_HEALTHSHOT )
+		return -1;
+
 	const char *pSuffix = GetWeaponSuffix();
 	if ( !pSuffix )
 		return -1;

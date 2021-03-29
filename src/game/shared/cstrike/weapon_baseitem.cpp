@@ -209,17 +209,13 @@ void CWeaponBaseItem::ItemPostFrame( void )
 		// remove the ammo
 		pPlayer->RemoveAmmo( 1, m_iPrimaryAmmoType );
 
+		pPlayer->SwitchToNextBestWeapon( this );
+#ifndef CLIENT_DLL
 		if ( pPlayer->GetAmmoCount(m_iPrimaryAmmoType) <= 0 )
 		{
-			//pPlayer->Weapon_Drop( this, NULL, NULL );
-#ifndef CLIENT_DLL	
 			UTIL_Remove( this );
+		}
 #endif
-		}
-		else
-		{
-			pPlayer->SwitchToNextBestWeapon( this );
-		}
 	}
 
 }
