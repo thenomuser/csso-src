@@ -388,13 +388,14 @@ C_BaseCombatWeapon *CHudWeaponSelection::FindNextWeaponInWeaponSelection(int iCu
 				continue;
 			bool isGrenade = pCSWeapon->IsKindOf( WEAPONTYPE_GRENADE );
 			bool isBomb = pCSWeapon->IsKindOf( WEAPONTYPE_C4 );
+			bool isStackable = pCSWeapon->IsKindOf( WEAPONTYPE_STACKABLEITEM );
 			bool isMelee = ( pCSWeapon->IsKindOf( WEAPONTYPE_KNIFE ) || pCSWeapon->IsA( WEAPON_TASER ) );
 			if ( ( selectionMode == WEAPON_SELECTION_GRENADE_AND_BOMB && !isGrenade && !isBomb ) ||
 				 ( selectionMode == WEAPON_SELECTION_GRENADE_AND_BOMB_AND_MELEE && !isGrenade && !isBomb && !isMelee ) ||
 				 ( selectionMode == WEAPON_SELECTION_NO_GRENADE_AND_BOMB && ( isGrenade || isBomb || isMelee ) ) ||	 
 				 ( selectionMode == WEAPON_SELECTION_GRENADE && !isGrenade ) ||
 				 ( selectionMode == WEAPON_SELECTION_MELEE && !isMelee ) ||
-				 ( selectionMode == WEAPON_SELECTION_ITEMSLOT && !isBomb ) )
+				 ( selectionMode == WEAPON_SELECTION_ITEMSLOT && !isBomb && !isStackable ) )
 				continue;
 		}
 
