@@ -1754,37 +1754,6 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 
 	int nType = pWeaponInfo->m_WeaponType;
 
-// 	if ( acquireMethod == AcquireMethod::Buy )
-// 	{
-// 		bool bFoundInLoadout = false;
-// 		int nStartSearchPos = LOADOUT_POSITION_INVALID;
-// 
-// 		if ( nType == WEAPONTYPE_PISTOL )
-// 			nStartSearchPos = LOADOUT_POSITION_SECONDARY0;
-// 		else if ( nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_MACHINEGUN )
-// 			nStartSearchPos = LOADOUT_POSITION_HEAVY0;
-// 		else if ( nType == WEAPONTYPE_SUBMACHINEGUN )
-// 			nStartSearchPos = LOADOUT_POSITION_SMG0;
-// 		else if ( nType == WEAPONTYPE_RIFLE || nType == WEAPONTYPE_SNIPER_RIFLE )
-// 			nStartSearchPos = LOADOUT_POSITION_RIFLE0;
-// 
-// 		// make sure that we have this item equipped in our inventory loadout
-// 		for ( int i = nStartSearchPos; i < (nStartSearchPos+6); ++i )
-// 		{
-// 			CEconItemView *pItemView = Inventory()->GetItemInLoadout( GetTeamNumber(), i );
-// 			if ( pItemView && pItemView->GetStaticData() )
-// 			{
-// 				if ( pItemView == pItem || ( V_stricmp( pItemView->GetStaticData()->GetDefinitionName(), WeaponIdAsString( weaponId ) ) == 0 ) )
-// 				{
-// 					bFoundInLoadout = true;
-// 					break;
-// 				}
-// 			}
-// 		}
-// 		if ( nStartSearchPos != LOADOUT_POSITION_INVALID && !bFoundInLoadout )
-// 			return AcquireResult::NotAllowedForPurchase;
-// 	}
-
 	if ( nType == WEAPONTYPE_GRENADE )
 	{
 		if ( mp_buy_allow_grenades.GetBool() == false )

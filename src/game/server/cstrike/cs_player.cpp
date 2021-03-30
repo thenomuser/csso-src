@@ -4646,12 +4646,9 @@ BuyResult_e CCSPlayer::AttemptToBuyTaser( void )
 
 // Handles the special "buy" alias commands we're creating to accommodate the buy
 // scripts players use (now that we've rearranged the buy menus and broken the scripts)
-//=============================================================================
-// HPE_BEGIN:
+
 //[tj]  This is essentially a shim so I can easily check the return
 //      value without adding new code to all the return points.
-//=============================================================================
-
 BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 {
 	const char* loadoutItem = CSLoadout()->GetWeaponFromSlot( this, CSLoadout()->GetSlotFromWeapon( this, item ) );
@@ -4668,55 +4665,77 @@ BuyResult_e CCSPlayer::HandleCommand_Buy( const char *item )
 }
 
 BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName ) 
-//=============================================================================
-// HPE_END
-//=============================================================================
 {
 	BuyResult_e result = CanPlayerBuy( false ) ? BUY_PLAYER_CANT_BUY : BUY_INVALID_ITEM; // set some defaults
 
 	// translate the new weapon names to the old ones that are actually being used.
-	wpnName = GetTranslatedWeaponAlias(wpnName);
+	wpnName = GetTranslatedWeaponAlias( wpnName );
 
-	CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( AliasToWeaponID( wpnName ) );
+	CSWeaponID weaponId = AliasToWeaponID( wpnName );
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+
 	if ( pWeaponInfo == NULL )
 	{
+		// it buys more ammo than it should be because
+		// GetReserveAmmoMax() returns max ammo for ammo
+		// type and not for weapon! It's happening because
+		// it checks if player (not weapon) has gun's type
+		// of ammo and if so, uses it's max capacity instead
+		// of gun's max capacity because player for some
+		// resaon has some ammo but he shouldn't
+		// solution: always return 0 in pPlayer->GetAmmoCount()?
+
 		// UPD: oh wait, you can't rebuy ammo in cs:go...
 		/*if ( Q_stricmp( wpnName, "primammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 0 );
-
-			// it buys more ammo than it should be because
-			// GetReserveAmmoMax() returns max ammo for ammo
-			// type and not for weapon! It's happening because
-			// it checks if player (not weapon) has gun's type
-			// of ammo and if so, uses it's max capacity instead
-			// of gun's max capacity because player for some
-			// resaon has some ammo but he shouldn't
-			// solution: always return 0 in pPlayer->GetAmmoCount()?
 		}
 		else if ( Q_stricmp( wpnName, "secammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}
-		else*/ if ( Q_stristr( wpnName, "defuser" )  )
+		else*/ if ( Q_stristr( wpnName, "defuser" ) )
 		{
-			if( CanPlayerBuy( true ) )
+			if ( CanPlayerBuy( true ) )
 			{
 				result = AttemptToBuyDefuser();
 			}
 		}
-		else if ( Q_stristr( wpnName, "taser" )  )
-		{
-			if ( CanPlayerBuy( true ) )
-				result = AttemptToBuyTaser();
-		}
 	}
 	else
 	{
-
 		if( !CanPlayerBuy( true ) )
 		{
 			return BUY_PLAYER_CANT_BUY;
+		}
+
+		AcquireResult::Type acquireResult = CanAcquire( weaponId, AcquireMethod::Buy );
+		switch ( acquireResult )
+		{
+		case AcquireResult::Allowed:
+			break;
+
+		case AcquireResult::AlreadyOwned:
+		case AcquireResult::ReachedGrenadeTotalLimit:
+		case AcquireResult::ReachedGrenadeTypeLimit:
+			if( !m_bIsInAutoBuy && !m_bIsInRebuy )
+				ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
+			return BUY_ALREADY_HAVE;
+
+		case AcquireResult::NotAllowedByTeam:
+			if ( !m_bIsInAutoBuy && !m_bIsInRebuy && pWeaponInfo->m_WrongTeamMsg[0] != 0 )
+			{
+				ClientPrint( this, HUD_PRINTCENTER, "#Alias_Not_Avail", pWeaponInfo->m_WrongTeamMsg );
+			}
+			return BUY_NOT_ALLOWED;
+
+
+		case AcquireResult::NotAllowedByProhibition:
+			return BUY_NOT_ALLOWED;
+
+		default:
+			// other unhandled reason
+			return BUY_NOT_ALLOWED;
 		}
 
 		BuyResult_e equipResult = BUY_INVALID_ITEM;
@@ -4733,7 +4752,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 		{
 			equipResult = AttemptToBuyShield();
 		}
-		else if ( Q_stristr( wpnName, "nightvision" )  )
+		else if ( Q_stristr( wpnName, "nightvision" ) )
 		{
 			equipResult = AttemptToBuyNightVision();
 		}
@@ -4749,88 +4768,37 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 
 		bool bPurchase = false;
 
-		// MIKETODO: assasination maps have a specific set of weapons that can be used in them.
-		if ( pWeaponInfo->m_iTeam != TEAM_UNASSIGNED && GetTeamNumber() != pWeaponInfo->m_iTeam )
+		// do they have enough money?
+		if ( m_iAccount >= pWeaponInfo->GetWeaponPrice() )
 		{
-			result = BUY_NOT_ALLOWED;
-			if ( pWeaponInfo->m_WrongTeamMsg[0] != 0 )
-			{
-				ClientPrint( this, HUD_PRINTCENTER, "#Alias_Not_Avail", pWeaponInfo->m_WrongTeamMsg );
-			}
+			return BUY_CANT_AFFORD;
 		}
-		else if ( pWeaponInfo->GetWeaponPrice() <= 0 )
+		else // essentially means: ( GetAccountBalance() >= pWeaponInfo->GetWeaponPrice( pItem ) )
 		{
-			// ClientPrint( this, HUD_PRINTCENTER, "#Cant_buy_this_item", pWeaponInfo->m_WrongTeamMsg );
-		}
-		else if( pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE )
-		{
-			// make sure the player can afford this item.
-			if ( m_iAccount >= pWeaponInfo->GetWeaponPrice() )
+			if ( m_lifeState != LIFE_DEAD )
 			{
-				bPurchase = true;
-
-				const char* weaponName = pWeaponInfo->szClassName;
-				if ( strncmp( weaponName, "weapon_", 7 ) == 0 )
+				if ( pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
 				{
-					weaponName += 7;
+					DropPistol();
 				}
-
-				switch ( CanAcquire( AliasToWeaponID( weaponName ), AcquireMethod::Buy ) )
+				else if ( pWeaponInfo->iSlot == WEAPON_SLOT_RIFLE )
 				{
-					case AcquireResult::ReachedGrenadeTypeLimit:
-					case AcquireResult::ReachedGrenadeTotalLimit:
-					case AcquireResult::AlreadyOwned:
-					case AcquireResult::AlreadyPurchased:
-					{
-						result = BUY_ALREADY_HAVE;
-						if ( !m_bIsInAutoBuy && !m_bIsInRebuy )
-							ClientPrint( this, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
-						bPurchase = false;
-					}
+					DropRifle();
 				}
 			}
-		}
-		else if ( !Weapon_OwnsThisType( pWeaponInfo->szClassName ) )	//don't buy duplicate weapons
-		{
-			// do they have enough money?
-			if ( m_iAccount >= pWeaponInfo->GetWeaponPrice() )
-			{
-				if ( m_lifeState != LIFE_DEAD )
-				{
-					if ( pWeaponInfo->iSlot == WEAPON_SLOT_PISTOL )
-					{
-						DropPistol();
-					}
-					else if ( pWeaponInfo->iSlot == WEAPON_SLOT_RIFLE )
-					{
-						DropRifle();
-					}
-				}
 
-				bPurchase = true;
-			}
-			else
-			{
-				result = BUY_CANT_AFFORD;
-				if( !m_bIsInAutoBuy && !m_bIsInRebuy )
-					ClientPrint( this, HUD_PRINTCENTER, "#Not_Enough_Money" );
-			}
-		}
-		else
-		{
-			result = BUY_ALREADY_HAVE;
+			bPurchase = true;
 		}
 
 		if ( HasShield() )
 		{
 			if ( pWeaponInfo->m_bCanUseWithShield == false )
 			{
-				result = BUY_NOT_ALLOWED;
-				bPurchase = false;
+				return BUY_NOT_ALLOWED;
 			}
 		}
 
-		if( bPurchase )
+		if ( bPurchase )
 		{
 			result = BUY_BOUGHT;
 
@@ -4838,7 +4806,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char* wpnName )
 				m_bUsingDefaultPistol = false;
 
 			GiveNamedItem( pWeaponInfo->szClassName );
-            AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
+			AddAccount( -pWeaponInfo->GetWeaponPrice(), true, true, pWeaponInfo->szClassName );
 			BlackMarketAddWeapon( wpnName, this );
 		}
 	}
