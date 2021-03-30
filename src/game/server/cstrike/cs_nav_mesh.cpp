@@ -250,9 +250,9 @@ bool CSNavMesh::Save( void ) const
 
 NavErrorType CSNavMesh::PostLoad( unsigned int version )
 {
-	/*if ( CSGameRules()->IsPlayingDeathmatch() )
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 		m_desiredChickenCount = 10;
-	else*/
+	else
 		m_desiredChickenCount = g_pMapInfo ? g_pMapInfo->m_iPetPopulation : 0;
 	m_chickenVector.RemoveAll();
 
