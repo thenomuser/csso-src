@@ -205,6 +205,8 @@ ConVar ammo_decoy_max( "ammo_decoy_max", "1", FCVAR_REPLICATED );
 ConVar ammo_molotov_max( "ammo_molotov_max", "1", FCVAR_REPLICATED );
 ConVar ammo_grenade_limit_total( "ammo_grenade_limit_total", "3", FCVAR_REPLICATED );
 
+ConVar ammo_item_limit_healthshot( "ammo_item_limit_healthshot", "4", FCVAR_REPLICATED );
+
 //ConVar mp_dynamicpricing( "mp_dynamicpricing", "0", FCVAR_REPLICATED, "Enables or Disables the dynamic weapon prices" );
 
 #if defined( GAME_DLL )
@@ -6741,6 +6743,7 @@ CAmmoDef* GetAmmoDef()
 		ammoDef.AddAmmoType( AMMO_TYPE_MOLOTOV,			DMG_BURN,	TRACER_NONE, 0, 0, "ammo_molotov_max", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_DECOY,			0,			TRACER_NONE, 0, 0, "ammo_decoy_max", 0, 0, 0 );
         ammoDef.AddAmmoType( AMMO_TYPE_TASERCHARGE,		DMG_SHOCK,	TRACER_BEAM, 0, 0, 0, 0, 0, 0 );
+		ammoDef.AddAmmoType( AMMO_TYPE_HEALTHSHOT,		0,			TRACER_LINE, 0, 0, "ammo_item_limit_healthshot", 0, 0, 0 );
 
 		//Adrian: I set all the prices to 0 just so the rest of the buy code works
 		//This should be revisited.
