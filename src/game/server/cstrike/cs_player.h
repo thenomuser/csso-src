@@ -677,8 +677,6 @@ public:
 	int		m_iKillStreak;
 
 private:
-	bool	m_bWasGivenAHealthshot;
-
 	int	m_iDeathPose;
 	int	m_iDeathFrame;
 

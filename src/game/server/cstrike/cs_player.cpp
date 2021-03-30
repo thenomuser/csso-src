@@ -1385,7 +1385,6 @@ void CCSPlayer::Spawn()
 	RemoveCarriedHostage();
 
 	m_iKillStreak = 0;
-	m_bWasGivenAHealthshot = false;
 
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
@@ -1855,10 +1854,9 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 {
 	BaseClass::Event_KilledOther(pVictim, info);
 
-	// check if we need to give this player a healtshot for kill-streak
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && m_iKillStreak >= 3 && !m_bWasGivenAHealthshot )
+	// give a healthshot in DM for every triple kill streak if dont have a healthshot
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (m_iKillStreak % 3 == 0) && !Weapon_OwnsThisType("weapon_healthshot") )
 	{
-		m_bWasGivenAHealthshot = true;
 		GiveNamedItem( "weapon_healthshot" );
 
 		// notify the player
