@@ -441,7 +441,7 @@ ConVar mp_gamemode_override(
 	"mp_gamemode_override",
 	"0",
 	FCVAR_REPLICATED,
-	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman",
+	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman\n 4 - Deathmatch",
 	true, 0,
 	true, GameModes::NUM_GAMEMODES - 1 );
 
