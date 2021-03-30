@@ -207,8 +207,8 @@ public:
 	// -----------------------
 	virtual int			GiveAmmo( int iCount, int iAmmoIndex, bool bSuppressSound = false );
 	int					GiveAmmo( int iCount, const char *szName, bool bSuppressSound = false );
-	virtual void		RemoveAmmo( int iCount, int iAmmoIndex );
-	virtual void		RemoveAmmo( int iCount, const char *szName );
+	virtual void		RemoveAmmo( int iCount, int iAmmoIndex, bool bIgnoreInfiniteAmmo = false );
+	virtual void		RemoveAmmo( int iCount, const char *szName, bool bIgnoreInfiniteAmmo = false );
 	void				RemoveAllAmmo( );
 	virtual int			GetAmmoCount( int iAmmoIndex ) const;
 	int					GetAmmoCount( char *szName ) const;

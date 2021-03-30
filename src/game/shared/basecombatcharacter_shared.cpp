@@ -148,7 +148,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::GetActiveWeapon() const
 // Input  : iCount - 
 //			iAmmoIndex - 
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
+void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex, bool bIgnoreInfiniteAmmo )
 {
 	if (iCount <= 0)
 		return;
@@ -156,18 +156,21 @@ void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
 	// Infinite ammo?
 	if ( GetAmmoDef()->CanCarryInfiniteAmmo( iAmmoIndex ) )
 		return;
-
-	extern ConVar sv_infinite_ammo;
-	if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
-		return;
+	
+	if ( !bIgnoreInfiniteAmmo )
+	{
+		extern ConVar sv_infinite_ammo;
+		if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
+			return;
+	}
 
 	// Ammo pickup sound
 	m_iAmmo.Set( iAmmoIndex, MAX( m_iAmmo[iAmmoIndex] - iCount, 0 ) );
 }
 
-void CBaseCombatCharacter::RemoveAmmo( int iCount, const char *szName )
+void CBaseCombatCharacter::RemoveAmmo( int iCount, const char *szName, bool bIgnoreInfiniteAmmo )
 {
-	RemoveAmmo( iCount, GetAmmoDef()->Index(szName) );
+	RemoveAmmo( iCount, GetAmmoDef()->Index(szName), bIgnoreInfiniteAmmo );
 }
 
 //-----------------------------------------------------------------------------

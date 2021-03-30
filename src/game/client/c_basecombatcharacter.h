@@ -68,8 +68,8 @@ public:
 	// -----------------------
 	// Ammo
 	// -----------------------
-	void				RemoveAmmo( int iCount, int iAmmoIndex );
-	void				RemoveAmmo( int iCount, const char *szName );
+	void				RemoveAmmo( int iCount, int iAmmoIndex, bool bIgnoreInfiniteAmmo = false );
+	void				RemoveAmmo( int iCount, const char *szName, bool bIgnoreInfiniteAmmo = false );
 	void				RemoveAllAmmo( );
 	int					GetAmmoCount( int iAmmoIndex ) const;
 	int					GetAmmoCount( char *szName ) const;
