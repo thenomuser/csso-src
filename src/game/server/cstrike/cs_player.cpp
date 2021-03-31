@@ -838,6 +838,8 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.FlashlightOff" );
 	PrecacheScriptSound( "HealthShot.Success" );
 
+	PrecacheScriptSound( "Deathmatch.Kill" );
+
 	// CS Bot sounds
 	PrecacheScriptSound( "Bot.StuckSound" );
 	PrecacheScriptSound( "Bot.StuckStart" );
