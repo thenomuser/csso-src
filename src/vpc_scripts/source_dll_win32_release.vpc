@@ -150,11 +150,6 @@ $Configuration "Release"
 		$AdditionalOptions					"$BASE /Oy-"	[$NOFPO]
 	}
 
-	$Compiler [$WIN32]
-	{
-		$EnableEnhancedInstructionSet	"Streaming SIMD Extensions 2 (/arch:SSE2)"
-	}
-
 	$Linker
 	{
 		// General
