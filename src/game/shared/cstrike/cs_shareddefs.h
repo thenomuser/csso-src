@@ -230,6 +230,7 @@ enum PlayerViewmodelSkinTone
 	BARE_ARM_103,
 	BARE_ARM_78,
 	BARE_ARM_PRO_VARF,
+	BARE_ARM_135,
 };
 
 struct PlayerViewmodelArmConfig
@@ -274,7 +275,7 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "ctm_st6_variante",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variante.mdl",				"",																						true },
 	{ "ctm_st6_variantf",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_green.mdl",							"",																						true },
 	{ "ctm_st6_variantg",			BARE_ARM_66,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantg.mdl",				"",																						true },
-	{ "ctm_st6_varianti",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"",																				"",																						false },
+	{ "ctm_st6_varianti",			BARE_ARM_135,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"",																				"",																						false },
 	{ "ctm_st6_variantj",			BARE_ARM_66,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantj.mdl",				"",																						true },
 	{ "ctm_st6_variantk",			BARE_ARM_66,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantk.mdl",				"",																						true },
 	{ "ctm_st6_variantl",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantl.mdl",				"",																						true },
