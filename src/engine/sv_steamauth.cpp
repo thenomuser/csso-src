@@ -713,7 +713,6 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 	if ( ucbCookie <= sizeof(uint64) )
 	{
 		WarningAndLog("Client UserID %x connected with invalid ticket size %d\n", unUserID, ucbCookie );
-		return false;
 	}
 
 	// steamID is prepended to the ticket
@@ -725,12 +724,10 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 	{
 		WarningAndLog("Client %d %s connected to universe %d, but game server %s is running in universe %d\n", unUserID, steamID.Render(),
 			steamID.GetEUniverse(), SteamGameServer()->GetSteamID().Render(), SteamGameServer()->GetSteamID().GetEUniverse() );
-		return false;
 	}
 	if ( !steamID.IsValid() || !steamID.BIndividualAccount() )
 	{
 		WarningAndLog("Client %d connected from %s with invalid Steam ID %s\n", unUserID, adr.ToString(), steamID.Render() );
-		return false;
 	}
 
 	// skip the steamID
@@ -744,23 +741,23 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 		break;
 	case k_EBeginAuthSessionResultInvalidTicket:
 		WarningAndLog("S3: Client connected with invalid ticket: UserID: %x\n", unUserID );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultDuplicateRequest:
 		WarningAndLog("S3: Duplicate client connection: UserID: %x SteamID %x\n", unUserID, steamID.ConvertToUint64( ) );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultInvalidVersion:
 		WarningAndLog("S3: Client connected with invalid ticket ( old version ): UserID: %x\n", unUserID );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultGameMismatch:
 		// This error would be very useful to present to the client.
 		WarningAndLog("S3: Client connected with ticket for the wrong game: UserID: %x\n", unUserID );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultExpiredTicket:
 		WarningAndLog("S3: Client connected with expired ticket: UserID: %x\n", unUserID );
-		return false;
+		break;
 	default:
 		WarningAndLog("S3: Client failed auth session for unknown reason. UserID: %x\n", unUserID );
-		return false;
+		break;
 	}
 
 	// first checks ok, we know now the SteamID
