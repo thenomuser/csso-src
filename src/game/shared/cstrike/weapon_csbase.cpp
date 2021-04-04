@@ -2072,7 +2072,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 
 	const char* CWeaponCSBase::GetMuzzleFlashEffectName( bool bThirdPerson )
 	{
-		if ( IsSilenced() )
+		if ( m_weaponMode == Secondary_Mode )
 		{
 			return bThirdPerson ? GetCSWpnData().m_szMuzzleFlash3rdPersonAlt : GetCSWpnData().m_szMuzzleFlash1stPersonAlt;
 		}

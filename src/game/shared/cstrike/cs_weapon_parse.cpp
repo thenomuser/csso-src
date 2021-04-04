@@ -391,15 +391,10 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_flAddonScale				= pKeyValuesData->GetFloat( "AddonScale", 1 );
 
 	// muzzle flash
-	const char* pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPerson", "" );
-	Q_strncpy( m_szMuzzleFlash1stPerson, pTemp, sizeof( m_szMuzzleFlash1stPerson ) );
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt", m_szMuzzleFlash1stPerson );
-	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pTemp, sizeof( m_szMuzzleFlash1stPersonAlt ) );
-
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPerson", "" );
-	Q_strncpy( m_szMuzzleFlash3rdPerson, pTemp, sizeof( m_szMuzzleFlash3rdPerson ) );
-	pTemp = pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt", m_szMuzzleFlash3rdPerson );
-	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pTemp, sizeof( m_szMuzzleFlash3rdPersonAlt ) );
+	Q_strncpy( m_szMuzzleFlash1stPerson, pKeyValuesData->GetString( "MuzzleFlash1stPerson" ), sizeof( m_szMuzzleFlash1stPerson ) );
+	Q_strncpy( m_szMuzzleFlash1stPersonAlt, pKeyValuesData->GetString( "MuzzleFlash1stPersonAlt" ), sizeof( m_szMuzzleFlash1stPersonAlt ) );
+	Q_strncpy( m_szMuzzleFlash3rdPerson, pKeyValuesData->GetString( "MuzzleFlash3rdPerson" ), sizeof( m_szMuzzleFlash3rdPerson ) );
+	Q_strncpy( m_szMuzzleFlash3rdPersonAlt, pKeyValuesData->GetString( "MuzzleFlash3rdPersonAlt" ), sizeof( m_szMuzzleFlash3rdPersonAlt ) );
 
 	m_iPenetration		= pKeyValuesData->GetFloat( "Penetration", 1 );
 	m_iDamage			= pKeyValuesData->GetInt( "Damage", 42 ); // Douglas Adams 1952 - 2001
