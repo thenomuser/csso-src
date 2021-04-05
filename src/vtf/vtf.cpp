@@ -425,11 +425,6 @@ bool CVTFTexture::Init( int nWidth, int nHeight, int nDepth, ImageFormat fmt, in
 	m_nFrameCount = iFrameCount;
 
 	m_nFaceCount = (iFlags & TEXTUREFLAGS_ENVMAP) ? CUBEMAP_FACE_COUNT : 1;
-	if ( IsX360() && ( iFlags & TEXTUREFLAGS_ENVMAP ) )
-	{
-		// 360 has no reason to support sphere map
-		m_nFaceCount = CUBEMAP_FACE_COUNT-1;
-	}
 
 #if defined( _X360 )
 	m_nMipSkipCount = 0;
@@ -658,12 +653,6 @@ bool CVTFTexture::LoadLowResData( CUtlBuffer &buf )
 //-----------------------------------------------------------------------------
 bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header, int nSkipMipLevels )
 {
-	if ( IsCubeMap() && header.version[1] == VTF_MINOR_VERSION )
-	{
-		Warning( "*** VTF 7.5 is currently not supported on cubemaps!\n" );
-		return false;
-	}
-
 	// Fix up the mip count + size based on how many mip levels we skip...
 	if (nSkipMipLevels > 0)
 	{
@@ -685,10 +674,11 @@ bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header,
 
 	// For backwards compatibility, we don't read in the spheremap fallback on
 	// older format .VTF files...
+	// PiMoN: Don't read spheremap fallback on 7.5 as well or it will break older formats
 	int nFacesToRead = m_nFaceCount;
 	if ( IsCubeMap() )
 	{
-		if ((header.version[0] == 7) && (header.version[1] < 1))
+		if ((header.version[0] == 7) && ((header.version[1] < 1) || (header.version[1] == VTF_MINOR_VERSION)))
 			nFacesToRead = 6;
 	}
 
@@ -1486,6 +1476,17 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 	header.numFrames = m_nFrameCount;
 	header.numMipLevels = m_nMipCount;
 	header.imageFormat = m_Format;
+
+	// fixup runtime image formats to be their non-runtime equivolents.
+	if ( m_Format == IMAGE_FORMAT_DXT1_RUNTIME )
+	{
+		header.imageFormat = IMAGE_FORMAT_DXT1;
+	}
+	else if ( m_Format == IMAGE_FORMAT_DXT5_RUNTIME )
+	{
+		header.imageFormat = IMAGE_FORMAT_DXT5;
+	}
+
 	VectorCopy( m_vecReflectivity, header.reflectivity );
 	header.bumpScale = m_flBumpScale;
 
@@ -1935,12 +1936,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 	// FIXME: Should this be re-written to not do an allocation?
 	int iConvertedSize = ComputeTotalSize( fmt );
 
-	unsigned char *pConvertedImage = new unsigned char[ iConvertedSize ];
-
-	// This can happen for large, bogus textures.
-	if ( !pConvertedImage )
-		return;
-
+	unsigned char *pConvertedImage = (unsigned char*)MemAllocScratch(iConvertedSize);
 	for (int iMip = 0; iMip < m_nMipCount; ++iMip)
 	{
 		int nMipWidth, nMipHeight, nMipDepth;
@@ -1954,8 +1950,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 			for (int iFace = 0; iFace < m_nFaceCount; ++iFace)
 			{
 				unsigned char *pSrcData = ImageData( iFrame, iFace, iMip );
-				unsigned char *pDstData = pConvertedImage + 
-					GetImageOffset( iFrame, iFace, iMip, fmt );
+				unsigned char *pDstData = pConvertedImage + GetImageOffset( iFrame, iFace, iMip, fmt );
 
 				for ( int z = 0; z < nMipDepth; ++z, pSrcData += nSrcFaceStride, pDstData += nDstFaceStride )
 				{
@@ -1994,6 +1989,8 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 
 	if ( !AllocateImageData(iConvertedSize) )
 		return;
+		
+	Assert(iConvertedSize<=m_nImageAllocSize);
 
 	memcpy( m_pImageData, pConvertedImage, iConvertedSize );
 	m_Format = fmt;
@@ -2024,7 +2021,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV )
 		}
 	}
 
-	delete [] pConvertedImage;
+	MemFreeScratch();
 }
 
 
@@ -2409,7 +2406,7 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 {
 	if (!IsCubeMap())
 		return;
-
+	/*
 	// HDRFIXME: Need to re-enable this.
 //	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
@@ -2419,7 +2416,7 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 	// Allocate the bits for the spheremap
 	Assert( m_nDepth == 1 );
 	int iMemRequired = ComputeFaceSize( 0, IMAGE_FORMAT_RGBA8888 );
-	unsigned char *pSphereMapBits = new unsigned char [ iMemRequired ];
+	unsigned char *pSphereMapBits = (unsigned char *)MemAllocScratch(iMemRequired);
 
 	// Generate a spheremap for each frame of the cubemap
 	for (int iFrame = 0; iFrame < m_nFrameCount; ++iFrame)
@@ -2444,7 +2441,8 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 	}
 
 	// Free memory
-	delete [] pSphereMapBits;
+	MemFreeScratch();
+	*/
 }
 
 void CVTFTexture::GenerateHemisphereMap( unsigned char *pSphereMapBitsRGBA, int targetWidth, 
