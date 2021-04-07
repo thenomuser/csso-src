@@ -142,6 +142,9 @@ vtex_dll.lib
 vtex.pdb
 vtex.exe
 vtex.lib
+vpk.pdb
+vpk.exe
+vpk.lib
 
 # ignore this files since they have to be builded manually any way
 mathlib.lib

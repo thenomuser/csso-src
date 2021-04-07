@@ -205,6 +205,11 @@ $Project "vice"
 	"utils\vice\vice.vpc" [$WIN32]
 }
 
+$Project "vpk"
+{
+	"utils\vpk\vpk.vpc" [$WINDOWS||$LINUX||$OSXALL]
+}
+
 $Project "vrad_dll"
 {
 	"utils\vrad\vrad_dll.vpc" [$WIN32]
