@@ -41,6 +41,18 @@ bool NPC_CheckBrushExclude( CBaseEntity *pEntity, CBaseEntity *pBrush );
 ConVar r_visualizetraces( "r_visualizetraces", "0", FCVAR_CHEAT );
 ConVar developer("developer", "0", 0, "Set developer message level" ); // developer mode
 
+const char *UTIL_VarArgs( const char *format, ... )
+{
+	va_list		argptr;
+	static char		string[1024];
+	
+	va_start (argptr, format);
+	Q_vsnprintf(string, sizeof(string), format,argptr);
+	va_end (argptr);
+
+	return string;	
+}
+
 float UTIL_VecToYaw( const Vector &vec )
 {
 	if (vec.y == 0 && vec.x == 0)

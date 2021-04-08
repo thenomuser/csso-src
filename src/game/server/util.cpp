@@ -1371,18 +1371,6 @@ void UTIL_SnapDirectionToAxis( Vector &direction, float epsilon )
 	}
 }
 
-const char *UTIL_VarArgs( const char *format, ... )
-{
-	va_list		argptr;
-	static char		string[1024];
-	
-	va_start (argptr, format);
-	Q_vsnprintf(string, sizeof(string), format,argptr);
-	va_end (argptr);
-
-	return string;	
-}
-
 bool UTIL_IsMasterTriggered(string_t sMaster, CBaseEntity *pActivator)
 {
 	if (sMaster != NULL_STRING)

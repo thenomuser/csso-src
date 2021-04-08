@@ -45,6 +45,9 @@ extern ConVar developer;	// developer mode
 #define LANGUAGE_BRITISH				3
 
 
+const char	*UTIL_VarArgs( PRINTF_FORMAT_STRING const char *format, ... ) FMTFUNCTION( 1, 2 );
+
+
 //-----------------------------------------------------------------------------
 // Pitch + yaw
 //-----------------------------------------------------------------------------
