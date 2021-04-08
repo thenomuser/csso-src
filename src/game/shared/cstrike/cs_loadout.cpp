@@ -1,3 +1,9 @@
+//========= Copyright PiMoNFeeD, CS:SO, All rights reserved. ==================//
+//
+// Purpose: player loadout
+//
+//=============================================================================//
+
 #include "cbase.h"
 #include "cs_loadout.h"
 #include "cs_shareddefs.h"
