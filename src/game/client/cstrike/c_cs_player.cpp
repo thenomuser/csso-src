@@ -1777,11 +1777,16 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	{
 		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
 		C_CSPlayer* csPlayer = ToCSPlayer( pPlayer );
-		if (csPlayer && csPlayer->IsLocalPlayer())
+		if (csPlayer)
 		{
-			C_RecipientFilter filter;
-			filter.AddRecipient( this );
-			PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+			if ( csPlayer->IsLocalPlayer() )
+			{
+				C_RecipientFilter filter;
+				filter.AddRecipient( this );
+				PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
+			}
+
+			csPlayer->RemoveGlovesModel();
 		}
 	}
 	else if ( Q_strcmp( "player_spawn", name ) == 0 )
