@@ -1134,6 +1134,8 @@ C_CSPlayer::C_CSPlayer() :
 
 	view->SetScreenOverlayMaterial( NULL );
 
+	m_iTargetedWeaponEntIndex = 0;
+
     m_bPlayingFreezeCamSound = false;
 
 	m_nextTaserShakeTime = 0.0f;
@@ -1179,6 +1181,31 @@ C_CSPlayer::~C_CSPlayer()
 	m_PlayerAnimState->Release();
 }
 
+
+class CTraceFilterOmitPlayers : public CTraceFilterSimple
+{
+public:
+	CTraceFilterOmitPlayers( const IHandleEntity *passentity = NULL, int collisionGroup = MASK_SHOT )
+		: CTraceFilterSimple( passentity, collisionGroup )
+	{
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+	{
+		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
+		if ( !pEntity )
+			return NULL;
+
+		if ( pEntity->IsPlayer() )
+			return false;
+
+		// Honor BlockLOS - this lets us see through partially-broken doors, etc
+		if ( !pEntity->BlocksLOS() )
+			return false;
+
+		return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
+	}
+};
 
 bool C_CSPlayer::HasDefuser() const
 {
@@ -1373,6 +1400,11 @@ int C_CSPlayer::GetIDTarget() const
 	}
 
 	return 0;
+}
+
+int C_CSPlayer::GetTargetedWeapon( void ) const
+{
+	return m_iTargetedWeaponEntIndex;
 }
 
 
@@ -1780,6 +1812,13 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		{
 			if ( csPlayer->IsLocalPlayer() )
 			{
+				//reset target ID 
+				m_iIDEntIndex = 0;
+				m_delayTargetIDTimer.Reset();
+				m_iOldIDEntIndex = 0;
+				m_holdTargetIDTimer.Reset();
+				m_iTargetedWeaponEntIndex = 0;
+
 				C_RecipientFilter filter;
 				filter.AddRecipient( this );
 				PlayMusicSelection( filter, CSMUSIC_DEATHCAM );
@@ -1797,6 +1836,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_delayTargetIDTimer.Reset();
 			m_iOldIDEntIndex = 0;
 			m_holdTargetIDTimer.Reset();
+			m_iTargetedWeaponEntIndex = 0;
 
 			UpdateAddonModels();
 
@@ -1937,7 +1977,14 @@ void C_CSPlayer::ClientThink()
 
 	UpdateHostageCarryModels();
 
-	UpdateIDTarget();
+	// don't show IDs in chase spec mode
+	bool inSpecMode = ( GetObserverMode() == OBS_MODE_CHASE || GetObserverMode() == OBS_MODE_DEATHCAM );
+
+	if ( IsLocalPlayer() && !inSpecMode && IsAlive() && ( mp_forcecamera.GetInt() != OBS_ALLOW_NONE ) )
+	{
+		UpdateIDTarget();
+		UpdateTargetedWeapon();
+	}
 
 	if ( gpGlobals->curtime >= m_fNextThinkPushAway )
 	{
@@ -2230,24 +2277,12 @@ C_CSPlayer* GetHudPlayer( void )
 //-----------------------------------------------------------------------------
 void C_CSPlayer::UpdateIDTarget()
 {
-	if ( !IsLocalPlayer() )
-		return;
-
 	// Clear old target and find a new one
 	m_iIDEntIndex = 0;
 
 	// don't show IDs if mp_playerid == 2
 	if ( mp_playerid.GetInt() == 2 )
 		return;
-
-	// don't show IDs if mp_fadetoblack is on
-	if ( mp_fadetoblack.GetBool() && !IsAlive() )
-		return;
-
-	// don't show IDs in chase spec mode
-	if ( GetObserverMode() == OBS_MODE_CHASE ||
-		 GetObserverMode() == OBS_MODE_DEATHCAM )
-		 return;
 
 	//Check how much of a screen fade we have.
 	//if it's more than 75 then we can't see what's going on so we don't display the id.
@@ -2281,34 +2316,14 @@ void C_CSPlayer::UpdateIDTarget()
 			if ( mp_playerid.GetInt() == 1 ) // only show team names
 			{
 				if ( pEntity->GetTeamNumber() != GetTeamNumber() )
-				{
 					return;
-				}
 			}
 
-			//Adrian: If there's a smoke cloud in my way, don't display the name
-			//We check this AFTER we found a player, just so we don't go thru this for nothing.
-			for ( int i = 0; i < m_SmokeGrenades.Count(); i++ )
-			{
-				C_BaseParticleEntity *pSmokeGrenade = (C_BaseParticleEntity*)m_SmokeGrenades.Element( i );
+			if ( LineGoesThroughSmoke( vecStart, pEntity->WorldSpaceCenter(), 1.0f ) )
+				return;
 
-				if ( pSmokeGrenade )
-				{
-					float flHit1, flHit2;
-
-					float flRadius = ( SMOKEGRENADE_PARTICLERADIUS * NUM_PARTICLES_PER_DIMENSION + 1 ) * 0.5f;
-
-					Vector vPos = pSmokeGrenade->GetAbsOrigin();
-
-					/*debugoverlay->AddBoxOverlay( pSmokeGrenade->GetAbsOrigin(), Vector( flRadius, flRadius, flRadius ),
-					 Vector( -flRadius, -flRadius, -flRadius ), QAngle( 0, 0, 0 ), 255, 0, 0, 255, 0.2 );*/
-
-					if ( IntersectInfiniteRayWithSphere( MainViewOrigin(), MainViewForward(), vPos, flRadius, &flHit1, &flHit2 ) )
-					{
-						 return;
-					}
-				}
-			}
+			if ( pEntity->IsBaseCombatWeapon() )
+				return;
 
 			if ( !GetIDTarget() && ( !m_iOldIDEntIndex || m_holdTargetIDTimer.IsElapsed() ) )
 			{
@@ -2320,6 +2335,39 @@ void C_CSPlayer::UpdateIDTarget()
 			m_iOldIDEntIndex = m_iIDEntIndex;
 			m_holdTargetIDTimer.Start( mp_playerid_hold.GetFloat() );
 		}
+	}
+}
+
+void C_CSPlayer::UpdateTargetedWeapon( void )
+{
+	m_iTargetedWeaponEntIndex = 0;
+
+	Vector aimDir;
+	AngleVectors( GetFinalAimAngle(), &aimDir );
+
+	// FIXME: if you drop a weapon at a teammates' feet, you won't get the HUD prompt text because the teammate id
+	// trace (which uses the bounding box of the teammate) is prioritized in the hud over the prompt to pick up the weapon.
+	// Pressing USE while looking at a weapon a teammate is standing on will still swap to it, since this trace is 
+	// succeeding - but you don't get the on-screen prompt. This kinda sucks during buytime, ideally the hud should
+	// support drawing the teammate name AND the weapon pickup promt at the same time.
+
+	trace_t result;
+	CTraceFilterOmitPlayers traceFilter; // don't hit players with this trace
+	UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_SHOT, &traceFilter, &result );
+
+	if ( result.DidHitNonWorldEntity() && result.m_pEnt->IsBaseCombatWeapon() )
+	{
+		if ( LineGoesThroughSmoke( EyePosition(), result.m_pEnt->WorldSpaceCenter(), 1.0f ) )
+			return;
+
+		//now that we have a weapon, we check to see if we are also looking at a bomb
+		// setting the weaponEntIndex to the bomb prevents the hint coming up to 
+		// pick up a weapon if it occupies the same space as a bomb
+		if ( GetUsableHighPriorityEntity() )
+			return;
+
+		// Set if to point at the weapon
+		m_iTargetedWeaponEntIndex = result.m_pEnt->entindex();
 	}
 }
 

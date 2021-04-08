@@ -160,9 +160,10 @@ void CTargetID::Paint()
 	//=============================================================================
 
 	// Get our target's ent index
-	int iEntIndex = pPlayer->GetIDTarget();
+	int iPlayerEntIndex = pPlayer->GetIDTarget();
+	int iWeaponEntIndex = pPlayer->GetTargetedWeapon();
 	// Didn't find one?
-	if ( !iEntIndex )
+	if ( !iPlayerEntIndex && !iWeaponEntIndex )
 	{
 		// Check to see if we should clear our ID
 		if ( m_flLastChangeTime && (gpGlobals->curtime > (m_flLastChangeTime + 0.5)) )
@@ -174,7 +175,7 @@ void CTargetID::Paint()
 		else
 		{
 			// Keep re-using the old one
-			iEntIndex = m_iLastEntIndex;
+			iPlayerEntIndex = m_iLastEntIndex;
 		}
 	}
 	else
@@ -183,9 +184,9 @@ void CTargetID::Paint()
 	}
 
 	// Is this an entindex sent by the server?
-	if ( iEntIndex )
+	if ( iPlayerEntIndex )
 	{
-		C_CSPlayer *pPlayer = static_cast<C_CSPlayer*>(cl_entitylist->GetEnt( iEntIndex ));
+		C_CSPlayer *pPlayer = static_cast<C_CSPlayer*>(cl_entitylist->GetEnt( iPlayerEntIndex ));
 		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 		const char *printFormatString = NULL;
@@ -198,7 +199,7 @@ void CTargetID::Paint()
 		// Some entities we always want to check, cause the text may change
 		// even while we're looking at it
 		// Is it a player?
-		if ( IsPlayerIndex( iEntIndex ) )
+		if ( IsPlayerIndex( iPlayerEntIndex ) )
 		{
 			if ( !pPlayer )
 			{
@@ -216,9 +217,9 @@ void CTargetID::Paint()
 				C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
 
 				char szClan[MAX_PLAYER_NAME_LENGTH];
-				if ( cs_PR && Q_strlen( cs_PR->GetClanTag( iEntIndex ) ) > 1 )
+				if ( cs_PR && Q_strlen( cs_PR->GetClanTag( iPlayerEntIndex ) ) > 1 )
 				{
-					Q_snprintf( szClan, sizeof( szClan ), "%s ", cs_PR->GetClanTag( iEntIndex ) );
+					Q_snprintf( szClan, sizeof( szClan ), "%s ", cs_PR->GetClanTag( iPlayerEntIndex ) );
 				}
 				else
 				{
@@ -250,7 +251,7 @@ void CTargetID::Paint()
 		}
 		else
 		{
-			C_BaseEntity *pEnt = cl_entitylist->GetEnt( iEntIndex );
+			C_BaseEntity *pEnt = cl_entitylist->GetEnt( iPlayerEntIndex );
 
 			//Hostages!
 
@@ -310,7 +311,7 @@ void CTargetID::Paint()
 				// Don't check validity if it's sent by the server
 				c = m_cHostageColor;
 				g_pVGuiLocalize->ConvertANSIToUnicode( pEnt->GetIDString(), sIDString, sizeof(sIDString) );
-				m_iLastEntIndex = iEntIndex;
+				m_iLastEntIndex = iPlayerEntIndex;
 			}
 		}
 
@@ -373,6 +374,49 @@ void CTargetID::Paint()
 			vgui::surface()->DrawSetTextFont( m_hFont );
 			vgui::surface()->DrawSetTextPos( xpos, ypos );
 			vgui::surface()->DrawSetTextColor( c );
+			vgui::surface()->DrawPrintText( sIDString, wcslen(sIDString) );
+		}
+	}
+	else if ( iWeaponEntIndex )
+	{
+		CWeaponCSBase *pWeapon = static_cast<CWeaponCSBase*>(cl_entitylist->GetEnt( iWeaponEntIndex ));
+		if ( pWeapon )
+		{
+			if ( pWeapon->GetWeaponFlags() & ITEM_FLAG_EXHAUSTIBLE )
+			{
+				g_pVGuiLocalize->ConvertANSIToUnicode( pWeapon->GetCSWpnData().szPrintName, sIDString, sizeof( sIDString ) );
+			}
+			else
+			{
+				if ( pPlayer->Weapon_GetSlot( pWeapon->GetSlot() ) )
+					g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( "#Cstrike_weaponid_pickup_have" ),
+													  1, g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ) );
+				else
+					g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( "#Cstrike_weaponid_pickup" ),
+													  1, g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ) );
+			}
+		}
+		else
+		{
+			sIDString[0] = 0;
+		}
+
+		if ( sIDString[0] )
+		{
+			int wide, tall;
+			vgui::surface()->GetTextSize( m_hFont, sIDString, wide, tall );
+
+			int ypos = YRES( 260 ) - tall / 2;
+			int xpos = (ScreenWidth() - wide) / 2;
+			
+			// make a badass shadow so you could actually see the thing
+			vgui::surface()->DrawSetTextFont( m_hFont );
+			vgui::surface()->DrawSetTextPos( xpos + XRES(2), ypos + YRES(2) );
+			vgui::surface()->DrawSetTextColor( Color( 0, 0, 0, 128 ) );
+			vgui::surface()->DrawPrintText( sIDString, wcslen( sIDString ) );
+
+			vgui::surface()->DrawSetTextPos( xpos, ypos );
+			vgui::surface()->DrawSetTextColor( Color( 240, 240, 240, 255 ) );
 			vgui::surface()->DrawPrintText( sIDString, wcslen(sIDString) );
 		}
 	}
