@@ -1775,8 +1775,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	}
 	else if ( Q_strcmp( "player_death", name ) == 0 )
 	{
-		C_BasePlayer* pPlayer = UTIL_PlayerByUserId( EventUserID );
-		C_CSPlayer* csPlayer = ToCSPlayer( pPlayer );
+		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
 		if (csPlayer)
 		{
 			if ( csPlayer->IsLocalPlayer() )
@@ -1800,13 +1799,18 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 
 			UpdateAddonModels();
-			RemoveGlovesModel();
 
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 				m_bShouldAutobuyDMWeapons = true;
-
-			m_pViewmodelArmConfig = NULL;
 		}
+
+		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
+		if ( csPlayer )
+		{
+			csPlayer->RemoveGlovesModel();
+			csPlayer->m_pViewmodelArmConfig = NULL;
+		}
+
 	}
 	else if ( Q_strcmp( "player_update_viewmodel", name ) == 0 )
 	{
