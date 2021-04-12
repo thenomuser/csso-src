@@ -15,12 +15,12 @@
 #include "c_cs_hostage.h"
 #include "c_plantedc4.h"
 
-class CHudScenarioIcon : public CHudElement, public vgui::Panel
+class CHudScenarioC4Icon : public CHudElement, public vgui::Panel
 {
 public:
-	DECLARE_CLASS_SIMPLE( CHudScenarioIcon, vgui::Panel );
+	DECLARE_CLASS_SIMPLE( CHudScenarioC4Icon, vgui::Panel );
 
-	CHudScenarioIcon( const char *name );
+	CHudScenarioC4Icon( const char *name );
 
 	virtual bool ShouldDraw();	
 	virtual void Paint();
@@ -28,41 +28,39 @@ public:
 private:
 	CPanelAnimationVar( Color, m_clrIcon, "IconColor", "IconColor" );	
 
-	CHudTexture *m_pC4Icon;
-	CHudTexture *m_pHostageIcon;
+	CHudTexture *m_pIcon;
 };
 
 
-DECLARE_HUDELEMENT( CHudScenarioIcon );
+DECLARE_HUDELEMENT( CHudScenarioC4Icon );
 
 
-CHudScenarioIcon::CHudScenarioIcon( const char *pName ) :
-	vgui::Panel( NULL, "HudScenarioIcon" ), CHudElement( pName )
+CHudScenarioC4Icon::CHudScenarioC4Icon( const char *pName ) :
+	vgui::Panel( NULL, "HudScenarioC4Icon" ), CHudElement( pName )
 {
 	SetParent( g_pClientMode->GetViewport() );
-	m_pC4Icon = NULL;
-	m_pHostageIcon = NULL;
+	m_pIcon = NULL;
 
 	SetHiddenBits( HIDEHUD_PLAYERDEAD );
 }
 
-bool CHudScenarioIcon::ShouldDraw()
+bool CHudScenarioC4Icon::ShouldDraw()
 {
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	return pPlayer && pPlayer->IsAlive();
 }
 
-void CHudScenarioIcon::Paint()
+void CHudScenarioC4Icon::Paint()
 {
 	// If there is a bomb planted, draw that
 	if( g_PlantedC4s.Count() > 0 )
 	{
-		if ( !m_pC4Icon )
+		if ( !m_pIcon )
 		{
-			m_pC4Icon = gHUD.GetIcon( "scenario_c4" );
+			m_pIcon = gHUD.GetIcon( "scenario_c4" );
 		}
 
-		if ( m_pC4Icon )
+		if ( m_pIcon )
 		{
 			int x, y, w, h;
 			GetBounds( x, y, w, h );
@@ -79,31 +77,73 @@ void CHudScenarioIcon::Paint()
 			}
 
 			if( pC4->IsBombActive() )
-				m_pC4Icon->DrawSelf( 0, 0, h, h, c );	//draw it square!
+				m_pIcon->DrawSelf( 0, 0, h, h, c );	//draw it square!
 		}
 	}
+}
 
+
+
+class CHudScenarioHostageIcon : public CHudElement, public vgui::Panel
+{
+public:
+	DECLARE_CLASS_SIMPLE( CHudScenarioHostageIcon, vgui::Panel );
+
+	CHudScenarioHostageIcon( const char *name );
+
+	virtual bool ShouldDraw();	
+	virtual void Paint();
+
+private:
+	CPanelAnimationVar( Color, m_clrIcon, "IconColor", "IconColor" );	
+
+	CHudTexture *m_pIcon;
+};
+
+
+DECLARE_HUDELEMENT( CHudScenarioHostageIcon );
+
+
+CHudScenarioHostageIcon::CHudScenarioHostageIcon( const char *pName ) :
+	vgui::Panel( NULL, "HudScenarioHostageIcon" ), CHudElement( pName )
+{
+	SetParent( g_pClientMode->GetViewport() );
+	m_pIcon = NULL;
+
+	SetHiddenBits( HIDEHUD_PLAYERDEAD );
+}
+
+bool CHudScenarioHostageIcon::ShouldDraw()
+{
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	return pPlayer && pPlayer->IsAlive();
+}
+
+void CHudScenarioHostageIcon::Paint()
+{
 	CCSGameRules *pRules = CSGameRules();
 
 	// If there are hostages, draw how many there are
 	if( pRules && pRules->GetNumHostagesRemaining() )
 	{
-		if ( !m_pHostageIcon )
+		if ( !m_pIcon )
 		{
-			m_pHostageIcon = gHUD.GetIcon( "scenario_hostage" );
+			m_pIcon = gHUD.GetIcon( "scenario_hostage" );
 		}
 
-		if( m_pHostageIcon )
+		if( m_pIcon )
 		{
 			int xpos = 0;
-			int iconWidth = m_pHostageIcon->Width();
+			int iconWidth = m_pIcon->Width();
 
 			for(int i=0;i<pRules->GetNumHostagesRemaining();i++)
 			{
-				m_pHostageIcon->DrawSelf( xpos, 0, m_clrIcon );
+				m_pIcon->DrawSelf( xpos, 0, m_clrIcon );
 				xpos += iconWidth;
 			}
 		}
 	}
 }
+
+
 
