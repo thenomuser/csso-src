@@ -794,6 +794,8 @@ public:
 	// Reset after prediction (in PostThink).
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
+	// See if we need to prevent player from being able to diffuse bomb.
+	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( bool, m_bKilledByTaser );
 	int m_iBombSiteIndex;
 

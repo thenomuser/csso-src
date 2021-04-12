@@ -759,8 +759,9 @@ END_PREDICTION_DATA()
 
 		CCSPlayer *player = dynamic_cast< CCSPlayer* >( pActivator );
 
-		if ( !player || player->GetTeamNumber() != TEAM_CT )
-		 	return;
+		// Can't defuse a bomb if we're not CT or we're in a no defuse area.
+		if ( !player || player->GetTeamNumber() != TEAM_CT || player->m_bInNoDefuseArea )
+			return;
 
 		if ( m_bStartDefuse )
 		{

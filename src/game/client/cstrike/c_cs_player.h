@@ -315,6 +315,7 @@ public:
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
+	CNetworkVar( bool, m_bInNoDefuseArea );
 	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
 
 	CNetworkVar( bool, m_bKilledByTaser );

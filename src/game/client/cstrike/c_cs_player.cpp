@@ -1036,6 +1036,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iAccount ) ),
 	RecvPropBool( RECVINFO( m_bInBombZone ) ),
 	RecvPropInt( RECVINFO( m_bInBuyZone ) ),
+	RecvPropInt( RECVINFO( m_bInNoDefuseArea ) ),
 	RecvPropBool( RECVINFO( m_bKilledByTaser ) ),
 	RecvPropInt( RECVINFO( m_iMoveState ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),

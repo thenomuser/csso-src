@@ -89,4 +89,5 @@ void CCSPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *
 	pPlayer->m_bInBombZone = false;
 	pPlayer->m_bInBuyZone = false;
 	pPlayer->m_bInHostageRescueZone = false;
+	pPlayer->m_bInNoDefuseArea = false;
 }

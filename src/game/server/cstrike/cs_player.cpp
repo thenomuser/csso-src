@@ -399,6 +399,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iAccount ), 16, SPROP_UNSIGNED ),
 	SendPropBool( SENDINFO( m_bInBombZone ) ),
 	SendPropInt( SENDINFO( m_bInBuyZone ), 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_bInNoDefuseArea ), 1, SPROP_UNSIGNED ),
 	SendPropBool( SENDINFO( m_bKilledByTaser ) ),
 	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_NUM_CLASSES )+1, SPROP_UNSIGNED ),
@@ -524,6 +525,7 @@ CCSPlayer::CCSPlayer()
 	m_lifeState = LIFE_DEAD; // Start "dead".
 	m_bInBombZone = false;
 	m_bInBuyZone = false;
+	m_bInNoDefuseArea = false;
 	m_bInHostageRescueZone = false;
 	m_flDeathTime = 0.0f;
 	m_iHostagesKilled = 0;
