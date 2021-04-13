@@ -93,6 +93,8 @@ ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_REPLICATED, "Player's ac
 ConVar view_punch_decay( "view_punch_decay", "18", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor exponent for view punch" );
 ConVar view_recoil_tracking( "view_recoil_tracking", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "How closely the view tracks with the aim punch from weapon recoil" );
 
+ConVar sv_footstep_sound_frequency( "sv_footstep_sound_frequency", "0.97", FCVAR_CHEAT | FCVAR_REPLICATED, "How frequent to hear the player's step sound or how fast they appear to be running from first person." );
+
 #ifdef CLIENT_DLL
 ConVar mp_usehwmmodels( "mp_usehwmmodels", "0", NULL, "Enable the use of the hw morph models. (-1 = never, 1 = always, 0 = based upon GPU)" ); // -1 = never, 0 = if hasfastvertextextures, 1 = always
 #endif
@@ -899,7 +901,7 @@ void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalki
 		break;
 
 	case STEPSOUNDTIME_ON_LADDER:
-		m_flStepSoundTime = 350;
+		m_flStepSoundTime = 200;
 		break;
 
 	case STEPSOUNDTIME_WATER_KNEE:
@@ -910,6 +912,8 @@ void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalki
 		Assert(0);
 		break;
 	}
+
+	m_flStepSoundTime *= sv_footstep_sound_frequency.GetFloat();
 
 	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
 	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
