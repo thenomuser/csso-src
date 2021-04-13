@@ -1581,7 +1581,8 @@ void CHostage::DropHostage( Vector vecPosition, bool bIsRescued )
 		m_nHostageState = k_EHostageStates_GettingDropped;
 		m_flDropStartTime = gpGlobals->curtime;
 
-		
+		// PiMoN: make this motherfucker receive damage again, thanks valve btw for not including it
+		m_takedamage = DAMAGE_YES;
 	}
 
 	//Vector soundPosition = GetAbsOrigin() + Vector( 0, 0, 5 );
