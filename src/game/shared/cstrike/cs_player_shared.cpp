@@ -17,7 +17,9 @@
 	#include "c_cs_playerresource.h"
 	#include "c_cs_hostage.h"
 	#include "c_plantedc4.h"
+	#include "prediction.h"
 
+	#define CRecipientFilter C_RecipientFilter
 	#define CCSPlayerResource C_CS_PlayerResource
 #else
 	#include "cs_player.h"
@@ -1663,6 +1665,51 @@ void CCSPlayer::OnLand( float fVelocity )
 	CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
 	if ( pActiveWeapon != NULL )
 		pActiveWeapon->OnLand(fVelocity);
+
+	if ( fVelocity > 270 )
+	{
+		CRecipientFilter filter;
+
+#if defined( CLIENT_DLL )
+		filter.AddRecipient( this );
+
+		if ( prediction->InPrediction() )
+		{
+			// Only use these rules when in prediction.
+			filter.UsePredictionRules();
+		}
+#else
+		filter.AddAllPlayers();
+		// the client plays it's own sound
+		filter.RemoveRecipient( this );
+#endif
+		
+			EmitSound(filter, entindex(), "Default.Land");
+
+			if (!m_pSurfaceData)
+				return;
+
+			unsigned short stepSoundName = m_pSurfaceData->sounds.stepleft;
+			if (!stepSoundName)
+				return;
+
+			IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
+
+			const char *pRawSoundName = physprops->GetString(stepSoundName);
+
+			char szStep[512];
+
+			if (GetTeamNumber() == TEAM_TERRORIST)
+			{
+				Q_snprintf(szStep, sizeof(szStep), "t_%s", pRawSoundName);
+			}
+			else
+			{
+				Q_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
+			}
+					
+			EmitSound(filter, entindex(), szStep);			
+	}
 }
 
 

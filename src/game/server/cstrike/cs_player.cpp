@@ -832,6 +832,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.PickupWeaponSilent" );
 	PrecacheScriptSound( "Player.DamageHelmet" );
 	PrecacheScriptSound( "Player.DamageHeadShot" );
+	PrecacheScriptSound( "Default.Land" );
 	PrecacheScriptSound( "Flesh.BulletImpact" );
 	PrecacheScriptSound( "Player.DamageKevlar" );
 	PrecacheScriptSound( "Player.NightVisionOff" );
