@@ -105,8 +105,6 @@ void CRevolver::SecondaryAttack()
 		
 		if ( !CSBaseGunFire( flCycleTimeAlt, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
 			return;
-
-		return;
 	}
 
 	m_flNextPrimaryAttack = gpGlobals->curtime + GetCSWpnData().m_flCycleTime[m_weaponMode];
