@@ -453,20 +453,17 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 #if 0
 	// eject brass variables
-	const char* pEjectBrassEffect = pKeyValuesData->GetString( "EjectBrassEffect", "" );
-	Q_strncpy( m_szEjectBrassEffect, pEjectBrassEffect, sizeof( m_szEjectBrassEffect ) );
+	Q_strncpy( m_szEjectBrassEffect, pKeyValuesData->GetString( "EjectBrassEffect" ), sizeof( m_szEjectBrassEffect ) );
 #endif
 
 	// tracer variables
 	m_iTracerFrequency[0] = pKeyValuesData->GetInt( "TracerFrequency", 0 );
 	m_iTracerFrequency[1] = pKeyValuesData->GetInt( "TracerFrequencyAlt", m_iTracerFrequency[0] );
-	const char* pTracerEffect = pKeyValuesData->GetString( "TracerEffect", "" );
-	Q_strncpy( m_szTracerEffect, pTracerEffect, sizeof( m_szTracerEffect ) );
+	Q_strncpy( m_szTracerEffect, pKeyValuesData->GetString( "TracerEffect" ), sizeof( m_szTracerEffect ) );
 
 	// heat variables
 	m_flHeatPerShot = pKeyValuesData->GetFloat( "HeatPerShot", 0.0f );
-	const char* pHeatEffect = pKeyValuesData->GetString( "HeatEffect", "" );
-	Q_strncpy( m_szHeatEffect, pHeatEffect, sizeof( m_szHeatEffect ) );
+	Q_strncpy( m_szHeatEffect, pKeyValuesData->GetString( "HeatEffect" ), sizeof( m_szHeatEffect ) );
 
 	// ironsight variables
 	m_bIronsightCapable = pKeyValuesData->GetBool( "IronsightCapable", false );
@@ -483,8 +480,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	if ( (sscanf( srcString, "%f %f %f", &(m_angIronsightPivotAngle.x), &(m_angIronsightPivotAngle.y), &(m_angIronsightPivotAngle.z) ) != 3) )
 		m_angIronsightPivotAngle.Init( 0, 0, 0 );
 
-	const char*	pIronsightDotMaterial = pKeyValuesData->GetString( "IronsightDotMaterial", "" );
-	Q_strncpy( m_szIronsightDotMaterial, pIronsightDotMaterial, sizeof( m_szIronsightDotMaterial ) );
+	Q_strncpy( m_szIronsightDotMaterial, pKeyValuesData->GetString( "IronsightDotMaterial" ), sizeof( m_szIronsightDotMaterial ) );
 
 	// Figure out what team can have this weapon.
 	m_iTeam = TEAM_UNASSIGNED;
@@ -514,17 +510,13 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	}
 
 	
-	const char *pWrongTeamMsg = pKeyValuesData->GetString( "WrongTeamMsg", "" );
-	Q_strncpy( m_WrongTeamMsg, pWrongTeamMsg, sizeof( m_WrongTeamMsg ) );
+	Q_strncpy( m_WrongTeamMsg, pKeyValuesData->GetString( "WrongTeamMsg" ), sizeof( m_WrongTeamMsg ) );
 
-	const char *pShieldViewModel = pKeyValuesData->GetString( "shieldviewmodel", "" );
-	Q_strncpy( m_szShieldViewModel, pShieldViewModel, sizeof( m_szShieldViewModel ) );
+	Q_strncpy( m_szShieldViewModel, pKeyValuesData->GetString( "shieldviewmodel" ), sizeof( m_szShieldViewModel ) );
 	
-	const char *pAnimEx = pKeyValuesData->GetString( "PlayerAnimationExtension", "m4" );
-	Q_strncpy( m_szAnimExtension, pAnimEx, sizeof( m_szAnimExtension ) );
+	Q_strncpy( m_szAnimExtension, pKeyValuesData->GetString( "PlayerAnimationExtension", "m4" ), sizeof( m_szAnimExtension ) );
 	
-	const char *pUIAnimEx = pKeyValuesData->GetString( "UIPlayerAnimationExtension", m_szAnimExtension );
-	Q_strncpy( m_szUIAnimExtension, pUIAnimEx, sizeof( m_szUIAnimExtension ) );
+	Q_strncpy( m_szUIAnimExtension, pKeyValuesData->GetString( "UIPlayerAnimationExtension", m_szAnimExtension ), sizeof( m_szUIAnimExtension ) );
 
 	// Default is 2000.
 	m_flBotAudibleRange = pKeyValuesData->GetFloat( "BotAudibleRange", 2000.0f );
