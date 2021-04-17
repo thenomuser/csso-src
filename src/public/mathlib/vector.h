@@ -32,6 +32,7 @@
 #include "mathlib/vector2d.h"
 #include "mathlib/math_pfns.h"
 #include "minmax.h"
+#include "vstdlib/random.h"
 
 // Uncomment this to add extra Asserts to check for NANs, uninitialized vecs, etc.
 //#define VECTOR_PARANOIA	1
@@ -399,6 +400,18 @@ public:
 		Init(vOther.x, vOther.y, vOther.z);
 		return *this;
 	}
+
+	VectorAligned& operator=(const VectorAligned &vOther)
+	{
+		// we know we're aligned, so use simd
+		// we can't use the convenient abstract interface coz it gets declared later
+#if _WIN32
+		_mm_store_ps(Base(), _mm_load_ps( vOther.Base() ));
+#else
+		Init(vOther.x, vOther.y, vOther.z);
+#endif
+		return *this;
+	}
 	
 #endif
 	float w;	// this space is used anyway
@@ -466,14 +479,28 @@ FORCEINLINE bool PointWithinViewAngle( Vector const &vecSrcPosition,
 	Vector vecDelta = vecTargetPosition - vecSrcPosition;
 	float cosDiff = DotProduct( vecLookDirection, vecDelta );
 
-	if ( cosDiff < 0 ) 
-		return false;
+	if ( flCosHalfFOV <= 0 ) // >180
+	{
+		// signs are different, answer is implicit
+		if ( cosDiff > 0 )
+			return true;
 
-	float flLen2 = vecDelta.LengthSqr();
+		// a/sqrt(b) > c  == a^2 < b * c ^2
+		// IFF left and right sides are <= 0
+		float flLen2 = vecDelta.LengthSqr();
+		return ( cosDiff * cosDiff <= flLen2 * flCosHalfFOV * flCosHalfFOV );
+	}
+	else // flCosHalfFOV > 0
+	{
+		// signs are different, answer is implicit
+		if ( cosDiff < 0 )
+			return false;
 
-	// a/sqrt(b) > c  == a^2 > b * c ^2
-	return ( cosDiff * cosDiff > flLen2 * flCosHalfFOV * flCosHalfFOV );
-	
+		// a/sqrt(b) > c  == a^2 > b * c ^2
+		// IFF left and right sides are >= 0
+		float flLen2 = vecDelta.LengthSqr();
+		return ( cosDiff * cosDiff >= flLen2 * flCosHalfFOV * flCosHalfFOV );
+	}
 }
 
 
@@ -554,9 +581,9 @@ inline void Vector::Init( vec_t ix, vec_t iy, vec_t iz )
 
 inline void Vector::Random( vec_t minVal, vec_t maxVal )
 {
-	x = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	y = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	z = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
+	x = RandomFloat( minVal, maxVal );
+	y = RandomFloat( minVal, maxVal );
+	z = RandomFloat( minVal, maxVal );
 	CHECK_VALID(*this);
 }
 
@@ -869,19 +896,19 @@ FORCEINLINE  ShortVector& ShortVector::operator-=(const ShortVector& v)
 
 FORCEINLINE  ShortVector& ShortVector::operator*=(float fl)	
 {
-	x *= fl;
-	y *= fl;
-	z *= fl;
-	w *= fl;
+	x = (short)(x * fl);
+	y = (short)(y * fl);
+	z = (short)(z * fl);
+	w = (short)(w * fl);
 	return *this;
 }
 
 FORCEINLINE  ShortVector& ShortVector::operator*=(const ShortVector& v)	
 { 
-	x *= v.x;
-	y *= v.y;
-	z *= v.z;
-	w *= v.w;
+	x = (short)(x * v.x);
+	y = (short)(y * v.y);
+	z = (short)(z * v.z);
+	w = (short)(w * v.w);
 	return *this;
 }
 
@@ -889,30 +916,30 @@ FORCEINLINE  ShortVector& ShortVector::operator/=(float fl)
 {
 	Assert( fl != 0.0f );
 	float oofl = 1.0f / fl;
-	x *= oofl;
-	y *= oofl;
-	z *= oofl;
-	w *= oofl;
+	x = (short)(x * oofl);
+	y = (short)(y * oofl);
+	z = (short)(z * oofl);
+	w = (short)(w * oofl);
 	return *this;
 }
 
 FORCEINLINE  ShortVector& ShortVector::operator/=(const ShortVector& v)	
 { 
 	Assert( v.x != 0 && v.y != 0 && v.z != 0 && v.w != 0 );
-	x /= v.x;
-	y /= v.y;
-	z /= v.z;
-	w /= v.w;
+	x = (short)(x / v.x);
+	y = (short)(y / v.y);
+	z = (short)(z / v.z);
+	w = (short)(w / v.w);
 	return *this;
 }
 
 FORCEINLINE void ShortVectorMultiply( const ShortVector& src, float fl, ShortVector& res )
 {
 	Assert( IsFinite(fl) );
-	res.x = src.x * fl;
-	res.y = src.y * fl;
-	res.z = src.z * fl;
-	res.w = src.w * fl;
+	res.x = (short)(src.x * fl);
+	res.y = (short)(src.y * fl);
+	res.z = (short)(src.z * fl);
+	res.w = (short)(src.w * fl);
 }
 
 FORCEINLINE ShortVector ShortVector::operator*(float fl) const
@@ -1019,19 +1046,19 @@ FORCEINLINE  IntVector4D& IntVector4D::operator-=(const IntVector4D& v)
 
 FORCEINLINE  IntVector4D& IntVector4D::operator*=(float fl)	
 {
-	x *= fl;
-	y *= fl;
-	z *= fl;
-	w *= fl;
+	x = (int)(x * fl);
+	y = (int)(y * fl);
+	z = (int)(z * fl);
+	w = (int)(w * fl);
 	return *this;
 }
 
 FORCEINLINE  IntVector4D& IntVector4D::operator*=(const IntVector4D& v)	
 { 
-	x *= v.x;
-	y *= v.y;
-	z *= v.z;
-	w *= v.w;
+	x = (int)(x * v.x);
+	y = (int)(y * v.y);
+	z = (int)(z * v.z);
+	w = (int)(w * v.w);
 	return *this;
 }
 
@@ -1039,30 +1066,30 @@ FORCEINLINE  IntVector4D& IntVector4D::operator/=(float fl)
 {
 	Assert( fl != 0.0f );
 	float oofl = 1.0f / fl;
-	x *= oofl;
-	y *= oofl;
-	z *= oofl;
-	w *= oofl;
+	x = (int)(x * oofl);
+	y = (int)(y * oofl);
+	z = (int)(z * oofl);
+	w = (int)(w * oofl);
 	return *this;
 }
 
 FORCEINLINE  IntVector4D& IntVector4D::operator/=(const IntVector4D& v)	
 { 
 	Assert( v.x != 0 && v.y != 0 && v.z != 0 && v.w != 0 );
-	x /= v.x;
-	y /= v.y;
-	z /= v.z;
-	w /= v.w;
+	x = (int)(x / v.x);
+	y = (int)(y / v.y);
+	z = (int)(z / v.z);
+	w = (int)(w / v.w);
 	return *this;
 }
 
 FORCEINLINE void IntVector4DMultiply( const IntVector4D& src, float fl, IntVector4D& res )
 {
 	Assert( IsFinite(fl) );
-	res.x = src.x * fl;
-	res.y = src.y * fl;
-	res.z = src.z * fl;
-	res.w = src.w * fl;
+	res.x = (int)(src.x * fl);
+	res.y = (int)(src.y * fl);
+	res.z = (int)(src.z * fl);
+	res.w = (int)(src.w * fl);
 }
 
 FORCEINLINE IntVector4D IntVector4D::operator*(float fl) const
@@ -1659,6 +1686,18 @@ public:
 		return *this;
 	}
 
+	QuaternionAligned& operator=(const QuaternionAligned &vOther)
+	{
+		// we know we're aligned, so use simd
+		// we can't use the convenient abstract interface coz it gets declared later
+#if _WIN32
+		_mm_store_ps(Base(), _mm_load_ps( vOther.Base() ));
+#else
+		Init(vOther.x, vOther.y, vOther.z, vOther.w);
+#endif
+		return *this;
+	}
+
 #endif
 } ALIGN16_POST;
 
@@ -1908,9 +1947,9 @@ inline void QAngle::Init( vec_t ix, vec_t iy, vec_t iz )
 
 inline void QAngle::Random( vec_t minVal, vec_t maxVal )
 {
-	x = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	y = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	z = minVal + ((float)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
+	x = RandomFloat( minVal, maxVal );
+	y = RandomFloat( minVal, maxVal );
+	z = RandomFloat( minVal, maxVal );
 	CHECK_VALID(*this);
 }
 

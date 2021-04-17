@@ -22,6 +22,7 @@
 #include "basetypes.h"	// For vec_t, put this somewhere else?
 #include "tier0/dbg.h"
 #include "mathlib/math_pfns.h"
+#include "vstdlib/random.h"
 
 // forward declarations
 class Vector;
@@ -245,10 +246,10 @@ inline void Vector4D::Init( vec_t ix, vec_t iy, vec_t iz, vec_t iw )
 
 inline void Vector4D::Random( vec_t minVal, vec_t maxVal )
 {
-	x = minVal + ((vec_t)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	y = minVal + ((vec_t)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	z = minVal + ((vec_t)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
-	w = minVal + ((vec_t)rand() / VALVE_RAND_MAX) * (maxVal - minVal);
+	x = RandomFloat( minVal , maxVal );
+	y = RandomFloat( minVal , maxVal );
+	z = RandomFloat( minVal , maxVal );
+	w = RandomFloat( minVal , maxVal );
 }
 
 inline void Vector4DClear( Vector4D& a )
