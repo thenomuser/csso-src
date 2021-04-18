@@ -384,7 +384,7 @@ void CTargetID::Paint()
 		{
 			if ( pWeapon->GetWeaponFlags() & ITEM_FLAG_EXHAUSTIBLE )
 			{
-				g_pVGuiLocalize->ConvertANSIToUnicode( pWeapon->GetCSWpnData().szPrintName, sIDString, sizeof( sIDString ) );
+				g_pVGuiLocalize->ConstructString( sIDString, sizeof( sIDString ), g_pVGuiLocalize->Find( pWeapon->GetCSWpnData().szPrintName ), 0 );
 			}
 			else
 			{
