@@ -80,6 +80,16 @@ $Project "glview"
 	"utils\glview\glview.vpc" [$WIN32]
 }
 
+$Project "hammer_dll"
+{
+	"hammer\hammer_dll.vpc" [$WIN32]
+}
+
+$Project "hammer_launcher"
+{
+	"hammer_launcher\hammer_launcher.vpc" [$WIN32]
+}
+
 $Project "height2normal"
 {
 	"utils\height2normal\height2normal.vpc" [$WIN32]

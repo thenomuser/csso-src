@@ -58,6 +58,25 @@ int V_stricmp( const char *s1, const char *s2 );
 int	V_strncmp( const char *s1, const char *s2, int count );
 int V_strnicmp( const char *s1, const char *s2, int n );
 
+//-----------------------------------------------------------------------------
+// Purpose: Slightly modified strtok. Does not modify the input string. Does
+//			not skip over more than one separator at a time. This allows parsing
+//			strings where tokens between separators may or may not be present:
+//
+//			Door01,,,0 would be parsed as "Door01"  ""  ""  "0"
+//			Door01,Open,,0 would be parsed as "Door01"  "Open"  ""  "0"
+//
+// Input  : token - Returns with a token, or zero length if the token was missing.
+//			str - String to parse.
+//			sep - Character to use as separator. UNDONE: allow multiple separator chars
+// Output : Returns a pointer to the next token to be parsed.
+//-----------------------------------------------------------------------------
+const char *nexttoken(char *token, size_t nMaxTokenLen, const char *str, char sep);
+template <size_t maxLenInChars> inline const char *nexttoken( OUT_Z_ARRAY char (&pToken)[maxLenInChars], const char *str, char sep)
+{
+	return nexttoken( pToken, maxLenInChars, str, sep );
+}
+
 #ifdef POSIX
 
 inline char *strupr( char *start )

@@ -145,6 +145,12 @@ vtex.lib
 vpk.pdb
 vpk.exe
 vpk.lib
+hammer.pdb
+hammer.exe
+hammer.lib
+hammer_dll.pdb
+hammer_dll.dll
+hammer_dll.lib
 
 # ignore this files since they have to be builded manually any way
 mathlib.lib
