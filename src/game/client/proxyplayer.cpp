@@ -14,6 +14,7 @@
 #include "toolframework_client.h"
 #include "cs_shareddefs.h"
 #include "c_cs_player.h"
+#include "cs_client_gamestats.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -326,6 +327,101 @@ void CEntityRandomProxy::OnBind( void *pC_BaseEntity )
 EXPOSE_INTERFACE( CEntityRandomProxy, IMaterialProxy, "EntityRandom" IMATERIAL_PROXY_INTERFACE_VERSION );
 
 #include "utlrbtree.h"
+
+//-----------------------------------------------------------------------------
+// StatTrak 'kill odometer' support: given a numerical value expressed as a string, pick a texture frame to represent a given digit
+//-----------------------------------------------------------------------------
+class CStatTrakDigitProxy : public CResultProxy
+{
+public:
+	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	virtual void OnBind( void *pC_BaseEntity );
+
+	virtual bool HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int *piScore );
+
+private:
+	CFloatInput	m_flDisplayDigit; // the particular digit we want to display
+	CFloatInput	m_flTrimZeros;
+};
+
+
+bool CStatTrakDigitProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	if ( !CResultProxy::Init( pMaterial, pKeyValues ) )
+		return false;
+
+	if ( !m_flDisplayDigit.Init( pMaterial, pKeyValues, "displayDigit", 0 ) )
+		return false;
+
+	if ( !m_flTrimZeros.Init( pMaterial, pKeyValues, "trimZeros", 0 ) )
+		return false;
+
+	return true;
+}
+
+bool CStatTrakDigitProxy::HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int *piScore )
+{
+	if ( !pC_BaseEntity )
+		return false;
+
+	if ( !piScore )
+		return false;
+
+	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
+	if ( pEntity )
+	{
+		// StatTrak modules are children of their accompanying viewmodels
+		C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel* >( pEntity->GetMoveParent() );
+		if ( pViewModel )
+		{
+			C_CSPlayer *pPlayer = ToCSPlayer( pViewModel->GetOwner() );
+			if ( pPlayer )
+			{
+				CWeaponCSBase *pWeap = pPlayer->GetActiveCSWeapon();
+				if ( pWeap )
+				{
+					*piScore = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeap->GetCSWeaponID() ).killStatId ).iStatValue;
+				}
+			}
+		}
+	}
+	return true;
+}
+
+void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
+{
+	int nKillEaterAltScore = 0;
+	bool bHasScoreToDisplay = HelperOnBindGetStatTrakScore( pC_BaseEntity, &nKillEaterAltScore );
+	if ( !bHasScoreToDisplay )
+	{	// Force flashing numbers
+		SetFloatResult( (int) fmod( gpGlobals->curtime, 10.0f ) );
+		return;
+	}
+
+	int iDesiredDigit = (int)m_flDisplayDigit.GetFloat();
+
+	// trim preceding zeros
+	if ( m_flTrimZeros.GetFloat() > 0 )
+	{
+		if ( pow( 10.0f, iDesiredDigit ) > nKillEaterAltScore )
+		{
+			SetFloatResult( 10.0f ); //assumed blank frame
+			return;
+		}
+	}
+
+	// get the [0-9] value of the digit we want
+	int iDigitCount = MIN( iDesiredDigit, 10 );
+	for ( int i=0; i<iDigitCount; i++ )
+	{
+		nKillEaterAltScore /= 10;
+	}
+	nKillEaterAltScore %= 10;
+
+	SetFloatResult( nKillEaterAltScore );
+}
+
+EXPOSE_INTERFACE( CStatTrakDigitProxy, IMaterialProxy, "StatTrakDigit" IMATERIAL_PROXY_INTERFACE_VERSION );
 
 #if IRONSIGHT
 //-----------------------------------------------------------------------------
