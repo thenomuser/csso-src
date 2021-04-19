@@ -367,21 +367,26 @@ bool CStatTrakDigitProxy::HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int
 	if ( !piScore )
 		return false;
 
-	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
-	if ( pEntity )
+	// checking if its used on a weapon model or a separate stattrak module
+	C_BaseViewModel *pViewModel = dynamic_cast<C_BaseViewModel*>(BindArgToEntity( pC_BaseEntity ));
+	if ( !pViewModel )
 	{
+		C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
+
 		// StatTrak modules are children of their accompanying viewmodels
-		C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel* >( pEntity->GetMoveParent() );
-		if ( pViewModel )
+		if ( pEntity )
+			pViewModel = dynamic_cast<C_BaseViewModel*>(pEntity->GetMoveParent());
+	}
+
+	if ( pViewModel )
+	{
+		C_CSPlayer *pPlayer = ToCSPlayer( pViewModel->GetOwner() );
+		if ( pPlayer )
 		{
-			C_CSPlayer *pPlayer = ToCSPlayer( pViewModel->GetOwner() );
-			if ( pPlayer )
+			CWeaponCSBase *pWeap = pPlayer->GetActiveCSWeapon();
+			if ( pWeap )
 			{
-				CWeaponCSBase *pWeap = pPlayer->GetActiveCSWeapon();
-				if ( pWeap )
-				{
-					*piScore = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeap->GetCSWeaponID() ).killStatId ).iStatValue;
-				}
+				*piScore = g_CSClientGameStats.GetStatById( GetWeaponTableEntryFromWeaponId( pWeap->GetCSWeaponID() ).killStatId ).iStatValue;
 			}
 		}
 	}
