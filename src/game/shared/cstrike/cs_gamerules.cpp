@@ -714,6 +714,24 @@ ConVar snd_music_selection(
 		true, 60	// max value
 		);
 
+	ConVar mp_roundtime_hostage(
+		"mp_roundtime_hostage",
+		"0",
+		FCVAR_REPLICATED | FCVAR_NOTIFY,
+		"How many minutes each round of Hostage Rescue takes. If 0 then use mp_roundtime instead.",
+		true, 0,	// min value
+		true, 60	// max value
+		);
+
+	ConVar mp_roundtime_defuse(
+		"mp_roundtime_defuse",
+		"0",
+		FCVAR_REPLICATED | FCVAR_NOTIFY,
+		"How many minutes each round of Bomb Defuse takes. If 0 then use mp_roundtime instead.",
+		true, 0,	// min value
+		true, 60	// max value
+		);
+
 	ConVar mp_freezetime( 
 		"mp_freezetime",
 		"6",
@@ -2952,7 +2970,22 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::ReadMultiplayCvars()
 	{
-		m_iRoundTime = IsWarmupPeriod() ? 999 : (int) (mp_roundtime.GetFloat() * 60);
+		float flRoundTime = 0;
+
+		if ( IsPlayingClassic() && IsHostageRescueMap() && (mp_roundtime_hostage.GetFloat() > 0) )
+		{
+			flRoundTime = mp_roundtime_hostage.GetFloat();
+		}
+		else if ( IsPlayingClassic() && IsBombDefuseMap() && (mp_roundtime_defuse.GetFloat() > 0) )
+		{
+			flRoundTime = mp_roundtime_defuse.GetFloat();
+		}
+		else
+		{
+			flRoundTime = mp_roundtime.GetFloat();
+		}
+		
+        m_iRoundTime = IsWarmupPeriod() ? 999 : (int)( flRoundTime * 60 );
 		m_iFreezeTime = IsWarmupPeriod() ? 2 : mp_freezetime.GetInt();
 		m_iCurrentGamemode = mp_gamemode_override.GetInt();
 	}
@@ -7235,7 +7268,13 @@ bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
 
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
-	return true; // PTODO: add some if's here after adding gamemodes
+	switch ( m_iCurrentGamemode )
+	{
+		case GameModes::DEATHMATCH:
+			return false;
+		default:
+			return true;
+	}
 }
 
 
