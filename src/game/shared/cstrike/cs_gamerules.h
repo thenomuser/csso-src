@@ -195,7 +195,6 @@ public:
 	int GetGamemode( void ) { return m_iCurrentGamemode; };
 
 	CNetworkVar( int, m_iCurrentGamemode );
-	int m_iOldGamemode;
 
 #ifndef CLIENT_DLL
 	bool IsArmorFree();

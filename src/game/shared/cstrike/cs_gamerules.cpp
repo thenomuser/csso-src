@@ -1213,7 +1213,6 @@ ConVar snd_music_selection(
 #endif
 
 		m_iCurrentGamemode = 0;
-		m_iOldGamemode = 0;
 
 		m_iMapFactionCT = -1;
 		m_iMapFactionT = -1;
@@ -2955,6 +2954,7 @@ ConVar snd_music_selection(
 	{
 		m_iRoundTime = IsWarmupPeriod() ? 999 : (int) (mp_roundtime.GetFloat() * 60);
 		m_iFreezeTime = IsWarmupPeriod() ? 2 : mp_freezetime.GetInt();
+		m_iCurrentGamemode = mp_gamemode_override.GetInt();
 	}
 
 	void CCSGameRules::RoundWin( void )
@@ -4222,36 +4222,6 @@ ConVar snd_music_selection(
 		{
 			CheckRestartRound();
 			m_tmNextPeriodicThink = gpGlobals->curtime + 1.0;
-		}
-
-		if ( mp_gamemode_override.GetInt() != m_iOldGamemode )
-		{
-			m_iCurrentGamemode = mp_gamemode_override.GetInt();
-			m_iOldGamemode = mp_gamemode_override.GetInt();
-
-			switch ( mp_gamemode_override.GetInt() )
-			{
-				default:
-				case GameModes::CUSTOM:
-					// do nothing here
-					break;
-				case GameModes::CASUAL:
-					engine->ServerCommand( "exec gamemode_casual.cfg\n" );
-					engine->ServerExecute();
-					break;
-				case GameModes::COMPETITIVE:
-					engine->ServerCommand( "exec gamemode_competitive.cfg\n" );
-					engine->ServerExecute();
-					break;
-				case GameModes::COMPETITIVE_2V2:
-					engine->ServerCommand( "exec gamemode_competitive2v2.cfg\n" );
-					engine->ServerExecute();
-					break;
-				case GameModes::DEATHMATCH:
-					engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
-					engine->ServerExecute();
-					break;
-			}
 		}
 
 		m_flLastThinkTime = gpGlobals->curtime;
