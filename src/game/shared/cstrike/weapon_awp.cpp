@@ -105,7 +105,7 @@ void CWeaponAWP::Spawn()
 
 void CWeaponAWP::SecondaryAttack()
 {
-	const float kZoomTime = 0.10f;
+	const float kZoomTime = 0.05f;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 

@@ -78,7 +78,7 @@ void CWeaponSCAR20::Spawn()
 
 void CWeaponSCAR20::SecondaryAttack()
 {
-	const float kZoomTime = 0.10f;
+	const float kZoomTime = 0.05f;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )

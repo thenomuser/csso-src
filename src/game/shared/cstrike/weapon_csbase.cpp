@@ -1004,12 +1004,12 @@ void CWeaponCSBase::CallWeaponIronsight()
 
 	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() )
 	{
-		pPlayer->SetFOV( pPlayer, 55, 0.2f );
+		pPlayer->SetFOV( pPlayer, 45, 0.10f );
 		m_weaponMode = Secondary_Mode;
 	}
-	else if ( pPlayer->GetFOV() == 55 )
+	else if ( pPlayer->GetFOV() == 45 )
 	{
-		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.15f );
+		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.06f );
 		m_weaponMode = Primary_Mode;
 	}
 	else 

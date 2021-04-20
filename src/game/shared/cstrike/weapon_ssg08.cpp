@@ -77,7 +77,7 @@ void CWeaponSSG08::Spawn()
 
 void CWeaponSSG08::SecondaryAttack()
 {
-	const float kZoomTime = 0.10f;
+	const float kZoomTime = 0.05f;
 
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if (pPlayer == NULL)
