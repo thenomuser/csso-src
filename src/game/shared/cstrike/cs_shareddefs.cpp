@@ -54,6 +54,7 @@ static PlayerGloves s_playerGloves[MAX_GLOVES+1] =
 	{ NULL, NULL },
 
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound.mdl",				"models/weapons/w_models/arms/w_glove_bloodhound.mdl"				},
+	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_perfectworld.mdl",	"models/weapons/w_models/arms/w_glove_bloodhound_perfectworld.mdl"	},
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_brokenfang.mdl",	"models/weapons/w_models/arms/w_glove_bloodhound_brokenfang.mdl"	},
 	{ "models/weapons/v_models/arms/glove_bloodhound/v_glove_bloodhound_hydra.mdl",			"models/weapons/w_models/arms/w_glove_bloodhound_hydra.mdl"			},
 	{ "models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/w_models/arms/w_glove_fingerless.mdl"				},

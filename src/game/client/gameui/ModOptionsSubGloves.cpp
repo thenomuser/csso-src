@@ -39,6 +39,7 @@ static Gloves gloveNames[] =
 {
 	{ "#GameUI_Loadout_Glove_Default",					NULL							},
 	{ "#GameUI_Loadout_Glove_Bloodhound",				"glove_bloodhound"				},
+	{ "#GameUI_Loadout_Glove_Bloodhound_PerfectWorld",	"glove_bloodhound_perfectworld"	},
 	{ "#GameUI_Loadout_Glove_Bloodhound_BrokenFang",	"glove_bloodhound_brokenfang"	},
 	{ "#GameUI_Loadout_Glove_Bloodhound_Hydra",			"glove_bloodhound_hydra"		},
 	{ "#GameUI_Loadout_Glove_Fingerless",				"glove_fingerless"				},
