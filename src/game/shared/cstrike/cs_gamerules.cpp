@@ -441,6 +441,14 @@ ConVar mp_gamemode_override(
 	"mp_gamemode_override",
 	"0",
 	FCVAR_REPLICATED,
+	"What gamemode are we playing today?\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman\n 4 - Deathmatch",
+	true, 0,
+	true, GameModes::NUM_GAMEMODES - 1 );
+
+ConVar mp_settings_override(
+	"mp_settings_override",
+	"0",
+	FCVAR_REPLICATED,
 	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman\n 4 - Deathmatch",
 	true, 0,
 	true, GameModes::NUM_GAMEMODES - 1 );
@@ -1244,6 +1252,30 @@ ConVar snd_music_selection(
 			SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
 		else
 			SetPhase( GAMEPHASE_PLAYING_STANDARD );
+
+		switch ( mp_settings_override.GetInt() )
+		{
+			default:
+			case GameModes::CUSTOM:
+				// do nothing here
+				break;
+			case GameModes::CASUAL:
+				engine->ServerCommand( "exec gamemode_casual.cfg\n" );
+				engine->ServerExecute();
+				break;
+			case GameModes::COMPETITIVE:
+				engine->ServerCommand( "exec gamemode_competitive.cfg\n" );
+				engine->ServerExecute();
+				break;
+			case GameModes::COMPETITIVE_2V2:
+				engine->ServerCommand( "exec gamemode_competitive2v2.cfg\n" );
+				engine->ServerExecute();
+				break;
+			case GameModes::DEATHMATCH:
+				engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
+				engine->ServerExecute();
+				break;
+		}
 	}
 
 	void CCSGameRules::SetPhase( GamePhase phase )
