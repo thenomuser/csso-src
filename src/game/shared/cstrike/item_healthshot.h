@@ -38,7 +38,6 @@ public:
 	CItem_Healthshot() 	{}
 
 	virtual void	Precache( void );
-	virtual void	Drop( const Vector &vecVelocity );
 
 	virtual bool	CanPrimaryAttack( void );
 

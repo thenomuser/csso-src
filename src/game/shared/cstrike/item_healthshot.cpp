@@ -80,12 +80,6 @@ bool CItem_Healthshot::CanUseOnSelf( CCSPlayer *pPlayer )
 	return true;
 }
 
-void CItem_Healthshot::Drop( const Vector &vecVelocity )
-{
-	DropHealthshot();
-	BaseClass::Drop( vecVelocity );
-}
-
 void CItem_Healthshot::DropHealthshot( void )
 {
 #ifndef CLIENT_DLL
