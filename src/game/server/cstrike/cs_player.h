@@ -674,8 +674,6 @@ public:
 	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
 
-	int		m_iKillStreak;
-
 private:
 	int	m_iDeathPose;
 	int	m_iDeathFrame;

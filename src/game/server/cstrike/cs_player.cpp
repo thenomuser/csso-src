@@ -1389,8 +1389,6 @@ void CCSPlayer::Spawn()
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
 
-	m_iKillStreak = 0;
-
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;
 	else
@@ -1860,7 +1858,7 @@ void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &
 	BaseClass::Event_KilledOther(pVictim, info);
 
 	// give a healthshot in DM for every triple kill streak if dont have a healthshot
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (m_iKillStreak % 3 == 0) && !Weapon_OwnsThisType("weapon_healthshot") )
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (m_NumEnemiesKilledThisSpawn % 3 == 0) && !Weapon_OwnsThisType("weapon_healthshot") )
 	{
 		GiveNamedItem( "weapon_healthshot" );
 
@@ -11042,8 +11040,6 @@ void CCSPlayer::IncrementFragCount( int nCount )
 
 	m_iFrags += nCount;
 	pl.frags = m_iFrags;
-
-	m_iKillStreak++;
 }
 
 void CCSPlayer::IncrementDeathCount( int nCount )
