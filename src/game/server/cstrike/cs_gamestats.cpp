@@ -928,7 +928,7 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
     TrackKillStats( pPlayerAttacker, pPlayerVictim );
 
 	// Skip rest of stat reporting for friendly fire
-	if ( pPlayerAttacker->GetTeam() == pVictim->GetTeam() )
+	if ( !pPlayerAttacker->IsOtherEnemy( pPlayerVictim ) )
 		return;
 
 	CSWeaponID weaponId = WEAPON_NONE;
