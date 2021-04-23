@@ -7826,7 +7826,7 @@ void CCSPlayer::BuildRebuyStruct()
 		m_rebuyStruct.m_szSecondaryWeapon[0] = 0;
 		m_rebuyStruct.m_secondaryAmmo = 0; // can't have ammo if we don't have a gun right?
 	}
-	else
+	else if ( !m_bUsingDefaultPistol ) // no need to add default pistol to rebuy struct
 	{
 		const char *wpnName = secondary->GetClassname();
 
