@@ -3103,6 +3103,12 @@ ConVar snd_music_selection(
 			}
 		}
 #endif
+
+#if CS_CONTROLLABLE_BOTS_ENABLED
+		RevertBotsFunctor revertBots;
+		ForEachPlayer( revertBots );
+#endif
+
 		// [tj] Notify players that the round is about to be reset
         for ( int clientIndex = 1; clientIndex <= gpGlobals->maxClients; clientIndex++ )
 		{
@@ -3121,11 +3127,6 @@ ConVar snd_music_selection(
 
 		int i;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
-		RevertBotsFunctor revertBots;
-		ForEachPlayer( revertBots );
-#endif
-
 		m_iTotalRoundsPlayed++;
 		
 		//ClearBodyQue();
@@ -3141,6 +3142,38 @@ ConVar snd_music_selection(
 		{
 			MoveHumansToHumanTeam();
 		}
+
+		/*************** AUTO-BALANCE CODE *************/
+		if ( mp_autoteambalance.GetInt() != 0 &&
+			(m_iUnBalancedRounds >= 1) )
+		{
+			if ( GetHumanTeam() == TEAM_UNASSIGNED )
+			{
+				BalanceTeams();
+			}
+		}
+
+		if ( ((m_iNumSpawnableCT - m_iNumSpawnableTerrorist) >= 2) ||
+			((m_iNumSpawnableTerrorist - m_iNumSpawnableCT) >= 2)	)
+		{
+			m_iUnBalancedRounds++;
+		}
+		else
+		{
+			m_iUnBalancedRounds = 0;
+		}
+
+		// Warn the players of an impending auto-balance next round...
+		if ( mp_autoteambalance.GetInt() != 0 &&
+			(m_iUnBalancedRounds == 1)	)
+		{
+			if ( GetHumanTeam() == TEAM_UNASSIGNED )
+			{
+				UTIL_ClientPrintAll( HUD_PRINTCENTER,"#Auto_Team_Balance_Next_Round");
+			}
+		}
+
+		/*************** AUTO-BALANCE CODE *************/
 
 		//If this is the first restart since halftime, do the appropriate bookkeeping.
 		bool bClearAccountsAfterHalftime = false;
@@ -3177,38 +3210,6 @@ ConVar snd_music_selection(
 				pPlayer->RemoveAllItems( true );
 			}
 		}
-
-		/*************** AUTO-BALANCE CODE *************/
-		if ( mp_autoteambalance.GetInt() != 0 &&
-			(m_iUnBalancedRounds >= 1) )
-		{
-			if ( GetHumanTeam() == TEAM_UNASSIGNED )
-			{
-				BalanceTeams();
-			}
-		}
-
-		if ( ((m_iNumSpawnableCT - m_iNumSpawnableTerrorist) >= 2) ||
-			((m_iNumSpawnableTerrorist - m_iNumSpawnableCT) >= 2)	)
-		{
-			m_iUnBalancedRounds++;
-		}
-		else
-		{
-			m_iUnBalancedRounds = 0;
-		}
-
-		// Warn the players of an impending auto-balance next round...
-		if ( mp_autoteambalance.GetInt() != 0 &&
-			(m_iUnBalancedRounds == 1)	)
-		{
-			if ( GetHumanTeam() == TEAM_UNASSIGNED )
-			{
-				UTIL_ClientPrintAll( HUD_PRINTCENTER,"#Auto_Team_Balance_Next_Round");
-			}
-		}
-
-		/*************** AUTO-BALANCE CODE *************/
 
 		if ( m_bCompleteReset )
 		{
