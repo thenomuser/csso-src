@@ -1882,6 +1882,10 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 		if ( acquireMethod == AcquireMethod::Buy )
 			return AcquireResult::NotAllowedForPurchase;
 	}
+	else if ( Weapon_OwnsThisType( WeaponIdAsString(weaponId) ) )
+	{
+		return AcquireResult::AlreadyOwned;
+	}
 
 	// additional constraints for purchasing weapons
 	if ( acquireMethod == AcquireMethod::Buy )
