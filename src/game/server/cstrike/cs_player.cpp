@@ -2674,6 +2674,8 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		}
 	}
 
+	bool bKnifeDamage = false;
+
 	if ( pAttacker )
 	{
 		// [paquin. forest] if  this is blast damage, and we haven't opted out with a cvar,
@@ -2712,8 +2714,10 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			if ( pWeaponInfo )
 			{
 				flArmorRatio *= pWeaponInfo->m_flArmorRatio;
+				//Knives do bullet damage, so we need to specifically check the weapon here
+				bKnifeDamage = pWeaponInfo->m_WeaponType == WEAPONTYPE_KNIFE;
 
-				if ( info.GetDamageType() & DMG_BULLET && bDamageIsFromOpponent )
+				if ( info.GetDamageType() & DMG_BULLET && !bKnifeDamage && bDamageIsFromOpponent )
 				{
 					CCS_GameStats.Event_ShotHit( pAttacker, info );	// [pmf] Should this be done AFTER damage reduction?
 				}
@@ -2809,6 +2813,22 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	if ( info.GetDamage() <= 0 )
 		return 0;
+
+	CSingleUserRecipientFilter user( this );
+		user.MakeReliable();
+		UserMessageBegin( user, "Damage" );
+			WRITE_BYTE( (int)info.GetDamage() );
+			WRITE_VEC3COORD( info.GetInflictor()->WorldSpaceCenter() );
+			if ( !( info.GetDamageType() & DMG_BULLET ) || bKnifeDamage )
+			{
+				WRITE_LONG( -1 );
+			}
+			else
+			{
+				WRITE_LONG( m_LastHitBox );
+			}
+			WRITE_VEC3COORD( m_vLastHitLocationObjectSpace );
+		MessageEnd();
 
 	// Do special explosion damage effect
 	if ( info.GetDamageType() & DMG_BLAST )
