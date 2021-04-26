@@ -196,6 +196,13 @@ bool CCSPlayer::IsAbleToInstantRespawn( void )
 {
 	if ( CSGameRules() )
 	{
+		switch ( CSGameRules()->GetPhase() )
+		{
+			case GAMEPHASE_MATCH_ENDED:
+			case GAMEPHASE_HALFTIME:
+				return false;
+		}
+
 		if ( CSGameRules()->IsWarmupPeriod() )
 			return true;
 	}

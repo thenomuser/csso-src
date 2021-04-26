@@ -244,11 +244,11 @@ private:
 
 	bool		m_bDontUploadStats;
 	
-	void SetPhase( GamePhase phase );
-	GamePhase GetPhase( void ) const { return m_gamePhase; }
 	GamePhase m_gamePhase;
 
 public:
+	void SetPhase( GamePhase phase );
+	GamePhase GetPhase( void ) const { return m_gamePhase; }
 
 	CNetworkVar( bool, m_bBombDropped );
 	CNetworkVar( bool, m_bBombPlanted );

@@ -391,6 +391,25 @@ void ClientModeCSNormal::Update()
 
 		m_fDelayedCTWinTime = -1.0f;
 	}
+
+	// halftime music needs a delay thusly
+	static bool bStartedHalfTimeMusic = false;
+	static float flHalfTimeStart = 0.0;
+	
+	if( CSGameRules() && CSGameRules()->GetPhase() == GAMEPHASE_HALFTIME  )
+	{
+		if( !bStartedHalfTimeMusic && gpGlobals->curtime - flHalfTimeStart > 6.5 )
+		{
+			bStartedHalfTimeMusic = true;
+			CSingleUserRecipientFilter filter(C_BasePlayer::GetLocalPlayer());
+			PlayMusicSelection(filter, CSMUSIC_HALFTIME);
+		}
+	}
+	else
+	{
+		flHalfTimeStart = gpGlobals->curtime;
+		bStartedHalfTimeMusic = false;
+	}
 }
 
 //--------------------------------------------------------------------------------------------------------

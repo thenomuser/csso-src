@@ -1352,7 +1352,18 @@ void CCSPlayer::Spawn()
 
 	if ( flImmuneTime > 0 || CSGameRules()->IsWarmupPeriod() )
 	{
-		if ( CSGameRules()->IsWarmupPeriod() )
+		//Make sure we can't move if we respawn in gun game after the rounds ends
+		if ( CSGameRules()->GetPhase() == GAMEPHASE_MATCH_ENDED )
+		{
+			AddFlag( FL_FROZEN );
+		}
+
+		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && !IsBot() )
+		{
+			// set immune time to super high and open the buy menu
+			m_bInBuyZone = true;
+		}
+		else if ( CSGameRules()->IsWarmupPeriod() )
 		{
 			flImmuneTime = 3;
 		}
