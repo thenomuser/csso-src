@@ -3038,35 +3038,41 @@ ConVar snd_music_selection(
         }
 
         //*******Catch up code by SupraFiend. Scale up the loser bonus when teams fall into losing streaks
+		m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
         if (m_iRoundWinStatus == WINNER_TER) // terrorists won
         {
             //check to see if they just broke a losing streak
             if ( m_iNumConsecutiveTerroristLoses > 0 )
-            {
-                // reset the loser bonus
-                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
-                m_iNumConsecutiveTerroristLoses = 0;
-            }
+                m_iNumConsecutiveTerroristLoses--;
+
             m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
+
+			//check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
+			for ( int i = 0; i != m_iNumConsecutiveCTLoses; i++ )
+			{
+				if ( m_iLoserBonus < 3000 )
+					m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );
+				else
+					break;
+			}
         }
         else if (m_iRoundWinStatus == WINNER_CT) // CT Won
         {
             //check to see if they just broke a losing streak
             if ( m_iNumConsecutiveCTLoses > 0 )
-            {
-                // reset the loser bonus
-                m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
-                m_iNumConsecutiveCTLoses = 0;
-            }
-            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
-        }
+                m_iNumConsecutiveCTLoses--;
 
-        //check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
-        if((m_iNumConsecutiveTerroristLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
-        else
-        if((m_iNumConsecutiveCTLoses > 1) && (m_iLoserBonus < 3000))
-            m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );//help out the team in the losing streak
+            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
+
+			//check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
+			for ( int i = 0; i != m_iNumConsecutiveTerroristLoses; i++ )
+			{
+				if ( m_iLoserBonus < 3000 )
+					m_iLoserBonus += TeamCashAwardValue( TeamCashAward::LOSER_BONUS_CONSECUTIVE_ROUNDS );
+				else
+					break;
+			}
+        }
 
         // assign the wining and losing bonuses
         if (m_iRoundWinStatus == WINNER_TER) // terrorists won
