@@ -1265,7 +1265,7 @@ void CConPanel::Paint()
 	DrawNotify();	// only draw notify in game
 }
 
-static ConVar mod_version( "mod_version", "0.7", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
+static ConVar mod_version( "mod_version", "0.8", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
