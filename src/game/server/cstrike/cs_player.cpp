@@ -1867,15 +1867,6 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 {
 	BaseClass::Event_KilledOther(pVictim, info);
-
-	// give a healthshot in DM for every triple kill streak if dont have a healthshot
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (m_NumEnemiesKilledThisSpawn % 3 == 0) && !Weapon_OwnsThisType("weapon_healthshot") )
-	{
-		GiveNamedItem( "weapon_healthshot" );
-
-		// notify the player
-		ClientPrint( this, HUD_PRINTTALK, "#Cstrike_WasGivenAHealthshot" );
-	}
 }
 
 
@@ -9854,7 +9845,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 	}
   
 	// all these achievements require a valid attacker on a different team
-	if ( pAttacker != NULL && pVictim != NULL && pVictim->GetTeamNumber() != pAttacker->GetTeamNumber() )
+	if ( pAttacker != NULL && pVictim != NULL && pVictim->IsOtherEnemy( pAttacker ) )
 	{
 		// get the weapon used - some of the achievements will need this data
 		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >(pAttacker->GetActiveWeapon());
@@ -9918,6 +9909,15 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		pAttacker->m_NumEnemiesKilledThisSpawn++;
 		if ( pAttacker->m_NumEnemiesKilledThisSpawn > pAttacker->m_maxNumEnemiesKillStreak )
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
+
+		// give a healthshot in DM for every triple kill streak if dont have a healthshot
+		if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && (pAttacker->m_NumEnemiesKilledThisSpawn % 3 == 0) && !pAttacker->Weapon_OwnsThisType( "weapon_healthshot" ) )
+		{
+			pAttacker->GiveNamedItem( "weapon_healthshot" );
+
+			// notify the player
+			ClientPrint( pAttacker, HUD_PRINTTALK, "#Cstrike_WasGivenAHealthshot" );
+		}
 
 		//store a list of kill times for spree tracking
 		pAttacker->m_killTimes.AddToTail(gpGlobals->curtime);
