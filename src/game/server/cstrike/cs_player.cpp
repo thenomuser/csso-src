@@ -3225,7 +3225,11 @@ void CCSPlayer::AddAccountAward( int reason )
 void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pWeapon )
 {
 	// no awards in the warmup period
-	if ( CSGameRules() && CSGameRules()->IsWarmupPeriod() )
+	if ( CSGameRules()->IsWarmupPeriod() )
+		return;
+
+	// no awards in dm either
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 		return;
 
 	if ( amount == 0 )
