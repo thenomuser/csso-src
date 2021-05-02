@@ -2128,7 +2128,7 @@ void CCSPlayer::UpdateRadar()
 		if ( !pPlayer )
 			continue; // nothing there
 
-		bool bSameTeam = pPlayer->GetTeamNumber() == GetTeamNumber();
+		bool bSameTeam = !IsOtherEnemy(pPlayer);
 
 		if ( playerbits.Get(i) && bSameTeam == true )
 			continue; // this player is in my PVS and not in my team, don't update radar pos
@@ -9937,7 +9937,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			if (avengedPlayer)
 			{
 				//Make sure you are avenging someone on your own team (This is the expected flow. Just here to avoid edge cases like team-switching).
-				if (pAttacker->GetTeamNumber() == avengedPlayer->GetTeamNumber())
+				if ( !pAttacker->IsOtherEnemy(avengedPlayer) )
 				{
 					CCS_GameStats.Event_PlayerAvengedTeammate(pAttacker, pVictim->m_enemyPlayersKilledThisRound[avengedIndex]);
 				}
@@ -10133,7 +10133,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 
 
 	//If you kill a friendly player while blind (from an enemy player), give the guy that blinded you an achievement    
-	if ( pAttacker != NULL && pVictim != NULL && pVictim->GetTeamNumber() == pAttacker->GetTeamNumber() && pAttacker->IsBlind())
+	if ( pAttacker != NULL && pVictim != NULL && !pVictim->IsOtherEnemy(pAttacker) && pAttacker->IsBlind() )
 	{
 		CCSPlayer* flashbangAttacker = pAttacker->GetLastFlashbangAttacker();
 		if ( flashbangAttacker &&
@@ -10176,7 +10176,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 
 	// Achievement check for being the last player alive in a match
 	if (pAlivePlayer)
-	{		
+	{
 		int alivePlayerTeam = pAlivePlayer->GetTeamNumber();
 		int alivePlayerOpposingTeam = alivePlayerTeam == TEAM_CT ? TEAM_TERRORIST : TEAM_CT;
 		if (livePlayerCount == 1 

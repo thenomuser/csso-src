@@ -1827,7 +1827,7 @@ ConVar snd_music_selection(
 				if(	pCSExplosionAttacker &&                  
 					!pCSExplosionVictim->IsAlive() && 
 					wasAliveBeforeExplosion &&
-					pCSExplosionVictim->GetTeamNumber() != pCSExplosionAttacker->GetTeamNumber())               
+					pCSExplosionVictim->IsOtherEnemy(pCSExplosionAttacker))               
 				{
 					numberOfEnemyPlayersKilledByThisExplosion++;
 				}
