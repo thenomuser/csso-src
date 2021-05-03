@@ -6506,18 +6506,18 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot 
 					continue;
 				}
 
-				if ( mp_randomspawn_los.GetBool() )
+				if ( mp_randomspawn.GetBool() && mp_randomspawn_los.GetBool() )
 				{
 					if ( CSGameRules() && CSGameRules()->IsSpawnPointHiddenFromOtherPlayers( pSpot, this, TEAM_CT )
 						 && UTIL_IsRandomSpawnFarEnoughAwayFromTeam( pSpot->GetAbsOrigin(), TEAM_CT ) )
 					{
 						return true;
 					}
-				}
-				else
-				{
-					pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-					continue;
+					else
+					{
+						pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
+						continue;
+					}
 				}
 
 				// if so, go to pSpot
@@ -6602,7 +6602,6 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 			pSpot = g_pLastCTSpawn;
 			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ))
 			{
-
 				g_pLastCTSpawn = pSpot;
 				goto ReturnSpot;
 			}
