@@ -61,6 +61,7 @@ struct ViewerSettings
 	bool enableSpecular;
 	bool showIllumPosition;
 	bool playSounds;
+	bool enableJiggleBones;
 
 	// Current attachment we're editing. -1 if none.
 	int m_iEditAttachment;

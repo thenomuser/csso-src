@@ -63,6 +63,7 @@
 //#define IDC_PARALLAXMAP			2030
 #define IDC_SHOWORIGINAXIS			2029
 #define IDC_ORIGINAXISLENGTH		2030
+#define IDC_JIGGLEBONES				2031
 
 #define MAX_SEQUENCES				5
 #define IDC_SEQUENCE0				3000
@@ -252,6 +253,7 @@ class ControlPanel : public mxWindow
 	mxCheckBox *cbPlaySounds;
 	mxCheckBox *cbShowOriginAxis;
 	mxSlider *leOriginAxisLength;
+	mxCheckBox *cbJiggleBones;
 
 	mxChoice *cLODChoice;
 	mxCheckBox *cbAutoLOD;

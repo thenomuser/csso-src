@@ -609,7 +609,8 @@ void StudioModel::SetUpBones( bool mergeBones )
 			bonematrix[1][3] = pos[i][1];
 			bonematrix[2][3] = pos[i][2];
 
-			if ( (pStudioHdr->pBone( 0 )[i].flags & BONE_ALWAYS_PROCEDURAL) && 
+			if ( g_viewerSettings.enableJiggleBones &&
+				(pStudioHdr->pBone( 0 )[i].flags & BONE_ALWAYS_PROCEDURAL) && 
 				 (pStudioHdr->pBone( 0 )[i].proctype & STUDIO_PROC_JIGGLE) )
 			{
 				//

@@ -1295,6 +1295,9 @@ void ControlPanel::SetupRenderWindow( mxTab* pTab )
 	cbOverbright2->setChecked( true );
 	setOverbright( true );
 
+	cbJiggleBones = new mxCheckBox( wRender, 125, 165, 150, 20, "Jiggle bones", IDC_JIGGLEBONES );
+	cbJiggleBones->setEnabled( true );
+
 	cbAttachments = new mxCheckBox (wRender, 5, 45, 120, 20, "Attachments (Ctrl-A)", IDC_ATTACHMENTS);
 	cbAttachments->setEnabled( true );
 
@@ -2111,6 +2114,10 @@ ControlPanel::handleEvent (mxEvent *event)
 		case IDC_SHOWORIGINAXIS:
 			setShowOriginAxis (((mxCheckBox *) event->widget)->isChecked());
 			break;
+
+		case IDC_JIGGLEBONES:
+			g_viewerSettings.enableJiggleBones = ((mxCheckBox *) event->widget)->isChecked();
+			break;
 			
 		case IDC_MESSAGES:
 		{
@@ -2752,6 +2759,7 @@ ControlPanel::resetControlPanel( void )
 	cbAttachments->setChecked( g_viewerSettings.showAttachments );
 	cbNormals->setChecked( g_viewerSettings.showNormals );
 	cbEnableHead->setChecked( g_pStudioModel->GetSolveHeadTurn() ? 1 : 0 );
+	cbJiggleBones->setChecked( g_viewerSettings.enableJiggleBones );
 
 	cbShowOriginAxis->setChecked( g_viewerSettings.showOriginAxis );
 	setOriginAxisLength( g_viewerSettings.originAxisLength );

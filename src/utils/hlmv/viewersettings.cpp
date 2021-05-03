@@ -68,6 +68,7 @@ void InitViewerSettings ( const char *subkey )
 	g_viewerSettings.overlayWireframe = false;
 	g_viewerSettings.enableSpecular = true;
 	g_viewerSettings.playSounds = true;
+	g_viewerSettings.enableJiggleBones = true;
 
 	g_viewerSettings.bgColor[0] = 0.25f;
 	g_viewerSettings.bgColor[1] = 0.25f;
