@@ -34,6 +34,9 @@ extern ConVar hostage_debug;
 #define CHICKEN_DISTANCE_RUN 200.0f
 #define CHICKEN_DISTANCE_WALK 100.0f
 
+// 04.05.2021: Valve removed holiday bodygroups and added random skins for chickens :(((
+#define MAX_CHICKEN_SKINS 4 // count goes from 0
+
 //-----------------------------------------------------------------------
 CChicken::CChicken()
 {
@@ -69,7 +72,6 @@ void CChicken::Precache( void )
 //-----------------------------------------------------------------------
 void CChicken::Spawn( void )
 {
-
 	SetModel( "models/chicken/chicken.mdl" );
 
 	BaseClass::Spawn();
@@ -143,13 +145,9 @@ void CChicken::Spawn( void )
 	m_lastLeaderID = 0;
 
 	m_flActiveFollowStartTime = 0;
-
-	// TODO: rewrite this
-	int bodygroup = FindBodygroupByName( "holiday" );
-	if ( UTIL_IsCSSOBirthday() )
-		SetBodygroup( bodygroup, 1 );
-	if ( UTIL_IsNewYear() )
-		SetBodygroup( bodygroup, 3 );
+	
+	// 04.05.2021: Valve removed holiday bodygroups and added random skins for chickens :(((
+	m_nSkin = RandomInt( 0, MAX_CHICKEN_SKINS );
 }
 
 
