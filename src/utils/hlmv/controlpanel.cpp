@@ -1295,7 +1295,7 @@ void ControlPanel::SetupRenderWindow( mxTab* pTab )
 	cbOverbright2->setChecked( true );
 	setOverbright( true );
 
-	cbJiggleBones = new mxCheckBox( wRender, 125, 165, 150, 20, "Jiggle bones", IDC_JIGGLEBONES );
+	cbJiggleBones = new mxCheckBox( wRender, 125, 165, 150, 20, "Jiggle Bones", IDC_JIGGLEBONES );
 	cbJiggleBones->setEnabled( true );
 
 	cbAttachments = new mxCheckBox (wRender, 5, 45, 120, 20, "Attachments (Ctrl-A)", IDC_ATTACHMENTS);
