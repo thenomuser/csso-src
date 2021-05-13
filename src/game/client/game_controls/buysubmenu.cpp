@@ -13,6 +13,7 @@
 #include <filesystem.h>
 #include <game/client/iviewport.h>
 #include <cdll_client_int.h>
+#include "weapon_csbase.h"
 
 #include "mouseoverpanelbutton.h"
 // #include "cs_gamerules.h"
@@ -142,6 +143,25 @@ void CBuySubMenu::OnCommand( const char *command)
 			{
 				GetWizardPanel()->Close();
 				gViewPortInterface->ShowBackGround( false );
+			}
+			else
+			{
+				// check if we need to show up main buymenu window
+				WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( UTIL_VarArgs( "weapon_%s", command + 4 ) );
+				if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
+				{
+					CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+					if ( pWeaponInfo )
+					{
+						if ( pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE &&
+							 pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
+						{
+							GetWizardPanel()->Close();
+							gViewPortInterface->ShowBackGround( false );
+							engine->ClientCmd( "buymenu" );
+						}
+					}
+				}
 			}
 		}
 		else
