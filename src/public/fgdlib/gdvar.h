@@ -50,6 +50,7 @@ enum GDIV_TYPE
 	ivAngleNegativePitch,	// used for instance rotating when just a pitch value is present
 	ivInstanceVariable,		// used for instance variables for easy hammer editing
 	ivInstanceParm,			// used for instance parameter declaration
+	ivBoolean,
 
 	ivMax					// count of types
 };
