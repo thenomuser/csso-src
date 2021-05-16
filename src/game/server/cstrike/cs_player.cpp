@@ -9081,57 +9081,64 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	}
 
 	//reset class
-	switch ( m_iClass )
+	if ( CSGameRules()->UseMapFactionsForThisPlayer(this) )
 	{
-	// Terrorist -> CT
-	case CS_CLASS_PHOENIX_CONNNECTION:
-		m_iClass = (int)CS_CLASS_SEAL_TEAM_6;
-		break;
-	case CS_CLASS_L337_KREW:
-		m_iClass = (int)CS_CLASS_GSG_9;
-		break;
-	case CS_CLASS_SEPARATIST:
-		m_iClass = (int)CS_CLASS_SAS;
-		break;
-	case CS_CLASS_BALKAN:
-		m_iClass = (int)CS_CLASS_GIGN;
-		break;
-	case CS_CLASS_PROFESSIONAL:
-		m_iClass = (int)CS_CLASS_FBI;
-		break;
-	case CS_CLASS_ANARCHIST:
-		m_iClass = (int)CS_CLASS_IDF;
-		break;
-	case CS_CLASS_PIRATE:
-		m_iClass = (int)CS_CLASS_SWAT;
-		break;
+		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer( this );
+	}
+	else
+	{
+		switch ( m_iClass )
+		{
+			// Terrorist -> CT
+			case CS_CLASS_PHOENIX_CONNNECTION:
+				m_iClass = (int) CS_CLASS_SEAL_TEAM_6;
+				break;
+			case CS_CLASS_L337_KREW:
+				m_iClass = (int) CS_CLASS_GSG_9;
+				break;
+			case CS_CLASS_SEPARATIST:
+				m_iClass = (int) CS_CLASS_SAS;
+				break;
+			case CS_CLASS_BALKAN:
+				m_iClass = (int) CS_CLASS_GIGN;
+				break;
+			case CS_CLASS_PROFESSIONAL:
+				m_iClass = (int) CS_CLASS_FBI;
+				break;
+			case CS_CLASS_ANARCHIST:
+				m_iClass = (int) CS_CLASS_IDF;
+				break;
+			case CS_CLASS_PIRATE:
+				m_iClass = (int) CS_CLASS_SWAT;
+				break;
 
-	// CT -> Terrorist
-	case CS_CLASS_SEAL_TEAM_6:
-		m_iClass = (int)CS_CLASS_PHOENIX_CONNNECTION;
-		break;
-	case CS_CLASS_GSG_9:
-		m_iClass = (int)CS_CLASS_L337_KREW;
-		break;
-	case CS_CLASS_SAS:
-		m_iClass = (int)CS_CLASS_SEPARATIST;
-		break;
-	case CS_CLASS_GIGN:
-		m_iClass = (int)CS_CLASS_BALKAN;
-		break;
-	case CS_CLASS_FBI:
-		m_iClass = (int)CS_CLASS_PROFESSIONAL;
-		break;
-	case CS_CLASS_IDF:
-		m_iClass = (int)CS_CLASS_ANARCHIST;
-		break;
-	case CS_CLASS_SWAT:
-		m_iClass = (int)CS_CLASS_PIRATE;
-		break;
+				// CT -> Terrorist
+			case CS_CLASS_SEAL_TEAM_6:
+				m_iClass = (int) CS_CLASS_PHOENIX_CONNNECTION;
+				break;
+			case CS_CLASS_GSG_9:
+				m_iClass = (int) CS_CLASS_L337_KREW;
+				break;
+			case CS_CLASS_SAS:
+				m_iClass = (int) CS_CLASS_SEPARATIST;
+				break;
+			case CS_CLASS_GIGN:
+				m_iClass = (int) CS_CLASS_BALKAN;
+				break;
+			case CS_CLASS_FBI:
+				m_iClass = (int) CS_CLASS_PROFESSIONAL;
+				break;
+			case CS_CLASS_IDF:
+				m_iClass = (int) CS_CLASS_ANARCHIST;
+				break;
+			case CS_CLASS_SWAT:
+				m_iClass = (int) CS_CLASS_PIRATE;
+				break;
 
-	case CS_CLASS_NONE:
-	default:
-		break;
+			case CS_CLASS_NONE:
+			default:
+				break;
+		}
 	}
 
 	// Initialize the player counts now that a player has switched teams
