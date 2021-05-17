@@ -58,8 +58,7 @@ public:
 	Vector	error;
 };
 
-#define CHASE_CAM_DISTANCE_MIN	16.0f
-#define CHASE_CAM_DISTANCE_MAX	96.0f
+#define CHASE_CAM_DISTANCE		76.0f
 #define WALL_OFFSET				6.0f
 
 
@@ -620,6 +619,8 @@ protected:
 	float			m_surfaceFriction;
 	char			m_chTextureType;
 
+	bool			m_bStartedFreezeFrame;
+	bool			m_bAbortedFreezeFrame;
 	bool			m_bSentFreezeFrame;
 	float			m_flFreezeZOffset;
 

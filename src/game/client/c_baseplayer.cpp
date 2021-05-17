@@ -107,8 +107,11 @@ static ConVar	cl_smoothtime	(
 #ifdef CSTRIKE_DLL
 ConVar	spec_freeze_time( "spec_freeze_time", "3.0", FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
 ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.3", FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
+ConVar	spec_freeze_traveltime_long( "spec_freeze_traveltime_long", "0.45", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam when they are far away.", true, 0.01, false, 0 );
 ConVar	spec_freeze_distance_min( "spec_freeze_distance_min", "60", FCVAR_CHEAT, "Minimum random distance from the target to stop when framing them in observer freeze cam." );
 ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "80", FCVAR_CHEAT, "Maximum random distance from the target to stop when framing them in observer freeze cam." );
+ConVar	spec_freeze_target_fov_long( "spec_freeze_target_fov_long", "90", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use when the cam zoom far away on the target." );
+ConVar	spec_freeze_target_fov( "spec_freeze_target_fov", "42", FCVAR_CHEAT | FCVAR_REPLICATED, "The target FOV that the deathcam should use." );
 #else
 ConVar	spec_freeze_time( "spec_freeze_time", "4.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Time spend frozen in observer freeze cam." );
 ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FCVAR_REPLICATED, "Time taken to zoom in to frame a target in observer freeze cam.", true, 0.01, false, 0 );
@@ -456,6 +459,9 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_chTextureType = 0;
 
 	m_flNextAchievementAnnounceTime = 0;
+
+	m_bStartedFreezeFrame = false;
+	m_bAbortedFreezeFrame = false;
 
 	m_bFiredWeapon = false;
 
@@ -890,9 +896,11 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			m_vecFreezeFrameStart = MainViewOrigin();
 			m_flFreezeFrameStartTime = gpGlobals->curtime;
 			m_flFreezeFrameDistance = RandomFloat( spec_freeze_distance_min.GetFloat(), spec_freeze_distance_max.GetFloat() );
-			m_flFreezeZOffset = RandomFloat( -30, 20 );
+			m_flFreezeZOffset = RandomFloat( -4, 4 );
 			m_bSentFreezeFrame = false;
 			m_nForceVisionFilterFlags = 0;
+			m_bStartedFreezeFrame = false;
+			m_bAbortedFreezeFrame = false;
 
 			C_BaseEntity *target = GetObserverTarget();
 			if ( target && target->IsPlayer() )
@@ -1548,35 +1556,14 @@ void C_BasePlayer::CalcChaseCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 
 	m_flObserverChaseDistance += gpGlobals->frametime*48.0f;
 
-	float flMinDistance = CHASE_CAM_DISTANCE_MIN;
-	float flMaxDistance = CHASE_CAM_DISTANCE_MAX;
-	
+	float flMaxDistance = CHASE_CAM_DISTANCE;
 	if ( target && target->IsBaseTrain() )
 	{
 		// if this is a train, we want to be back a little further so we can see more of it
 		flMaxDistance *= 2.5f;
 	}
 
-	if ( target )
-	{
-		C_BaseAnimating *pTargetAnimating = target->GetBaseAnimating();
-		if ( pTargetAnimating )
-		{
-			float flScaleSquared = pTargetAnimating->GetModelScale() * pTargetAnimating->GetModelScale();
-			flMinDistance *= flScaleSquared;
-			flMaxDistance *= flScaleSquared;
-			m_flObserverChaseDistance = flMaxDistance;
-		}
-	}
-
-	if ( target && !target->IsPlayer() && target->IsNextBot() )
-	{
-		// if this is a boss, we want to be back a little further so we can see more of it
-		flMaxDistance *= 2.5f;
-		m_flObserverChaseDistance = flMaxDistance;
-	}
-
-	m_flObserverChaseDistance = clamp( m_flObserverChaseDistance, flMinDistance, flMaxDistance );
+	m_flObserverChaseDistance = clamp( m_flObserverChaseDistance, 16, flMaxDistance );
 	
 	AngleVectors( viewangles, &forward );
 
@@ -1659,6 +1646,11 @@ void C_BasePlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, floa
 	{
 		CalcDeathCamView( eyeOrigin, eyeAngles, fov );
 		return;
+	}
+
+	if ( !m_bStartedFreezeFrame )
+	{
+		m_bStartedFreezeFrame = true;
 	}
 
 	// Zoom towards our target
@@ -1815,7 +1807,7 @@ void C_BasePlayer::CalcDeathCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	interpolation = clamp( interpolation, 0.0f, 1.0f );
 
 	m_flObserverChaseDistance += gpGlobals->frametime*48.0f;
-	m_flObserverChaseDistance = clamp( m_flObserverChaseDistance, ( CHASE_CAM_DISTANCE_MIN * 2 ), CHASE_CAM_DISTANCE_MAX );
+	m_flObserverChaseDistance = clamp( m_flObserverChaseDistance, 16, CHASE_CAM_DISTANCE );
 
 	QAngle aForward = eyeAngles;
 	Vector origin = EyePosition();			

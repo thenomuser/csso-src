@@ -185,9 +185,13 @@ public:
 	bool IsPlayerDominated( int iPlayerIndex );
 	bool IsPlayerDominatingMe( int iPlayerIndex );
 
+	virtual float				GetFOV( void );
+
 	virtual void CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );
+	virtual void CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );
 
 	virtual float GetDeathCamInterpolationTime();
+	float GetFreezeFrameInterpolant( void );
 
 	AcquireResult::Type CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod );
 	int					GetCarryLimit( CSWeaponID weaponId );
@@ -419,6 +423,11 @@ private:
 	CountdownTimer m_ladderSurpressionTimer;
 	Vector m_lastLadderNormal;
 	Vector m_lastLadderPos;
+
+	bool	m_bFreezeFrameCloseOnKiller;
+	int		m_nFreezeFrameShiftSideDist;
+	Vector	m_vecFreezeFrameEnd;
+	float	m_flFreezeFrameTilt;
 
 	void UpdateRadar();
 	void UpdateSoundEvents();

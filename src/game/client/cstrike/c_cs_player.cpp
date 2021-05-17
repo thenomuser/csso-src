@@ -27,6 +27,7 @@
 #include "props_shared.h"
 #include "obstacle_pushaway.h"
 #include "death_pose.h"
+#include "interpolatortypes.h"
 
 #include "effect_dispatch_data.h"	//for water ripple / splash effect
 #include "c_te_effect_dispatch.h"	//ditto
@@ -71,14 +72,21 @@ static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
 
 extern ConVar	spec_freeze_time;
 extern ConVar	spec_freeze_traveltime;
+extern ConVar	spec_freeze_traveltime_long;
 extern ConVar	spec_freeze_distance_min;
 extern ConVar	spec_freeze_distance_max;
+extern ConVar	spec_freeze_target_fov;
+extern ConVar	spec_freeze_target_fov_long;
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
 ConVar cl_left_hand_ik( "cl_left_hand_ik", "1", 0, "Attach player's left hand to rifle with IK." );
 
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
+
+ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Sets the view fov if cheats are on." );
+
+#define FREEZECAM_LONGCAM_DIST	320  // over this amount, the camera will zoom close on target
 
 #define sv_magazine_drop_physics 1
 #define sv_magazine_drop_time 15
@@ -91,6 +99,9 @@ ConVar cl_minmodels( "cl_minmodels", "0", 0, "Uses one player model for each tea
 ConVar cl_min_ct( "cl_min_ct", "1", 0, "Controls which CT model is used when cl_minmodels is set.", true, 1, true, 7 );
 ConVar cl_min_t( "cl_min_t", "1", 0, "Controls which Terrorist model is used when cl_minmodels is set.", true, 1, true, 7 );
 */
+
+// [jason] Adjusts the safe extents of the camera placement for the freeze cam to prevent it from penetrating the killer's geometry
+ConVar cl_freeze_cam_penetration_tolerance( "cl_freeze_cam_penetration_tolerance", "0", 0, "If the freeze cam gets closer to target than this distance, we snap to death cam instead (0 = use character bounds instead, -1 = disable this safety check" );
 
 ConVar cl_ragdoll_crumple( "cl_ragdoll_crumple", "1" );
 
@@ -1136,6 +1147,11 @@ C_CSPlayer::C_CSPlayer() :
 	view->SetScreenOverlayMaterial( NULL );
 
 	m_iTargetedWeaponEntIndex = 0;
+
+	m_vecFreezeFrameEnd = Vector( 0, 0, 0 );
+	m_flFreezeFrameTilt = 0;
+	m_bFreezeFrameCloseOnKiller = false;
+	m_nFreezeFrameShiftSideDist = 0;
 
     m_bPlayingFreezeCamSound = false;
 
@@ -3345,6 +3361,43 @@ bool C_CSPlayer::HasC4( void )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : float
+//-----------------------------------------------------------------------------
+float C_CSPlayer::GetFOV( void )
+{
+	float flCurFOV = BaseClass::GetFOV();
+
+	if ( flCurFOV == GetDefaultFOV() )
+	{
+		if ( !sv_cheats )
+		{
+			sv_cheats = cvar->FindVar( "sv_cheats" );
+		}
+
+		if ( sv_cheats->GetBool() && fov_cs_debug.GetInt() > 0 )
+		{
+			return fov_cs_debug.GetInt();
+		}
+	}
+
+#if IRONSIGHT
+	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+	if ( pWeapon )
+	{
+		CIronSightController* pIronSightController = pWeapon->GetIronSightController();
+		if ( pIronSightController )
+		{
+			//bias the local client FOV change so ironsight transitions are nicer
+			flCurFOV = pIronSightController->GetIronSightFOV( GetDefaultFOV(), true );
+		}
+	}
+#endif //IRONSIGHT
+
+	return flCurFOV;
+}
+
 
 //-----------------------------------------------------------------------------
 void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
@@ -3476,6 +3529,15 @@ namespace Interpolators
 	}
 }
 
+float C_CSPlayer::GetFreezeFrameInterpolant( void )
+{
+
+	float fCurTime = gpGlobals->curtime - m_flFreezeFrameStartTime;
+	float fTravelTime = !m_bFreezeFrameCloseOnKiller ? spec_freeze_traveltime.GetFloat() : spec_freeze_traveltime_long.GetFloat();
+	float fInterpolant = clamp( fCurTime / fTravelTime, 0.0f, 1.0f );
+
+	return Interpolators::SmoothStepEnd( fInterpolant );
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Calculate the view for the player while he's in freeze frame observer mode
@@ -3484,68 +3546,233 @@ void C_CSPlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float&
 {
 	C_BaseEntity *pTarget = GetObserverTarget();
 
-	//=============================================================================
-	// HPE_BEGIN:
-	// [Forrest] Added sv_disablefreezecam check
-	//=============================================================================
+	Vector prevEyeOrigin = eyeOrigin;
+	QAngle prevEyeAngles = eyeAngles;
+
+	float fInterpolant = GetFreezeFrameInterpolant();
+
 	static ConVarRef sv_disablefreezecam( "sv_disablefreezecam" );
-	if ( !pTarget || cl_disablefreezecam.GetBool() || sv_disablefreezecam.GetBool() )
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+	if ( m_bAbortedFreezeFrame || !pTarget || pTarget == this || cl_disablefreezecam.GetBool() || sv_disablefreezecam.GetBool() )
 	{
+		if ( !pTarget )
+		{
+			if ( !m_bStartedFreezeFrame )
+			{
+				// randomly pick left or right
+				int nLeftOrRight = RandomInt( 0, 1 );
+				// sup dutch
+				m_flFreezeFrameTilt = (nLeftOrRight > 0) ? RandomFloat( 4, 10 ) : RandomFloat( -4, -10 );
+				m_bStartedFreezeFrame = true;
+			}
+			eyeAngles.z = Lerp( fInterpolant, 0.0f, m_flFreezeFrameTilt );
+		}
+
 		return CalcDeathCamView( eyeOrigin, eyeAngles, fov );
 	}
 
-	// pick a zoom camera target
+	Vector targetOrig = pTarget->GetRenderOrigin();
+	float flDistToTarg = (GetAbsOrigin() - targetOrig).Length2D();
+
 	Vector vLookAt = pTarget->GetObserverCamOrigin();	// Returns ragdoll origin if they're ragdolled
 	vLookAt += GetChaseCamViewOffset( pTarget );
+	Vector vecCamTarget = vLookAt;
+	if ( pTarget->IsAlive() )
+	{
+		// Look at their chest, not their head
+		Vector maxs = GameRules()->GetViewVectors()->m_vHullMax;
+		vecCamTarget.z -= (maxs.z * 0.25);
+	}
+	else
+	{
+		vecCamTarget.z += VEC_DEAD_VIEWHEIGHT.z;	// look over ragdoll, not through
+	}
 
-	// look over ragdoll, not through
-	if ( !pTarget->IsAlive() )
-		vLookAt.z += pTarget->GetBaseAnimating() ? VEC_DEAD_VIEWHEIGHT_SCALED( pTarget->GetBaseAnimating() ).z : VEC_DEAD_VIEWHEIGHT.z;
+	float flScaler = pTarget->IsAlive() ? 0.1 : 0.075;
+	float flDistFromCurToTarg2D = vLookAt.AsVector2D().DistTo( eyeOrigin.AsVector2D() );
+	vecCamTarget.z -= clamp( (flDistFromCurToTarg2D) *flScaler, 0, 34 );
 
 	// Figure out a view position in front of the target
-	Vector vEyeOnPlane = eyeOrigin;
-	vEyeOnPlane.z = vLookAt.z;
-	Vector vToTarget = vLookAt - vEyeOnPlane;
+	Vector vecEyeOnPlane = eyeOrigin;
+	vecEyeOnPlane.z = vecCamTarget.z;
+	Vector vTargetPos = vecCamTarget;
+	Vector vToTarget = vTargetPos - vecEyeOnPlane;
 	VectorNormalize( vToTarget );
 
-	// goal position of camera is pulled away from target by m_flFreezeFrameDistance
-	Vector vTargetPos = vLookAt - (vToTarget * m_flFreezeFrameDistance);
+	// Stop a few units away from the target, and shift up to be at the same height
+	vTargetPos = vecCamTarget - (vToTarget * m_flFreezeFrameDistance);
+
+	float flEyePosZ = pTarget->EyePosition().z;
+	vTargetPos.z = flEyePosZ + m_flFreezeZOffset;
+
+	if ( vToTarget == Vector( 0, 0, 0 ) )
+	{
+		// Abort!
+		m_bAbortedFreezeFrame = true;
+		return;
+	}
 
 	// Now trace out from the target, so that we're put in front of any walls
 	trace_t trace;
+	Vector vecHMinWall( -16, -16, -16 );
+	Vector vecHMaxWall( 16, 16, 16 );
 	C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
-	UTIL_TraceHull( vLookAt, vTargetPos, WALL_MIN, WALL_MAX, MASK_SOLID, pTarget, COLLISION_GROUP_NONE, &trace );
+	UTIL_TraceHull( vecCamTarget, vTargetPos, vecHMinWall, vecHMaxWall, MASK_SHOT, pTarget, COLLISION_GROUP_NONE, &trace );
 	C_BaseEntity::PopEnableAbsRecomputations();
 	if ( trace.fraction < 1.0 )
 	{
 		// The camera's going to be really close to the target. So we don't end up
 		// looking at someone's chest, aim close freezecams at the target's eyes.
 		vTargetPos = trace.endpos;
+		vecCamTarget = vLookAt;
 
 		// To stop all close in views looking up at character's chins, move the view up.
-		vTargetPos.z += fabs(vLookAt.z - vTargetPos.z) * 0.85;
+		vTargetPos.z += fabs( vecCamTarget.z - vTargetPos.z ) * 0.85;
 		C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
-		UTIL_TraceHull( vLookAt, vTargetPos, WALL_MIN, WALL_MAX, MASK_SOLID, pTarget, COLLISION_GROUP_NONE, &trace );
+		UTIL_TraceHull( vecCamTarget, vTargetPos, WALL_MIN, WALL_MAX, MASK_SHOT, pTarget, COLLISION_GROUP_NONE, &trace );
 		C_BaseEntity::PopEnableAbsRecomputations();
 		vTargetPos = trace.endpos;
 	}
 
+	// move the eye toward our killer
+	if ( !m_bStartedFreezeFrame )
+	{
+		m_vecFreezeFrameStart = eyeOrigin;
+
+		m_bFreezeFrameCloseOnKiller = false;
+
+		// randomly pick left or right
+		int nLeftOrRight = RandomInt( 0, 1 );
+		m_nFreezeFrameShiftSideDist = nLeftOrRight == 1 ? RandomInt( 12, 22 ) : RandomInt( -12, -22 );
+
+		// sup dutch
+		m_flFreezeFrameTilt = ( m_nFreezeFrameShiftSideDist > 0 ) ? RandomFloat( 6, 14 ) : RandomFloat( -6, -14 );
+
+		if ( flDistToTarg >= FREEZECAM_LONGCAM_DIST )
+		{
+			m_bFreezeFrameCloseOnKiller = true;
+		}
+		else
+		{
+			// do a one time hull trace to the target and see if it's wide enough
+			C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
+			Vector vecHMin(-16,-16,-16 );
+			Vector vecHMax(16,16,16 );
+			trace_t trace3;
+			UTIL_TraceHull( m_vecFreezeFrameStart, vTargetPos, vecHMin, vecHMax, MASK_SHOT, this, COLLISION_GROUP_DEBRIS, &trace3 );
+			C_BaseEntity::PopEnableAbsRecomputations();
+			if ( trace3.fraction < 1.0 )
+			{
+				//Abort!
+				m_bFreezeFrameCloseOnKiller = true;
+			}
+		}
+
+		m_bStartedFreezeFrame = true;
+	}
+
+	//Vector vCamEnd = EyePosition() - ( vToTarget * 90 );
+	if ( !m_bFreezeFrameCloseOnKiller && flDistToTarg < FREEZECAM_LONGCAM_DIST )
+	{
+		Vector vCamEnd = m_vecFreezeFrameStart - (vToTarget * 8);
+		vCamEnd.z += MAX( (m_vecFreezeFrameStart.z - vecCamTarget.z)*0.75, 8 );
+
+		Vector forward, right, up;
+		QAngle angTemp;
+		VectorAngles( vToTarget, angTemp );
+		AngleVectors( angTemp, &forward, &right, &up );
+
+		Vector vLRStart = m_vecFreezeFrameStart;
+		Vector vLREnd = vCamEnd - (right * m_nFreezeFrameShiftSideDist);
+		trace_t traceLR;
+		UTIL_TraceHull( m_vecFreezeFrameStart, vLREnd, WALL_MIN, WALL_MAX, MASK_SOLID, this, COLLISION_GROUP_NONE, &traceLR );
+
+		IRagdoll *pRagdoll = GetRepresentativeRagdoll();
+		if ( pRagdoll )
+		{
+			vLRStart = pRagdoll->GetRagdollOrigin();
+			vLRStart.z = trace.endpos.z;
+		}
+		float distToOffset = vLRStart.AsVector2D().DistTo( trace.endpos.AsVector2D() );
+		if ( traceLR.fraction < 0.2 || distToOffset < 16 )
+		{
+			// Abort!
+			m_bFreezeFrameCloseOnKiller = true;
+		}
+
+		m_vecFreezeFrameEnd = traceLR.endpos;
+	}
+
+	float flNewFOV = spec_freeze_target_fov.GetFloat();
+
+	// dont frame both player, just zoom on killer
+	if ( m_bFreezeFrameCloseOnKiller )
+	{
+		m_vecFreezeFrameEnd = vTargetPos;
+		flNewFOV = spec_freeze_target_fov_long.GetFloat();
+	}
+
 	// Look directly at the target
-	vToTarget = vLookAt - vTargetPos;
+	vToTarget = vecCamTarget - prevEyeOrigin;
 	VectorNormalize( vToTarget );
 	VectorAngles( vToTarget, eyeAngles );
+	// apply the tilt
+	eyeAngles.z = Lerp( fInterpolant, 0.0f, m_flFreezeFrameTilt );
+
+	// set the fov to the convar, but have it hit the target slightly before the camera stops
+	fov = clamp( Lerp( fInterpolant + 0.05f, (float) GetDefaultFOV(), flNewFOV ), flNewFOV, GetDefaultFOV() );
+	Interpolator_CurveInterpolate( INTERPOLATE_SIMPLE_CUBIC, m_vecFreezeFrameStart - Vector( 0, 0, -12 ), m_vecFreezeFrameStart, m_vecFreezeFrameEnd, vTargetPos, fInterpolant, eyeOrigin );
 
 	float fCurTime = gpGlobals->curtime - m_flFreezeFrameStartTime;
-	float fInterpolant = clamp( fCurTime / spec_freeze_traveltime.GetFloat(), 0.0f, 1.0f );
-	fInterpolant = Interpolators::SmoothStepEnd( fInterpolant );
+	float fTravelTime = !m_bFreezeFrameCloseOnKiller ? spec_freeze_traveltime.GetFloat() : spec_freeze_traveltime_long.GetFloat();
 
-	// move the eye toward our killer
-	VectorLerp( m_vecFreezeFrameStart, vTargetPos, fInterpolant, eyeOrigin );
+	// [jason] check that our target position does not fall within the render extents of the target we're looking at;
+	//	this can happen if our killer is in a tight spot and the camera is trying to avoid clipping geometry
+	const int kFreezeCamTolerance = cl_freeze_cam_penetration_tolerance.GetInt();
+	if ( !m_bSentFreezeFrame && kFreezeCamTolerance >= 0 )
+	{
+		// at really long distances the camera moves long distances each frame
+		// this means that thecamera could bypass the target spot by a bunch, so
+		// let' check to see if the target will surpass the target pos next frame and just go ahead and stop
+		bool bStopCamera = false;
+		float distFromPrev = eyeOrigin.AsVector2D().DistTo( prevEyeOrigin.AsVector2D() );
+		float distToTargetPos = m_vecFreezeFrameEnd.AsVector2D().DistTo( eyeOrigin.AsVector2D() );
 
-	if ( fCurTime >= spec_freeze_traveltime.GetFloat() && !m_bSentFreezeFrame )
+		// either use the render extents of the target, or the value we specified in the convar
+		float targetRadius = (float) kFreezeCamTolerance;
+		if ( m_bFreezeFrameCloseOnKiller && targetRadius <= 0.0f )
+		{
+			Vector vecMins, vecMaxs;
+			pTarget->GetRenderBounds( vecMins, vecMaxs );
+			targetRadius = vecMins.AsVector2D().DistTo( vecMaxs.AsVector2D() ) * 0.3f;
+		}
+
+		// figure out ho much we moved last frame and keep from clipping too far into the killer's face
+		if ( distToTargetPos - (distFromPrev - distToTargetPos) < (targetRadius*0.5f) )
+		{
+			bStopCamera = true;
+		}
+
+		// disregard height, treat the target as an infinite cylinder so we don't end up with extreme up/down view angles
+		float distFromTarget = vLookAt.AsVector2D().DistTo( eyeOrigin.AsVector2D() );
+
+		if ( (m_bFreezeFrameCloseOnKiller && distFromTarget < targetRadius) )
+		{
+			DevMsg( "CS_PLAYER: Detected overlap: Extents of target = %3.2f, Dist from them = %3.2f \n", targetRadius, distFromTarget );
+
+			bStopCamera = true;
+		}
+
+		if ( bStopCamera )
+		{
+			eyeOrigin = prevEyeOrigin;
+			eyeAngles = prevEyeAngles;
+			fTravelTime = fCurTime;
+
+			m_flFreezeFrameTilt = eyeAngles.z;
+		}
+	}
+
+	if ( fCurTime >= fTravelTime && !m_bSentFreezeFrame )
 	{
 		IGameEvent *pEvent = gameeventmanager->CreateEvent( "freezecam_started" );
 		if ( pEvent )
@@ -3566,6 +3793,67 @@ float C_CSPlayer::GetDeathCamInterpolationTime()
 	else
 		return CS_DEATH_ANIMATION_TIME;
 
+}
+
+void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
+{
+	CBaseEntity* pKiller = NULL;
+
+	if ( mp_forcecamera.GetInt() == OBS_ALLOW_ALL )
+	{
+		// if mp_forcecamera is off let user see killer or look around
+		pKiller = GetObserverTarget();
+		eyeAngles = EyeAngles();
+	}
+
+	// NOTE: CS_DEATH_ANIMATION_TIME differs from base class implementation
+	float interpolation = ( gpGlobals->curtime - m_flDeathTime ) / CS_DEATH_ANIMATION_TIME;
+
+	interpolation = clamp( interpolation, 0.0f, 1.0f );
+
+	m_flObserverChaseDistance += gpGlobals->frametime*48.0f;
+	m_flObserverChaseDistance = clamp( m_flObserverChaseDistance, 16, CHASE_CAM_DISTANCE );
+
+	QAngle aForward = eyeAngles;
+	Vector origin = EyePosition();
+
+	IRagdoll *pRagdoll = GetRepresentativeRagdoll();
+	if ( pRagdoll )
+	{
+		origin = pRagdoll->GetRagdollOrigin();
+		origin.z += VEC_DEAD_VIEWHEIGHT.z; // look over ragdoll, not through
+	}
+
+	if ( pKiller && pKiller->IsPlayer() && pKiller != this )
+	{
+		//Get the vector from the dead body EyePos to the killers EyePos
+		Vector vKiller = pKiller->EyePosition() - origin;
+
+		// Get the angles for that vector
+		QAngle aKiller; VectorAngles( vKiller, aKiller );
+		// Interpolate from the original eye angles to point at the killers EyePos
+		InterpolateAngles( aForward, aKiller, eyeAngles, interpolation );
+	}
+
+	// Get the vector for our new view.  It should be looking at the killer
+	Vector vForward; AngleVectors( eyeAngles, &vForward );
+
+	VectorNormalize( vForward );
+	// Add the two vectors with the negative chase distance as a scale
+	VectorMA( origin, -m_flObserverChaseDistance, vForward, eyeOrigin );
+
+	trace_t trace; // clip against world
+	C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
+	UTIL_TraceHull( origin, eyeOrigin, WALL_MIN, WALL_MAX, MASK_SOLID, this, COLLISION_GROUP_NONE, &trace );
+	C_BaseEntity::PopEnableAbsRecomputations();
+
+	if ( trace.fraction < 1.0 )
+	{
+		eyeOrigin = trace.endpos;
+		m_flObserverChaseDistance = VectorLength( origin - eyeOrigin );
+	}
+
+	fov = GetFOV();
 }
 
 
