@@ -154,7 +154,8 @@ void CBuySubMenu::OnCommand( const char *command)
 					if ( pWeaponInfo )
 					{
 						if ( pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE &&
-							 pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
+							 pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT &&
+							 pWeaponInfo->m_WeaponType != WEAPONTYPE_KNIFE ) // PiMoN: a knife shouldn't really be here but that's what taser is
 						{
 							GetWizardPanel()->Close();
 							gViewPortInterface->ShowBackGround( false );
