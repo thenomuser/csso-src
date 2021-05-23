@@ -129,6 +129,7 @@ public:
 	bool	m_decoy;
 	bool	m_molotov;
 	bool	m_incgrenade;
+	bool	m_taser;
 };
 
 typedef CUtlVector< WeaponSet > WeaponSetList;

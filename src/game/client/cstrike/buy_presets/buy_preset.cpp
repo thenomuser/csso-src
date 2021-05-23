@@ -89,6 +89,12 @@ void BuyPresetManager::GetCurrentLoadout( WeaponSet *weaponSet )
 	ammoType = (pInfo)?pInfo->iAmmoType:0;
 	weaponSet->m_incgrenade = (pWeapon && player->GetAmmoCount( ammoType ));
 
+	// Grab current taser
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_TASER ));
+	pInfo = GetWeaponInfo( WEAPON_TASER );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+	weaponSet->m_taser = (pWeapon);
+
 	// Grab current equipment
 	weaponSet->m_defuser = player->HasDefuser();
 	weaponSet->m_nightvision = player->HasNightVision();
@@ -153,6 +159,7 @@ void WeaponSet::Reset()
 	m_decoy = false;
 	m_molotov = false;
 	m_incgrenade = false;
+	m_taser = false;
 }
 
 
@@ -299,6 +306,20 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 		cost += pInfo->GetWeaponPrice();
 		ws.m_incgrenade = true;
 		hasIncGrenade = true;
+	}
+
+	//-------------------------------------------------------------------------
+	// Taser
+	pWeapon = dynamic_cast< CWeaponCSBase * >(player->GetCSWeapon( WEAPON_TASER ));
+	pInfo = GetWeaponInfo( WEAPON_TASER );
+	ammoType = (pInfo)?pInfo->iAmmoType:0;
+
+	bool hasTaser = (pWeapon && player->GetAmmoCount( ammoType ));
+	if ( m_taser && !hasTaser )
+	{
+		cost += pInfo->GetWeaponPrice();
+		ws.m_taser = true;
+		hasTaser = true;
 	}
 
 	//-------------------------------------------------------------------------
@@ -711,6 +732,13 @@ void WeaponSet::GetFromScratch( int& cost, WeaponSet& ws ) const
 		ws.m_incgrenade = m_incgrenade;
 	}
 
+	if ( m_taser )
+	{
+		CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_TASER );
+		cost += ( pInfo ) ? pInfo->GetWeaponPrice() : 0;
+		ws.m_taser = m_taser;
+	}
+
 	CCSWeaponInfo *pInfo = GetWeaponInfo( WEAPON_FLASHBANG );
 	cost += ( pInfo ) ? pInfo->GetWeaponPrice() * m_flashbangs : 0;
 	ws.m_flashbangs = m_flashbangs;
@@ -834,6 +862,11 @@ void WeaponSet::GenerateBuyCommands( char command[BUY_PRESET_COMMAND_LEN] ) cons
 	for ( i=0; i<m_flashbangs; ++i )
 	{
 		tmp = BufPrintf( tmp, remainder, "buy flashbang\n" );
+	}
+
+	if ( m_taser )
+	{
+		tmp = BufPrintf( tmp, remainder, "buy taser\n" );
 	}
 
 	if ( m_defuser )
@@ -1166,6 +1199,10 @@ void BuyPreset::Parse( KeyValues *data )
 			{
 				ws.m_flashbangs = MIN( 2, MAX( 0, intVal ) );
 			}
+			else if ( !strcmp( itemBuf, "taser" ) )
+			{
+				ws.m_taser = (intVal > 0);
+			}
 
 			remainder = SharedParse( remainder );
 		}
@@ -1238,7 +1275,7 @@ void BuyPreset::Save( KeyValues *data )
 		presetKey->SetString( "Secondary", ConstructWeaponString( ws.m_secondaryWeapon ) );
 
 		presetKey->SetString( "Equipment",
-			SharedVarArgs("vest%s/%d flash/%d sgren/%d hegren/%d defuser/%d nvgs/%d",
+			SharedVarArgs("vest%s/%d flash/%d sgren/%d decoy/%d molotov/%d incgrenade/%d hegren/%d defuser/%d taser/%d nvgs/%d",
 			(ws.m_helmet)?"helm":"", ws.m_armor,
 			ws.m_flashbangs,
 			ws.m_smokeGrenade,
@@ -1247,6 +1284,7 @@ void BuyPreset::Save( KeyValues *data )
 			ws.m_incgrenade,
 			ws.m_HEGrenade,
 			ws.m_defuser,
+			ws.m_taser,
 			ws.m_nightvision
 			) );
 	}
