@@ -1278,7 +1278,7 @@ void CGame::PlayStartupVideos( void )
 
 	if (!bNeedHealthWarning && !bEndGame && !bRecap && (CommandLine()->CheckParm("-dev") || CommandLine()->CheckParm("-novid") || CommandLine()->CheckParm("-allowdebug")))
 		return;
-	
+
 	const char *pszFile = "media/StartupVids.txt";
 	if ( bEndGame )
 	{

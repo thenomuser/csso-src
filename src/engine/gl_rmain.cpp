@@ -248,7 +248,7 @@ public:
 	void ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags );
 
 	void ViewEnd( void );
-	
+
 	void ViewDrawFade( byte *color, IMaterial* pMaterial, bool mapFullTextureToScreen = true );
 
 	IWorldRenderList * CreateWorldList();

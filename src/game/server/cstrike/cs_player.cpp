@@ -668,6 +668,12 @@ void CCSPlayer::Precache()
 	PrecacheModel( "models/weapons/w_eq_taser.mdl" );
 	PrecacheModel( "models/weapons/w_defuser.mdl" );
 
+	// PiMoN: hardcoding this stuff to (hopefully) get rid of some cheaters
+	engine->ForceSimpleMaterial( "materials/vgui/white.vmt" );
+	engine->ForceSimpleMaterial( "materials/vgui/white_additive.vmt" );
+	engine->ForceSimpleMaterial( "materials/effects/flashbang.vmt" );
+	engine->ForceSimpleMaterial( "materials/effects/flashbang_white.vmt" );
+
 	Vector mins( -14, -30, -10 );
 	Vector maxs( 14, 30, 80 );
 

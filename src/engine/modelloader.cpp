@@ -5608,6 +5608,10 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 
 				FinishDynamicModelLoadIfReady( &dyn, pModel );
 			}
+
+			// do the clean up after we're actually done
+			// we keep some file cache around to make sure that LoadModel doesn't do blocking load
+			g_pQueuedLoader->CleanupDynamicLoad();
 			
 			s_LastDynamicLoadTime = Plat_FloatTime();
 		}
