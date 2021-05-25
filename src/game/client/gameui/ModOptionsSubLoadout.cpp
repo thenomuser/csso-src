@@ -21,6 +21,7 @@
 #include <vgui_controls/ComboBox.h>
 
 #include "CvarTextEntry.h"
+#include "CvarToggleCheckButton.h"
 #include "LabeledCommandComboBox.h"
 #include "EngineInterface.h"
 #include "tier1/convar.h"
@@ -83,6 +84,8 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pLoadoutDeagleTComboBox = new CLabeledCommandComboBox( this, "DeagleTComboBox" );
 	m_pLoadoutDeagleTComboBox->AddItem( "#Cstrike_WPNHUD_DesertEagle", "loadout_slot_deagle_weapon_t 0" );
 	m_pLoadoutDeagleTComboBox->AddItem( "#Cstrike_WPNHUD_Revolver", "loadout_slot_deagle_weapon_t 1" );
+		
+	m_pStatTrak = new CCvarToggleCheckButton( this, "EnableStatTrak", "#GameUI_Loadout_StatTrak", "loadout_stattrak" );
 
 	m_pLoadoutM4ComboBox->AddActionSignalTarget( this );
 	m_pLoadoutHKP2000ComboBox->AddActionSignalTarget( this );
@@ -92,6 +95,7 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pLoadoutMP7TComboBox->AddActionSignalTarget( this );
 	m_pLoadoutDeagleCTComboBox->AddActionSignalTarget( this );
 	m_pLoadoutDeagleTComboBox->AddActionSignalTarget( this );
+	m_pStatTrak->AddActionSignalTarget( this );
 
 	LoadControlSettings("Resource/ModOptionsSubLoadout.res");
 }
@@ -148,6 +152,8 @@ void CModOptionsSubLoadout::OnResetData()
 	ConVarRef loadout_slot_deagle_weapon_t( "loadout_slot_deagle_weapon_t" );
 	if ( loadout_slot_deagle_weapon_t.IsValid() )
 		m_pLoadoutDeagleTComboBox->SetInitialItem( loadout_slot_deagle_weapon_t.GetInt() );
+
+	m_pStatTrak->Reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -163,4 +169,5 @@ void CModOptionsSubLoadout::OnApplyChanges()
 	m_pLoadoutMP7TComboBox->ApplyChanges();
 	m_pLoadoutDeagleCTComboBox->ApplyChanges();
 	m_pLoadoutDeagleTComboBox->ApplyChanges();
+	m_pStatTrak->ApplyChanges();
 }

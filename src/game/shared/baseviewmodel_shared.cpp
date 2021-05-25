@@ -54,6 +54,9 @@ CBaseViewModel::CBaseViewModel()
 	m_nOldAnimationParity = 0;
 	m_EntClientFlags |= ENTCLIENTFLAG_ALWAYS_INTERPOLATE;
 
+	m_flStatTrakGlowMultiplier = 0.0f;
+	m_flStatTrakGlowMultiplierIdeal = 0.0f;
+
 	m_flCamDriverAppliedTime = 0;
 	m_flCamDriverWeight = 0;
 	m_vecCamDriverLastPos.Init();

@@ -28,6 +28,7 @@ ConVar loadout_slot_agent_ct( "loadout_slot_agent_ct", "0", FCVAR_ARCHIVE | FCVA
 ConVar loadout_slot_agent_t( "loadout_slot_agent_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which agent to use for Ts.", true, 0, true, MAX_AGENTS_T );
 ConVar loadout_slot_gloves_ct( "loadout_slot_gloves_ct", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which gloves to use for CTs.", true, 0, true, MAX_GLOVES );
 ConVar loadout_slot_gloves_t( "loadout_slot_gloves_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Which gloves to use for Ts.", true, 0, true, MAX_GLOVES );
+ConVar loadout_stattrak( "loadout_stattrak", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "Enable or disable StatTrak on weapons.", true, 0, true, 1 );
 #endif
 
 CCSLoadout*	g_pCSLoadout = NULL;

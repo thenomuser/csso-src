@@ -492,6 +492,57 @@ EXPOSE_INTERFACE( CIronSightAmountProxy, IMaterialProxy, "IronSightAmount" IMATE
 #endif //IRONSIGHT
 
 //-----------------------------------------------------------------------------
+// StatTrakIllum proxy
+//-----------------------------------------------------------------------------
+class CStatTrakIllumProxy : public CResultProxy
+{
+public:
+	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	virtual void OnBind( void *pC_BaseEntity );
+
+private:
+	CFloatInput	m_flMinVal;
+	CFloatInput	m_flMaxVal;
+};
+
+
+bool CStatTrakIllumProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	if (!CResultProxy::Init( pMaterial, pKeyValues ))
+		return false;
+
+	if (!m_flMinVal.Init( pMaterial, pKeyValues, "minVal", 0.5 ))
+		return false;
+
+	if (!m_flMaxVal.Init( pMaterial, pKeyValues, "maxVal", 1 ))
+		return false;
+
+	return true;
+}
+
+void CStatTrakIllumProxy::OnBind( void *pC_BaseEntity )
+{
+
+	if (!pC_BaseEntity)
+		return;
+
+	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
+	if ( pEntity )
+	{
+		// StatTrak modules are children of their accompanying viewmodels
+		C_BaseViewModel *pViewModel = dynamic_cast< C_BaseViewModel* >( pEntity->GetMoveParent() );
+		if ( pViewModel )
+		{
+			SetFloatResult( Lerp( pViewModel->GetStatTrakGlowMultiplier(), m_flMinVal.GetFloat(), m_flMaxVal.GetFloat() ) );
+			return;
+		}
+	}
+
+}
+
+EXPOSE_INTERFACE( CStatTrakIllumProxy, IMaterialProxy, "StatTrakIllum" IMATERIAL_PROXY_INTERFACE_VERSION );
+
+//-----------------------------------------------------------------------------
 // Returns the player speed
 //-----------------------------------------------------------------------------
 class CPlayerLogoProxy : public IMaterialProxy
