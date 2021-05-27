@@ -443,6 +443,12 @@ bool CIronSightController::IsInIronSight( void )
 		if ( pPlayer && pPlayer->IsLookingAtWeapon() )
 			return false;
 
+#if defined ( CLIENT_DLL )
+		C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == pPlayer && pLocalPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+			return false;
+#endif
+
 		if ( GetIronSightAmount() > 0  && (IsApproachingSighted() || IsApproachingUnSighted()) )
 			return true;
 	}

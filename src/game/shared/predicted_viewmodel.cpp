@@ -253,6 +253,27 @@ void CPredictedViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& e
 #if IRONSIGHT
 	CalcIronsightView( eyePosition, eyeAngles );
 #endif
+
+#ifdef CLIENT_DLL
+	// bias the position of the viewmodel during observer camera interpolation
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( pLocalPlayer && pLocalPlayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_NONE )
+	{
+		C_CSPlayer *pCSPlayer = ToCSPlayer( pLocalPlayer );
+		if ( pCSPlayer )
+		{
+			Vector vecOffset = pCSPlayer->GetObserverInterpolatedOffsetVector();
+
+			// pull up from offscreen a little
+			vecOffset.z -= vecOffset.Length() * 0.2f;
+			
+			// dampen overall
+			vecOffset *= 0.5f;
+
+			SetLocalOrigin( GetLocalOrigin() + vecOffset );
+		}
+	}
+#endif
 #endif //CLIENT_DLL
 }
 

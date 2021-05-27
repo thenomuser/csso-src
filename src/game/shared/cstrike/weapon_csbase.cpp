@@ -1709,6 +1709,9 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		if ( pPlayer->IsInVGuiInputMode() )
 			return;
 
+		if ( pPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+			return;
+
 		int r = cl_crosshaircolor_r.GetInt();
 		int g = cl_crosshaircolor_g.GetInt();
 		int b = cl_crosshaircolor_b.GetInt();
@@ -2113,7 +2116,11 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() )
 				return true;
 
+			// hide particle effects when we're interpolating between observer targets
 			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+			if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == pPlayer && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pLocalPlayer->GetObserverInterpState() == C_BasePlayer::OBSERVER_INTERP_TRAVELING )
+				return true;
+
 			bool bLocalThirdPerson = ( ( pPlayer == pLocalPlayer ) && pPlayer->ShouldDraw() );
 
 			Vector origin;

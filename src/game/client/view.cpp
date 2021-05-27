@@ -59,6 +59,10 @@
 #include "c_prop_portal.h" //portal surface rendering functions
 #endif
 
+#ifdef CSTRIKE_DLL
+#include "c_cs_player.h"
+#endif
+
 	
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -707,6 +711,15 @@ void CViewRender::SetUpViews()
 		// for keeping the camera control during pause.
 		g_pClientMode->OverrideView( &viewEye );
 	}
+
+#if defined ( CSTRIKE_DLL )
+	C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+	if ( pCSPlayer && pCSPlayer->ShouldInterpolateObserverChanges() )
+	{
+		pCSPlayer->InterpolateObserverView( viewEye.origin, viewEye.angles );
+		pCSPlayer->CalcViewModelView( viewEye.origin, viewEye.angles );
+	}
+#endif
 
 	// give the toolsystem a chance to override the view
 	ToolFramework_SetupEngineView( viewEye.origin, viewEye.angles, viewEye.fov );

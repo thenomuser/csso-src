@@ -599,9 +599,28 @@ CBaseEntity	*C_BasePlayer::GetObserverTarget() const	// returns players target o
 	}
 }
 
+// Helper method to fix up visiblity across split screen for view models when observer target or mode changes
+void UpdateViewmodelVisibility( C_BasePlayer *player )
+{
+	// Update view model visibility
+	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
+	{
+		CBaseViewModel *vm = player->GetViewModel( i );
+		if ( !vm )
+			continue;
+		vm->UpdateVisibility();
+	}
+}
+
 // Called from Recv Proxy, mainly to reset tone map scale
 void C_BasePlayer::SetObserverTarget( EHANDLE hObserverTarget )
 {
+	// [msmith] We need to update the view model visibility status of the player we were observing because their view models
+	// may no longer be rendering in our splitscreen viewport.
+	C_BasePlayer* pOldObserverTarget = ToBasePlayer( m_hObserverTarget );
+
+	C_BasePlayer *pNewObserverTarget = ToBasePlayer( hObserverTarget );
+
 	// If the observer target is changing to an entity that the client doesn't know about yet,
 	// it can resolve to NULL.  If the client didn't have an observer target before, then
 	// comparing EHANDLEs directly will see them as equal, since it uses Get(), and compares
@@ -617,22 +636,42 @@ void C_BasePlayer::SetObserverTarget( EHANDLE hObserverTarget )
 		IGameEvent *event = gameeventmanager->CreateEvent( "spec_target_updated" );
 		if ( event )
 		{
+			event->SetInt("userid", GetUserID() );
 			gameeventmanager->FireEventClientSide( event );
 		}
 
 		if ( IsLocalPlayer() )
 		{
-			ResetToneMapping(1.0);
+			ResetToneMapping( 1.0f ); // This forces the tonemapping scalar to the average of min and max
 		}
 		// NVNT notify haptics of changed player
 		if ( haptics )
 			haptics->OnPlayerChanged();
+
+		UpdateViewmodelVisibility( this );
+		UpdateVisibility();	
 
 		if ( IsLocalPlayer() )
 		{
 			// On a change of viewing mode or target, we may want to reset both head and torso to point at the new target.
 			g_ClientVirtualReality.AlignTorsoAndViewToWeapon();
 		}
+
+		if ( pNewObserverTarget )
+		{
+			pNewObserverTarget->UpdateVisibility();
+			UpdateViewmodelVisibility( pNewObserverTarget );
+		}
+	}
+
+	// [msmith] We need to wait until we've set a new observer target before updating the view model visibility of our
+	// old observer target.
+	// NOTE: We need to update this even if the observed target did not change because the observer mode may have changed.
+	//       If the observer mode switched to third person for example, the view model should NOT be drawn.
+	if ( pOldObserverTarget )
+	{
+		pOldObserverTarget->UpdateVisibility();
+		UpdateViewmodelVisibility( pOldObserverTarget );
 	}
 }
 
@@ -1453,6 +1492,18 @@ int C_BasePlayer::DrawModel( int flags )
 		return 0;
 	}
 #endif
+
+	// if local player is spectating this player in first person mode, don't draw it
+	C_BasePlayer * player = C_BasePlayer::GetLocalPlayer();
+
+	if ( player && player->IsObserver() )
+	{
+		if ( player->GetObserverMode() == OBS_MODE_IN_EYE &&
+			player->GetObserverTarget() == this &&
+			!input->CAM_IsThirdPerson() && 
+			player->GetObserverInterpState() != OBSERVER_INTERP_TRAVELING )
+			return 0;
+	}
 	return BaseClass::DrawModel( flags );
 }
 
@@ -2579,6 +2630,30 @@ void RecvProxy_ObserverMode( const CRecvProxyData *pData, void *pStruct, void *p
 	Assert( pPlayer );
 
 	pPlayer->SetObserverMode ( pData->m_Value.m_Int );
+	pPlayer->OnObserverModeChange( false );
+}
+
+void C_BasePlayer::OnObserverModeChange( bool bIsObserverTarget )
+{
+	C_BasePlayer *pPlayer = this;
+
+	if ( pPlayer->IsLocalPlayer() || bIsObserverTarget )
+	{
+		pPlayer->UpdateVisibility();
+		UpdateViewmodelVisibility( pPlayer );
+	}
+
+	if ( bIsObserverTarget )
+		return;
+
+	// [msmith] When the observer mode changes, we also need to update the visibility of the view models for the
+	// target we are observing.  This is important when changing between first and third person when in split screen.
+	C_BasePlayer* observerTarget = ToBasePlayer( pPlayer->GetObserverTarget() );
+	if ( NULL != observerTarget )
+	{
+		observerTarget->UpdateVisibility();
+		UpdateViewmodelVisibility( observerTarget );
+	}
 }
 
 //-----------------------------------------------------------------------------

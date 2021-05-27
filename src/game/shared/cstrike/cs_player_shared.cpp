@@ -1499,7 +1499,8 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 			return;
 
 		if ( pLocalPlayer->GetObserverTarget() == this &&
-			pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+			 pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE &&
+			 !pLocalPlayer->IsInObserverInterpolation() )
 		{
 			bUseObserverTarget = true;
 		}

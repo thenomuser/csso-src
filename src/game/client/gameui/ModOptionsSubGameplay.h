@@ -22,11 +22,6 @@ class CCvarSlider;
 
 class CModOptionsSubGameplay;
 
-// PiMoN: change this to zero if you want to
-// show a MessageBox to player that they need
-// to restart the game or disconnect from a server
-#define INSTANT_MUSIC_CHANGE 1
-
 //-----------------------------------------------------------------------------
 // Purpose: crosshair options property page
 //-----------------------------------------------------------------------------
@@ -56,6 +51,7 @@ private:
 	CCvarToggleCheckButton*		m_pUseOpensBuyMenu;
 	CCvarToggleCheckButton*		m_pAddBotPrefix;
 	CCvarToggleCheckButton*		m_pDrawTracers;
+	CCvarToggleCheckButton*		m_pSpecInterpCamera;
 	CCvarSlider*				m_pViewmodelOffsetX;
 	vgui::Label*				m_pViewmodelOffsetXLabel;
 	CCvarSlider*				m_pViewmodelOffsetY;
@@ -69,11 +65,6 @@ private:
 	vgui::Label*				m_pViewmodelRecoilLabel;
 	CLabeledCommandComboBox*	m_pViewbobStyle;
 	CLabeledCommandComboBox*	m_pWeaponPos;
-	CLabeledCommandComboBox*	m_pMusicSelection;
-
-#if !INSTANT_MUSIC_CHANGE
-	bool						m_bNeedToWarnAboutMusic;
-#endif
 };
 
 #endif // MODOPTIONSSUBGAMEPLAY_H

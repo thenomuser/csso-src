@@ -18,6 +18,11 @@ class CLabeledCommandComboBox;
 
 class CModOptionsSubLoadout;
 
+// PiMoN: change this to zero if you want to
+// show a MessageBox to player that they need
+// to restart the game or disconnect from a server
+#define INSTANT_MUSIC_CHANGE 1
+
 //-----------------------------------------------------------------------------
 // Purpose: crosshair options property page
 //-----------------------------------------------------------------------------
@@ -47,6 +52,11 @@ private:
 	CLabeledCommandComboBox *m_pLoadoutDeagleCTComboBox;
 	CLabeledCommandComboBox *m_pLoadoutDeagleTComboBox;
 	CCvarToggleCheckButton	*m_pStatTrak;
+	CLabeledCommandComboBox *m_pMusicSelection;
+
+#if !INSTANT_MUSIC_CHANGE
+	bool						m_bNeedToWarnAboutMusic;
+#endif
 };
 
 #endif // MODOPTIONSSUBLOADOUT_H

@@ -1178,6 +1178,14 @@ C_CSPlayer::C_CSPlayer() :
 	m_bFlashScreenshotHasBeenGrabbed = false;
 	m_bFlashDspHasBeenCleared = true;
 
+	SetCurrentMusic( CSMUSIC_NONE );
+	m_flMusicRoundStartTime = 0.0;
+	m_vecObserverInterpolateOffset = vec3_origin;
+	m_bObserverInterpolationNeedsDeferredSetup = false;
+	m_flObsInterp_PathLength = 0.0f;
+	m_obsInterpState = OBSERVER_INTERP_NONE;
+	m_qObsInterp_OrientationStart = m_qObsInterp_OrientationTravelDir = Quaternion( 0, 0, 0, 0 );
+
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
 
@@ -2714,6 +2722,20 @@ bool C_CSPlayer::ShouldDraw( void )
 			return true;
 	}
 
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+
+	// keep drawing players we're observing with the interpolating spectator camera
+	if ( pLocalPlayer && pLocalPlayer->GetObserverInterpState() == OBSERVER_INTERP_TRAVELING )
+	{
+		return true;
+	}
+
+	// don't draw players we're observing in first-person
+	if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() == ToBasePlayer(this) && pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE )
+	{
+		return false;
+	}
+
 	return BaseClass::ShouldDraw();
 }
 
@@ -3396,6 +3418,9 @@ float C_CSPlayer::GetFOV( void )
 	}
 #endif //IRONSIGHT
 
+	if ( GetObserverInterpState() == OBSERVER_INTERP_TRAVELING )
+		flCurFOV = GetDefaultFOV();
+
 	return flCurFOV;
 }
 
@@ -3458,9 +3483,213 @@ void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 	BaseClass::CalcObserverView( eyeOrigin, eyeAngles, fov );
 }
 
-//=============================================================================
-// HPE_BEGIN:
-//=============================================================================
+ConVar cl_obs_interp_enable( "cl_obs_interp_enable", "1", FCVAR_ARCHIVE, "Enables interpolation between observer targets" );
+ConVar cl_obs_interp_pos_rate( "cl_obs_interp_pos_rate", "0.27" );
+ConVar cl_obs_interp_pos_halflife( "cl_obs_interp_pos_halflife", "0.26" );
+ConVar cl_obs_interp_snap_dist( "cl_obs_interp_snap_dist", "1" );
+ConVar cl_obs_interp_settle_dist( "cl_obs_interp_settle_dist", "16" );
+ConVar cl_obs_interp_dist_to_turn_to_face( "cl_obs_interp_dist_to_turn_to_face", "500", 0, "Changing to a target further than this will cause the camera to face the direction of travel" );
+ConVar cl_obs_interp_angle_progress_headstart( "cl_obs_interp_angle_progress_headstart", "0.025" );
+ConVar cl_obs_interp_turn_to_face_start_frac( "cl_obs_interp_turn_to_face_start_frac", "0.1" );
+ConVar cl_obs_interp_turn_to_face_end_frac( "cl_obs_interp_turn_to_face_end_frac", "0.65" );
+ConVar cl_obs_interp_obstruction_behavior( "cl_obs_interp_obstruction_behavior", "2" );
+extern ConVar sv_disable_observer_interpolation;
+
+void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles )
+{
+	Assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
+	// Interpolate the view between observer target changes
+	if ( m_obsInterpState != OBSERVER_INTERP_NONE && ShouldInterpolateObserverChanges() )
+	{
+		// We flag observer interpolation on as soon as observer targets change in the recvproxy change callback,
+		// but we can't get entity position that early in the frame, so some setup is deferred until this point. We
+		// have to set observer interpolation earlier, before the view is set up for this frame, otherwise we'll get a flicker
+		// as the first frame after an observer target change will draw at the final position.
+		if ( m_bObserverInterpolationNeedsDeferredSetup )
+		{
+			
+			// Initial setup
+			m_vecObserverInterpolateOffset = vOutOrigin - m_vecObserverInterpStartPos;
+			m_flObsInterp_PathLength = m_vecObserverInterpolateOffset.Length();
+			Vector vRight = m_vecObserverInterpolateOffset.Cross( Vector( 0, 0, 1 ) );
+			Vector vUp = vRight.Cross( m_vecObserverInterpolateOffset );
+			BasisToQuaternion( m_vecObserverInterpolateOffset.Normalized(), vRight.Normalized(), vUp.Normalized(), m_qObsInterp_OrientationTravelDir );
+			m_bObserverInterpolationNeedsDeferredSetup = false;
+		}
+
+		float flPosProgress = ExponentialDecay( cl_obs_interp_pos_halflife.GetFloat(), cl_obs_interp_pos_rate.GetFloat(), gpGlobals->frametime );
+
+		// Decay the offset vector until we reach the new observer position
+		m_vecObserverInterpolateOffset *= flPosProgress;
+		vOutOrigin -= m_vecObserverInterpolateOffset;
+
+		// Angle interpolation is a function of position progress so they stay in sync (adding a slight head start for aesthetic reasons)
+		float flPathProgress, flObserverInterpolateOffset = m_vecObserverInterpolateOffset.Length();
+		if ( m_flObsInterp_PathLength <= 0.0001f * flObserverInterpolateOffset )
+		{
+			flPathProgress = 1.0f;
+		}
+		else
+		{
+			flPathProgress = ( flObserverInterpolateOffset / m_flObsInterp_PathLength ) - cl_obs_interp_angle_progress_headstart.GetFloat();
+			flPathProgress = 1.0f - Clamp( flPathProgress, 0.0f, 1.0f );
+		}
+
+		// Messy and in flux... still tuning the interpolation code below
+		Quaternion q1, q2;
+		Quaternion qFinal;
+		AngleQuaternion( vOutAngles, qFinal );
+		float t = 0;
+		if ( m_flObsInterp_PathLength > cl_obs_interp_dist_to_turn_to_face.GetFloat() && GetObserverMode() == OBS_MODE_IN_EYE )
+		{
+			// at a far enough distance, turn to face direction of motion before ending at final angles
+			//QuaternionSlerp( m_qObsInterp_OrientationStart, m_qObsInterp_OrientationTravelDir, flPathProgress, q1 );
+			//QuaternionSlerp( m_qObsInterp_OrientationTravelDir, qFinal, flPathProgress, q2 );
+
+			if ( flPathProgress < cl_obs_interp_turn_to_face_start_frac.GetFloat() )
+			{
+				//QuaternionSlerp( m_qObsInterp_OrientationStart, m_qObsInterp_OrientationTravelDir, flPathProgress, q1 );
+				q1 = m_qObsInterp_OrientationStart;
+				q2 = m_qObsInterp_OrientationTravelDir;
+				t = RemapVal( flPathProgress, 0.0, cl_obs_interp_turn_to_face_start_frac.GetFloat(), 0.0, 1.0 );
+			}
+			else if ( flPathProgress < cl_obs_interp_turn_to_face_end_frac.GetFloat() )
+			{
+				q1 = q2 = m_qObsInterp_OrientationTravelDir;
+			}
+			else
+			{
+				q1 = m_qObsInterp_OrientationTravelDir;
+				q2 = qFinal;
+				t = SimpleSplineRemapValClamped( flPathProgress, cl_obs_interp_turn_to_face_end_frac.GetFloat(), 1.0, 0.0, 1.0 );
+			}
+		}
+		else
+		{
+			// Otherwise, interpolate from start to end orientation
+			q1 = m_qObsInterp_OrientationStart;
+			q2 = qFinal;
+			t = flPathProgress;
+		}
+
+		Quaternion qOut;
+		//QuaternionSlerp( q1, q2, flPathProgress, qOut );
+		QuaternionSlerp( q1, q2, t, qOut );
+		QuaternionAngles( qOut, vOutAngles );
+
+		Assert( cl_obs_interp_snap_dist.GetFloat() < cl_obs_interp_settle_dist.GetFloat() );
+		// At a close enough dist snap to final and stop interpolating
+		if ( m_vecObserverInterpolateOffset.LengthSqr() < cl_obs_interp_snap_dist.GetFloat()*cl_obs_interp_snap_dist.GetFloat() )
+		{
+			m_obsInterpState = OBSERVER_INTERP_NONE;
+			UpdateObserverTargetVisibility();
+		}
+		else if ( m_vecObserverInterpolateOffset.LengthSqr() < cl_obs_interp_settle_dist.GetFloat() * cl_obs_interp_settle_dist.GetFloat() )
+		{
+			m_obsInterpState = OBSERVER_INTERP_SETTLING;
+			UpdateObserverTargetVisibility();
+		}
+	}
+	Assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
+}
+
+
+void C_CSPlayer::UpdateObserverTargetVisibility( void ) const
+{
+	C_CSPlayer *pObservedPlayer = dynamic_cast < C_CSPlayer* >( GetObserverTarget() );
+	if ( pObservedPlayer )
+	{
+		extern void UpdateViewmodelVisibility( C_BasePlayer *player );
+		UpdateViewmodelVisibility( pObservedPlayer );
+		pObservedPlayer->UpdateVisibility();
+	}
+}
+
+
+bool C_CSPlayer::ShouldInterpolateObserverChanges() const
+{
+	if ( !cl_obs_interp_enable.GetBool() )
+		return false;
+
+	// server doesn't want this
+	if ( sv_disable_observer_interpolation.GetBool() )
+		return false;
+
+	// Disallow when playing on a team in a competitive match
+	bool bIsPlayingOnCompetitiveTeam = CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() && ( GetTeamNumber() == TEAM_CT || GetTeamNumber() == TEAM_TERRORIST );
+	if ( bIsPlayingOnCompetitiveTeam )
+		return false;
+
+	// supported modes
+	if ( GetObserverMode() != OBS_MODE_IN_EYE && GetObserverMode() != OBS_MODE_CHASE && GetObserverMode() != OBS_MODE_ROAMING )
+		return false;
+
+	// If we are in hltv and have a camera man, only run for that player. Otherwise, only run for the local player.
+	CBasePlayer *pInterpPlayer = C_CSPlayer::GetLocalCSPlayer();
+
+	if ( pInterpPlayer != this )
+		return false;
+
+	return true;
+}
+
+// Set up initial state for interpolating between observer positions
+void C_CSPlayer::StartObserverInterpolation( const QAngle& startAngles )
+{
+	// Find obstructions in the path, skip past them if needed
+	m_vecObserverInterpStartPos = MainViewOrigin();
+	C_CSPlayer* pObserverTarget = dynamic_cast< C_CSPlayer* > ( GetObserverTarget() );
+	if ( cl_obs_interp_obstruction_behavior.GetInt() > 0 && pObserverTarget )
+	{
+		trace_t tr;
+		Ray_t ray;
+		// HACK: This is wrong for chase and roam modes, but this is too early in the frame to call
+		// CalcObserverView functions without trigger the absqueries valid assert... Revisit if needed,
+		// but this will probably be a good enough test to see if we would lerp through solid
+		ray.Init( pObserverTarget->GetNetworkOrigin() + VEC_VIEW, m_vecObserverInterpStartPos );
+		CTraceFilterWorldAndPropsOnly filter;
+		enginetrace->TraceRay( ray, MASK_VISIBLE, &filter, &tr );
+
+		if ( tr.DidHit() )
+		{
+			if ( cl_obs_interp_obstruction_behavior.GetInt() == 1 )
+			{
+				m_vecObserverInterpStartPos = tr.endpos;
+			}
+			else if ( cl_obs_interp_obstruction_behavior.GetInt() == 2 )
+			{
+				m_obsInterpState = OBSERVER_INTERP_NONE;
+				UpdateObserverTargetVisibility();
+				return;
+			}
+		}
+	}
+
+	AngleQuaternion( startAngles, m_qObsInterp_OrientationStart );
+	m_obsInterpState = OBSERVER_INTERP_TRAVELING;
+	m_bObserverInterpolationNeedsDeferredSetup = true;
+	UpdateObserverTargetVisibility();
+}
+
+
+C_CSPlayer::eObserverInterpState C_CSPlayer::GetObserverInterpState( void ) const
+{
+	if ( !ShouldInterpolateObserverChanges() )
+		return OBSERVER_INTERP_NONE;
+
+	return m_obsInterpState;
+}
+
+void C_CSPlayer::SetObserverTarget( EHANDLE hTarget )
+{
+	EHANDLE prevTarget = m_hObserverTarget;
+	BaseClass::SetObserverTarget( hTarget );
+	if ( hTarget && prevTarget != hTarget && ShouldInterpolateObserverChanges() )
+	{
+		StartObserverInterpolation( EyeAngles() );
+	}
+}
+
 // [tj] checks if this player has another given player on their Steam friends list.
 bool C_CSPlayer::HasPlayerAsFriend(C_CSPlayer* player)
 {

@@ -967,6 +967,10 @@ bool CViewRender::ShouldDrawViewModel( bool bDrawViewmodel )
 	if ( C_BasePlayer::ShouldDrawLocalPlayer() )
 		return false;
 
+	if ( C_BasePlayer::GetLocalPlayer()->ShouldDrawLocalPlayer() && 
+		( C_BasePlayer::GetLocalPlayer()->GetObserverMode() != OBS_MODE_IN_EYE || C_BasePlayer::GetLocalPlayer()->GetObserverInterpState() == C_BasePlayer::OBSERVER_INTERP_TRAVELING ) )
+		return false;
+
 	if ( !ShouldDrawEntities() )
 		return false;
 

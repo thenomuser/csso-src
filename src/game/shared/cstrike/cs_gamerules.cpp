@@ -83,6 +83,8 @@ extern IReplaySystem *g_pReplay;
 
 #endif
 
+ConVar sv_disable_observer_interpolation( "sv_disable_observer_interpolation", "0", FCVAR_REPLICATED, "Disallow interpolating between observer targets on this server." );
+
 
 /**
  * Player hull & eye position for standing, ducking, etc.  This version has a taller
@@ -7195,11 +7197,6 @@ int CCSGameRules::GetStartMoney( void )
 	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
 }
 
-bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
-{
-	return (m_iCurrentGamemode == GameModes::COMPETITIVE) || (m_iCurrentGamemode == GameModes::COMPETITIVE_2V2); // TODO: check if 2v2 actually belongs here
-}
-
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
 	switch ( m_iCurrentGamemode )
@@ -7314,6 +7311,11 @@ void CCSGameRules::SwitchTeamsAtRoundReset( void )
 	}
 }
 #endif
+
+bool CCSGameRules::IsPlayingAnyCompetitiveStrictRuleset( void ) const
+{
+	return (m_iCurrentGamemode == GameModes::COMPETITIVE) || (m_iCurrentGamemode == GameModes::COMPETITIVE_2V2); // TODO: check if 2v2 actually belongs here
+}
 
 bool CCSGameRules::IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer )
 {

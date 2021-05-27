@@ -28,8 +28,6 @@
 #include "EngineInterface.h"
 #include "tier1/convar.h"
 
-#include "GameUI_Interface.h"
-
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
@@ -38,62 +36,6 @@
 #include <tier0/memdbgon.h>
 
 using namespace vgui;
-
-const char* szMusicStrings[] =
-{
-	"valve_csgo_01", // the default one should be on top
-	"amontobin_01",
-	"austinwintory_01",
-	"austinwintory_02",
-	"awolnation_01",
-	"beartooth_01",
-	"beartooth_02",
-	"blitzkids_01",
-	"damjanmravunac_01",
-	"danielsadowski_01",
-	"danielsadowski_02",
-	"danielsadowski_03",
-	"danielsadowski_04",
-	"darude_01",
-	"dren_01",
-	"dren_02",
-	"feedme_01",
-	"hades_01",
-	"halflife_alyx_01",
-	"halo_01",
-	"hotlinemiami_01",
-	"hundredth_01",
-	"ianhultquist_01",
-	"kellybailey_01",
-	"kitheory_01",
-	"lenniemoore_01",
-	"mateomessina_01",
-	"mattlange_01",
-	"mattlevine_01",
-	"michaelbross_01",
-	"midnightriders_01",
-	"mordfustang_01",
-	"neckdeep_01",
-	"neckdeep_02",
-	"newbeatfund_01",
-	"noisia_01",
-	"proxy_01",
-	"roam_01",
-	"robertallaire_01",
-	"sammarshall_01",
-	"sasha_01",
-	"scarlxrd_01",
-	"scarlxrd_02",
-	"seanmurray_01",
-	"skog_01",
-	"skog_02",
-	"skog_03",
-	"theverkkars_01",
-	"timhuling_01",
-	"treeadams_benbromfield_01",
-	"troelsfolmann_01",
-	"twinatlantic_01"
-};
 
 //-----------------------------------------------------------------------------
 // Purpose: Basic help dialog
@@ -115,6 +57,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pUseOpensBuyMenu = new CCvarToggleCheckButton( this, "UseOpensBuyMenuCheckbox", "#GameUI_Gameplay_UseOpensBuyMenu", "cl_use_opens_buy_menu" );
 	m_pAddBotPrefix = new CCvarToggleCheckButton( this, "AddBotPrefix", "#GameUI_Gameplay_AddBotPrefix", "cl_add_bot_prefix" );
 	m_pDrawTracers = new CCvarToggleCheckButton( this, "DrawTracers", "#GameUI_Gameplay_DrawTracers", "r_drawtracers" );
+	m_pSpecInterpCamera = new CCvarToggleCheckButton( this, "SpecInterpCamera", "#GameUI_Gameplay_SpecInterpCamera", "cl_obs_interp_enable" );
 	m_pViewmodelOffsetX = new CCvarSlider( this, "ViewmodelOffsetXSlider", "", -2.0f, 2.5f, "viewmodel_offset_x" );
 	m_pViewmodelOffsetXLabel = new Label( this, "ViewmodelOffsetXLabel", "" );
 	m_pViewmodelOffsetY = new CCvarSlider( this, "ViewmodelOffsetYSlider", "", -2.0f, 2.0f, "viewmodel_offset_y" );
@@ -128,7 +71,6 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelRecoilLabel = new Label( this, "ViewmodelRecoilLabel", "" );
 	m_pViewbobStyle = new CLabeledCommandComboBox( this, "ViewbobStyleComboBox" );
 	m_pWeaponPos = new CLabeledCommandComboBox( this, "WeaponPositionComboBox" );
-	m_pMusicSelection = new CLabeledCommandComboBox( this, "MusicSelectionComboBox" );
 
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_1", "viewmodel_presetpos 1" );
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_2", "viewmodel_presetpos 2" );
@@ -140,19 +82,11 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Left", "cl_righthand 0" );
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Right", "cl_righthand 1" );
 
-	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
-	{
-		char command[128];
-		char string[128];
-		Q_snprintf( command, sizeof( command ), "snd_music_selection %s", szMusicStrings[i] );
-		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%s", szMusicStrings[i] );
-		m_pMusicSelection->AddItem( string, command );
-	}
-
 	m_pCloseOnBuy->AddActionSignalTarget( this );
 	m_pUseOpensBuyMenu->AddActionSignalTarget( this );
 	m_pAddBotPrefix->AddActionSignalTarget( this );
 	m_pDrawTracers->AddActionSignalTarget( this );
+	m_pSpecInterpCamera->AddActionSignalTarget( this );
 	m_pViewmodelOffsetX->AddActionSignalTarget( this );
 	m_pViewmodelOffsetY->AddActionSignalTarget( this );
 	m_pViewmodelOffsetZ->AddActionSignalTarget( this );
@@ -161,13 +95,8 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetPreset->AddActionSignalTarget( this );
 	m_pViewbobStyle->AddActionSignalTarget( this );
 	m_pWeaponPos->AddActionSignalTarget( this );
-	m_pMusicSelection->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubGameplay.res" );
-
-#if !INSTANT_MUSIC_CHANGE
-	m_bNeedToWarnAboutMusic = true;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -251,6 +180,7 @@ void CModOptionsSubGameplay::OnResetData()
 	m_pUseOpensBuyMenu->Reset();
 	m_pAddBotPrefix->Reset();
 	m_pDrawTracers->Reset();
+	m_pSpecInterpCamera->Reset();
 	m_pViewmodelOffsetX->Reset();
 	m_pViewmodelOffsetY->Reset();
 	m_pViewmodelOffsetZ->Reset();
@@ -267,17 +197,6 @@ void CModOptionsSubGameplay::OnResetData()
 	ConVarRef cl_righthand( "cl_righthand" );
 	if ( cl_righthand.IsValid() )
 		m_pWeaponPos->SetInitialItem( cl_righthand.GetInt() );
-
-	ConVarRef snd_music_selection( "snd_music_selection" );
-	const char *pMusicName = snd_music_selection.GetString();
-	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
-	{
-		if ( !Q_strcmp( pMusicName, szMusicStrings[i] ) )
-		{
-			m_pMusicSelection->SetInitialItem( i );
-			break;
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -289,6 +208,7 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pUseOpensBuyMenu->ApplyChanges();
 	m_pAddBotPrefix->ApplyChanges();
 	m_pDrawTracers->ApplyChanges();
+	m_pSpecInterpCamera->ApplyChanges();
 	m_pViewmodelOffsetPreset->ApplyChanges();
 	m_pViewmodelOffsetX->ApplyChanges();
 	m_pViewmodelOffsetY->ApplyChanges();
@@ -297,24 +217,4 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pViewmodelRecoil->ApplyChanges();
 	m_pViewbobStyle->ApplyChanges();
 	m_pWeaponPos->ApplyChanges();
-	m_pMusicSelection->ApplyChanges();
-
-	ConVarRef snd_music_selection( "snd_music_selection" );
-#if INSTANT_MUSIC_CHANGE
-	if ( Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
-#else
-	if ( m_bNeedToWarnAboutMusic && Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
-#endif
-	{
-		// Bring up the confirmation dialog
-#if INSTANT_MUSIC_CHANGE
-		m_pMusicSelection->ApplyChanges();
-		GameUI().ReleaseBackgroundMusic();
-#else
-		MessageBox *box = new MessageBox( "#GameUI_OptionsRestartRequired_Title", "#GameUI_Gameplay_MusicRestartHint", this );
-		box->MoveToFront();
-		box->DoModal();
-		m_bNeedToWarnAboutMusic = false;
-#endif
-	}
 }

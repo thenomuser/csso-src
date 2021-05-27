@@ -478,16 +478,15 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 
 	// check if local player chases owner of this weapon in first person
 	C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
-
 	if ( localplayer && localplayer->IsObserver() && GetOwner() )
 	{
 		// don't draw weapon if chasing this guy as spectator
 		// we don't check that in ShouldDraw() since this may change
 		// without notification 
-		
 		if ( localplayer->GetObserverMode() == OBS_MODE_IN_EYE &&
-			 localplayer->GetObserverTarget() == GetOwner() ) 
-			return false;
+			localplayer->GetObserverTarget() == GetOwner() &&
+			localplayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING ) 
+			return true;
 	}
 
 	return BaseClass::DrawModel( flags );

@@ -2343,6 +2343,14 @@ bool CBasePlayer::SetObserverMode(int mode )
 		m_iObserverLastMode = m_iObserverMode;
 	}
 
+	if ( ( m_iObserverMode == OBS_MODE_DEATHCAM || m_iObserverMode == OBS_MODE_FREEZECAM ) &&
+		 ( mode == OBS_MODE_CHASE || mode == OBS_MODE_IN_EYE ) )
+	{
+		// when we transition from death/freezecam to spectating, reset our spectated target so we 
+		//	properly find a controllable bot (if one is available)
+		m_hObserverTarget = NULL;
+	}
+
 	m_iObserverMode = mode;
 	
 	switch ( mode )

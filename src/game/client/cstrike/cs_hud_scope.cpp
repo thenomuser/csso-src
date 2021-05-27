@@ -127,6 +127,9 @@ void CHudScope::Paint( void )
 	if ( pPlayer == NULL )
 		return;
 
+	if ( pPlayer && pPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+		return;
+
 	switch ( pPlayer->GetObserverMode() )
 	{
 	case OBS_MODE_NONE:

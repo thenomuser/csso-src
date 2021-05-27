@@ -149,7 +149,7 @@ public:
 	virtual int			GetObserverMode() const;
 	void				SetObserverMode ( int iNewMode );
 	virtual CBaseEntity	*GetObserverTarget() const;
-	void			SetObserverTarget( EHANDLE hObserverTarget );
+	virtual void		SetObserverTarget( EHANDLE hObserverTarget );
 
 	bool			AudioStateIsUnderwater( Vector vecMainViewOrigin );
 
@@ -411,6 +411,8 @@ protected:
 	EHANDLE					m_hOldFogController;
 
 public:
+	void OnObserverModeChange( bool bIsObserverTarget = false );
+
 	int m_StuckLast;
 
 	CNetworkVar( float, m_flDuckAmount );
@@ -646,6 +648,15 @@ private:
 	StepSoundCache_t		m_StepSoundCache[ 2 ];
 
 public:
+	// HACK: Only used for cstrike players, making virtual here because a ton of base player code needs to know about that state. 
+	enum eObserverInterpState
+	{
+		OBSERVER_INTERP_NONE,			// Not interpolating
+		OBSERVER_INTERP_TRAVELING,		// Camera moving quickly towards target, hide most 1st person effects
+		OBSERVER_INTERP_SETTLING,		// Camera very close to final position but still interpolating (to avoid a pop)... draw viewmodel/scope state but keep interpolating
+	};
+	virtual eObserverInterpState GetObserverInterpState( void ) const { return OBSERVER_INTERP_NONE; }
+	virtual bool IsInObserverInterpolation( void ) const { return false; }
 
 	const char *GetLastKnownPlaceName( void ) const	{ return m_szLastPlaceName; }	// return the last nav place name the player occupied
 

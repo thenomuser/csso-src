@@ -26,6 +26,8 @@
 #include "EngineInterface.h"
 #include "tier1/convar.h"
 
+#include "GameUI_Interface.h"
+
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
 #endif
@@ -34,6 +36,62 @@
 #include <tier0/memdbgon.h>
 
 using namespace vgui;
+
+const char* szMusicStrings[] =
+{
+	"valve_csgo_01", // the default one should be on top
+	"amontobin_01",
+	"austinwintory_01",
+	"austinwintory_02",
+	"awolnation_01",
+	"beartooth_01",
+	"beartooth_02",
+	"blitzkids_01",
+	"damjanmravunac_01",
+	"danielsadowski_01",
+	"danielsadowski_02",
+	"danielsadowski_03",
+	"danielsadowski_04",
+	"darude_01",
+	"dren_01",
+	"dren_02",
+	"feedme_01",
+	"hades_01",
+	"halflife_alyx_01",
+	"halo_01",
+	"hotlinemiami_01",
+	"hundredth_01",
+	"ianhultquist_01",
+	"kellybailey_01",
+	"kitheory_01",
+	"lenniemoore_01",
+	"mateomessina_01",
+	"mattlange_01",
+	"mattlevine_01",
+	"michaelbross_01",
+	"midnightriders_01",
+	"mordfustang_01",
+	"neckdeep_01",
+	"neckdeep_02",
+	"newbeatfund_01",
+	"noisia_01",
+	"proxy_01",
+	"roam_01",
+	"robertallaire_01",
+	"sammarshall_01",
+	"sasha_01",
+	"scarlxrd_01",
+	"scarlxrd_02",
+	"seanmurray_01",
+	"skog_01",
+	"skog_02",
+	"skog_03",
+	"theverkkars_01",
+	"timhuling_01",
+	"treeadams_benbromfield_01",
+	"troelsfolmann_01",
+	"twinatlantic_01"
+};
 
 
 //-----------------------------------------------------------------------------
@@ -86,6 +144,16 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pLoadoutDeagleTComboBox->AddItem( "#Cstrike_WPNHUD_Revolver", "loadout_slot_deagle_weapon_t 1" );
 		
 	m_pStatTrak = new CCvarToggleCheckButton( this, "EnableStatTrak", "#GameUI_Loadout_StatTrak", "loadout_stattrak" );
+	m_pMusicSelection = new CLabeledCommandComboBox( this, "MusicSelectionComboBox" );
+
+	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
+	{
+		char command[128];
+		char string[128];
+		Q_snprintf( command, sizeof( command ), "snd_music_selection %s", szMusicStrings[i] );
+		Q_snprintf( string, sizeof( string ), "#GameUI_Gameplay_MusicKit_%s", szMusicStrings[i] );
+		m_pMusicSelection->AddItem( string, command );
+	}
 
 	m_pLoadoutM4ComboBox->AddActionSignalTarget( this );
 	m_pLoadoutHKP2000ComboBox->AddActionSignalTarget( this );
@@ -96,6 +164,11 @@ CModOptionsSubLoadout::CModOptionsSubLoadout(vgui::Panel *parent) : vgui::Proper
 	m_pLoadoutDeagleCTComboBox->AddActionSignalTarget( this );
 	m_pLoadoutDeagleTComboBox->AddActionSignalTarget( this );
 	m_pStatTrak->AddActionSignalTarget( this );
+	m_pMusicSelection->AddActionSignalTarget( this );
+
+#if !INSTANT_MUSIC_CHANGE
+	m_bNeedToWarnAboutMusic = true;
+#endif
 
 	LoadControlSettings("Resource/ModOptionsSubLoadout.res");
 }
@@ -154,6 +227,17 @@ void CModOptionsSubLoadout::OnResetData()
 		m_pLoadoutDeagleTComboBox->SetInitialItem( loadout_slot_deagle_weapon_t.GetInt() );
 
 	m_pStatTrak->Reset();
+
+	ConVarRef snd_music_selection( "snd_music_selection" );
+	const char *pMusicName = snd_music_selection.GetString();
+	for ( int i = 0; i < ARRAYSIZE( szMusicStrings ); i++ )
+	{
+		if ( !Q_strcmp( pMusicName, szMusicStrings[i] ) )
+		{
+			m_pMusicSelection->SetInitialItem( i );
+			break;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -170,4 +254,24 @@ void CModOptionsSubLoadout::OnApplyChanges()
 	m_pLoadoutDeagleCTComboBox->ApplyChanges();
 	m_pLoadoutDeagleTComboBox->ApplyChanges();
 	m_pStatTrak->ApplyChanges();
+	m_pMusicSelection->ApplyChanges();
+
+	ConVarRef snd_music_selection( "snd_music_selection" );
+#if INSTANT_MUSIC_CHANGE
+	if ( Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+#else
+	if ( m_bNeedToWarnAboutMusic && Q_strcmp( snd_music_selection.GetString(), szMusicStrings[m_pMusicSelection->GetActiveItem()] ) )
+#endif
+	{
+		// Bring up the confirmation dialog
+#if INSTANT_MUSIC_CHANGE
+		m_pMusicSelection->ApplyChanges();
+		GameUI().ReleaseBackgroundMusic();
+#else
+		MessageBox *box = new MessageBox( "#GameUI_OptionsRestartRequired_Title", "#GameUI_Gameplay_MusicRestartHint", this );
+		box->MoveToFront();
+		box->DoModal();
+		m_bNeedToWarnAboutMusic = false;
+#endif
+	}
 }

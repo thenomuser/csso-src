@@ -526,6 +526,26 @@ public:
 
 	C_CSPlayer( const C_CSPlayer & );
 
+	// For interpolating between observer targets 
+protected:
+	void						UpdateObserverTargetVisibility( void ) const;
+	Vector						m_vecObserverInterpolateOffset;			// Offset vec applied to the view which decays over time
+	Vector						m_vecObserverInterpStartPos;
+	float						m_flObsInterp_PathLength;				// Full path lenght being interpolated
+	Quaternion					m_qObsInterp_OrientationStart;
+	Quaternion					m_qObsInterp_OrientationTravelDir;
+	eObserverInterpState		m_obsInterpState;
+	bool						m_bObserverInterpolationNeedsDeferredSetup;
+
+public:
+	bool								ShouldInterpolateObserverChanges() const;
+	void								StartObserverInterpolation( const QAngle &startAngles );
+	virtual eObserverInterpState		GetObserverInterpState( void ) const OVERRIDE;
+	virtual bool						IsInObserverInterpolation( void ) const OVERRIDE { return ShouldInterpolateObserverChanges() && m_obsInterpState != OBSERVER_INTERP_NONE; }
+	virtual void						SetObserverTarget( EHANDLE hObserverTarget ) OVERRIDE;
+	void								InterpolateObserverView( Vector& vOrigin, QAngle& vAngles );
+	Vector								GetObserverInterpolatedOffsetVector( void ) { return m_vecObserverInterpolateOffset; }
+
 public:
 
 	virtual bool	GetAttachment( int number, Vector &origin );
