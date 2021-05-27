@@ -419,6 +419,7 @@ LINK_ENTITY_TO_CLASS( weapon_cs_base, CWeaponCSBase );
 
 #if defined( CLIENT_DLL )
 	ConVar cl_crosshairstyle( "cl_crosshairstyle", "2", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "0 = DEFAULT, 1 = DEFAULT STATIC, 2 = ACCURATE SPLIT (accurate recoil/spread feedback with a fixed inner part), 3 = ACCURATE DYNAMIC (accurate recoil/spread feedback), 4 = CLASSIC STATIC, 5 = OLD CS STYLE (fake recoil - inaccurate feedback)" );
+	ConVar cl_crosshaircolor( "cl_crosshaircolor", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Set crosshair color as defined in game_options.consoles.txt" );
 	ConVar cl_dynamiccrosshair( "cl_dynamiccrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE ); // PiMoN: so the CSS settings won't fuck up (thanks valve)
 	ConVar cl_scalecrosshair( "cl_scalecrosshair", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Enable crosshair scaling (deprecated)" );
 	ConVar cl_crosshairscale( "cl_crosshairscale", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Crosshair scaling factor (deprecated)" );
@@ -1712,9 +1713,21 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		if ( pPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
 			return;
 
-		int r = cl_crosshaircolor_r.GetInt();
-		int g = cl_crosshaircolor_g.GetInt();
-		int b = cl_crosshaircolor_b.GetInt();
+		int	r, g, b;
+		switch ( cl_crosshaircolor.GetInt() )
+		{
+			case 0:	r = 250;	g = 50;		b = 50;		break;
+			case 1:	r = 50;		g = 250;	b = 50;		break;
+			case 2:	r = 250;	g = 250;	b = 50;		break;
+			case 3:	r = 50;		g = 50;		b = 250;	break;
+			case 4:	r = 50;		g = 250;	b = 250;	break;
+			case 5:
+				r = cl_crosshaircolor_r.GetInt();
+				g = cl_crosshaircolor_g.GetInt();
+				b = cl_crosshaircolor_b.GetInt();
+				break;
+			default:	r = 50;		g = 250;	b = 50;		break;
+		}
 
 		// if user is using nightvision, make the crosshair red.
 		if ( pPlayer->m_bNightVisionOn )
