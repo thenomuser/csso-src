@@ -118,7 +118,36 @@ void CRender::PushInstanceData( CMapInstance *pInstanceClass, Vector &InstanceOr
 	InstanceState.m_pInstanceClass = pInstanceClass;
 	InstanceState.m_pTopInstanceClass = NULL;
 
-	AngleMatrix( InstanceState.m_InstanceAngles, InstanceState.m_InstanceOrigin, Instance3x4Matrix );
+	matrix3x4_t		TransMatrix;
+	matrix3x4_t		RotMatrix;
+	matrix3x4_t		TransRotMatrix;
+
+	AngleMatrix( InstanceState.m_InstanceAngles, RotMatrix );
+	SetIdentityMatrix( TransMatrix );
+	PositionMatrix( InstanceState.m_InstanceOrigin, TransMatrix );
+
+	MatrixMultiply( TransMatrix, RotMatrix, TransRotMatrix );
+
+	Vector vLocalOrigin = vec3_origin;
+	if ( pInstanceClass != NULL && pInstanceClass->GetInstancedMap() != NULL )
+	{
+		CMapEntityList	entityList;
+
+		pInstanceClass->GetInstancedMap()->FindEntitiesByClassName( entityList, "func_instance_origin", false );
+		if ( entityList.Count() == 1 )
+		{
+			entityList.Element( 0 )->GetOrigin( vLocalOrigin );
+		}
+	}
+
+	matrix3x4_t		LocalTransRotMatrix;
+	Vector			vOut;
+	VectorRotate( -vLocalOrigin, RotMatrix, vOut ); 
+	SetIdentityMatrix( TransMatrix );
+	PositionMatrix( vOut, TransMatrix );
+
+	MatrixMultiply( TransMatrix, TransRotMatrix, Instance3x4Matrix );
+
 	InstanceState.m_InstanceMatrix.Init( Instance3x4Matrix );
 
 	Vector		vecTransformedOrigin;
