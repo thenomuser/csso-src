@@ -16,6 +16,7 @@
 #include <bitbuf.h>
 #include "cs_gamerules.h"
 #include "util_shared.h"
+#include "c_cs_playerresource.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -120,7 +121,22 @@ void C_PlantedC4::ClientThink( void )
 		
 		CSoundParameters params;
 
-		if ( ( m_flC4Blow - gpGlobals->curtime ) > 1.0f && GetParametersForSound( "C4.PlantSound", params, NULL ) )
+		const char* szBeepSoundName = "C4.PlantSound";
+		if ( GetCSResources() )
+		{
+			// determine whether the bomb is on A or B site by comparing how close both sites are
+			Vector deltaA, deltaB;
+			VectorSubtract( WorldSpaceCenter(), GetCSResources()->GetBombsiteAPosition(), deltaA );
+			VectorSubtract( WorldSpaceCenter(), GetCSResources()->GetBombsiteBPosition(), deltaB );
+
+			if ( deltaA.Length() > deltaB.Length() )
+			{
+				// site B is closer than site A: use a different beep sound
+				szBeepSoundName = "C4.PlantSoundB";
+			}
+		}
+
+		if ( ( m_flC4Blow - gpGlobals->curtime ) > 1.0f && GetParametersForSound( szBeepSoundName, params, NULL ) )
 		{
 			EmitSound_t ep( params );
 			ep.m_SoundLevel = ATTN_TO_SNDLVL( attenuation );
