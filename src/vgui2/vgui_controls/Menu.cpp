@@ -1267,7 +1267,8 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 	switch (code)
 	{
 	case KEY_ESCAPE:
-	case KEY_XBUTTON_B: 
+	case KEY_XBUTTON_B:
+	case STEAMCONTROLLER_B:
 		{
 			// hide the menu on ESC
 			SetVisible(false);
@@ -1277,7 +1278,8 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 		// they should also scroll the scroll bar if needed
 	case KEY_UP:
 	case KEY_XBUTTON_UP: 
-	case KEY_XSTICK1_UP: 
+	case KEY_XSTICK1_UP:
+	case STEAMCONTROLLER_DPAD_UP:
 		{	
 			MoveAlongMenuItemList(MENU_UP, 0);
 			if ( m_MenuItems.IsValidIndex( m_iCurrentlySelectedItemID ) )
@@ -1293,6 +1295,7 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 	case KEY_DOWN:
 	case KEY_XBUTTON_DOWN: 
 	case KEY_XSTICK1_DOWN: 
+	case STEAMCONTROLLER_DPAD_DOWN:
 		{
 			MoveAlongMenuItemList(MENU_DOWN, 0);
 			if ( m_MenuItems.IsValidIndex( m_iCurrentlySelectedItemID ) )
@@ -1309,6 +1312,7 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 	case KEY_RIGHT:
 	case KEY_XBUTTON_RIGHT: 
 	case KEY_XSTICK1_RIGHT: 
+	case STEAMCONTROLLER_DPAD_RIGHT:
 		{
 			// make sure a menuItem is currently selected
 			if ( m_MenuItems.IsValidIndex(m_iCurrentlySelectedItemID) )
@@ -1331,6 +1335,7 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 	case KEY_LEFT:
 	case KEY_XBUTTON_LEFT: 
 	case KEY_XSTICK1_LEFT: 
+	case STEAMCONTROLLER_DPAD_LEFT:
 		{
 			// if our parent is a menu item then we are a submenu so close us.
 			if (GetParentMenuItem())
@@ -1345,6 +1350,7 @@ void Menu::OnKeyCodeTyped(KeyCode keycode)
 		}
 	case KEY_ENTER:
 	case KEY_XBUTTON_A:
+	case STEAMCONTROLLER_A:
 		{
 			// make sure a menuItem is currently selected
 			if ( m_MenuItems.IsValidIndex(m_iCurrentlySelectedItemID) )
@@ -2237,8 +2243,8 @@ void Menu::OnCursorMoved(int x, int y)
 	
 	// chain up
 	CallParentFunction(new KeyValues("OnCursorMoved", "x", x, "y", y));
-	RequestFocus();
-	InvalidateLayout();
+	//RequestFocus();
+	//InvalidateLayout();
 }
 
 //-----------------------------------------------------------------------------
@@ -2368,9 +2374,15 @@ void Menu::OnCursorEnteredMenuItem(int VPanel)
 		MenuItem *item = static_cast<MenuItem *>(ipanel()->GetPanel(menuItem, GetModuleName()));
 		// arm the menu
 		item->ArmItem();
-		// open the cascading menu if there is one.
-		item->OpenCascadeMenu();
 		SetCurrentlySelectedItem(item);
+
+		// open the cascading menu if there is one.
+		if ( item->HasMenu() )
+		{
+			// open the cascading menu if there is one.
+			item->OpenCascadeMenu();
+			ActivateItem( m_iCurrentlySelectedItemID );
+		}
 	}
 }
 
@@ -2712,7 +2724,13 @@ MenuBuilder::MenuBuilder( Menu *pMenu, Panel *pActionTarget )
 MenuItem* MenuBuilder::AddMenuItem( const char *pszButtonText, const char *pszCommand, const char *pszCategoryName )
 {
 	AddSepratorIfNeeded( pszCategoryName );
-	return m_pMenu->GetMenuItem( m_pMenu->AddMenuItem( pszButtonText, new KeyValues( pszCommand ), m_pActionTarget ) );
+	return m_pMenu->GetMenuItem( m_pMenu->AddMenuItem( pszButtonText, pszCommand, m_pActionTarget ) );
+}
+
+MenuItem* MenuBuilder::AddMenuItem( const char *pszButtonText, KeyValues *kvUserData, const char *pszCategoryName )
+{
+	AddSepratorIfNeeded( pszCategoryName );
+	return m_pMenu->GetMenuItem( m_pMenu->AddMenuItem( pszButtonText, kvUserData, m_pActionTarget ) );
 }
 
 MenuItem* MenuBuilder::AddCascadingMenuItem( const char *pszButtonText, Menu *pSubMenu, const char *pszCategoryName )

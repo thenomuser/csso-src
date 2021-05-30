@@ -249,9 +249,9 @@ void CKeyBindingHelpDialog::PopulateList()
 			}
 			if ( k == c )
 			{
-				int k = maps.AddToTail( );
-				maps[k].m_pMap = map;
-				maps[k].m_pPanel = pPanel;
+				int iMap = maps.AddToTail( );
+				maps[iMap].m_pMap = map;
+				maps[iMap].m_pPanel = pPanel;
 			}
 			map = map->baseMap;
 		}
@@ -268,7 +268,7 @@ void CKeyBindingHelpDialog::PopulateList()
 	for ( i = 0; i < c; ++i )
 	{
 		PanelKeyBindingMap *m = maps[ i ].m_pMap;
-		Panel *pPanel = maps[i].m_pPanel;
+		pPanel = maps[i].m_pPanel;
 		Assert( m );
 
 		int bindings = m->boundkeys.Count();

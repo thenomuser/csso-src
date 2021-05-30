@@ -139,6 +139,7 @@ void ImagePanel::PaintBackground()
 		
 		// surface()->DrawSetColor( 255, 255, 255, GetAlpha() );
 		m_pImage->SetColor( GetDrawColor() );
+		m_pImage->SetRotation( m_iRotation );
 		
 		//=============================================================================
 		// HPE_END
@@ -293,6 +294,7 @@ void ImagePanel::ApplySettings(KeyValues *inResourceData)
 	m_bTileImage = inResourceData->GetInt("tileImage", 0);
 	m_bTileHorizontally = inResourceData->GetInt("tileHorizontally", m_bTileImage);
 	m_bTileVertically = inResourceData->GetInt("tileVertically", m_bTileImage);
+	m_iRotation = inResourceData->GetInt( "rotation", ROTATED_UNROTATED );
 	const char *imageName = inResourceData->GetString("image", "");
 	if ( *imageName )
 	{

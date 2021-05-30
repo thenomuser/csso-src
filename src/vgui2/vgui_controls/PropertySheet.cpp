@@ -268,7 +268,7 @@ public:
 				if ( !m_pParent->IsWithin( screenx, screeny ) )
 				{
 					Panel *page = reinterpret_cast< Panel * >( data->GetPtr( "propertypage" ) );
-					PropertySheet *sheet = reinterpret_cast< PropertySheet * >( data->GetPtr( "propertysheet" ) );
+					sheet = reinterpret_cast< PropertySheet * >( data->GetPtr( "propertysheet" ) );
 					char const *title = data->GetString( "tabname", "" );
 					if ( !page || !sheet )
 						return;
@@ -1023,30 +1023,29 @@ void PropertySheet::PerformLayout()
 		{
 			int tabHeight = IsSmallTabs() ? (m_iTabHeightSmall-1) : (m_iTabHeight-1);
 
-            int width, tall;
-            m_PageTabs[i]->GetSize(width, tall);
+            m_PageTabs[i]->GetSize(wide, tall);
 
 			if ( m_bTabFitText )
 			{
 				m_PageTabs[i]->SizeToContents();
-				width = m_PageTabs[i]->GetWide();
+				wide = m_PageTabs[i]->GetWide();
 
 				int iXInset, iYInset;
 				m_PageTabs[i]->GetTextInset( &iXInset, &iYInset );
-				width += (iXInset * 2);
+				wide += (iXInset * 2);
 			}
 
 			if (m_PageTabs[i] == _activeTab)
 			{
 				// active tab is taller
-				_activeTab->SetBounds(xtab, 2, width, tabHeight);
+				_activeTab->SetBounds(xtab, 2, wide, tabHeight);
 			}
 			else
 			{
-				m_PageTabs[i]->SetBounds(xtab, 4, width, tabHeight - 2);
+				m_PageTabs[i]->SetBounds(xtab, 4, wide, tabHeight - 2);
 			}
 			m_PageTabs[i]->SetVisible(true);
-			xtab += (width + 1) + m_iTabXDelta;
+			xtab += (wide + 1) + m_iTabXDelta;
 		}
 	}
 	else
@@ -1407,6 +1406,7 @@ void PropertySheet::OnKeyCodePressed(KeyCode code)
 		case KEY_XBUTTON_RIGHT:
 		case KEY_XSTICK1_RIGHT:
 		case KEY_XSTICK2_RIGHT:
+		case STEAMCONTROLLER_DPAD_RIGHT:
 			{
 				ChangeActiveTab(_activeTabIndex+1);
 				break;
@@ -1415,6 +1415,7 @@ void PropertySheet::OnKeyCodePressed(KeyCode code)
 		case KEY_XBUTTON_LEFT:
 		case KEY_XSTICK1_LEFT:
 		case KEY_XSTICK2_LEFT:
+		case STEAMCONTROLLER_DPAD_LEFT:
 			{
 				ChangeActiveTab(_activeTabIndex-1);
 				break;

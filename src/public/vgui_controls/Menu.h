@@ -362,6 +362,7 @@ public:
 	MenuBuilder( Menu *pMenu, Panel *pActionTarget );
 
 	MenuItem* AddMenuItem( const char *pszButtonText, const char *pszCommand, const char *pszCategoryName );
+	MenuItem* AddMenuItem( const char *pszButtonText, KeyValues *kvUserData, const char *pszCategoryName );
 
 	MenuItem* AddCascadingMenuItem( const char *pszButtonText, Menu *pSubMenu, const char *pszCategoryName );
 

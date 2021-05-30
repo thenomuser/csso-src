@@ -231,6 +231,7 @@ protected:
 	unsigned short	   m_sArmedSoundName, m_sDepressedSoundName, m_sReleasedSoundName;
 	bool m_bSelectionStateSaved;
 	bool m_bStaySelectedOnClick;
+	bool m_bStayArmedOnClick;
 };
 
 } // namespace vgui

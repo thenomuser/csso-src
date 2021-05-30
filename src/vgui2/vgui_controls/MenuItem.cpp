@@ -358,7 +358,7 @@ void MenuItem::OpenCascadeMenu()
 		// if the window's been moved
 		m_pCascadeMenu->PerformLayout();
 		m_pCascadeMenu->SetVisible(true);
-		ArmItem();
+		m_pCascadeMenu->MoveToFront();
 	}
 }
 

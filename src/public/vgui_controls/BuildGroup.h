@@ -13,6 +13,7 @@
 #endif
 
 #include "tier1/utlvector.h"
+#include "tier1/utldict.h"
 #include "tier1/utlsymbol.h"
 #include <vgui/VGUI.h>
 #include <vgui/Dar.h>
@@ -49,7 +50,7 @@ public:
 	virtual Panel *GetCurrentPanel();
 
 	// Load the control settings from file
-	virtual void LoadControlSettings(const char *controlResourceName, const char *pathID = NULL, KeyValues *pPreloadedKeyValues = NULL, KeyValues *pConditions = NULL);
+	virtual void LoadControlSettings(const char *controlResourceName, const char *pathID = NULL, KeyValues *pPreloadedKeyValues = NULL, KeyValues *pConditions = NULL );
 
 	// Reload the control settings from file
 	void ReloadControlSettings();
@@ -126,6 +127,9 @@ public:
 	// conditional keys for selectively reading keyvalues
 	void ProcessConditionalKeys( KeyValues *pDat, KeyValues *pConditions );
 
+	static bool PrecacheResFile( const char* pszResFileName );
+	static void ClearResFileCache();
+
 protected:
 	virtual bool CursorMoved(int x, int y, Panel *panel);
 	virtual bool MouseDoublePressed(MouseCode code, Panel *panel);
@@ -170,6 +174,8 @@ private:
 	CUtlVector<CUtlSymbol> m_RegisteredControlSettingsFiles;
 
 	friend class Panel;
+
+	static CUtlDict< KeyValues* > m_dictCachedResFiles;
 };
 
 

@@ -71,6 +71,7 @@ void Button::Init()
 	_keyFocusBorder = NULL;
 	m_bSelectionStateSaved = false;
 	m_bStaySelectedOnClick = false;
+	m_bStaySelectedOnClick = false;
 	m_sArmedSoundName = UTL_INVAL_SYMBOL;
 	m_sDepressedSoundName = UTL_INVAL_SYMBOL;
 	m_sReleasedSoundName = UTL_INVAL_SYMBOL;
@@ -138,7 +139,7 @@ void Button::SetSelected( bool state )
 		InvalidateLayout(false);
 	}
 
-	if ( state && _buttonFlags.IsFlagSet( ARMED ) )
+	if ( !m_bStayArmedOnClick && state && _buttonFlags.IsFlagSet( ARMED ) )
 	{
 		_buttonFlags.SetFlag( ARMED,  false );
 		InvalidateLayout(false);
@@ -857,6 +858,7 @@ void Button::ApplySettings( KeyValues *inResourceData )
 	}
 
 	m_bStaySelectedOnClick = inResourceData->GetBool( "stayselectedonclick", false );
+	m_bStayArmedOnClick = inResourceData->GetBool( "stay_armed_on_click", false );
 
 	const char *sound = inResourceData->GetString("sound_armed", "");
 	if (*sound)
@@ -1011,7 +1013,7 @@ void Button::OnKeyCodePressed(KeyCode code)
 {
 	KeyCode localCode = GetBaseButtonCode( code );
 
-	if( ( localCode == KEY_XBUTTON_A ) && IsEnabled() )
+	if( ( localCode == KEY_XBUTTON_A || localCode == STEAMCONTROLLER_A ) && IsEnabled() )
 	{
 		SetArmed( true );
 		_buttonFlags.SetFlag( BUTTON_KEY_DOWN );
@@ -1044,7 +1046,7 @@ void Button::OnKeyCodeReleased( KeyCode keycode )
 {
 	vgui::KeyCode code = GetBaseButtonCode( keycode );
 
-	if ( _buttonFlags.IsFlagSet( BUTTON_KEY_DOWN ) && ( code == KEY_XBUTTON_A || code == KEY_XBUTTON_START ) )
+	if ( _buttonFlags.IsFlagSet( BUTTON_KEY_DOWN ) && ( code == KEY_XBUTTON_A || code == KEY_XBUTTON_START || code == STEAMCONTROLLER_A ) )
 	{
 		SetArmed( true );
 		if( _activationType != ACTIVATE_ONPRESSED )

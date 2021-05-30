@@ -139,7 +139,7 @@ class IForceVirtualInheritancePanel
 //			This is designed as an easy-access to the vgui-functionality; for more
 //			low-level access to vgui functions use the IPanel/IClientPanel interfaces directly
 //-----------------------------------------------------------------------------
-class Panel : public IClientPanel, virtual IForceVirtualInheritancePanel
+class Panel : public IClientPanel, virtual public IForceVirtualInheritancePanel
 {
 	DECLARE_CLASS_SIMPLE_NOBASE( Panel );
 
@@ -161,7 +161,8 @@ public:
 	virtual ~Panel();
 
 	// returns pointer to Panel's vgui VPanel interface handle
-	virtual VPANEL GetVPanel() { return _vpanel; }
+	virtual VPANEL GetVPanel()  { return _vpanel; }
+	VPANEL GetVPanel() const { return _vpanel; }
 	HPanel ToHandle() const;
 
 	virtual void Init( int x, int y, int wide, int tall );
@@ -198,7 +199,7 @@ public:
 	void SetBuildModeDeletable(bool state);	// set buildModeDialog deletable
 	bool IsBuildModeActive();	// true if we're currently in edit mode
 	void SetZPos(int z);	// sets Z ordering - lower numbers are always behind higher z's
-	int  GetZPos( void );
+	int  GetZPos( void ) const;
 	void SetAlpha(int alpha);	// sets alpha modifier for panel and all child panels [0..255]
 	int GetAlpha();	// returns the current alpha
 
@@ -629,8 +630,6 @@ public:
 	void		SetParentNeedsCursorMoveEvents( bool bNeedsEvents ) { m_bParentNeedsCursorMoveEvents = bNeedsEvents; }
 	bool		ParentNeedsCursorMoveEvents() const { return m_bParentNeedsCursorMoveEvents; }
 
-	int ComputePos( const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX );
-
 	// For 360: support directional navigation between UI controls via dpad
 	enum NAV_DIRECTION { ND_UP, ND_DOWN, ND_LEFT, ND_RIGHT, ND_BACK, ND_NONE };
 	virtual Panel* NavigateUp();
@@ -718,6 +717,29 @@ public:
 	const char* GetNavActivateName( void ) const { return m_sNavActivateName.String(); }
 	const char* GetNavBackName( void ) const { return m_sNavBackName.String(); }
 
+	enum BuildModeFlags_t
+	{
+		BUILDMODE_EDITABLE = 1 << 0,
+		BUILDMODE_DELETABLE = 1 << 1,
+		BUILDMODE_SAVE_XPOS_RIGHTALIGNED = 1 << 2,
+		BUILDMODE_SAVE_XPOS_CENTERALIGNED = 1 << 3,
+		BUILDMODE_SAVE_YPOS_BOTTOMALIGNED = 1 << 4,
+		BUILDMODE_SAVE_YPOS_CENTERALIGNED = 1 << 5,
+		BUILDMODE_SAVE_WIDE_FULL = 1 << 6,
+		BUILDMODE_SAVE_TALL_FULL = 1 << 7,
+		BUILDMODE_SAVE_PROPORTIONAL_TO_PARENT = 1 << 8,
+		BUILDMODE_SAVE_WIDE_PROPORTIONAL = 1 << 9,
+		BUILDMODE_SAVE_TALL_PROPORTIONAL = 1 << 10,
+		BUILDMODE_SAVE_XPOS_PROPORTIONAL_SELF = 1 << 11,
+		BUILDMODE_SAVE_YPOS_PROPORTIONAL_SELF = 1 << 12,
+		BUILDMODE_SAVE_WIDE_PROPORTIONAL_TALL = 1 << 13,
+		BUILDMODE_SAVE_TALL_PROPORTIONAL_WIDE = 1 << 14,
+		BUILDMODE_SAVE_XPOS_PROPORTIONAL_PARENT = 1 << 15,
+		BUILDMODE_SAVE_YPOS_PROPORTIONAL_PARENT = 1 << 16,
+		BUILDMODE_SAVE_WIDE_PROPORTIONAL_SELF = 1 << 17,
+		BUILDMODE_SAVE_TALL_PROPORTIONAL_SELF = 1 << 18,
+	};
+
 protected:
 	//this will return m_NavDown and will not look for the next visible panel
 	Panel* GetNavUpPanel();
@@ -732,26 +754,6 @@ protected:
 	NAV_DIRECTION m_LastNavDirection;
 
 private:
-	enum BuildModeFlags_t
-	{
-		BUILDMODE_EDITABLE						= 1 << 0,
-		BUILDMODE_DELETABLE						= 1 << 1,
-		BUILDMODE_SAVE_XPOS_RIGHTALIGNED		= 1 << 2,
-		BUILDMODE_SAVE_XPOS_CENTERALIGNED		= 1 << 3,
-		BUILDMODE_SAVE_YPOS_BOTTOMALIGNED		= 1 << 4,
-		BUILDMODE_SAVE_YPOS_CENTERALIGNED		= 1 << 5,
-		BUILDMODE_SAVE_WIDE_FULL				= 1 << 6,
-		BUILDMODE_SAVE_TALL_FULL				= 1 << 7,
-		BUILDMODE_SAVE_PROPORTIONAL_TO_PARENT	= 1 << 8,
-		BUILDMODE_SAVE_WIDE_PROPORTIONAL		= 1 << 9,
-		BUILDMODE_SAVE_TALL_PROPORTIONAL		= 1 << 10,
-		BUILDMODE_SAVE_XPOS_PROPORTIONAL_SELF	= 1 << 11,
-		BUILDMODE_SAVE_YPOS_PROPORTIONAL_SELF	= 1 << 12,
-		BUILDMODE_SAVE_WIDE_PROPORTIONAL_TALL	= 1 << 13,
-		BUILDMODE_SAVE_TALL_PROPORTIONAL_WIDE	= 1 << 14,
-		BUILDMODE_SAVE_XPOS_PROPORTIONAL_PARENT = 1 << 15,
-		BUILDMODE_SAVE_YPOS_PROPORTIONAL_PARENT = 1 << 16
-	};
 
 	enum PanelFlags_t
 	{
@@ -775,9 +777,6 @@ private:
 		IS_MOUSE_DISABLED_FOR_THIS_PANEL_ONLY = 0x8000,
 		ALL_FLAGS							= 0xFFFF,
 	};
-
-	int ComputeWide( KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForTall );
-	int ComputeTall( KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForWide );
 
 	// used to get the Panel * for users with only IClientPanel
 	virtual Panel *GetPanel() { return this; }
@@ -869,7 +868,7 @@ private:
 	short			m_nResizeDeltaY;
 
 	HCursor			_cursor;
-	unsigned short	_buildModeFlags; // flags that control how the build mode dialog handles this panel
+	unsigned int	_buildModeFlags; // flags that control how the build mode dialog handles this panel
 
 	byte			_pinCorner : 4;	// the corner of the dialog this panel is pinned to
 	byte			_autoResizeDirection : 4; // the directions in which the panel will auto-resize to
@@ -921,6 +920,8 @@ private:
 	bool			m_bForceStereoRenderToFrameBuffer;
 
 	static Panel* m_sMousePressedPanels[ ( MOUSE_MIDDLE - MOUSE_LEFT ) + 1 ];
+
+	CUtlDict< VPanelHandle > m_dictChidlren;
 
 	CPanelAnimationVar( float, m_flAlpha, "alpha", "255" );
 
@@ -1022,6 +1023,16 @@ public:
 void VguiPanelGetSortedChildPanelList( Panel *pParentPanel, void *pSortedPanels );
 void VguiPanelGetSortedChildButtonList( Panel *pParentPanel, void *pSortedPanels, char *pchFilter = NULL, int nFilterType = 0 );
 int VguiPanelNavigateSortedChildButtonList( void *pSortedPanels, int nDir );
+int ComputeWide(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForTall);
+int ComputeTall(Panel* pPanel, unsigned int& nBuildFlags, KeyValues *inResourceData, int nParentWide, int nParentTall, bool bComputingForWide);
+
+enum EOperator
+{
+	OP_ADD,
+	OP_SUB,
+	OP_SET,
+};
+int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize, const int& nParentSize, const bool& bX, EOperator eOp );
 
 
 } // namespace vgui

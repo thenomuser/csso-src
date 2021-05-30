@@ -185,6 +185,16 @@ void BaseTooltip::PositionWindow( Panel *pTipPanel )
 	int wide, tall;
 	surface()->GetScreenSize(wide, tall);
 
+	int iParentX = 0, iParentY = 0;
+	if ( !pTipPanel->IsPopup() )
+	{
+		pTipPanel->GetParent()->GetPos( iParentX, iParentY );
+		pTipPanel->GetParent()->LocalToScreen( iParentX, iParentY );
+	}
+
+	cursorX -= iParentX;
+	cursorY -= iParentY;
+
 	if (wide - iTipW > cursorX)
 	{
 		cursorY += 20;
