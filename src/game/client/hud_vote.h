@@ -17,6 +17,7 @@
 #include <vgui_controls/Frame.h>
 #include <vgui_controls/Button.h>
 #include <networkstringtabledefs.h>
+#include "vgui_avatarimage.h"
 
 extern INetworkStringTable *g_pStringTableServerMapCycle;
 
@@ -135,6 +136,7 @@ class CHudVote : public vgui::EditablePanel, public CHudElement
 	virtual void	Init( void );
 	virtual bool	ShouldDraw( void );
 	virtual void	ApplySchemeSettings( vgui::IScheme *pScheme );
+	virtual void	PerformLayout();
 	virtual void	FireGameEvent( IGameEvent *event );
 	virtual void	OnThink();
 	virtual int		KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
@@ -155,6 +157,8 @@ private:
 	bool			IsPlayingDemo() const;
 
 	EditablePanel		*m_pVoteActive;
+	vgui::Label			*m_pVoteActiveIssueLabel;
+	CAvatarImagePanel	*m_pVoteActiveTargetAvatar;
 	VoteBarPanel		*m_voteBar;
 	EditablePanel		*m_pVoteFailed;
 	EditablePanel		*m_pVotePassed;
@@ -163,6 +167,9 @@ private:
 
 	CUtlVector< VoteIssue_t > m_VoteSetupIssues;
 	CUtlStringList		m_VoteSetupMapCycle;
+
+	int					m_nVoteActiveIssueLabelX;
+	int					m_nVoteActiveIssueLabelY;
 	
 #ifdef TF_CLIENT_DLL
 	CUtlStringList		m_VoteSetupPopFiles;

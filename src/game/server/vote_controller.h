@@ -50,9 +50,13 @@ public:
 	virtual void		OnVoteFailed( int iEntityHoldingVote );		// The moment the vote fails, also has some time for feedback before the window goes away
 	virtual void		OnVoteStarted( void ) {}					// Called as soon as the vote starts
 	virtual bool		IsEnabled( void ) { return false; }			// Query the issue to see if it's enabled
+	virtual bool		IsEnabledDuringWarmup( void ) { return false; } // Can this vote be called during warmup?
+	virtual float		GetCommandDelay( void );
 	virtual bool		CanTeamCallVote( int iTeam ) const;			// Can someone on the given team call this vote?
 	virtual bool		CanCallVote( int nEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime ); // Can this guy hold a vote on this issue?
 	virtual bool		IsTeamRestrictedVote( void );				// Restrict access and visibility of this vote to a specific team?
+	virtual bool		IsUnanimousVoteToPass( void ) { return false; }	// Requires all potential voters to pass
+	virtual int			GetVotesRequiredToPass( void );					// how many votes are required to pass
 	virtual const char *GetDisplayString( void ) = 0;				// The string that will be passed to the client for display
 	virtual void		ExecuteCommand( void ) = 0;					// Where the magic happens.  Do your thing.
 	virtual void		ListIssueDetails( CBasePlayer *pForWhom ) = 0;	// Someone would like to know all your valid details
@@ -67,6 +71,8 @@ public:
 	virtual float		GetQuorumRatio( void );						// Each issue can decide the required ratio of voted-vs-abstained
 	virtual bool		NeedsPermissionFromGC( void ) { return false; }	// Per-issue decision to ask a GC if this vote is permitted (see TF's MvM kick vote for an example)
 	virtual void		GCResponseReceived( bool bApproved );		// How to handle the response/verdict from the GC (VoteController also receives a response)
+	virtual float		GetFailedVoteLockOutTime( void );			// How long to wait before a failed vote can be resubmitted.
+	virtual vote_create_failed_t MakeVoteFailErrorCodeForClients( vote_create_failed_t eDefaultFailCode ) { return eDefaultFailCode; }
 
 	CHandle< CBasePlayer > m_hPlayerTarget;							// If the target of the issue is a player, we should store them here
 
@@ -128,15 +134,17 @@ public:
 	void			SendVoteFailedToPassMessage( vote_create_failed_t nReason );
 	void			VoteChoice_Increment( int nVoteChoice );
 	void			VoteChoice_Decrement( int nVoteChoice );
+	int				GetCallingEntity( void ) { return m_iEntityHoldingVote; }
+	int				GetPotentialVotes( void ) { return m_nPotentialVotes.Get(); }
 	int				GetVoteIssueIndexWithHighestCount( void );
 	void			TrackVoteCaller( CBasePlayer *pPlayer );
 	bool			CanEntityCallVote( CBasePlayer *pPlayer, int &nCooldown, vote_create_failed_t &nErrorCode );
 	bool			IsVoteActive( void ) { return ( m_iActiveIssueIndex != INVALID_ISSUE || m_pendingVoteParams.m_iIssueIndex != INVALID_ISSUE ); }
 	int				GetNumVotesCast( void );
+	void			EndVoteImmediately( void );
 
 	void			AddPlayerToKickWatchList( CSteamID steamID, float flDuration );		// Band-aid until we figure out how player's avoid kick votes
 	void			AddPlayerToNameLockedList( CSteamID steamID, float flDuration, int nUserID );
-	bool			IsPlayerBeingKicked( CBasePlayer *pPlayer );
 	void			GCResponseReceived( bool bVerdict );		// The GC's response when a vote issue requires approval from the GC
 
 protected:

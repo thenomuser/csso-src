@@ -178,6 +178,7 @@ public:
 #ifndef CLIENT_DLL
 	bool	UseMapFactionsForThisPlayer( CBasePlayer* pPlayer );
 	int		GetMapFactionsForThisPlayer( CBasePlayer* pPlayer );
+	bool	MapFactionsDefined( int teamnum );
 #endif
 
 	bool IsVIPMap() const;
@@ -390,6 +391,8 @@ public:
 	void RestartRound( void );
 	void RoundWin( void );
 	void BalanceTeams( void );
+	void HandleScrambleTeams( void );
+	void HandleSwapTeams( void );
 	void MoveHumansToHumanTeam( void );
 	bool TeamFull( int team_id );
 	int	 MaxNumPlayersOnTerrTeam();
@@ -479,6 +482,12 @@ protected:
 
 public:
 
+	void SetScrambleTeamsOnRestart( bool scramble ) { m_bScrambleTeamsOnRestart = scramble; }
+	bool GetScrambleTeamsOnRestart( void ) { return m_bScrambleTeamsOnRestart; }
+
+	void SetSwapTeamsOnRestart( bool swapTeams ) { m_bSwapTeamsOnRestart = swapTeams; }
+	bool GetSwapTeamsOnRestart( void ) { return m_bSwapTeamsOnRestart; }
+
 	bool IsFriendlyFireOn();
 
 	bool	IsLastRoundBeforeHalfTime( void );
@@ -506,6 +515,8 @@ public:
 
 	bool m_bFirstConnected;
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
+	bool m_bScrambleTeamsOnRestart;
+	bool m_bSwapTeamsOnRestart;
 
 	short m_iNumCTWins;
 	short m_iNumTerroristWins;

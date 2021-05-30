@@ -1181,6 +1181,8 @@ public:
 	void	SetNumMVPs( int iNumMVP );
 	void	IncrementNumMVPs( CSMvpReason_t mvpReason );
 	int		GetNumMVPs();
+
+	int		GetFrags() const { return m_iFrags; }
 	 
     void    RemoveNemesisRelationships();
 	void	SetDeathFlags( int iDeathFlags ) { m_iDeathFlags = iDeathFlags; }

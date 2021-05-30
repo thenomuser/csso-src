@@ -216,55 +216,6 @@ ConVar mp_match_end_at_timelimit( "mp_match_end_at_timelimit", "0", FCVAR_NOTIFY
 
 ConVar mp_holiday_nogifts( "mp_holiday_nogifts", "0", FCVAR_NOTIFY, "Set to 1 to prevent holiday gifts from spawning when players are killed." );
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------	
-void cc_SwitchTeams( const CCommand& args )
-{
-	if ( UTIL_IsCommandIssuedByServerAdmin() )
-	{
-		CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-
-		if ( pRules )
-		{
-			pRules->SetSwitchTeams( true );
-			mp_restartgame.SetValue( 5 );
-			pRules->ShouldResetScores( false, false );
-			pRules->ShouldResetRoundsPlayed( false );
-		}
-	}
-}
-
-static ConCommand mp_switchteams( "mp_switchteams", cc_SwitchTeams, "Switch teams and restart the game" );
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------	
-void cc_ScrambleTeams( const CCommand& args )
-{
-	if ( UTIL_IsCommandIssuedByServerAdmin() )
-	{
-		CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-
-		if ( pRules )
-		{
-			pRules->SetScrambleTeams( true );
-			mp_restartgame.SetValue( 5 );
-			pRules->ShouldResetScores( true, false );
-
-			if ( args.ArgC() == 2 )
-			{
-				// Don't reset the roundsplayed when mp_scrambleteams 2 is passed
-				if ( atoi( args[1] ) == 2 )
-				{
-					pRules->ShouldResetRoundsPlayed( false );
-				}
-			}
-		}
-	}
-}
-
-static ConCommand mp_scrambleteams( "mp_scrambleteams", cc_ScrambleTeams, "Scramble the teams and restart the game" );
 ConVar mp_scrambleteams_auto( "mp_scrambleteams_auto", "1", FCVAR_NOTIFY, "Server will automatically scramble the teams if criteria met.  Only works on dedicated servers." );
 ConVar mp_scrambleteams_auto_windifference( "mp_scrambleteams_auto_windifference", "2", FCVAR_NOTIFY, "Number of round wins a team must lead by in order to trigger an auto scramble." );
 

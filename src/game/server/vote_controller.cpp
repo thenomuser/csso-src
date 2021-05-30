@@ -12,9 +12,8 @@
 #include "gameinterface.h"
 #include "fmtstr.h"
 
-#ifdef TF_DLL
-#include "tf/tf_gamerules.h"
-#include "tf/tf_voteissues.h"
+#ifdef CSTRIKE_DLL
+#include "cs_gamerules.h"
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -47,10 +46,12 @@ ConVar sv_vote_failure_timer( "sv_vote_failure_timer", "300", FCVAR_NONE, "A vot
 #ifdef TF_DLL
 ConVar sv_vote_failure_timer_mvm( "sv_vote_failure_timer_mvm", "120", FCVAR_NONE, "A vote that fails in MvM cannot be re-submitted for this long" );
 #endif // TF_DLL
-ConVar sv_vote_creation_timer( "sv_vote_creation_timer", "150", FCVAR_NONE, "How long before a player can attempt to call another vote (in seconds)." );
-ConVar sv_vote_quorum_ratio( "sv_vote_quorum_ratio", "0.6", FCVAR_NOTIFY, "The minimum ratio of eligible players needed to pass a vote.  Min 0.5, Max 1.0.", true, 0.1f, true, 1.0f );
+ConVar sv_vote_creation_timer( "sv_vote_creation_timer", "120", FCVAR_NONE, "How long before a player can attempt to call another vote (in seconds)." );
+// default value of the sv_vote_quorum_ratio is 0.501 so on a 32 player server, you will still need 1 more than half, otherwise at 0.6, you would need 20 people to vote yes instead of 17
+ConVar sv_vote_quorum_ratio( "sv_vote_quorum_ratio", "0.501", FCVAR_NOTIFY, "The minimum ratio of eligible players needed to pass a vote. Min 0.1, Max 1.0.", true, 0.1f, true, 1.0f );
 ConVar sv_vote_allow_spectators( "sv_vote_allow_spectators", "0", FCVAR_NONE, "Allow spectators to vote?" );
-ConVar sv_vote_ui_hide_disabled_issues( "sv_vote_ui_hide_disabled_issues", "1", FCVAR_NONE, "Suppress listing of disabled issues in the vote setup screen." );
+ConVar sv_vote_allow_in_warmup( "sv_vote_allow_in_warmup", "0", FCVAR_NONE, "Allow voting during warmup?" );
+ConVar sv_vote_ui_hide_disabled_issues( "sv_vote_ui_hide_disabled_issues", "0", FCVAR_NONE, "Suppress listing of disabled issues in the vote setup screen." );
 
 ConVar sv_vote_holder_may_vote_no( "sv_vote_holder_may_vote_no", "0", FCVAR_NONE, "1 = Vote caller is not forced to vote yes on yes/no votes." );
 
@@ -546,7 +547,7 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 			{
 				if ( !bDedicatedServer )
 				{
-					SendVoteCreationFailedMessage( nErrorCode, pVoteCaller, nTime );
+					SendVoteCreationFailedMessage( pCurrentIssue->MakeVoteFailErrorCodeForClients( nErrorCode ), pVoteCaller, nTime );
 				}
 
 				m_pendingVoteParams.Reset();
@@ -744,7 +745,14 @@ void CVoteController::VoteControllerThink( void )
 
 		bool bVotePassed = false;
 
-		if ( GetNumVotesCast() >= ( m_nPotentialVotes * m_potentialIssues[m_iActiveIssueIndex]->GetQuorumRatio() ) )
+		int nVotesToSucceed = m_potentialIssues[m_iActiveIssueIndex]->GetVotesRequiredToPass();
+
+		if ( m_nVoteOptionCount[VOTE_OPTION1] > nVotesToSucceed )
+		{
+			// bail early, we succeeded
+			bVotePassed = true;
+		}
+		else if ( GetNumVotesCast() >= ( m_nPotentialVotes * m_potentialIssues[m_iActiveIssueIndex]->GetQuorumRatio() ) )
 		{
 			int nPassingVoteOptionIndex = GetVoteIssueIndexWithHighestCount();
 			if ( nPassingVoteOptionIndex >= 0 && nPassingVoteOptionIndex < MAX_VOTE_OPTIONS )
@@ -771,15 +779,7 @@ void CVoteController::VoteControllerThink( void )
 
 		if ( bVotePassed )
 		{
-			float flDelay = sv_vote_command_delay.GetFloat();
-#ifdef TF_DLL
-			if ( dynamic_cast< CKickIssue* >( m_potentialIssues[m_iActiveIssueIndex] ) )
-			{
-				// Don't delay successful kick votes
-				flDelay = 0.f;
-			}
-#endif
-			m_executeCommandTimer.Start( flDelay );
+			m_executeCommandTimer.Start( m_potentialIssues[m_iActiveIssueIndex]->GetCommandDelay() );
 			m_resetVoteTimer.Start( 5.f );
 
 			UTIL_LogPrintf( "Vote succeeded \"%s %s\"\n", m_potentialIssues[m_iActiveIssueIndex]->GetTypeString(), m_potentialIssues[m_iActiveIssueIndex]->GetDetailsString() );
@@ -796,7 +796,7 @@ void CVoteController::VoteControllerThink( void )
 		else
 		{
 			vote_create_failed_t nReason = m_potentialIssues[m_iActiveIssueIndex]->IsYesNoVote() ? VOTE_FAILED_YES_MUST_EXCEED_NO : VOTE_FAILED_QUORUM_FAILURE;
-			SendVoteFailedToPassMessage( nReason );
+			SendVoteFailedToPassMessage( m_potentialIssues[m_iActiveIssueIndex]->MakeVoteFailErrorCodeForClients(nReason) );
 			m_potentialIssues[m_iActiveIssueIndex]->OnVoteFailed( m_iEntityHoldingVote );
 			m_resetVoteTimer.Start( 5.f );
 		}
@@ -912,6 +912,26 @@ void CVoteController::ListIssues( CBasePlayer *pForWhom )
 		pCurrentIssue->ListIssueDetails( pForWhom );
 	}
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, "--- End Vote commands---\n" );
+}
+
+void CVoteController::EndVoteImmediately( void )
+{
+	if ( !IsVoteActive() )
+		return;
+
+	CBaseIssue *pActiveIssue = m_potentialIssues[m_iActiveIssueIndex];
+
+	// for record-keeping
+	if ( pActiveIssue->IsYesNoVote() )
+	{
+		pActiveIssue->SetYesNoVoteCount( m_nVoteOptionCount[VOTE_OPTION1], m_nVoteOptionCount[VOTE_OPTION2], m_nPotentialVotes );
+	}
+
+	SendVoteFailedToPassMessage( pActiveIssue->MakeVoteFailErrorCodeForClients( VOTE_FAILED_QUORUM_FAILURE ) );
+	pActiveIssue->OnVoteFailed( GetCallingEntity() );
+	m_resetVoteTimer.Start( 5.0 );
+
+	m_acceptingVotesTimer.Invalidate();
 }
 
 //-----------------------------------------------------------------------------
@@ -1035,25 +1055,6 @@ void CVoteController::AddPlayerToNameLockedList( CSteamID steamID, float flDurat
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CVoteController::IsPlayerBeingKicked( CBasePlayer *pPlayer )
-{
-#ifdef TF_DLL
-	if ( pPlayer && m_iActiveIssueIndex != INVALID_ISSUE )
-	{
-		CKickIssue *pKickIssue = dynamic_cast< CKickIssue* >( m_potentialIssues[m_iActiveIssueIndex] );
-		if ( pKickIssue )
-		{
-			return pKickIssue->m_hPlayerTarget == pPlayer;
-		}
-	}
-#endif // TF_DLL
-
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CVoteController::GCResponseReceived( bool bVerdict )
 {
 	m_waitingForGCResponseTimer.Invalidate();
@@ -1129,12 +1130,49 @@ bool CBaseIssue::IsTeamRestrictedVote( void )
 	return false;
 }
 
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+int CBaseIssue::GetVotesRequiredToPass( void )
+{
+	// TODO: to reduce risk of new bugs, this logic was preserved as-is from VoteControllerThink. But it can/should be cleaned up for legibility.
+	int nPotentialVoters = CountPotentialVoters();
+	
+	// BUGBUG: disconnecting/reconnecting players during the vote can affect the final tally, so we will use the larger number here:
+	if ( g_voteController && ( g_voteController->GetPotentialVotes() > nPotentialVoters ) )
+		nPotentialVoters = g_voteController->GetPotentialVotes();
+
+	int nVotesToSucceed = 0;
+
+	// Unanimous votes require all attending humans (which might be less than 10 players)
+	if ( IsUnanimousVoteToPass() )
+	{
+		nVotesToSucceed = MAX( 1, nPotentialVoters );
+	}
+	else
+	{
+		float flnVotesToSucceed = ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() ) ? MAX( 1, nPotentialVoters - 1 ) : ( ( float )nPotentialVoters * sv_vote_quorum_ratio.GetFloat() );
+		nVotesToSucceed = ceil( flnVotesToSucceed );
+	}
+
+	return nVotesToSucceed;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
 const char *CBaseIssue::GetVotePassedString( void )
 {
 	return "Unknown vote passed.";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+float CBaseIssue::GetFailedVoteLockOutTime( void )
+{
+	return sv_vote_failure_timer.GetFloat();
 }
 
 //-----------------------------------------------------------------------------
@@ -1151,16 +1189,7 @@ void CBaseIssue::OnVoteFailed( int iEntityHoldingVote )
 			FailedVote *pFailedVote = m_FailedVotes[index];
 			if ( Q_strcmp( pFailedVote->szFailedVoteParameter, GetDetailsString() ) == 0 )
 			{
-				int nTime = sv_vote_failure_timer.GetInt();
-
-#ifdef TF_DLL
-				if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
-				{
-					nTime = sv_vote_failure_timer_mvm.GetInt();
-				}
-#endif // TF_DLL
-
-				pFailedVote->flLockoutTime = gpGlobals->curtime + nTime;
+				pFailedVote->flLockoutTime = gpGlobals->curtime + GetFailedVoteLockOutTime();
 
 				return;
 			}
@@ -1170,7 +1199,7 @@ void CBaseIssue::OnVoteFailed( int iEntityHoldingVote )
 		FailedVote *pNewFailedVote = new FailedVote;
 		int iIndex = m_FailedVotes.AddToTail( pNewFailedVote );
 		V_strcpy_safe( m_FailedVotes[iIndex]->szFailedVoteParameter, GetDetailsString() );
-		m_FailedVotes[iIndex]->flLockoutTime = gpGlobals->curtime + sv_vote_failure_timer.GetFloat();
+		m_FailedVotes[iIndex]->flLockoutTime = gpGlobals->curtime + GetFailedVoteLockOutTime();
 	}
 }
 
@@ -1204,13 +1233,13 @@ bool CBaseIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create
 		return false;
 	}
 
-#ifdef TF_DLL
-	if ( TFGameRules() && TFGameRules()->IsInWaitingForPlayers() && !TFGameRules()->IsInTournamentMode() )
+#ifdef CSTRIKE_DLL
+	if ( !sv_vote_allow_in_warmup.GetBool() && CSGameRules() && CSGameRules()->IsWarmupPeriod() && !IsEnabledDuringWarmup() )
 	{
 		nFailCode = VOTE_FAILED_WAITINGFORPLAYERS;
 		return false;
 	}
-#endif // TF_DLL
+#endif
 
 	CBaseEntity *pVoteCaller = UTIL_EntityByIndex( iEntIndex );
 	if ( pVoteCaller && !CanTeamCallVote( GetVoterTeam( pVoteCaller ) ) )
@@ -1321,6 +1350,15 @@ bool CBaseIssue::GetVoteOptions( CUtlVector <const char*> &vecNames )
 	vecNames.AddToTail( "No" );
 
 	return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+float CBaseIssue::GetCommandDelay( void )
+{
+	return sv_vote_command_delay.GetFloat();
 }
 
 //-----------------------------------------------------------------------------
