@@ -697,7 +697,6 @@ public:
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
 	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
 	CNetworkVar( bool, m_bHasMovedSinceSpawn );		// Whether player has moved from spawn position
-	int m_LastHitGroup;			// the last body region that took damage
 
 	bool m_bIsFemale;
 
