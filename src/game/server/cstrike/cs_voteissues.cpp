@@ -154,11 +154,7 @@ void CKickIssue::ExecuteCommand( void )
 {
 	CCSPlayer *subject = NULL;
 
-	//[tj] Not applicable without TF-specific GC code
-	//uint32 unReason = kVoteKickBanPlayerReason_Other;	
-	uint32 unReason;
-
-	ExtractDataFromDetails( m_szDetailsString, &subject, &unReason );
+	ExtractDataFromDetails( m_szDetailsString, &subject );
 
 	if( subject )
 	{
@@ -273,11 +269,7 @@ void CKickIssue::OnVoteFailed( int iEntityHoldingVote )
 	CBaseCSIssue::OnVoteFailed( iEntityHoldingVote );
 
 	CCSPlayer *subject = NULL;
-	uint32 unReason;// = kVoteKickBanPlayerReason_Other;
-	ExtractDataFromDetails( m_szDetailsString, &subject, &unReason );
-
-	//[tj]removing this to get voting to compile
-	//NotifyGC( subject, false, unReason );
+	ExtractDataFromDetails( m_szDetailsString, &subject );
 }
 
 //-----------------------------------------------------------------------------
@@ -324,15 +316,6 @@ void CKickIssue::OnVoteFailed( int iEntityHoldingVote )
 //-----------------------------------------------------------------------------
 const char *CKickIssue::GetDisplayString( void )
 {
-	uint32 unReason = kVoteKickBanPlayerReason_Other;
-	ExtractDataFromDetails( m_szDetailsString, NULL, &unReason );
-	switch ( unReason )
-	{
-	case kVoteKickBanPlayerReason_Other:	return "#CStrike_vote_kick_player_other";
-	case kVoteKickBanPlayerReason_Cheating:	return "#CStrike_vote_kick_player_cheating";
-	case kVoteKickBanPlayerReason_Idle:		return "#CStrike_vote_kick_player_idle";
-	case kVoteKickBanPlayerReason_Scamming:	return "#CStrike_vote_kick_player_scamming";
-	}
 	return "#CStrike_vote_kick_player_other";
 }
 
@@ -350,18 +333,7 @@ const char *CKickIssue::GetVotePassedString( void )
 const char *CKickIssue::GetDetailsString( void )
 {
 	int iUserID = 0;
-	const char *pReason = strstr( m_szDetailsString, " " );
-	if ( pReason != NULL )
-	{
-		pReason += 1;
-		CUtlString userID;
-		userID.SetDirect( m_szDetailsString, pReason - m_szDetailsString );
-		iUserID = atoi( userID );
-	}
-	else
-	{
-		iUserID = atoi( m_szDetailsString );
-	}	
+	iUserID = atoi( m_szDetailsString );
 
 	CBasePlayer *pPlayer = UTIL_PlayerByUserId( iUserID );
 	if ( pPlayer )
@@ -377,26 +349,10 @@ const char *CKickIssue::GetDetailsString( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject, uint32 *pReason )
+void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject )
 {
 	int iUserID = 0;
-	const char *pReasonString = strstr( pszDetails, " " );
-	if ( pReasonString != NULL )
-	{
-		pReasonString += 1;
-		CUtlString userID;
-		userID.SetDirect( pszDetails, pReasonString - pszDetails );
-		iUserID = atoi( userID );
-		if ( pReason )
-		{
-			//[tj] Not applicable without TF-specific GC code
-			//*pReason = GetKickBanPlayerReason( pReasonString );
-		}
-	}
-	else
-	{
-		iUserID = atoi( pszDetails );
-	}
+	iUserID = atoi( pszDetails );
 
 	if ( iUserID >= 0 )
 	{
@@ -413,6 +369,196 @@ void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSu
 void CKickIssue::ListIssueDetails( CBasePlayer *pForWhom )
 {
 	if( !sv_vote_issue_kick_allowed.GetBool() )
+		return;
+
+	char szBuffer[MAX_COMMAND_LENGTH];
+	Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <userID>\n", GetTypeString() );
+	ClientPrint( pForWhom, HUD_PRINTCONSOLE, szBuffer );
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Ban Player Issue
+//-----------------------------------------------------------------------------
+ConVar sv_vote_issue_ban_allowed( "sv_vote_issue_ban_allowed", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Can people hold votes to ban players from the server?" );
+ConVar sv_vote_ban_duration( "sv_vote_ban_duration", "60", FCVAR_REPLICATED | FCVAR_NOTIFY, "How long should a ban vote ban someone from the server? (in minutes)" );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBanIssue::ExecuteCommand( void )
+{
+	CCSPlayer *subject = NULL;
+
+	ExtractDataFromDetails( m_szDetailsString, &subject );
+
+	if( subject )
+	{
+		engine->ServerCommand( CFmtStr( "banid %d %d;", sv_vote_ban_duration.GetInt(), subject->GetUserID() ) );
+	}
+	else if ( m_steamIDtoBan.IsValid() )
+	{
+		// Also enlist this user's SteamID in the banlist
+		engine->ServerCommand( CFmtStr( "banid %d STEAM64BITID_%llu;", sv_vote_ban_duration.GetInt(), m_steamIDtoBan.ConvertToUint64() ) );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CBanIssue::IsEnabled( void )
+{
+	return sv_vote_issue_ban_allowed.GetBool() && UTIL_HumansInGame() > 1; // PiMoN: I think its not necessary to have it enabled if you don't have anyone to ban
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CBanIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
+{
+	if ( !CBaseCSIssue::CanCallVote( iEntIndex, pszDetails, nFailCode, nTime ) )
+		return false;
+
+	if( !IsEnabled() )
+	{
+		nFailCode = VOTE_FAILED_ISSUE_DISABLED;
+		return false;
+	}
+
+	CCSPlayer *pSubject = NULL;
+	ExtractDataFromDetails( pszDetails, &pSubject );
+	if ( !pSubject || pSubject->IsBot() )
+	{
+		nFailCode = VOTE_FAILED_PLAYERNOTFOUND;
+		return false;
+	}
+
+	if ( pSubject->IsReplay() || pSubject->IsHLTV() )
+	{
+		nFailCode = VOTE_FAILED_PLAYERNOTFOUND;
+		return false;
+	}
+	
+	CBaseEntity *pVoteCaller = UTIL_EntityByIndex( iEntIndex );
+	if ( pVoteCaller )
+	{		
+		if ( pSubject )
+		{
+			bool bDeny = false;
+			if ( !engine->IsDedicatedServer() )
+			{
+				if ( pSubject->entindex() == 1 )
+				{
+					bDeny = true;
+				}
+			}
+
+			// This should only be set if we've successfully authenticated via rcon
+			if ( pSubject->IsAutoKickDisabled() )
+			{
+				bDeny = true;
+			}
+
+			if ( bDeny )
+			{
+				nFailCode = VOTE_FAILED_CANNOT_BAN_ADMIN;
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBanIssue::OnVoteFailed( int iEntityHoldingVote )
+{
+	CBaseCSIssue::OnVoteFailed( iEntityHoldingVote );
+
+	CCSPlayer *subject = NULL;
+	ExtractDataFromDetails( m_szDetailsString, &subject );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBanIssue::OnVoteStarted( void )
+{
+	CCSPlayer *pSubject = NULL;
+	ExtractDataFromDetails( m_szDetailsString, &pSubject );
+
+	// Auto vote 'No' for the person being banned
+	if ( g_voteController && pSubject && (pSubject->GetTeamNumber() != TEAM_SPECTATOR) && !pSubject->IsBot() )
+	{
+		g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
+	}
+
+	if ( pSubject )
+	{
+		pSubject->GetSteamID( &m_steamIDtoBan );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CBanIssue::GetDisplayString( void )
+{
+	return "#CStrike_vote_ban_player";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CBanIssue::GetVotePassedString( void )
+{
+	return "#CStrike_vote_passed_ban_player";
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CBanIssue::GetDetailsString( void )
+{
+	int iUserID = 0;
+	iUserID = atoi( m_szDetailsString );
+
+	CBasePlayer *pPlayer = UTIL_PlayerByUserId( iUserID );
+	if ( pPlayer )
+	{
+		return pPlayer->GetPlayerName();
+	}
+	else
+	{
+		return "unnamed";
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBanIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject )
+{
+	int iUserID = 0;
+	iUserID = atoi( pszDetails );
+
+	if ( iUserID >= 0 )
+	{
+		if( pSubject )
+		{
+			*pSubject = ToCSPlayer( UTIL_PlayerByUserId( iUserID ) );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBanIssue::ListIssueDetails( CBasePlayer *pForWhom )
+{
+	if( !sv_vote_issue_ban_allowed.GetBool() )
 		return;
 
 	char szBuffer[MAX_COMMAND_LENGTH];

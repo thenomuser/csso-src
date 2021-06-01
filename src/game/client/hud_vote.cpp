@@ -508,7 +508,7 @@ void CVoteSetupDialog::OnCommand(const char *command)
 					}
 				}
 			}
-			else if ( !V_stricmp( "Kick", szIssueRaw ) )
+			else if ( !V_stricmp( "Kick", szIssueRaw ) || !V_stricmp( "Ban", szIssueRaw ) )
 			{
 				// Get selected Player
 				int iSelectedParam = m_pVoteParameterList->GetSelectedItem();
@@ -526,18 +526,6 @@ void CVoteSetupDialog::OnCommand(const char *command)
 							CBasePlayer *pPlayer = UTIL_PlayerByIndex( playerIndex );
 							Q_snprintf( szVoteCommand, sizeof( szVoteCommand ), "callvote %s \"%d %s\"\n;", szIssueRaw, pPlayer->GetUserID(), pReasonString );
 							engine->ClientCmd( szVoteCommand );
-#ifdef TF_CLIENT_DLL
-							CSteamID steamID;
-							CTFPlayer* pSubject = ToTFPlayer( pPlayer );
-							if ( pSubject && pSubject->GetSteamID( &steamID ) && steamID.GetAccountID() != 0 )
-							{
-								GCSDK::CProtoBufMsg<CMsgTFVoteKickBanPlayer> msg( k_EMsgGCVoteKickBanPlayer );
-								uint32 reason = GetKickBanPlayerReason( pReasonString );
-								msg.Body().set_account_id_subject( steamID.GetAccountID() );
-								msg.Body().set_kick_reason( reason );
-								GCClientSystem()->BSendMessage( msg );
-							}
-#endif
 						}
 					}
 				}
@@ -646,8 +634,8 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 					pKeyValues->deleteThis();
 				}
 			}
-			// KICK
-			else if ( !V_stricmp( "Kick", pszIssueRaw ) )
+			// KICK AND BAN
+			else if ( !V_stricmp( "Kick", pszIssueRaw ) || !V_stricmp( "Ban", pszIssueRaw ) )
 			{
 				// Feed the player list to the parameters list
 				int nMaxClients = engine->GetMaxClients();
@@ -669,13 +657,17 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 					if ( engine->GetPlayerInfo( playerIndex, &playerInfo ) && playerInfo.fakeplayer )
 						continue;
 					
-					// Can't kick people on the other team, so don't list them
+					// we cant issue a vote against other team's players only when kicking
+					if ( !V_stricmp( "Kick", pszIssueRaw ) )
+					{
+						// Can't kick people on the other team, so don't list them
 #ifdef CSTRIKE_DLL
-					if ( pPlayer->GetTeam() != pLocalPlayer->GetTeam() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+						if ( pPlayer->GetTeam() != pLocalPlayer->GetTeam() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
 #else
-					if ( pPlayer->GetTeam() != pLocalPlayer->GetTeam() )
+						if ( pPlayer->GetTeam() != pLocalPlayer->GetTeam() )
 #endif
-						continue;
+							continue;
+					}
 
 					char szPlayerIndex[32];
 					Q_snprintf( szPlayerIndex, sizeof( szPlayerIndex ), "%d", playerIndex );
@@ -692,16 +684,6 @@ void CVoteSetupDialog::OnItemSelected( vgui::Panel *panel )
 						m_pVoteParameterList->SetItemFgColor( iId, m_IssueFGColor );
 					}
 				}
-
-#ifdef TF_CLIENT_DLL
-				SetDialogVariable( "combo_label", g_pVGuiLocalize->Find( "#TF_VoteKickReason" ) );
-				m_pComboBox->AddItem( g_pVGuiLocalize->Find( "TF_VoteKickReason_Other" ), new KeyValues( "other" ) );
-				m_pComboBox->AddItem( g_pVGuiLocalize->Find( "TF_VoteKickReason_Cheating" ), new KeyValues( "cheating" ) );
-				m_pComboBox->AddItem( g_pVGuiLocalize->Find( "TF_VoteKickReason_Idle" ), new KeyValues( "idle" ) );
-				m_pComboBox->AddItem( g_pVGuiLocalize->Find( "TF_VoteKickReason_Scamming" ), new KeyValues( "scamming" ) );
-				m_pComboBox->SilentActivateItemByRow( 0 );
-				m_pComboBox->SetVisible( true );
-#endif
 			}
 #ifdef TF_CLIENT_DLL
 			// CHANGE POP FILE
@@ -792,7 +774,7 @@ void CVoteSetupDialog::RefreshIssueParameters()
 	{
 		KeyValues *pIssueKeyValues = m_pVoteSetupList->GetItemData( iSelectedItem );
 		const char *pszIssueRaw = pIssueKeyValues->GetString( "IssueRaw" );
-		if ( !V_stricmp( "Kick", pszIssueRaw ) )
+		if ( !V_stricmp( "Kick", pszIssueRaw ) || !V_stricmp( "Ban", pszIssueRaw ) )
 		{
 			if ( m_pVoteParameterList->GetItemCount() > 0 )
 			{
@@ -1118,6 +1100,10 @@ void CHudVote::MsgFunc_CallVoteFailed( bf_read &msg )
 
 		case VOTE_FAILED_CANNOT_KICK_ADMIN:
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_cannot_kick_admin" );
+			break;
+
+		case VOTE_FAILED_CANNOT_BAN_ADMIN:
+			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_cannot_ban_admin" );
 			break;
 
 		case VOTE_FAILED_SCRAMBLE_IN_PROGRESS:

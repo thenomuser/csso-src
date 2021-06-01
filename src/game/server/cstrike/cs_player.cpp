@@ -846,6 +846,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.FlashlightOn" );
 	PrecacheScriptSound( "Player.FlashlightOff" );
 	PrecacheScriptSound( "HealthShot.Success" );
+	PrecacheScriptSound( "Player.Respawn" );
 
 	PrecacheScriptSound( "Deathmatch.Kill" );
 
@@ -1405,6 +1406,15 @@ void CCSPlayer::Spawn()
 
 	// clear out and carried hostage stuff
 	RemoveCarriedHostage();
+
+	// play a respawn sound if you're in deathmatch 
+	if ( State_Get() == STATE_ACTIVE )
+	{
+		if ( (CSGameRules()->GetGamemode() == GameModes::DEATHMATCH && GetTeamNumber() >= TEAM_TERRORIST) )
+		{
+			EmitSound( "Player.Respawn" );
+		}
+	}
 
 	if ( GetTeamNumber() == TEAM_CT )
 		m_bIsFemale = (HasAgentSet( TEAM_CT )) ? (GetCSAgentInfoCT( GetAgentID( TEAM_CT ) )->m_bIsFemale) : false;

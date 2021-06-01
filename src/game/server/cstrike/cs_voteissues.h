@@ -15,14 +15,6 @@
 
 class CCSPlayer;
 
-enum
-{
-	kVoteKickBanPlayerReason_Other,
-	kVoteKickBanPlayerReason_Cheating,
-	kVoteKickBanPlayerReason_Idle,
-	kVoteKickBanPlayerReason_Scamming,
-};
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -75,12 +67,39 @@ public:
 	virtual const char *GetDetailsString( void );
 
 private:
-	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject, uint32 *pReason = NULL );
-	void				NotifyGC( CCSPlayer *pSubject, bool bKickedSuccessfully, uint32 unReason );
+	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject );
 
 	CSteamID			m_steamIDVoteCaller;
 	CSteamID			m_steamIDtoBan;
 	bool				m_bPlayerCrashed;
+};
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+class CBanIssue : public CBaseCSIssue
+{
+public:
+	CBanIssue() : CBaseCSIssue( "Ban" )
+	{
+	}
+
+	virtual void		ExecuteCommand( void );
+	virtual bool		IsEnabled( void );
+	virtual bool		CanCallVote( int nEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime );
+	virtual const char *GetDisplayString( void );
+	virtual void		ListIssueDetails( CBasePlayer *pForWhom );
+	virtual const char *GetVotePassedString( void );
+	virtual bool		IsTeamRestrictedVote( void ) { return true; }
+	virtual void		OnVoteFailed( int iEntityHoldingVote );
+	virtual void		OnVoteStarted( void );
+	virtual const char *GetDetailsString( void );
+
+private:
+	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject );
+
+	CSteamID			m_steamIDVoteCaller;
+	CSteamID			m_steamIDtoBan;
 };
 
 //-----------------------------------------------------------------------------

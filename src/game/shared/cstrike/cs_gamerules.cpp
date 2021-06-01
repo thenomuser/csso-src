@@ -6231,8 +6231,9 @@ ConVar snd_music_selection(
 
 		CBaseEntity::Create( "vote_controller", vec3_origin, vec3_angle );
 		// Vote Issue classes are handled/cleaned-up by g_voteController
-		new CRestartGameIssue;
 		new CKickIssue;
+		new CBanIssue;
+		new CRestartGameIssue;
 		new CChangeLevelIssue;
 		new CNextLevelIssue;
 		new CScrambleTeams;
