@@ -897,7 +897,7 @@ void Shader_DrawChainsStatic( const CMSurfaceSortList &sortList, int nSortGroup,
 				{
 					if ( bWarn )
 					{
-						Warning( "Too many vertex format changes in frame, whole world not rendered\n" );
+						DevWarning( "Too many vertex format changes in frame, whole world not rendered\n" );
 						bWarn = false;
 					}
 					continue;
