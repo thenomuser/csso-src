@@ -1278,7 +1278,7 @@ void CConPanel::PaintBackground()
 	char ver[ 100 ];
 
 	if ( !Q_stricmp( "csso", GetCurrentMod() ) ) // weird hardcode but works
-		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%2.1f by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetFloat() );
+		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)  CS:SO v%s by PiMoNFeeD", PROTOCOL_VERSION, build_number(), mod_version.GetString() );
 	else
 		Q_snprintf(ver, sizeof( ver ), "Source Engine %i (build %d)", PROTOCOL_VERSION, build_number() );
 	wchar_t unicode[ 200 ];

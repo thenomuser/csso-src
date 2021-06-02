@@ -1156,14 +1156,14 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		DiscordRichPresence discordPresence;
 		memset( &discordPresence, 0, sizeof( discordPresence ) );
 
-		discordPresence.state = VarArgs( "Version %2.1f", mod_version.GetFloat() );
+		discordPresence.state = VarArgs( "Version %s", mod_version.GetString() );
 		discordPresence.details = "Main Menu";
 		discordPresence.startTimestamp = startTimestamp;
 		discordPresence.largeImageKey = "icon_huge_square";
 		Discord_UpdatePresence( &discordPresence );
 	}
 
-	Msg( "\nCounter-Strike: Source Offensive, version %2.1f\nMade by PiMoNFeeD using property of Valve Software\n\n", mod_version.GetFloat() );
+	Msg( "\nCounter-Strike: Source Offensive, version %s\nMade by PiMoNFeeD using property of Valve Software\n\n", mod_version.GetString() );
 
 	return true;
 }
@@ -1718,7 +1718,7 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 		//sprintf( buffer2, "Server: %s", engine->GetConnectedIP() ); -- test it later, for now its always "LAN"
 		//discordPresence.details = buffer2;
 		ConVarRef mod_version( "mod_version" );
-		discordPresence.state = VarArgs( "Version %2.1f", mod_version.GetFloat() );
+		discordPresence.state = VarArgs( "Version %s", mod_version.GetString() );
 		discordPresence.largeImageKey = "icon_huge_square";
 		Discord_UpdatePresence( &discordPresence );
 	}
@@ -1821,7 +1821,7 @@ void CHLClient::LevelShutdown( void )
 		memset( &discordPresence, 0, sizeof( discordPresence ) );
 
 		ConVarRef mod_version( "mod_version" );
-		discordPresence.state = VarArgs( "Version %2.1f", mod_version.GetFloat() );
+		discordPresence.state = VarArgs( "Version %s", mod_version.GetString() );
 		discordPresence.details = "Main Menu";
 		discordPresence.startTimestamp = startTimestamp;
 		discordPresence.largeImageKey = "icon_huge_square";
