@@ -1076,6 +1076,7 @@ void CCSPlayer::SetModelFromClass( void )
 		{
 			index = RandomInt( 0, LAST_T_CLASS - 1 );
 			m_iClass = index + FIRST_T_CLASS; // clean up players who selected a higher class than we support yet
+			SetRandomClassSkin();
 		}
 		
 		switch ( m_iClass )
@@ -1129,6 +1130,7 @@ void CCSPlayer::SetModelFromClass( void )
 		{
 			index = RandomInt( 0, LAST_CT_CLASS - FIRST_CT_CLASS );
 			m_iClass = index + FIRST_CT_CLASS; // clean up players who selected a higher class than we support yet
+			SetRandomClassSkin();
 		}
 
 		switch ( m_iClass )
@@ -1180,6 +1182,93 @@ void CCSPlayer::SetModelFromClass( void )
 		// todo: can we actually get here?
 		Assert( false ); // we shouldn't be here
 		//SetModel( CTST6PlayerModels[0] );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:	Used to clamp m_iSkin to a correct array size
+//			to fix a bug of m_iSkin being out-of-range of an array
+//			which results in a wrong class model
+//-----------------------------------------------------------------------------
+void CCSPlayer::SetRandomClassSkin( void )
+{
+	switch ( m_iClass )
+	{
+		case CS_CLASS_PHOENIX_CONNNECTION:
+		{
+			m_iSkin = RandomInt( 0, TPhoenixPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_L337_KREW:
+		{
+			m_iSkin = RandomInt( 0, TLeetPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_SEPARATIST:
+		{
+			m_iSkin = RandomInt( 0, TSeparatistPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_BALKAN:
+		{
+			m_iSkin = RandomInt( 0, TBalkanPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_PROFESSIONAL:
+		{
+			m_iSkin = RandomInt( 0, TProfessionalPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_ANARCHIST:
+		{
+			m_iSkin = RandomInt( 0, TAnarchistPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_PIRATE:
+		{
+			m_iSkin = RandomInt( 0, TPiratePlayerModels.Count() - 1 );
+			break;
+		}
+
+		case CS_CLASS_SEAL_TEAM_6:
+		{
+			m_iSkin = RandomInt( 0, CTST6PlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_GSG_9:
+		{
+			m_iSkin = RandomInt( 0, CTGSG9PlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_SAS:
+		{
+			m_iSkin = RandomInt( 0, CTSASPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_GIGN:
+		{
+			m_iSkin = RandomInt( 0, CTGIGNPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_FBI:
+		{
+			m_iSkin = RandomInt( 0, CTFBIPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_IDF:
+		{
+			m_iSkin = RandomInt( 0, CTIDFPlayerModels.Count() - 1 );
+			break;
+		}
+		case CS_CLASS_SWAT:
+		{
+			m_iSkin = RandomInt( 0, CTSWATPlayerModels.Count() - 1 );
+			break;
+		}
+		default:
+		{
+			break;
+		}
 	}
 }
 
@@ -6305,79 +6394,7 @@ bool CCSPlayer::HandleCommand_JoinClass( int iClass )
 	if ( !HasAgentSet( GetTeamNumber() ) )
 	{
 		m_iClass = iClass;
-		switch ( m_iClass )
-		{
-			case CS_CLASS_PHOENIX_CONNNECTION:
-			{
-				m_iSkin = RandomInt( 0, TPhoenixPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_L337_KREW:
-			{
-				m_iSkin = RandomInt( 0, TLeetPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_SEPARATIST:
-			{
-				m_iSkin = RandomInt( 0, TSeparatistPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_BALKAN:
-			{
-				m_iSkin = RandomInt( 0, TBalkanPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_PROFESSIONAL:
-			{
-				m_iSkin = RandomInt( 0, TProfessionalPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_ANARCHIST:
-			{
-				m_iSkin = RandomInt( 0, TAnarchistPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_PIRATE:
-			{
-				m_iSkin = RandomInt( 0, TPiratePlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_SEAL_TEAM_6:
-			{
-				m_iSkin = RandomInt( 0, CTST6PlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_GSG_9:
-			{
-				m_iSkin = RandomInt( 0, CTGSG9PlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_SAS:
-			{
-				m_iSkin = RandomInt( 0, CTSASPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_GIGN:
-			{
-				m_iSkin = RandomInt( 0, CTGIGNPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_FBI:
-			{
-				m_iSkin = RandomInt( 0, CTFBIPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_IDF:
-			{
-				m_iSkin = RandomInt( 0, CTIDFPlayerModels.Count() - 1 );
-				break;
-			}
-			case CS_CLASS_SWAT:
-			{
-				m_iSkin = RandomInt( 0, CTSWATPlayerModels.Count() - 1 );
-				break;
-			}
-		}
+		SetRandomClassSkin();
 	}
 	else
 	{
@@ -9105,6 +9122,7 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	if ( CSGameRules()->UseMapFactionsForThisPlayer(this) )
 	{
 		m_iClass = CSGameRules()->GetMapFactionsForThisPlayer( this );
+		SetRandomClassSkin();
 	}
 	else
 	{
@@ -9160,6 +9178,8 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 			default:
 				break;
 		}
+
+		SetRandomClassSkin();
 	}
 
 	// Initialize the player counts now that a player has switched teams

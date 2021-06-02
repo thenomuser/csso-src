@@ -81,6 +81,27 @@ public:
 	{
 		this->SetSize( numElements );
 	}
+
+	T& operator[]( int i )
+	{
+		// PiMoN: make sure the values an in-range so players will have proper models
+		clamp( i, 0, Size() - 1 );
+
+		// Do an inline unsigned check for maximum debug-build performance.
+		Assert( (unsigned) i < (unsigned) m_Size );
+		StagingUtlVectorBoundsCheck( i, m_Size );
+		return m_Memory[i];
+	}
+	const T& operator[]( int i ) const
+	{
+		// PiMoN: make sure the values an in-range so players will have proper models
+		clamp( i, 0, Size() - 1 );
+
+		// Do an inline unsigned check for maximum debug-build performance.
+		Assert( (unsigned) i < (unsigned) m_Size );
+		StagingUtlVectorBoundsCheck( i, m_Size );
+		return m_Memory[i];
+	}
 };
 
 #define CS_HOSTAGE_TRANSTIME_PICKUP		0.1

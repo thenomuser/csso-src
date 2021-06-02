@@ -877,6 +877,7 @@ protected:
 	bool SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot );
 
 	void SetModelFromClass( void );
+	void SetRandomClassSkin( void );
 
 public:
 	CNetworkVar( int, m_iClass ); // One of the CS_CLASS_ enums.
