@@ -103,6 +103,13 @@ void FX_RicochetSound( const Vector& pos )
 	Vector org = pos;
 	CLocalPlayerFilter filter;
  	C_BaseEntity::EmitSound( filter, SOUND_FROM_WORLD, "FX_RicochetSound.Ricochet", &org );
+
+#ifdef CSTRIKE_DLL
+	if (RandomFloat() < 0.01) // 1% chance of playing legacy cs 1.6 ric sound.
+	{
+		C_BaseEntity::EmitSound(filter, SOUND_FROM_WORLD, "FX_RicochetSound.Ricochet_Legacy", &org);
+	}
+#endif
 }
 
 //-----------------------------------------------------------------------------

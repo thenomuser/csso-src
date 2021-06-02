@@ -869,6 +869,10 @@ void CCSPlayer::Precache()
 	PrecacheParticleSystem( "blood_impact_light" );
 	PrecacheParticleSystem( "blood_impact_light_headshot" );
 
+	PrecacheScriptSound( "Bullets.DefaultNearmiss" );
+	PrecacheScriptSound( "FX_RicochetSound.Ricochet" );
+	PrecacheScriptSound( "FX_RicochetSound.Ricochet_Legacy" );
+
 	BaseClass::Precache();
 }
 

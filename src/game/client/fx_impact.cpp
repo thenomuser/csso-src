@@ -406,6 +406,36 @@ void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin
 			C_BaseEntity::EmitSound( filter, NULL, pbulletImpactSoundName, pdata->soundhandles.bulletImpact, &vecOrigin );
 		}
 
+#if defined( CSTRIKE_DLL )
+		// play a ricochet based on the material
+		float flRicoChance = 0.0f;
+		switch( pdata->game.material )
+		{
+			case CHAR_TEX_METAL:
+			case CHAR_TEX_CONCRETE:
+			case CHAR_TEX_COMPUTER:
+			case CHAR_TEX_TILE:
+				flRicoChance = 5.0;
+				break;
+
+			case CHAR_TEX_GRATE:
+			case CHAR_TEX_VENT:
+			case CHAR_TEX_WOOD:
+				flRicoChance = 3.0;
+				break;
+				
+			case CHAR_TEX_DIRT:
+			case CHAR_TEX_PLASTIC:
+				flRicoChance = 1.0;
+				break;
+		}
+
+		if ( RandomFloat(0, 10) <= flRicoChance )
+		{
+			FX_RicochetSound( vecOrigin );
+		}
+#endif
+
 		return;
 	}
 
