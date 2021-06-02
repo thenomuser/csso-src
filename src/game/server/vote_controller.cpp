@@ -914,26 +914,6 @@ void CVoteController::ListIssues( CBasePlayer *pForWhom )
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, "--- End Vote commands---\n" );
 }
 
-void CVoteController::EndVoteImmediately( void )
-{
-	if ( !IsVoteActive() )
-		return;
-
-	CBaseIssue *pActiveIssue = m_potentialIssues[m_iActiveIssueIndex];
-
-	// for record-keeping
-	if ( pActiveIssue->IsYesNoVote() )
-	{
-		pActiveIssue->SetYesNoVoteCount( m_nVoteOptionCount[VOTE_OPTION1], m_nVoteOptionCount[VOTE_OPTION2], m_nPotentialVotes );
-	}
-
-	SendVoteFailedToPassMessage( pActiveIssue->MakeVoteFailErrorCodeForClients( VOTE_FAILED_QUORUM_FAILURE ) );
-	pActiveIssue->OnVoteFailed( GetCallingEntity() );
-	m_resetVoteTimer.Start( 5.0 );
-
-	m_acceptingVotesTimer.Invalidate();
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: -1 when invalid
 //-----------------------------------------------------------------------------

@@ -141,7 +141,6 @@ public:
 	bool			CanEntityCallVote( CBasePlayer *pPlayer, int &nCooldown, vote_create_failed_t &nErrorCode );
 	bool			IsVoteActive( void ) { return ( m_iActiveIssueIndex != INVALID_ISSUE || m_pendingVoteParams.m_iIssueIndex != INVALID_ISSUE ); }
 	int				GetNumVotesCast( void );
-	void			EndVoteImmediately( void );
 
 	void			AddPlayerToKickWatchList( CSteamID steamID, float flDuration );		// Band-aid until we figure out how player's avoid kick votes
 	void			AddPlayerToNameLockedList( CSteamID steamID, float flDuration, int nUserID );

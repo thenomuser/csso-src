@@ -5259,7 +5259,6 @@ ConVar snd_music_selection(
             {
                 pListPlayers.AddToHead( pCSPlayer );
             }
-
         }
         
         for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
@@ -5273,8 +5272,6 @@ ConVar snd_music_selection(
                 pCSPlayer->SwitchTeam( newTeam );				
 			}
         }
-
-		g_voteController->EndVoteImmediately();
     }
     
     // the following two functions cap the number of players on a team to five instead of basing it on the number of spawn points
