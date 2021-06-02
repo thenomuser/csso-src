@@ -863,6 +863,11 @@ void CCSPlayer::Precache()
 	PrecacheModel ( "models/items/cs_gift.mdl" );
 
 	PrecacheParticleSystem( "impact_helmet_headshot" );
+	PrecacheParticleSystem( "blood_impact_basic" );
+	PrecacheParticleSystem( "blood_impact_heavy" );
+	PrecacheParticleSystem( "blood_impact_medium" );
+	PrecacheParticleSystem( "blood_impact_light" );
+	PrecacheParticleSystem( "blood_impact_light_headshot" );
 
 	BaseClass::Precache();
 }

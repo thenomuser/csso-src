@@ -5,7 +5,6 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "clienteffectprecachesystem.h"
 #include "fx_sparks.h"
 #include "iefx.h"
 #include "c_te_effect_dispatch.h"
@@ -19,12 +18,8 @@
 #include "view.h"
 #include "c_cs_player.h"
 
-CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectCSBloodSpray )
-CLIENTEFFECT_MATERIAL( "effects/blood_gore" )
-CLIENTEFFECT_MATERIAL( "effects/blood_drop" )
-CLIENTEFFECT_MATERIAL( "effects/blood_puff" )
-CLIENTEFFECT_REGISTER_END()
-
+static ConVar damage_impact_heavy( "damage_impact_heavy", "40", FCVAR_NONE, "Damage ABOVE this value is considered heavy damage" );
+static ConVar damage_impact_medium( "damage_impact_medium", "20", FCVAR_NONE, "Damage BELOW this value is considered light damage" );
 
 class CHitEffectRamp
 {
@@ -321,141 +316,32 @@ void FX_CS_BloodSpray( const Vector &origin, const Vector &normal, float flDamag
 	if ( violence_hblood && !violence_hblood->GetBool() )
 		return;
 
-	Vector offset;
-	int i;
-	
-	float r = 64;
-	float g = 0;
-	float b = 4;
+	// Use the new particle system
+	Vector dir = normal;/* * RandomVector( -0.05f, 0.05f )*/;
+	Vector offset = origin + ( normal );
 
-	float scale = 0.5 + clamp( flDamage/50.f, 0.0, 1.0 ) ;
+	QAngle vecAngles;
+	VectorAngles( dir, vecAngles );
 
-	//Find area ambient light color and use it to tint smoke
-	Vector worldLight = WorldGetLightForPoint( origin, true );
-	Vector color = Vector( (float)(worldLight[0] * r) / 255.0f, (float)(worldLight[1] * g) / 255.0f, (float)(worldLight[2] * b) / 255.0f );
-	float colorRamp;
-
-	Vector	offDir;
-
-	CSmartPtr<CBloodSprayEmitter> pSimple = CBloodSprayEmitter::Create( "bloodgore" );
-	if ( !pSimple )
-		return;
-
-	pSimple->SetSortOrigin( origin );
-	pSimple->SetGravity( 0 );
-
-	// Blood impact
-	PMaterialHandle	hMaterial = ParticleMgr()->GetPMaterial( "effects/blood_core" );
-
-	SimpleParticle *pParticle;
-
-	Vector	dir = normal * RandomVector( -0.5f, 0.5f );
-
-	offset = origin + ( 2.0f * normal );
-
-	pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), hMaterial, offset );
-
-	if ( pParticle != NULL )
+	const char *pEffectName;
+	if ( flDamage > damage_impact_heavy.GetInt() )
 	{
-		pParticle->m_flLifetime = 0.0f;
-		pParticle->m_flDieTime	= 0.75f;
-
-		pParticle->m_vecVelocity	= dir * random->RandomFloat( 16.0f, 32.0f );
-		pParticle->m_vecVelocity[2] -= random->RandomFloat( 8.0f, 16.0f );
-
-		colorRamp = random->RandomFloat( 0.75f, 2.0f );
-
-		pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
-		
-		pParticle->m_uchStartSize	= 8;
-		pParticle->m_uchEndSize		= 32;
-	
-		pParticle->m_uchStartAlpha	= 255;
-		pParticle->m_uchEndAlpha	= 0;
-		
-		pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-		pParticle->m_flRollDelta	= 0;
+	      pEffectName = "blood_impact_heavy";
+	}
+	else if ( flDamage >= damage_impact_medium.GetInt() )
+	{
+		pEffectName = "blood_impact_medium";
+	}
+	else if ( flDamage > 1 )
+	{
+		pEffectName = "blood_impact_light";
+	}
+	else
+	{
+		pEffectName = "blood_impact_light_headshot";
 	}
 
-	hMaterial = ParticleMgr()->GetPMaterial( "effects/blood_gore" );
-
-	for ( i = 0; i < 4; i++ )
-	{
-		offset = origin + ( 2.0f * normal );
-
-		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), hMaterial, offset );
-
-		if ( pParticle != NULL )
-		{
-			pParticle->m_flLifetime = 0.0f;
-			pParticle->m_flDieTime	= random->RandomFloat( 0.75f, 1.0f);
-
-			pParticle->m_vecVelocity	= dir * random->RandomFloat( 16.0f, 32.0f )*(i+1);
-			pParticle->m_vecVelocity[2] -= random->RandomFloat( 16.0f, 32.0f )*(i+1);
-
-			colorRamp = random->RandomFloat( 0.75f, 2.0f );
-
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
-			
-			pParticle->m_uchStartSize	= scale * random->RandomInt( 4, 8 );
-			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
-		
-			pParticle->m_uchStartAlpha	= 255;
-			pParticle->m_uchEndAlpha	= 0;
-			
-			pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-			pParticle->m_flRollDelta	= 0;
-		}
-	}
-
-	//
-	// Dump out drops
-	//
-	TrailParticle *tParticle;
-
-	CSmartPtr<CTrailParticles> pTrailEmitter = CTrailParticles::Create( "blooddrops" );
-	if ( !pTrailEmitter )
-		return;
-
-	pTrailEmitter->SetSortOrigin( origin );
-
-	// Partial gravity on blood drops
-	pTrailEmitter->SetGravity( 400.0 ); 
-	
-	// Enable simple collisions with nearby surfaces
-	pTrailEmitter->Setup(origin, &normal, 1, 10, 100, 400, 0.2, 0 );
-
-	hMaterial = ParticleMgr()->GetPMaterial( "effects/blood_drop" );
-
-	//
-	// Shorter droplets
-	//
-	for ( i = 0; i < 32; i++ )
-	{
-		// Originate from within a circle 'scale' inches in diameter
-		offset = origin;
-
-		tParticle = (TrailParticle *) pTrailEmitter->AddParticle( sizeof(TrailParticle), hMaterial, offset );
-
-		if ( tParticle == NULL )
-			break;
-
-		tParticle->m_flLifetime	= 0.0f;
-
-		offDir = RandomVector( -1.0f, 1.0f );
-
-		tParticle->m_vecVelocity = offDir * random->RandomFloat( 32.0f, 128.0f );
-
-		tParticle->m_flWidth		= scale * random->RandomFloat( 1.0f, 3.0f );
-		tParticle->m_flLength		= random->RandomFloat( 0.1f, 0.15f );
-		tParticle->m_flDieTime		= random->RandomFloat( 0.5f, 1.0f );
-
-		FloatToColor32( tParticle->m_color, color[0], color[1], color[2], 1.0f );
-	}
+	DispatchParticleEffect( pEffectName, offset, vecAngles );
 }
 
 
