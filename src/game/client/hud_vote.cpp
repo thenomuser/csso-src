@@ -48,8 +48,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar cl_vote_ui_active_after_voting( "cl_vote_ui_active_after_voting", "0" );
-ConVar cl_vote_ui_show_notification( "cl_vote_ui_show_notification", "0" );
+ConVar cl_vote_ui_active_after_voting( "cl_vote_ui_active_after_voting", "1" );
 
 #ifdef TF_CLIENT_DLL
 
@@ -1224,7 +1223,6 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 		return;
 
 	// Entity calling the vote
-	bool bShowNotif = cl_vote_ui_show_notification.GetBool();
 	const char *pszCallerName = "Server";
 	m_iVoteCallerIdx = msg.ReadByte();
 	if ( m_iVoteCallerIdx != DEDICATED_SERVER )
@@ -1233,12 +1231,6 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 		if ( pVoteCaller )
 		{
 			pszCallerName = pVoteCaller->GetPlayerName();
-
-			// Don't show a notification to the caller
-			if ( pVoteCaller == pLocalPlayer )
-			{
-				bShowNotif = false;
-			}
 		}
 		else
 		{
@@ -1423,19 +1415,7 @@ void CHudVote::MsgFunc_VoteStart( bf_read &msg )
 		event->SetInt( "initiator", m_iVoteCallerIdx );
 		gameeventmanager->FireEventClientSide( event );
 	}
-
-#ifdef TF_CLIENT_DLL
-	if ( bShowNotif )
-	{
-		NotificationQueue_Add( new CTFVoteNotification( pszCallerName ) );
-	}
-	else
-	{
-		m_bShowVoteActivePanel = true;
-	}
-#else
 	m_bShowVoteActivePanel = true;
-#endif	// TF_CLIENT_DLL
 }
 
 //-----------------------------------------------------------------------------
