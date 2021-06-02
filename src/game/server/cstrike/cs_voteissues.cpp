@@ -394,6 +394,7 @@ void CBanIssue::ExecuteCommand( void )
 
 	if( subject )
 	{
+		engine->ServerCommand( CFmtStr( "kickid_ex %d %d You have banned from the server", subject->GetUserID(), /*CSGameRules()->IsPlayingOffline() ? 0 :*/ 1 ) );
 		engine->ServerCommand( CFmtStr( "banid %d %d;", sv_vote_ban_duration.GetInt(), subject->GetUserID() ) );
 	}
 	else if ( m_steamIDtoBan.IsValid() )
