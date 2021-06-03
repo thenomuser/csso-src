@@ -1863,7 +1863,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 			m_iTargetedWeaponEntIndex = 0;
 
-			UpdateAddonModels();
+			RemoveAddonModels();
 
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 				m_bShouldAutobuyDMWeapons = true;
