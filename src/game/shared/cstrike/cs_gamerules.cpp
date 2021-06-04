@@ -3766,7 +3766,7 @@ ConVar snd_music_selection(
 		}
 
 		// Give C4 to the terrorists
-		if ( m_bMapHasBombTarget == true && !IsWarmupPeriod() && GetGamemode() != GameModes::DEATHMATCH )
+		if ( m_bMapHasBombTarget == true )
 			GiveC4();
 
 		// Reset game variables
@@ -3895,6 +3895,9 @@ ConVar snd_music_selection(
 
 	void CCSGameRules::GiveC4()
 	{
+		if ( IsWarmupPeriod() || GetGamemode() == GameModes::DEATHMATCH )
+			return;
+
 		enum {
 			ALL_TERRORISTS = 0,
 			HUMAN_TERRORISTS,
