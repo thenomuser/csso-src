@@ -374,7 +374,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 			CBaseIssue *pCurrentIssue = m_potentialIssues[iIndex];
 			if ( pCurrentIssue )
 			{
-				if ( !pCurrentIssue->IsEnabled() && sv_vote_ui_hide_disabled_issues.GetBool() )
+				if ( !(pCurrentIssue->IsEnabled() || pVoteCaller->IsAutoKickDisabled()) && sv_vote_ui_hide_disabled_issues.GetBool() )
 					continue;
 
 				nIssueCount++;
@@ -394,7 +394,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 		if ( pCurrentIssue )
 		{
 			// Don't send/display disabled issues when set
-			if ( !pCurrentIssue->IsEnabled() && sv_vote_ui_hide_disabled_issues.GetBool() )
+			if ( !(pCurrentIssue->IsEnabled() || pVoteCaller->IsAutoKickDisabled()) && sv_vote_ui_hide_disabled_issues.GetBool() )
 				continue;
 
 			// Don't exceed MAX_USER_MSG_DATA (hack)
@@ -407,7 +407,7 @@ bool CVoteController::SetupVote( int iEntIndex )
 
 			WRITE_STRING( pCurrentIssue->GetTypeString() );
 			WRITE_STRING( pCurrentIssue->GetTypeStringLocalized() );
-			WRITE_BYTE( pCurrentIssue->IsEnabled() );
+			WRITE_BYTE( pCurrentIssue->IsEnabled() || pVoteCaller->IsAutoKickDisabled() );
 		}
 	}
 
@@ -454,7 +454,8 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 		{
 			vote_create_failed_t nErrorCode = VOTE_FAILED_GENERIC;
 			int nTime = 0;
-			if ( pCurrentIssue->CanCallVote( iEntIndex, pszDetailString, nErrorCode, nTime ) )
+			bool bCanCallVote = pCurrentIssue->CanCallVote( iEntIndex, pszDetailString, nErrorCode, nTime );
+			if ( bCanCallVote || (nErrorCode == VOTE_FAILED_ISSUE_DISABLED && pVoteCaller->IsAutoKickDisabled()) ) // allow rcon admins to call any vote
 			{
 				// Does the GC need to approve now? If so, this function will send the message.
 				if ( pCurrentIssue->NeedsPermissionFromGC() )
