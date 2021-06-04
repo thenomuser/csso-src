@@ -69,8 +69,7 @@ public:
 private:
 	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject );
 
-	CSteamID			m_steamIDVoteCaller;
-	CSteamID			m_steamIDtoBan;
+	const char*			m_uniqueIDtoBan;
 	bool				m_bPlayerCrashed;
 };
 
@@ -98,8 +97,7 @@ public:
 private:
 	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject );
 
-	CSteamID			m_steamIDVoteCaller;
-	CSteamID			m_steamIDtoBan;
+	const char*			m_uniqueIDtoBan;
 };
 
 //-----------------------------------------------------------------------------

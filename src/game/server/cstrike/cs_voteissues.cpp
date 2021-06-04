@@ -165,12 +165,12 @@ void CKickIssue::ExecuteCommand( void )
 			engine->ServerCommand( CFmtStr( "banid %d %d;", sv_vote_kick_ban_duration.GetInt(), subject->GetUserID() ) );
 		}
 
-		engine->ServerCommand( CFmtStr( "kickid_ex %d %d You have been voted off;", subject->GetUserID(), /*CSGameRules()->IsPlayingOffline() ? 0 :*/ 1 ) );
+		engine->ServerCommand( CFmtStr( "kickid_ex %d 1 You have been voted off;", subject->GetUserID() ) );
 	}
-	else if ( !m_bPlayerCrashed && m_steamIDtoBan.IsValid() && ( sv_vote_kick_ban_duration.GetInt() > 0 ) )
+	else if ( !m_bPlayerCrashed && m_uniqueIDtoBan && m_uniqueIDtoBan[0] && (sv_vote_kick_ban_duration.GetInt() > 0) )
 	{
-		// Also enlist this user's SteamID in the banlist
-		engine->ServerCommand( CFmtStr( "banid %d STEAM64BITID_%llu;", sv_vote_kick_ban_duration.GetInt(), m_steamIDtoBan.ConvertToUint64() ) );
+		// Also enlist this user's unique ID in the banlist
+		engine->ServerCommand( CFmtStr( "banid %d %s;", sv_vote_kick_ban_duration.GetInt(), m_uniqueIDtoBan ) );
 	}
 }
 
@@ -275,39 +275,39 @@ void CKickIssue::OnVoteFailed( int iEntityHoldingVote )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
- void CKickIssue::OnVoteStarted( void )
- {
-	 CCSPlayer *pSubject = NULL;
-	 ExtractDataFromDetails(	m_szDetailsString, &pSubject );
+void CKickIssue::OnVoteStarted( void )
+{
+	CCSPlayer *pSubject = NULL;
+	ExtractDataFromDetails(	m_szDetailsString, &pSubject );
 
-	 // Auto vote 'No' for the person being kicked unless they are idle
-	 // NOTE: Subtle. There's a problem with IsAwayFromKeyboard where if a player
-	 // has idled and is taken over by a bot, IsAwayFromKeyboard will return false
-	 // because the camera controller that takes over when idling will spoof 
-	 // input messages, making it impossible to know if the player is moving his
-	 // joystick or not. Being on TEAM_SPECTATOR, however, means you're idling,
-	 // so we don't want to autovote NO if they are on team spectator
-	 if ( g_voteController && pSubject && ( pSubject->GetTeamNumber( ) != TEAM_SPECTATOR ) && !pSubject->IsBot( ) )
-	 {
-		 g_voteController->TryCastVote( pSubject->entindex( ), "Option2" );
-	 }
+	// Auto vote 'No' for the person being kicked unless they are idle
+	// NOTE: Subtle. There's a problem with IsAwayFromKeyboard where if a player
+	// has idled and is taken over by a bot, IsAwayFromKeyboard will return false
+	// because the camera controller that takes over when idling will spoof 
+	// input messages, making it impossible to know if the player is moving his
+	// joystick or not. Being on TEAM_SPECTATOR, however, means you're idling,
+	// so we don't want to autovote NO if they are on team spectator
+	if ( g_voteController && pSubject && ( pSubject->GetTeamNumber( ) != TEAM_SPECTATOR ) && !pSubject->IsBot( ) )
+	{
+		//g_voteController->TryCastVote( pSubject->entindex( ), "Option2" );
+	}
 
-	 // Also when the vote starts, figure out if the player should not be banned
-	 // if the player is crashed/hung. Need to perform the check here instead of
-	 // inside Execute to prevent cheaters quitting before the vote finishes and
-	 // not getting banned.
-	 m_bPlayerCrashed = false;
-	 if ( pSubject )
-	 {
-		 INetChannelInfo *pNetChanInfo = engine->GetPlayerNetInfo( pSubject->entindex() );
-		 if ( !pNetChanInfo || pNetChanInfo->IsTimingOut() )
-		 {
-			 // don't ban the player
-			 DevMsg( "Will not ban kicked player: net channel was idle for %.2f sec.\n", pNetChanInfo ? pNetChanInfo->GetTimeSinceLastReceived() : 0.0f );
-			 m_bPlayerCrashed = true;
-		 }
+	// Also when the vote starts, figure out if the player should not be banned
+	// if the player is crashed/hung. Need to perform the check here instead of
+	// inside Execute to prevent cheaters quitting before the vote finishes and
+	// not getting banned.
+	m_bPlayerCrashed = false;
+	if ( pSubject )
+	{
+		INetChannelInfo *pNetChanInfo = engine->GetPlayerNetInfo( pSubject->entindex() );
+		if ( !pNetChanInfo || pNetChanInfo->IsTimingOut() )
+		{
+			// don't ban the player
+			DevMsg( "Will not ban kicked player: net channel was idle for %.2f sec.\n", pNetChanInfo ? pNetChanInfo->GetTimeSinceLastReceived() : 0.0f );
+			m_bPlayerCrashed = true;
+		}
 
-		 pSubject->GetSteamID( &m_steamIDtoBan );
+		m_uniqueIDtoBan = pSubject->GetNetworkIDString();
 	 }
  }
 
@@ -394,13 +394,13 @@ void CBanIssue::ExecuteCommand( void )
 
 	if( subject )
 	{
-		engine->ServerCommand( CFmtStr( "kickid_ex %d %d You have banned from the server", subject->GetUserID(), /*CSGameRules()->IsPlayingOffline() ? 0 :*/ 1 ) );
 		engine->ServerCommand( CFmtStr( "banid %d %d;", sv_vote_ban_duration.GetInt(), subject->GetUserID() ) );
+		engine->ServerCommand( CFmtStr( "kickid_ex %d 1 You have been banned from this server;", subject->GetUserID() ) );
 	}
-	else if ( m_steamIDtoBan.IsValid() )
+	else if ( m_uniqueIDtoBan && m_uniqueIDtoBan[0] )
 	{
-		// Also enlist this user's SteamID in the banlist
-		engine->ServerCommand( CFmtStr( "banid %d STEAM64BITID_%llu;", sv_vote_ban_duration.GetInt(), m_steamIDtoBan.ConvertToUint64() ) );
+		// Also enlist this user's unique ID in the banlist
+		engine->ServerCommand( CFmtStr( "banid %d %s;", sv_vote_ban_duration.GetInt(), m_uniqueIDtoBan ) );
 	}
 }
 
@@ -493,12 +493,12 @@ void CBanIssue::OnVoteStarted( void )
 	// Auto vote 'No' for the person being banned
 	if ( g_voteController && pSubject && (pSubject->GetTeamNumber() != TEAM_SPECTATOR) && !pSubject->IsBot() )
 	{
-		g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
+		//g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
 	}
 
 	if ( pSubject )
 	{
-		pSubject->GetSteamID( &m_steamIDtoBan );
+		m_uniqueIDtoBan = pSubject->GetNetworkIDString();
 	}
 }
 
