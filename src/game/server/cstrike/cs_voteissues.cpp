@@ -689,7 +689,7 @@ bool CChangeLevelIssue::IsYesNoVote( void )
 //-----------------------------------------------------------------------------
 // Purpose: Nextlevel
 //-----------------------------------------------------------------------------
-ConVar sv_vote_issue_nextlevel_allowed( "sv_vote_issue_nextlevel_allowed", "1", 1, "Can people hold votes to set the next level?" );
+ConVar sv_vote_issue_nextlevel_allowed( "sv_vote_issue_nextlevel_allowed", "1", 0, "Can people hold votes to set the next level?" );
 ConVar sv_vote_issue_nextlevel_choicesmode( "sv_vote_issue_nextlevel_choicesmode", "1", 0, "Present players with a list of lowest playtime maps to choose from?" );
 ConVar sv_vote_issue_nextlevel_allowextend( "sv_vote_issue_nextlevel_allowextend", "1", 0, "Allow players to extend the current map?" );
 ConVar sv_vote_issue_nextlevel_prevent_change( "sv_vote_issue_nextlevel_prevent_change", "1", 1, "Not allowed to vote for a nextlevel if one has already been set." );
