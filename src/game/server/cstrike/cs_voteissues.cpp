@@ -289,7 +289,7 @@ void CKickIssue::OnVoteStarted( void )
 	// so we don't want to autovote NO if they are on team spectator
 	if ( g_voteController && pSubject && ( pSubject->GetTeamNumber( ) != TEAM_SPECTATOR ) && !pSubject->IsBot( ) )
 	{
-		//g_voteController->TryCastVote( pSubject->entindex( ), "Option2" );
+		g_voteController->TryCastVote( pSubject->entindex( ), "Option2" );
 	}
 
 	// Also when the vote starts, figure out if the player should not be banned
@@ -493,7 +493,7 @@ void CBanIssue::OnVoteStarted( void )
 	// Auto vote 'No' for the person being banned
 	if ( g_voteController && pSubject && (pSubject->GetTeamNumber() != TEAM_SPECTATOR) && !pSubject->IsBot() )
 	{
-		//g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
+		g_voteController->TryCastVote( pSubject->entindex(), "Option2" );
 	}
 
 	if ( pSubject )
