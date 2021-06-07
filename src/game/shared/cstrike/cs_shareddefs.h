@@ -463,8 +463,8 @@ struct CCSClassInfo
 
 const CCSClassInfo* GetCSClassInfo( int i );
 
-#define MAX_AGENTS_CT 20
-#define MAX_AGENTS_T 26
+#define MAX_AGENTS_CT 25
+#define MAX_AGENTS_T 29
 
 struct CCSAgentInfo
 {
