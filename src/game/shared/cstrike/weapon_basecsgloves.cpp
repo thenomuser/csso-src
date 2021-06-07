@@ -70,10 +70,10 @@ void CBaseCSGloves::Equip( CCSPlayer *pOwner )
 	if ( !pOwner->IsAlive() )
 		return;
 
-	UpdateGlovesModel();
-
 	FollowEntity( pOwner, true );
 	SetOwnerEntity( pOwner );
+
+	UpdateGlovesModel();
 
 	// assuming that before equipping them, a DoesModelSupportGloves() check was made
 	pOwner->SetBodygroup( pOwner->FindBodygroupByName( "gloves" ), 1 ); // hide default gloves
@@ -108,8 +108,12 @@ void CBaseCSGloves::UpdateGlovesModel()
 	const char *pszModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayerOwner, pPlayerOwner->GetTeamNumber() ) )->szWorldModel;
 	SetModel( pszModel );
 
+#ifdef CLIENT_DLL
+	m_nSkin = pPlayerOwner->m_pViewmodelArmConfig->iSkintoneIndex;
+#else
 	CStudioHdr *pHdr = pPlayerOwner->GetModelPtr();
 	if ( pHdr )
 		m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+#endif
 }
 
