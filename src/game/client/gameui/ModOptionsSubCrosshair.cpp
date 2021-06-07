@@ -64,11 +64,12 @@ struct ColorItem_t
 
 static ColorItem_t s_crosshairColors[] = 
 {
-	{ "#Valve_Green",	50,		250,	50 },
 	{ "#Valve_Red",		250,	50,		50 },
-	{ "#Valve_Blue",	50,		50,		250 },
+	{ "#Valve_Green",	50,		250,	50 },
 	{ "#Valve_Yellow",	250,	250,	50 },
+	{ "#Valve_Blue",	50,		50,		250 },
 	{ "#Valve_Ltblue",	50,		250,	250 },
+	{ "#GameUI_Crosshair_Color_Custom", 0, 0, 0 }
 };
 
 static const char* crosshairBackgroundImages[] =
@@ -115,6 +116,7 @@ private:
 	CCvarToggleCheckButton	*m_pCrosshairDrawOutline;
 	CCvarSlider				*m_pCrosshairOutlineThickness;
 	CCvarToggleCheckButton	*m_pCrosshairT;
+	CLabeledCommandComboBox	*m_pCrosshairColor;
 	int m_iCrosshairTextureID;
 };
 
@@ -136,6 +138,7 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairDrawOutline = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairDrawOutline", "#GameUI_Crosshair_DrawOutline", "cl_crosshair_drawoutline" );
 	m_pCrosshairOutlineThickness = new CCvarSlider( m_pOptionsPanel, "CrosshairOutlineThickness", "#GameUI_Crosshair_OutlineThickness", 0.0f, 3.0f, "cl_crosshair_outlinethickness" );
 	m_pCrosshairT = new CCvarToggleCheckButton( m_pOptionsPanel, "CrosshairT", "#GameUI_Crosshair_T", "cl_crosshair_t" );
+	m_pCrosshairColor = new CLabeledCommandComboBox( m_pOptionsPanel, "CrosshairColor" );
 
 	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_0", "cl_crosshairstyle 0" );
 	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_1", "cl_crosshairstyle 1" );
@@ -143,6 +146,13 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_3", "cl_crosshairstyle 3" );
 	m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_4", "cl_crosshairstyle 4" );
 	//m_pCrosshairStyle->AddItem( "#GameUI_Crosshair_Style_5", "cl_crosshairstyle 5" ); // deprecated in CSGO
+
+	for ( int i = 0; i < ARRAYSIZE( s_crosshairColors ); i++ )
+	{
+		char command[64];
+		Q_snprintf( command, sizeof( command ), "cl_crosshaircolor %d", i );
+		m_pCrosshairColor->AddItem( s_crosshairColors[i].name, command );
+	}
 
 	m_pCrosshairStyle->AddActionSignalTarget( this );
 	m_pCrosshairAlpha->AddActionSignalTarget( this );
@@ -158,6 +168,7 @@ CrosshairImagePanelCS::CrosshairImagePanelCS( Panel *parent, const char *name, C
 	m_pCrosshairDrawOutline->AddActionSignalTarget( this );
 	m_pCrosshairOutlineThickness->AddActionSignalTarget( this );
 	m_pCrosshairT->AddActionSignalTarget( this );
+	m_pCrosshairColor->AddActionSignalTarget( this );
 
 	m_iCrosshairTextureID = vgui::surface()->CreateNewTextureID();
 	vgui::surface()->DrawSetTextureFile( m_iCrosshairTextureID, "vgui/white_additive" , true, false);
@@ -206,9 +217,20 @@ void CrosshairImagePanelCS::Paint()
 		a = m_pCrosshairAlpha->GetSliderValue();
 
 	int r, g, b;
-	r = m_pCrosshairColorR->GetSliderValue();
-	g = m_pCrosshairColorG->GetSliderValue();
-	b = m_pCrosshairColorB->GetSliderValue();
+	switch ( m_pCrosshairColor->GetActiveItem() )
+	{
+		case 0:	r = 250;	g = 50;		b = 50;		break;
+		case 1:	r = 50;		g = 250;	b = 50;		break;
+		case 2:	r = 250;	g = 250;	b = 50;		break;
+		case 3:	r = 50;		g = 50;		b = 250;	break;
+		case 4:	r = 50;		g = 250;	b = 250;	break;
+		case 5:
+			r = m_pCrosshairColorR->GetSliderValue();
+			g = m_pCrosshairColorG->GetSliderValue();
+			b = m_pCrosshairColorB->GetSliderValue();
+			break;
+		default:	r = 50;		g = 250;	b = 50;		break;
+	}
 
 	vgui::surface()->DrawSetColor( r, g, b, a );
 
@@ -280,6 +302,9 @@ void CrosshairImagePanelCS::OnSliderMoved(KeyValues *data)
 //-----------------------------------------------------------------------------
 void CrosshairImagePanelCS::OnTextChanged(vgui::Panel *panel)
 {
+	m_pCrosshairColorR->SetEnabled( m_pCrosshairColor->GetActiveItem() == 5 );
+	m_pCrosshairColorG->SetEnabled( m_pCrosshairColor->GetActiveItem() == 5 );
+	m_pCrosshairColorB->SetEnabled( m_pCrosshairColor->GetActiveItem() == 5 );
 	m_pOptionsPanel->OnControlModified();
 	UpdateCrosshair();
 }
@@ -311,6 +336,9 @@ void CrosshairImagePanelCS::ResetData()
 	m_pCrosshairOutlineThickness->Reset();
 	m_pCrosshairT->Reset();
 
+	ConVarRef cl_crosshaircolor( "cl_crosshaircolor" );
+	m_pCrosshairColor->SetInitialItem( cl_crosshaircolor.GetInt() );
+
 	SetImage( crosshairBackgroundImages[RandomInt(0, ARRAYSIZE(crosshairBackgroundImages) - 1)] ); // bruh
 
 	UpdateCrosshair();
@@ -332,6 +360,7 @@ void CrosshairImagePanelCS::ApplyChanges()
 	m_pCrosshairDrawOutline->ApplyChanges();
 	m_pCrosshairOutlineThickness->ApplyChanges();
 	m_pCrosshairT->ApplyChanges();
+	m_pCrosshairColor->ApplyChanges();
 }
 
 //-----------------------------------------------------------------------------
