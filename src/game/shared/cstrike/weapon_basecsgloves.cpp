@@ -109,11 +109,16 @@ void CBaseCSGloves::UpdateGlovesModel()
 	SetModel( pszModel );
 
 #ifdef CLIENT_DLL
-	m_nSkin = pPlayerOwner->m_pViewmodelArmConfig->iSkintoneIndex;
-#else
-	CStudioHdr *pHdr = pPlayerOwner->GetModelPtr();
-	if ( pHdr )
-		m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+	if ( pPlayerOwner->m_pViewmodelArmConfig != NULL )
+		m_nSkin = pPlayerOwner->m_pViewmodelArmConfig->iSkintoneIndex;
+	else
+	{
+#endif
+		CStudioHdr *pHdr = pPlayerOwner->GetModelPtr();
+		if ( pHdr )
+			m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+#ifdef CLIENT_DLL
+	}
 #endif
 }
 
