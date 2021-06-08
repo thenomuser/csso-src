@@ -158,6 +158,7 @@ void CKickIssue::ExecuteCommand( void )
 
 	if( subject )
 	{
+		Msg( "%s (unique ID: %s) got kicked by voting.\n", subject->GetPlayerName(), subject->GetNetworkIDString() );
 		// Check the cached value of player crashed state
 		if ( ( sv_vote_kick_ban_duration.GetInt() > 0 ) && !m_bPlayerCrashed )
 		{
@@ -169,6 +170,7 @@ void CKickIssue::ExecuteCommand( void )
 	}
 	else if ( !m_bPlayerCrashed && m_uniqueIDtoBan && m_uniqueIDtoBan[0] && (sv_vote_kick_ban_duration.GetInt() > 0) )
 	{
+		Msg( "%s (unique ID: %s) got kicked by voting.\n", subject->GetPlayerName(), subject->GetNetworkIDString() );
 		// Also enlist this user's unique ID in the banlist
 		engine->ServerCommand( CFmtStr( "banid %d %s;", sv_vote_kick_ban_duration.GetInt(), m_uniqueIDtoBan ) );
 	}
@@ -394,11 +396,13 @@ void CBanIssue::ExecuteCommand( void )
 
 	if( subject )
 	{
+		Msg( "%s (unique ID: %s) got banned by voting.\n", subject->GetPlayerName(), subject->GetNetworkIDString() );
 		engine->ServerCommand( CFmtStr( "banid %d %d;", sv_vote_ban_duration.GetInt(), subject->GetUserID() ) );
 		engine->ServerCommand( CFmtStr( "kickid_ex %d 1 You have been banned from this server;", subject->GetUserID() ) );
 	}
 	else if ( m_uniqueIDtoBan && m_uniqueIDtoBan[0] )
 	{
+		Msg( "%s (unique ID: %s) got banned by voting.\n", subject->GetPlayerName(), subject->GetNetworkIDString() );
 		// Also enlist this user's unique ID in the banlist
 		engine->ServerCommand( CFmtStr( "banid %d %s;", sv_vote_ban_duration.GetInt(), m_uniqueIDtoBan ) );
 	}
