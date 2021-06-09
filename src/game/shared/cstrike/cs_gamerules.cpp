@@ -347,6 +347,16 @@ ConVar mp_c4_cannot_be_defused(
 	FCVAR_REPLICATED,
 	"If set, the planted c4 cannot be defused." );
 
+ConVar mp_starting_losses(
+	"mp_starting_losses",
+	"0",
+	FCVAR_REPLICATED,
+	"Determines what the initial loss streak is.",
+	true,
+	0,
+	false,
+	0 );
+
 #ifndef CLIENT_DLL
 CON_COMMAND( mp_warmup_start, "Start warmup." )
 {
@@ -2942,9 +2952,7 @@ ConVar snd_music_selection(
         {
             //check to see if they just broke a losing streak
             if ( m_iNumConsecutiveTerroristLoses > 0 )
-                m_iNumConsecutiveTerroristLoses--;
-
-            m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
+				m_iNumConsecutiveTerroristLoses--;
 
 			//check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
 			for ( int i = 0; i != m_iNumConsecutiveCTLoses; i++ )
@@ -2954,14 +2962,14 @@ ConVar snd_music_selection(
 				else
 					break;
 			}
+
+            m_iNumConsecutiveCTLoses++;//increment the number of wins the CTs have had
         }
         else if (m_iRoundWinStatus == WINNER_CT) // CT Won
         {
             //check to see if they just broke a losing streak
             if ( m_iNumConsecutiveCTLoses > 0 )
-                m_iNumConsecutiveCTLoses--;
-
-            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
+				m_iNumConsecutiveCTLoses--;
 
 			//check if the losing team is in a losing streak & that the loser bonus hasn't maxed out.
 			for ( int i = 0; i != m_iNumConsecutiveTerroristLoses; i++ )
@@ -2971,6 +2979,8 @@ ConVar snd_music_selection(
 				else
 					break;
 			}
+
+            m_iNumConsecutiveTerroristLoses++;//increment the number of wins the Terrorists have had
         }
 
         // assign the wining and losing bonuses
@@ -3149,8 +3159,8 @@ ConVar snd_music_selection(
 			// Reset score info
 			m_iNumTerroristWins				= 0;
 			m_iNumCTWins					= 0;
-			m_iNumConsecutiveTerroristLoses	= 0;
-			m_iNumConsecutiveCTLoses		= 0;
+			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
+			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
 
 			if ( HasHalfTime() )
 			{
@@ -3367,8 +3377,8 @@ ConVar snd_music_selection(
 			//We are starting fresh. So it's like no one has ever won or lost.
 			m_iNumTerroristWins				= 0; 
 			m_iNumCTWins					= 0;
-			m_iNumConsecutiveTerroristLoses	= 0;
-			m_iNumConsecutiveCTLoses		= 0;
+			m_iNumConsecutiveTerroristLoses	= mp_starting_losses.GetInt();
+			m_iNumConsecutiveCTLoses		= mp_starting_losses.GetInt();
 			m_iLoserBonus					= TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
 		}
 
@@ -3853,8 +3863,8 @@ ConVar snd_music_selection(
 				}
 			}
 
-			m_iNumConsecutiveTerroristLoses = 0;
-			m_iNumConsecutiveCTLoses = 0;
+			m_iNumConsecutiveTerroristLoses = mp_starting_losses.GetInt();
+			m_iNumConsecutiveCTLoses = mp_starting_losses.GetInt();
 			m_iLoserBonus = TeamCashAwardValue( TeamCashAward::LOSER_BONUS );
 		}
 
