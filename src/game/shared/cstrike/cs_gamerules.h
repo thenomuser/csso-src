@@ -108,20 +108,6 @@ namespace PlayerCashAward
 	};
 };
 
-namespace GameModes
-{
-	enum Type
-	{
-		CUSTOM = 0,
-		CASUAL,
-		COMPETITIVE,
-		COMPETITIVE_2V2,
-		DEATHMATCH,
-		
-		NUM_GAMEMODES,
-	};
-};
-
 #ifdef CLIENT_DLL
 	#define CCSGameRules C_CSGameRules
 	#define CCSGameRulesProxy C_CSGameRulesProxy

@@ -449,14 +449,6 @@ ConVar mp_gamemode_override(
 	true, 0,
 	true, GameModes::NUM_GAMEMODES - 1 );
 
-ConVar mp_settings_override(
-	"mp_settings_override",
-	"0",
-	FCVAR_REPLICATED,
-	"Which gamemode settings to use:\n 0 - Custom\n 1 - Casual\n 2 - Competitive\n 3 - Wingman\n 4 - Deathmatch",
-	true, 0,
-	true, GameModes::NUM_GAMEMODES - 1 );
-
 ConVar sv_kick_ban_duration(
 	"sv_kick_ban_duration",
 	"15",
@@ -1160,7 +1152,7 @@ ConVar snd_music_selection(
 		else
 			SetPhase( GAMEPHASE_PLAYING_STANDARD );
 
-		switch ( mp_settings_override.GetInt() )
+		switch ( mp_gamemode_override.GetInt() )
 		{
 			default:
 			case GameModes::CUSTOM:

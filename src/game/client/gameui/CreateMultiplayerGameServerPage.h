@@ -32,6 +32,9 @@ public:
 	bool IsRandomMapSelected();
 	const char *GetMapName();
 
+	int GetGameModeID();
+	void SetGameModeID( int gamemodeid );
+
 	vgui::ComboBox *GetMapList( void ) { return m_pMapList; }
 
 	// CS Bots
@@ -48,6 +51,7 @@ private:
 	void LoadMaps( const char *pszPathID );
 
 	vgui::ComboBox *m_pMapList;
+	vgui::ComboBox *m_pGameModeList;
 	vgui::CheckButton *m_pEnableBotsCheck;
 	CCvarToggleCheckButton *m_pEnableTutorCheck;
 	KeyValues *m_pSavedData;

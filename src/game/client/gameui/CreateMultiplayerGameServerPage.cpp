@@ -17,6 +17,7 @@ using namespace vgui;
 #include "tier1/convar.h"
 #include "EngineInterface.h"
 #include "CvarToggleCheckButton.h"
+#include "cs_shareddefs.h"
 
 #include "ModInfo.h"
 
@@ -41,6 +42,16 @@ CCreateMultiplayerGameServerPage::CCreateMultiplayerGameServerPage(vgui::Panel *
 	m_pEnableBotsCheck = new CheckButton( this, "EnableBotsCheck", "" );
 	m_pEnableBotsCheck->SetVisible( false );
 	m_pEnableBotsCheck->SetEnabled( false );
+
+	m_pGameModeList = new ComboBox( this, "GameModeList", 5, false );
+	for ( int i = 0; i < GameModes::NUM_GAMEMODES; i++ )
+	{
+		char label[64];
+		Q_snprintf( label, sizeof( label ), "#GameUI_GameMode_%d", i );
+		m_pGameModeList->AddItem( label, new KeyValues( "data", "mp_gamemode_override", i ) ); // PiMoN: I wish I could get rid of this frecking KeyValues, its useless!
+	}
+
+	m_pGameModeList->ActivateItem( 0 );
 
 	LoadControlSettings("Resource/CreateMultiplayerGameServerPage.res");
 
@@ -296,6 +307,22 @@ void CCreateMultiplayerGameServerPage::SetMap(const char *mapName)
 			break;
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CCreateMultiplayerGameServerPage::GetGameModeID()
+{
+	return m_pGameModeList->GetActiveItem();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CCreateMultiplayerGameServerPage::SetGameModeID( int gamemodeid )
+{
+	m_pGameModeList->ActivateItem( gamemodeid );
 }
 
 //-----------------------------------------------------------------------------

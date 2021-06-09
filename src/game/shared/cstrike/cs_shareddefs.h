@@ -108,6 +108,20 @@ public:
 #define CS_HOSTAGE_TRANSTIME_DROP		0.25
 #define CS_HOSTAGE_TRANSTIME_RESCUE		4.0
 
+namespace GameModes
+{
+	enum Type
+	{
+		CUSTOM = 0,
+		CASUAL,
+		COMPETITIVE,
+		COMPETITIVE_2V2,
+		DEATHMATCH,
+
+		NUM_GAMEMODES,
+	};
+};
+
 enum EHostageStates_t
 {
 	k_EHostageStates_Idle = 0,
