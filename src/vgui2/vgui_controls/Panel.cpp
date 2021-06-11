@@ -8816,30 +8816,28 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 			nFlags |= nFlagFull;
 			pszInput++;
 		}
-		else
-		{
-			// look for alignment flags
-			if ( pszInput[0] == 'r' || pszInput[0] == 'R' )
-			{
-				nFlags |= nFlagRightAlign;
-				pszInput++;
-			}
-			else if ( pszInput[0] == 'c' || pszInput[0] == 'C' )
-			{
-				nFlags |= nFlagCenterAlign;
-				pszInput++;
-			}
 
-			if ( pszInput[0] == 's' || pszInput[0] == 'S' )
-			{
-				nFlags |= nFlagProportionalSelf;
-				pszInput++;
-			}
-			else if ( pszInput[0] == 'p' || pszInput[0] == 'P' )
-			{
-				nFlags |= nFlagProportionalParent;
-				pszInput++;
-			}
+		// look for alignment flags
+		if ( pszInput[0] == 'r' || pszInput[0] == 'R' )
+		{
+			nFlags |= nFlagRightAlign;
+			pszInput++;
+		}
+		else if ( pszInput[0] == 'c' || pszInput[0] == 'C' )
+		{
+			nFlags |= nFlagCenterAlign;
+			pszInput++;
+		}
+
+		if ( pszInput[0] == 's' || pszInput[0] == 'S' )
+		{
+			nFlags |= nFlagProportionalSelf;
+			pszInput++;
+		}
+		else if ( pszInput[0] == 'p' || pszInput[0] == 'P' )
+		{
+			nFlags |= nFlagProportionalParent;
+			pszInput++;
 		}
 
 		// get the value
