@@ -8805,32 +8805,41 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 	const int nFlagCenterAlign = bX ? Panel::BUILDMODE_SAVE_XPOS_CENTERALIGNED : Panel::BUILDMODE_SAVE_YPOS_CENTERALIGNED;
 	const int nFlagProportionalSelf = bX ? Panel::BUILDMODE_SAVE_XPOS_PROPORTIONAL_SELF : Panel::BUILDMODE_SAVE_YPOS_PROPORTIONAL_SELF;
 	const int nFlagProportionalParent = bX ? Panel::BUILDMODE_SAVE_XPOS_PROPORTIONAL_PARENT : Panel::BUILDMODE_SAVE_YPOS_PROPORTIONAL_PARENT;
+	const int nFlagFull = bX ? Panel::BUILDMODE_SAVE_XPOS_FULL : Panel::BUILDMODE_SAVE_YPOS_FULL;
 
 	int nFlags = 0;
 	int nPosDelta = 0;
 	if (pszInput)
 	{
-		// look for alignment flags
-		if (pszInput[0] == 'r' || pszInput[0] == 'R')
+		if ( pszInput[0] == 'f' || pszInput[0] == 'F' )
 		{
-			nFlags |= nFlagRightAlign;
+			nFlags |= nFlagFull;
 			pszInput++;
 		}
-		else if (pszInput[0] == 'c' || pszInput[0] == 'C')
+		else
 		{
-			nFlags |= nFlagCenterAlign;
-			pszInput++;
-		}
+			// look for alignment flags
+			if ( pszInput[0] == 'r' || pszInput[0] == 'R' )
+			{
+				nFlags |= nFlagRightAlign;
+				pszInput++;
+			}
+			else if ( pszInput[0] == 'c' || pszInput[0] == 'C' )
+			{
+				nFlags |= nFlagCenterAlign;
+				pszInput++;
+			}
 
-		if (pszInput[0] == 's' || pszInput[0] == 'S')
-		{
-			nFlags |= nFlagProportionalSelf;
-			pszInput++;
-		}
-		else if (pszInput[0] == 'p' || pszInput[0] == 'P')
-		{
-			nFlags |= nFlagProportionalParent;
-			pszInput++;
+			if ( pszInput[0] == 's' || pszInput[0] == 'S' )
+			{
+				nFlags |= nFlagProportionalSelf;
+				pszInput++;
+			}
+			else if ( pszInput[0] == 'p' || pszInput[0] == 'P' )
+			{
+				nFlags |= nFlagProportionalParent;
+				pszInput++;
+			}
 		}
 
 		// get the value
@@ -8839,7 +8848,7 @@ int ComputePos( Panel* pPanel, const char *pszInput, int &nPos, const int& nSize
 
 		float flProportion = 1.f;
 		// scale the x up to our screen co-ords
-		if ( pPanel->IsProportional() )
+		if ( !(nFlags & nFlagFull) && pPanel->IsProportional() )
 		{
 			int nOldPos = nNewPos;
 			nNewPos = scheme()->GetProportionalScaledValueEx( pPanel->GetScheme(), nNewPos );
