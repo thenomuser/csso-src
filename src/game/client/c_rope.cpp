@@ -83,8 +83,9 @@ static ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT ); // get it fr
 static ConVar r_drawropes( "r_drawropes", "1", FCVAR_CHEAT );
 static ConVar r_queued_ropes( "r_queued_ropes", "1" );
 static ConVar r_ropetranslucent( "r_ropetranslucent", "1");
-static ConVar r_rope_holiday_light_scale( "r_rope_holiday_light_scale", "0.055", FCVAR_DEVELOPMENTONLY );
+static ConVar r_rope_holiday_light_scale( "r_rope_holiday_light_scale", "0.14", FCVAR_DEVELOPMENTONLY );
 static ConVar r_ropes_holiday_lights_allowed( "r_ropes_holiday_lights_allowed", "1", FCVAR_DEVELOPMENTONLY );
+static ConVar r_ropes_holiday_lights_type( "r_ropes_holiday_lights_type", "0", FCVAR_DEVELOPMENTONLY, "0 == sprites, 1 == models" );
 
 static ConVar rope_wind_dist( "rope_wind_dist", "1000", 0, "Don't use CPU applying small wind gusts to ropes when they're past this distance." );
 static ConVar rope_averagelight( "rope_averagelight", "1", 0, "Makes ropes use average of cubemap lighting instead of max intensity." );
@@ -288,7 +289,6 @@ private:
 
 	bool m_bDrawHolidayLights;
 	bool m_bHolidayInitialized;
-	int m_nHolidayLightsStyle;
 };
 
 static CRopeManager s_RopeManager;
@@ -316,7 +316,6 @@ CRopeManager::CRopeManager()
 	m_pDepthWriteMaterial = NULL;
 	m_bDrawHolidayLights = false;
 	m_bHolidayInitialized = false;
-	m_nHolidayLightsStyle = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -650,7 +649,7 @@ bool CRopeManager::IsHolidayLightMode( void )
 	}
 #endif
 
-	bool bDrawHolidayLights = false;
+	bool bDrawHolidayLights = (UTIL_IsNewYear() || UTIL_IsCSSOBirthday());
 
 #ifdef USES_ECON_ITEMS
 	if ( !m_bHolidayInitialized && GameRules() )
@@ -678,7 +677,7 @@ bool CRopeManager::IsHolidayLightMode( void )
 
 int CRopeManager::GetHolidayLightStyle( void )
 {
-	return m_nHolidayLightsStyle;
+	return r_ropes_holiday_lights_type.GetInt();
 }
 
 //-----------------------------------------------------------------------------
@@ -1705,7 +1704,7 @@ void C_RopeKeyframe::BuildRope( RopeSegData_t *pSegmentData, const Vector &vCurr
 			data.m_nHitBox = ( iNode << 8 );
 			data.m_flScale = r_rope_holiday_light_scale.GetFloat();
 			data.m_vOrigin = pSegmentData->m_Segments[nSegmentCount].m_vPos;
-			DispatchEffect( "TF_HolidayLight", data );
+			DispatchEffect( "CS_HolidayLight", data );
 		}
 
 		++nSegmentCount;
@@ -1739,7 +1738,7 @@ void C_RopeKeyframe::BuildRope( RopeSegData_t *pSegmentData, const Vector &vCurr
 					data.m_nHitBox++;
 					data.m_flScale = r_rope_holiday_light_scale.GetFloat();
 					data.m_vOrigin = pSegmentData->m_Segments[nSegmentCount].m_vPos;
-					DispatchEffect( "TF_HolidayLight", data );
+					DispatchEffect( "CS_HolidayLight", data );
 				}
 
 				++nSegmentCount;

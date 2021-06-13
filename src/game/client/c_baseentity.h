@@ -793,6 +793,7 @@ public:
 
 	// A random value 0-1 used by proxies to make sure they're not all in sync
 	float							ProxyRandomValue() const { return m_flProxyRandomValue; }
+	void							SetProxyRandomValue( float flNewValue ) { m_flProxyRandomValue = flNewValue; }
 
 	// The spawn time of this entity
 	float							SpawnTime() const { return m_flSpawnTime; }

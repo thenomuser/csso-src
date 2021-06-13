@@ -78,6 +78,34 @@ EXPOSE_INTERFACE( CAddProxy, IMaterialProxy, "Add" IMATERIAL_PROXY_INTERFACE_VER
 
 
 //-----------------------------------------------------------------------------
+// modulo
+//-----------------------------------------------------------------------------
+
+class CModProxy : public CFunctionProxy
+{
+public:
+	bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
+	void OnBind( void *pC_BaseEntity );
+};
+
+bool CModProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
+{
+	// Requires 2 args..
+	bool ok = CFunctionProxy::Init( pMaterial, pKeyValues );
+	ok = ok && m_pSrc2;
+	return ok;
+}
+
+void CModProxy::OnBind( void *pC_BaseEntity )
+{
+	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	SetFloatResult(  fmod( m_pSrc1->GetFloatValue(), m_pSrc2->GetFloatValue() )  );
+}
+
+EXPOSE_INTERFACE( CModProxy, IMaterialProxy, "Modulo" IMATERIAL_PROXY_INTERFACE_VERSION );
+
+
+//-----------------------------------------------------------------------------
 // Subtracts two vars...
 //-----------------------------------------------------------------------------
 
