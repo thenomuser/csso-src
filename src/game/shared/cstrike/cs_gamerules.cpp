@@ -6420,13 +6420,6 @@ CBaseCombatWeapon *CCSGameRules::GetNextBestWeapon( CBaseCombatCharacter *pPlaye
 
 float CCSGameRules::GetMapRemainingTime()
 {
-#ifdef GAME_DLL
-	if ( nextlevel.GetString() && *nextlevel.GetString() )
-	{
-		return 0;
-	}
-#endif
-
 	// if timelimit is disabled, return -1
 	if ( mp_timelimit.GetInt() <= 0 )
 		return -1;
