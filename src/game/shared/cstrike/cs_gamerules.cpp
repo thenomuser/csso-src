@@ -2366,7 +2366,7 @@ ConVar snd_music_selection(
 	{
 		// We needed players to start scoring
 		// Do we have them now?
-		if( !m_iNumSpawnableTerrorist || !m_iNumSpawnableCT )
+		if( !m_iNumSpawnableTerrorist && !m_iNumSpawnableCT )
 		{
 			Msg( "Game will not start until both teams have players.\n" );
 			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_scoring" );
@@ -2375,7 +2375,7 @@ ConVar snd_music_selection(
 			m_bFirstConnected = false;
 		}
 
-		if ( !m_bFirstConnected && m_iNumSpawnableTerrorist && m_iNumSpawnableCT )
+		if ( !m_bFirstConnected && (m_iNumSpawnableTerrorist || m_iNumSpawnableCT) )
 		{
 			// Start the round immediately when the first person joins
 			// UTIL_LogPrintf( "World triggered \"Game_Commencing\"\n" );
