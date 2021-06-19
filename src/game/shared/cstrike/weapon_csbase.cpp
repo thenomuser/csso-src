@@ -53,7 +53,7 @@ ConVar weapon_recoil_decay2_exp( "weapon_recoil_decay2_exp", "8", FCVAR_CHEAT | 
 ConVar weapon_recoil_decay2_lin( "weapon_recoil_decay2_lin", "18", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor (linear term) for weapon recoil" );
 ConVar weapon_recoil_vel_decay( "weapon_recoil_vel_decay", "4.5", FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor for weapon recoil velocity" );
 
-ConVar weapon_accuracy_nospread( "weapon_accuracy_nospread", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Disable weapon inaccuracy spread" );
+ConVar weapon_accuracy_nospread( "weapon_accuracy_nospread", "0", FCVAR_REPLICATED, "Disable weapon inaccuracy spread" );
 ConVar weapon_recoil_scale( "weapon_recoil_scale", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Overall scale factor for recoil. Used to reduce recoil on specific platforms" );
 ConVar weapon_air_spread_scale( "weapon_air_spread_scale", "1.0", FCVAR_CHEAT | FCVAR_REPLICATED, "Scale factor for jumping inaccuracy, set to 0 to make jumping accuracy equal to standing", true, 0.0f, false, 1.0f );
 

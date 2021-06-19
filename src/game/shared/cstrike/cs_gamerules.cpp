@@ -87,6 +87,10 @@ extern IReplaySystem *g_pReplay;
 
 ConVar sv_disable_observer_interpolation( "sv_disable_observer_interpolation", "0", FCVAR_REPLICATED, "Disallow interpolating between observer targets on this server." );
 
+#if defined( GAME_DLL )
+ConVar sv_buy_status_override( "sv_buy_status_override", "-1", FCVAR_GAMEDLL | FCVAR_REPLICATED, "Override for buy status map info. 0 = everyone can buy, 1 = ct only, 2 = t only 3 = nobody" );
+#endif
+
 
 /**
  * Player hull & eye position for standing, ducking, etc.  This version has a taller
@@ -1230,6 +1234,10 @@ ConVar snd_music_selection(
 				break;
 			case GameModes::DEATHMATCH:
 				engine->ServerCommand( "exec gamemode_deathmatch.cfg\n" );
+				engine->ServerExecute();
+				break;
+			case GameModes::FLYING_SCOUTSMAN:
+				engine->ServerCommand( "exec gamemode_flying_scoutsman.cfg\n" );
 				engine->ServerExecute();
 				break;
 		}
@@ -3238,33 +3246,43 @@ ConVar snd_music_selection(
 
 		ReadMultiplayCvars();
 
-		// Check to see if there's a mapping info paramater entity
-		if ( g_pMapInfo )
+		int iBuyStatus = -1;
+		if ( sv_buy_status_override.GetInt() >= 0 )
 		{
-			switch ( g_pMapInfo->m_iBuyingStatus )
+			iBuyStatus = sv_buy_status_override.GetInt();
+		}
+		else if ( g_pMapInfo )
+		{
+			// Check to see if there's a mapping info parameter entity
+			iBuyStatus = g_pMapInfo->m_iBuyingStatus;
+		}
+
+		if ( iBuyStatus >= 0 )
+		{
+			switch ( iBuyStatus )
 			{
 				case 0: 
 					m_bCTCantBuy = false; 
 					m_bTCantBuy = false; 
-					//Msg( "EVERYONE CAN BUY!\n" );
+					Msg( "EVERYONE CAN BUY!\n" );
 					break;
 				
 				case 1: 
 					m_bCTCantBuy = false; 
 					m_bTCantBuy = true; 
-					//Msg( "Only CT's can buy!!\n" );
+					Msg( "Only CT's can buy!!\n" );
 					break;
 
 				case 2: 
 					m_bCTCantBuy = true; 
 					m_bTCantBuy = false; 
-					//Msg( "Only T's can buy!!\n" );
+					Msg( "Only T's can buy!!\n" );
 					break;
 				
 				case 3: 
 					m_bCTCantBuy = true; 
 					m_bTCantBuy = true; 
-					//Msg( "No one can buy!!\n" );
+					Msg( "No one can buy!!\n" );
 					break;
 
 				default: 
@@ -7415,13 +7433,10 @@ int CCSGameRules::GetStartMoney( void )
 
 bool CCSGameRules::IsPlayingClassic( void ) const
 {
-	switch ( m_iCurrentGamemode )
-	{
-		case GameModes::DEATHMATCH:
-			return false;
-		default:
-			return true;
-	}
+	if ( m_iCurrentGamemode < GameModes::CLASSIC_GAMEMODES && m_iCurrentGamemode > GameModes::CUSTOM )
+		return true;
+
+	return false;
 }
 
 
