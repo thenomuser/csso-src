@@ -672,6 +672,18 @@ ConVar snd_music_selection(
 		true, 0,
 		false, 0 );
 
+	ConVar mp_playercashawards(
+		"mp_playercashawards",
+		"1",
+		FCVAR_REPLICATED,
+		"Players can earn money by performing in-game actions" );
+
+	ConVar mp_teamcashawards(
+		"mp_teamcashawards",
+		"1",
+		FCVAR_REPLICATED,
+		"Teams can earn money by performing in-game actions" );
+
 	ConVar mp_roundtime( 
 		"mp_roundtime",
 		"2.5",
@@ -7317,6 +7329,9 @@ void CCSGameRules::AddTeamAccount( int team, int reason )
 
 void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char* szAwardText )
 {
+	if ( !mp_teamcashawards.GetBool() )
+		return;
+
 	if ( amount == 0 )
 		return;
 

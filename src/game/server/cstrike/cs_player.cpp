@@ -148,6 +148,7 @@ extern ConVar mp_t_default_melee;
 extern ConVar mp_t_default_secondary;
 extern ConVar mp_t_default_primary;
 extern ConVar mp_t_default_grenades;
+extern ConVar mp_playercashawards;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -3475,8 +3476,8 @@ void CCSPlayer::AddAccountAward( int reason, int amount, const CWeaponCSBase *pW
 	if ( CSGameRules()->IsWarmupPeriod() )
 		return;
 
-	// no awards in dm either
-	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
+	// cash awards for individual actions must be enabled for this game mode
+	if ( !mp_playercashawards.GetBool() )
 		return;
 
 	if ( amount == 0 )
