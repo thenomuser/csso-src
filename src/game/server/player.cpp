@@ -4661,6 +4661,14 @@ void CBasePlayer::PostThink()
 		PostThinkVPhysics();
 		VPROF_SCOPE_END();
 	}
+	else
+	{
+		// DDK: for g_fGameOver, this fixes a case where the player would never complete an active weapon animation
+		// this was because in this case we weren't updating the items and handling animaion completion flags
+		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-ItemPostFrame" );
+		ItemPostFrame();
+		VPROF_SCOPE_END();
+	}
 
 #if !defined( NO_ENTITY_PREDICTION )
 	// Even if dead simulate entities
