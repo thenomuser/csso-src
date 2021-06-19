@@ -1109,6 +1109,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesT ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotKnifeWeaponCT ) ),
+	RecvPropInt( RECVINFO( m_iLoadoutSlotKnifeWeaponT ) ),
 
 END_RECV_TABLE()
 

@@ -293,6 +293,54 @@ ConVar mp_halftime_duration(
 	true, 0.0f,
 	true, 300.0f );
 
+ConVar mp_ct_default_melee(
+	"mp_ct_default_melee",
+	"weapon_knife",
+	FCVAR_REPLICATED ,
+	"The default melee weapon that the CTs will spawn with.  Even if this is blank, a knife will be given.  To give a taser, it should look like this: 'weapon_knife weapon_taser'.  Remember to set mp_weapons_allow_zeus to 1 if you want to give a taser!" );
+
+ConVar mp_ct_default_secondary(
+	"mp_ct_default_secondary",
+	"weapon_hkp2000",
+	FCVAR_REPLICATED,
+	"The default secondary (pistol) weapon that the CTs will spawn with" );
+
+ConVar mp_ct_default_primary(
+	"mp_ct_default_primary",
+	"",
+	FCVAR_REPLICATED,
+	"The default primary (rifle) weapon that the CTs will spawn with" );
+
+ConVar mp_ct_default_grenades(
+	"mp_ct_default_grenades",
+	"",
+	FCVAR_REPLICATED,
+	"The default grenades that the CTs will spawn with.  To give multiple grenades, separate each weapon class with a space like this: 'weapon_molotov weapon_hegrenade'" );
+
+ConVar mp_t_default_melee(
+	"mp_t_default_melee",
+	"weapon_knife",
+	FCVAR_REPLICATED,
+	"The default melee weapon that the Ts will spawn with" );
+
+ConVar mp_t_default_secondary(
+	"mp_t_default_secondary",
+	"weapon_glock",
+	FCVAR_REPLICATED,
+	"The default secondary (pistol) weapon that the Ts will spawn with" );
+
+ConVar mp_t_default_primary(
+	"mp_t_default_primary",
+	"",
+	FCVAR_REPLICATED,
+	"The default primary (rifle) weapon that the Ts will spawn with" );
+
+ConVar mp_t_default_grenades(
+	"mp_t_default_grenades",
+	"",
+	FCVAR_REPLICATED,
+	"The default grenades that the Ts will spawn with.  To give multiple grenades, separate each weapon class with a space like this: 'weapon_molotov weapon_hegrenade'" );
+
 ConVar mp_death_drop_gun(
 	"mp_death_drop_gun",
 	"1",

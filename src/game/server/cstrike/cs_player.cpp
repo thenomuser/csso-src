@@ -140,6 +140,14 @@ extern ConVar mp_autokick;
 extern ConVar mp_holiday_nogifts;
 extern ConVar sv_turbophysics;
 extern ConVar mp_anyone_can_pickup_c4;
+extern ConVar mp_ct_default_melee;
+extern ConVar mp_ct_default_secondary;
+extern ConVar mp_ct_default_primary;
+extern ConVar mp_ct_default_grenades;
+extern ConVar mp_t_default_melee;
+extern ConVar mp_t_default_secondary;
+extern ConVar mp_t_default_primary;
+extern ConVar mp_t_default_grenades;
 
 // [menglish] Added in convars for freeze cam time length
 extern ConVar spec_freeze_time;
@@ -458,6 +466,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotKnifeWeaponCT ) ),
+	SendPropInt( SENDINFO( m_iLoadoutSlotKnifeWeaponT ) ),
 
 
 END_SEND_TABLE()
@@ -1557,40 +1567,166 @@ void CCSPlayer::GiveDefaultItems()
 		return;
 #endif
 
-	// Always give the player the knife.
-	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+	if ( CSGameRules()->IsArmorFree() )
+		GiveNamedItem( "item_assaultsuit" );
 
-	if ( GetTeamNumber() == TEAM_CT )
+	const char *pchTeamKnifeName = GetTeamNumber() == TEAM_TERRORIST ? "weapon_knife_t" : "weapon_knife";
+
+	if ( CSLoadout()->HasKnifeSet( this, GetTeamNumber() ) )
+		 pchTeamKnifeName = KnivesEntities[CSLoadout()->GetKnifeForPlayer(this, GetTeamNumber())];
+
+	// don't give default items if the player is in deathmatch- we control weapon giving in DM, the player could get a random weapon
+	if ( CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 	{
-		if ( m_iLoadoutSlotKnifeWeaponCT == 0 || IsBotOrControllingBot() )
-			GiveNamedItem( "weapon_knife" );
-		else
-			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponCT + 1] );
+		CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );	
+		// if the player doesn't have something in the melee slot, give them a knife
+		if ( !knife )
+			GiveNamedItem( pchTeamKnifeName );
 
-		if ( !pistol )
+		// if they don't have any pistol, give them the default pistol
+		if ( !Weapon_GetSlot( WEAPON_SLOT_PISTOL ) )
 		{
-			if ( IsBot() )
-				GiveNamedItem( "weapon_hkp2000" );
-			else
+			const char *secondaryString = NULL;
+			if ( GetTeamNumber() == TEAM_CT )
+				secondaryString = mp_ct_default_secondary.GetString();
+			else if ( GetTeamNumber() == TEAM_TERRORIST )
+				secondaryString = mp_t_default_secondary.GetString();
+
+			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
+			if ( loadout_slot != SLOT_NONE )
+				secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+			CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+			if ( weaponId )
 			{
-				char weapon[32];
-				Q_snprintf( weapon, sizeof( weapon ), "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, SLOT_HKP2000 ) );
-				GiveNamedItem( weapon );
+				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+				if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
+			{
+					GiveNamedItem( secondaryString );
+					m_bUsingDefaultPistol = true;
+				}
 			}
-			m_bUsingDefaultPistol = true;
+		}
+
+		m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
+		return;
+	}	
+	
+	CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
+	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+	CBaseCombatWeapon *rifle = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+
+	m_bUsingDefaultPistol = true;
+
+	const char *meleeString = NULL;
+	if ( GetTeamNumber() == TEAM_CT )
+		meleeString = mp_ct_default_melee.GetString();
+	else if ( GetTeamNumber() == TEAM_TERRORIST )
+		meleeString = mp_t_default_melee.GetString();
+
+	if ( meleeString && *meleeString )
+	{
+		// remove everything in the melee slot
+		while ( knife )
+		{
+			DestroyWeapon( knife );
+			knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );	
+		}
+
+		// always give them a knife (mainly because we don't have animations to support no weapons)
+		GiveNamedItem( pchTeamKnifeName );
+
+		char token[256];
+		meleeString = engine->ParseFile( meleeString, token, sizeof( token ) );
+		while ( meleeString != NULL )
+		{
+			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, token );
+			if ( loadout_slot != SLOT_NONE )
+				V_strcpy( token, UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) ) );
+
+			// if it's not a knife, give it.  This is pretty much only going to be a taser, but we support anything
+			if ( V_strncmp( token, "weapon_knife", 12 ) )
+			{
+				CSWeaponID weaponId = WeaponIdFromString( token );
+				if ( weaponId )
+			{	
+					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+					if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_KNIFE )
+					{
+						GiveNamedItem( token );
+					}
+				}
+			}
+			meleeString = engine->ParseFile( meleeString, token, sizeof( token ) );
 		}
 	}
-	else if ( GetTeamNumber() == TEAM_TERRORIST )
-	{
-		if ( m_iLoadoutSlotKnifeWeaponT == 0 || IsBotOrControllingBot() )
-			GiveNamedItem( "weapon_knife_t" );
-		else
-			GiveNamedItem( KnivesEntities[m_iLoadoutSlotKnifeWeaponT + 1] );
 
-		if ( !pistol )
+	if ( !pistol )
+	{
+		const char *secondaryString = NULL;
+		if ( GetTeamNumber() == TEAM_CT )
+			secondaryString = mp_ct_default_secondary.GetString();
+		else if ( GetTeamNumber() == TEAM_TERRORIST )
+			secondaryString = mp_t_default_secondary.GetString();
+
+		LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
+		if ( loadout_slot != SLOT_NONE )
+			secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+	
+		CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+		if ( weaponId )
 		{
-			GiveNamedItem( "weapon_glock" );
-			m_bUsingDefaultPistol = true;
+			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+			if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
+				GiveNamedItem( secondaryString );
+		}
+	}
+
+	if ( !rifle )
+	{
+		const char *primaryString = NULL;
+		if ( GetTeamNumber() == TEAM_CT )
+			primaryString = mp_ct_default_primary.GetString();
+		else if ( GetTeamNumber() == TEAM_TERRORIST )
+			primaryString = mp_t_default_primary.GetString();
+
+		LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, primaryString + 7 ); // +7 to get rid of weapon_ prefix
+		if ( loadout_slot != SLOT_NONE )
+			primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+		CSWeaponID weaponId = WeaponIdFromString( primaryString );
+		if ( weaponId )
+		{
+			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+			if ( pWeaponInfo && pWeaponInfo->m_WeaponType != WEAPONTYPE_KNIFE && pWeaponInfo->m_WeaponType != WEAPONTYPE_PISTOL && pWeaponInfo->m_WeaponType != WEAPONTYPE_C4 && pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE && pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
+				GiveNamedItem( primaryString );
+		}
+	}
+
+	// give the player grenades if he needs them
+	const char *grenadeString = NULL;
+	if ( GetTeamNumber() == TEAM_CT )
+		grenadeString = mp_ct_default_grenades.GetString();
+	else if ( GetTeamNumber() == TEAM_TERRORIST )
+		grenadeString = mp_t_default_grenades.GetString();
+
+	if ( grenadeString && *grenadeString )
+	{
+		char token[256];
+		grenadeString = engine->ParseFile( grenadeString, token, sizeof( token ) );
+		while ( grenadeString != NULL )
+		{
+			CSWeaponID weaponId = WeaponIdFromString( token );
+			if ( weaponId )
+			{
+				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+				if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_GRENADE )
+				{
+					if ( !HasWeaponOfType( weaponId ) )
+						GiveNamedItem( token );
+				}
+			}
+			grenadeString = engine->ParseFile( grenadeString, token, sizeof( token ) );
 		}
 	}
 
@@ -1603,10 +1739,7 @@ void CCSPlayer::GiveDefaultItems()
 	{
 		Weapon_GetSlot( WEAPON_SLOT_RIFLE )->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 250 );
 	}
-
-	if ( CSGameRules()->IsArmorFree() )
-		GiveNamedItem( "item_assaultsuit" );
-
+	
 	m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
 }
 

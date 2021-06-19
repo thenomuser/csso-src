@@ -1929,6 +1929,21 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 	return AcquireResult::Allowed;
 }
 
+bool CCSPlayer::HasWeaponOfType( int nWeaponID ) const
+{
+	for ( int i = 0; i < WeaponCount(); ++i )
+	{		
+		CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* > ( GetWeapon( i ) );
+
+		if ( pWeapon && pWeapon->GetCSWeaponID() == nWeaponID )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //--------------------------------------------------------------------------------------------------------------
 
 #define MATERIAL_NAME_LENGTH 16

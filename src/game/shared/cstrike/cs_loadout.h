@@ -64,6 +64,9 @@ public:
 	
 	bool			HasGlovesSet( CCSPlayer* pPlayer, int team );
 	int				GetGlovesForPlayer( CCSPlayer* pPlayer, int team );
+
+	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
+	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
 };
 
 

@@ -150,3 +150,51 @@ int CCSLoadout::GetGlovesForPlayer( CCSPlayer* pPlayer, int team )
 
 	return value;
 }
+
+bool CCSLoadout::HasKnifeSet( CCSPlayer* pPlayer, int team )
+{
+	if ( !pPlayer )
+		return false;
+
+	if ( pPlayer->IsBotOrControllingBot() )
+		return false;
+
+	int value = 0;
+	switch ( team )
+	{
+		case TEAM_CT:
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponCT;
+			break;
+		case TEAM_TERRORIST:
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponT;
+			break;
+		default:
+			break;
+	}
+
+	return (value > 0) ? true : false;
+}
+
+int CCSLoadout::GetKnifeForPlayer( CCSPlayer* pPlayer, int team )
+{
+	if ( !pPlayer )
+		return 0;
+
+	if ( pPlayer->IsBotOrControllingBot() )
+		return 0;
+
+	int value = 0;
+	switch ( team )
+	{
+		case TEAM_CT:
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponCT + 1;
+			break;
+		case TEAM_TERRORIST:
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponT + 1;
+			break;
+		default:
+			break;
+	}
+
+	return value;
+}
