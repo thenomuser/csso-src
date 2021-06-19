@@ -19,6 +19,7 @@
 #ifdef CLIENT_DLL
 
 	#include "c_cs_player.h"
+	#include "weapon_selection.h"
 
 #else
 
@@ -398,6 +399,12 @@ void CBaseCSGrenade::ItemPostFrame()
 		m_bRedraw = true;
 		m_bIsHeldByPlayer = false;
 		m_fThrowTime = 0.0f;
+
+		CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+		if ( pHudSelection )
+		{
+			pHudSelection->OnWeaponDrop( this );
+		}
 	}
 
 	void CBaseCSGrenade::StartGrenadeThrow()

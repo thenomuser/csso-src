@@ -23,7 +23,6 @@ void RegisterUserMessages()
 	usermessages->Register( "HudMsg", -1 );
 	usermessages->Register( "ResetHUD", 1 );	// called every respawn
 	usermessages->Register( "GameTitle", 0 );	// show game title
-	usermessages->Register( "ItemPickup", -1 );	// for item history on screen
 	usermessages->Register( "ShowMenu", -1 );	// show hud menu
 	usermessages->Register( "Shake", 13 );		// shake view
 	usermessages->Register( "Fade", 10 );	// fade HUD in/out
@@ -46,7 +45,6 @@ void RegisterUserMessages()
 	usermessages->Register( "ReloadEffect", 2 );			// a player reloading..
 	usermessages->Register( "PlayerAnimEvent", -1 );	// jumping, firing, reload, etc.
 
-	usermessages->Register( "AmmoDenied", 2 );
 	usermessages->Register( "UpdateRadar", -1 );
 	usermessages->Register( "KillCam", -1 );
 	usermessages->Register( "MarkAchievement", -1 );

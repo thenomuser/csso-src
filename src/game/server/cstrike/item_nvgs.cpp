@@ -22,12 +22,6 @@ public:
 		Precache( );
 		BaseClass::Spawn( );
 	}
-	/*
-	void Precache( void )
-	{
-		PrecacheScriptSound( "BaseCombatCharacter.ItemPickup2" );
-	}
-	*/
 	bool MyTouch( CBasePlayer *pBasePlayer )
 	{
 		CCSPlayer *pPlayer = dynamic_cast< CCSPlayer* >( pBasePlayer );
@@ -38,17 +32,6 @@ public:
 		}
 
 		pPlayer->m_bHasNightVision = true;
-
-		if ( pPlayer->IsDead() == false )
-		{
-			//CPASAttenuationFilter filter( pPlayer );
-			//EmitSound( filter, entindex(), "BaseCombatCharacter.ItemPickup2" );
-
-			CSingleUserRecipientFilter user( pPlayer );
-			UserMessageBegin( user, "ItemPickup" );
-			WRITE_STRING( "item_nvgs" );
-			MessageEnd();
-		}
 
 		return true;
 	}

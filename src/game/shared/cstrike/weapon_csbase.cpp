@@ -11,6 +11,7 @@
 #include "weapon_csbase.h"
 #include "ammodef.h"
 #include "cs_gamerules.h"
+#include "basegrenade_shared.h"
 #include "npcevent.h"
 
 #define ALLOW_WEAPON_SPREAD_DISPLAY	0
@@ -24,6 +25,7 @@
 	#include "hud_crosshair.h"
 	#include "c_te_effect_dispatch.h"
 	#include "c_te_legacytempents.h"
+	#include "weapon_selection.h"
 
 	extern IVModelInfoClient* modelinfo;
 
@@ -1604,6 +1606,13 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 #ifdef CLIENT_DLL
 	BaseClass::Drop(vecVelocity);
+
+	CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+	if ( pHudSelection )
+	{
+		pHudSelection->OnWeaponDrop( this );
+	}
+
 	return;
 #else
 
@@ -2052,6 +2061,32 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 	void CWeaponCSBase::OnDataChanged( DataUpdateType_t type )
 	{
 		BaseClass::OnDataChanged( type );
+
+		C_BaseCombatCharacter *pOwner = GetPreviousOwner();
+
+		if ( GetWeaponType() == WEAPONTYPE_GRENADE )
+		{
+			pOwner = ((CBaseGrenade *) this)->GetThrower();
+		}
+
+		if ( pOwner )
+		{
+			C_BasePlayer *pPlayer = ToBasePlayer( pOwner );
+			C_CSPlayer *pObservedPlayer = GetHudPlayer();
+
+			// check if weapon was dropped by local player or the player we are observing
+			if ( pObservedPlayer == pPlayer )
+			{
+				if ( m_iState == WEAPON_NOT_CARRIED && m_iOldState != WEAPON_NOT_CARRIED )
+				{
+					CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+					if ( pHudSelection )
+					{
+						pHudSelection->OnWeaponDrop( this );
+					}
+				}
+			}
+		}
 
 #if IRONSIGHT
 		UpdateIronSightController();

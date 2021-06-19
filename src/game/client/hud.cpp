@@ -12,7 +12,7 @@
 //
 #include "cbase.h"
 #include "hud_macros.h"
-#include "history_resource.h"
+#include "hudelement.h"
 #include "iinput.h"
 #include "clientmode.h"
 #include "in_buttons.h"

@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "weapon_selection.h"
 #include "hud_macros.h"
-#include "history_resource.h"
 #include "menu.h"
 #include "in_buttons.h"
 #include <KeyValues.h>

@@ -24,6 +24,7 @@
 	#include "client_virtualreality.h"
 	#define CRecipientFilter C_RecipientFilter
 	#include "sourcevr/isourcevirtualreality.h"
+	#include "weapon_selection.h"
 
 #else
 
@@ -996,6 +997,13 @@ bool CBasePlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex 
 		if ( pViewModel )
 			pViewModel->RemoveEffects( EF_NODRAW );
 		ResetAutoaim( );
+#if defined ( CLIENT_DLL )
+		CBaseHudWeaponSelection *pHudSelection = GetHudWeaponSelection();
+		if ( pHudSelection )
+		{
+			pHudSelection->OnWeaponSwitch( pWeapon );
+		}
+#endif
 		return true;
 	}
 	return false;

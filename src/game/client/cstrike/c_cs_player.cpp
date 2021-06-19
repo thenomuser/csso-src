@@ -38,7 +38,7 @@
 #include "c_cs_hostage.h"
 #include "prediction.h"
 
-#include "history_resource.h"
+#include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
 
@@ -951,17 +951,6 @@ void RecvProxy_HasDefuser( const CRecvProxyData *pData, void *pStruct, void *pOu
 			drawIcon = true;
 		}
 		pPlayerData->GiveDefuser();
-	}
-
-	if (pPlayerData->IsLocalPlayer() && drawIcon)
-	{
-		// add to pickup history
-		CHudHistoryResource *pHudHR = GET_HUDELEMENT( CHudHistoryResource );
-
-		if ( pHudHR )
-		{
-			pHudHR->AddToHistory(HISTSLOT_ITEM, "defuser_pickup");
-		}
 	}
 }
 
