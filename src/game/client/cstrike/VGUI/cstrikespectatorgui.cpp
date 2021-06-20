@@ -23,6 +23,7 @@
 #include <vgui_controls/AnimationController.h>
 #include "voice_status.h"
 #include "hud_radar.h"
+#include "view.h"
 
 using namespace vgui;
 DECLARE_HUDELEMENT( CCSMapOverview )
@@ -549,6 +550,32 @@ void CCSMapOverview::Update( void )
 		// Follow the local player in chase cam, so the map rotates using the local player's angles
 		SetFollowEntity( pPlayer->entindex() );
 	}
+
+	if ( m_vecRadarVerticalSections.Count() )
+	{
+		float flPlayerZ = 0;
+		if ( pPlayer && pPlayer->GetObserverMode() == OBS_MODE_NONE )
+		{
+			flPlayerZ = pPlayer->GetLocalOrigin().z;
+		}
+		else 
+		{
+			flPlayerZ = MainViewOrigin().z;
+		}
+
+		FOR_EACH_VEC( m_vecRadarVerticalSections, i )
+		{
+			HudRadarLevelVerticalSection_t *pRadarSection = &m_vecRadarVerticalSections[i];
+
+			if ( flPlayerZ >= pRadarSection->m_flSectionAltitudeFloor && 
+				 flPlayerZ < pRadarSection->m_flSectionAltitudeCeiling && 
+				m_nCurrentRadarVerticalSection != pRadarSection->m_nSectionIndex )
+			{
+				m_nCurrentRadarVerticalSection = pRadarSection->m_nSectionIndex;
+				break;
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -706,6 +733,9 @@ CCSMapOverview::CCSMapOverview( const char *pElementName ) : BaseClass( pElement
 		m_playerPreferredMode = MAP_MODE_OFF;
 		break;
 	}
+
+	m_nCurrentRadarVerticalSection = -1;
+	m_vecRadarVerticalSections.RemoveAll();
 }
 
 void CCSMapOverview::Init( void )
@@ -1151,6 +1181,12 @@ void CCSMapOverview::DrawMapTexture()
 	{
 		textureIDToUse = m_nRadarMapTextureID;
 		foundRadarVersion = true;
+	}
+
+	if ( m_vecRadarVerticalSections.Count() )
+	{
+		if ( m_vecRadarVerticalSections[m_nCurrentRadarVerticalSection].m_iTextureID != -1 )
+			textureIDToUse = m_vecRadarVerticalSections[m_nCurrentRadarVerticalSection].m_iTextureID;
 	}
 
 	int mapInset = GetBorderSize();
@@ -1644,6 +1680,63 @@ void CCSMapOverview::SetMap(const char * levelname)
 	{
 		if( !CreateRadarImage(m_MapKeyValues->GetString("material"), radarFileName) )
 			m_nRadarMapTextureID = -1;
+	}
+
+	KeyValues* pSections = m_MapKeyValues->FindKey( "verticalsections" );
+	if ( pSections )
+	{
+		int nIndex = 0;
+		for ( KeyValues *kSection = pSections->GetFirstSubKey(); kSection != NULL; kSection = kSection->GetNextKey() )
+		{
+			float flAltMin = kSection->GetFloat( "AltitudeMin", 0.0f );
+			float flAltMax = kSection->GetFloat( "AltitudeMax", 0.0f );
+
+			if ( flAltMin < flAltMax )
+			{
+				HudRadarLevelVerticalSection_t *pNewSection = &m_vecRadarVerticalSections[ m_vecRadarVerticalSections.AddToTail() ];
+				
+				if ( !V_strcmp( kSection->GetName(), "default" ) || !V_strcmp( kSection->GetName(), "Default" ) ) // don't say anything.
+				{
+					V_sprintf_safe( pNewSection->m_szSectionName, "overviews/%s", levelname );
+				}
+				else
+				{
+					V_sprintf_safe( pNewSection->m_szSectionName, "overviews/%s_%s", levelname, kSection->GetName() );
+				}
+
+				pNewSection->m_nSectionIndex = nIndex;
+				pNewSection->m_flSectionAltitudeFloor = flAltMin;
+				pNewSection->m_flSectionAltitudeCeiling = flAltMax;
+				pNewSection->m_iTextureID = surface()->CreateNewTextureID();
+				surface()->DrawSetTextureFile( pNewSection->m_iTextureID, pNewSection->m_szSectionName, true, false );
+
+				int sectionWide, sectionTall;
+				surface()->DrawGetTextureSize( pNewSection->m_iTextureID, sectionWide, sectionTall );
+				if ( sectionWide != wide || sectionTall != tall )
+				{
+					m_vecRadarVerticalSections.Purge();
+					break;
+				}
+
+				nIndex++;
+			}
+			else
+			{
+				DevWarning( "Radar vertical section is invalid!\n" );
+			}
+		}
+
+		if ( m_vecRadarVerticalSections.Count() )
+		{
+			DevMsg( "Loaded radar vertical section keyvalues.\n" );
+		}
+	}
+	else
+	{
+		// map doesn't have sections, clear any sections from previous map
+		// TODO: Perhaps initialize a single giant vertical section that covers the whole map,
+		//       to reduce variation in handling radar in downstream code?
+		m_vecRadarVerticalSections.Purge();
 	}
 
 	ClearGoalIcons();

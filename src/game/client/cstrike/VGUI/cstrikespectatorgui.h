@@ -274,6 +274,28 @@ private:
 	int	 m_nRadarMapTextureID;	// texture id for radar version of current overview image
 
 	int m_playerPreferredMode; // The mode the player wants to be in for when we aren't being the radar
+
+	int m_nCurrentRadarVerticalSection;
+
+	struct HudRadarLevelVerticalSection_t
+	{
+		int m_nSectionIndex;
+		char m_szSectionName[MAX_MAP_NAME];
+		float m_flSectionAltitudeFloor;
+		float m_flSectionAltitudeCeiling;
+		int m_iTextureID;
+
+		HudRadarLevelVerticalSection_t()
+		{
+			m_nSectionIndex = 0;
+			m_szSectionName[0] = 0;
+			m_flSectionAltitudeFloor = 0;
+			m_flSectionAltitudeCeiling = 0;
+			m_iTextureID = -1;
+		}
+	};
+
+	CUtlVector< HudRadarLevelVerticalSection_t > m_vecRadarVerticalSections;
 };
 
 #endif // CSSPECTATORGUI_H
