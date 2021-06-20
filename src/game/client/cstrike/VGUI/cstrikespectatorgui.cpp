@@ -1686,6 +1686,7 @@ void CCSMapOverview::SetMap(const char * levelname)
 	if ( pSections )
 	{
 		int nIndex = 0;
+		char szSectionName[MAX_MAP_NAME];
 		for ( KeyValues *kSection = pSections->GetFirstSubKey(); kSection != NULL; kSection = kSection->GetNextKey() )
 		{
 			float flAltMin = kSection->GetFloat( "AltitudeMin", 0.0f );
@@ -1697,18 +1698,18 @@ void CCSMapOverview::SetMap(const char * levelname)
 				
 				if ( !V_strcmp( kSection->GetName(), "default" ) || !V_strcmp( kSection->GetName(), "Default" ) ) // don't say anything.
 				{
-					V_sprintf_safe( pNewSection->m_szSectionName, "overviews/%s", levelname );
+					V_sprintf_safe( szSectionName, "overviews/%s", levelname );
 				}
 				else
 				{
-					V_sprintf_safe( pNewSection->m_szSectionName, "overviews/%s_%s", levelname, kSection->GetName() );
+					V_sprintf_safe( szSectionName, "overviews/%s_%s", levelname, kSection->GetName() );
 				}
 
 				pNewSection->m_nSectionIndex = nIndex;
 				pNewSection->m_flSectionAltitudeFloor = flAltMin;
 				pNewSection->m_flSectionAltitudeCeiling = flAltMax;
 				pNewSection->m_iTextureID = surface()->CreateNewTextureID();
-				surface()->DrawSetTextureFile( pNewSection->m_iTextureID, pNewSection->m_szSectionName, true, false );
+				surface()->DrawSetTextureFile( pNewSection->m_iTextureID, szSectionName, true, false );
 
 				int sectionWide, sectionTall;
 				surface()->DrawGetTextureSize( pNewSection->m_iTextureID, sectionWide, sectionTall );

@@ -280,7 +280,6 @@ private:
 	struct HudRadarLevelVerticalSection_t
 	{
 		int m_nSectionIndex;
-		char m_szSectionName[MAX_MAP_NAME];
 		float m_flSectionAltitudeFloor;
 		float m_flSectionAltitudeCeiling;
 		int m_iTextureID;
@@ -288,7 +287,6 @@ private:
 		HudRadarLevelVerticalSection_t()
 		{
 			m_nSectionIndex = 0;
-			m_szSectionName[0] = 0;
 			m_flSectionAltitudeFloor = 0;
 			m_flSectionAltitudeCeiling = 0;
 			m_iTextureID = -1;
