@@ -121,26 +121,29 @@ void CHudRoundTimer::Think()
 	}
 	if ( pRules->IsFreezePeriod() )
 	{
-		// in freeze period countdown to round start time
-		m_iTimer = (int)ceil(pRules->GetRoundStartTime()-gpGlobals->curtime);
-	}
-	if ( pRules->IsTimeOutActive() )
-	{
-		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
-		if ( pPlayer )
+		if ( pRules->IsTimeOutActive() )
 		{
-			switch ( pPlayer->GetTeamNumber() )
+			C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+			if ( pPlayer )
 			{
-				case TEAM_CT:
-					m_iTimer = (int)ceil( pRules->GetCTTimeOutRemaining() );
-					break;
-				case TEAM_TERRORIST:
-					m_iTimer = (int)ceil( pRules->GetTerroristTimeOutRemaining() );
-					break;
+				switch ( pPlayer->GetTeamNumber() )
+				{
+					case TEAM_CT:
+						m_iTimer = (int) ceil( pRules->GetCTTimeOutRemaining() );
+						break;
+					case TEAM_TERRORIST:
+						m_iTimer = (int) ceil( pRules->GetTerroristTimeOutRemaining() );
+						break;
+				}
 			}
 		}
+		else
+		{
+			// in freeze period countdown to round start time
+			m_iTimer = (int) ceil( pRules->GetRoundStartTime() - gpGlobals->curtime );
+		}
 	}
-
+	
 	if(m_iTimer > 30)
 	{
 		SetFgColor(m_TextColor);
