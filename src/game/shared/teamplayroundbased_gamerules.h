@@ -22,7 +22,6 @@
 	extern ConVar mp_showcleanedupents;
 	extern ConVar mp_bonusroundtime;
 	extern ConVar mp_restartround;
-	extern ConVar mp_winlimit;
 	extern ConVar mp_maxrounds;
 	extern ConVar mp_stalemate_timelimit;
 	extern ConVar mp_stalemate_enable;

@@ -241,6 +241,7 @@ private:
 	CNetworkVar( int, m_iRoundTime );		 // (From mp_roundtime) - How many seconds long this round is.
 	CNetworkVar( float, m_fRoundStartTime ); // time round has started
 	CNetworkVar( float, m_flGameStartTime );
+	CNetworkVar( int, m_nOvertimePlaying );
 	CNetworkVar( int, m_iHostagesRemaining );
 	CNetworkVar( bool, m_bAnyHostageReached );
 	CNetworkVar( bool, m_bMapHasBombTarget );
@@ -413,8 +414,6 @@ public:
 
 	// Check various conditions to end the map.
 	bool CheckGameOver();
-	bool CheckMaxRounds();
-	bool CheckWinLimit();
 	bool CheckFragLimit();
 
 	void CheckLevelInitialized();
@@ -489,6 +488,7 @@ protected:
 	virtual void GoToIntermission( void );
 
 public:
+	void SetOvertimePlaying( int nOvertimePlaying ) { m_nOvertimePlaying = nOvertimePlaying; }
 
 	void SetScrambleTeamsOnRestart( bool scramble ) { m_bScrambleTeamsOnRestart = scramble; }
 	bool GetScrambleTeamsOnRestart( void ) { return m_bScrambleTeamsOnRestart; }
@@ -629,6 +629,10 @@ public:
 	int		PlayerCashAwardValue( int reason );
 	void	AddTeamAccount( int team, int reason );
 	void	AddTeamAccount( int team, int reason, int amount, const char* szAwardText = NULL );
+
+	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
+
+	int GetNumWinsToClinch( void ) const;
 
 private:
 

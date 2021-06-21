@@ -1703,7 +1703,6 @@ void __MsgFunc_MatchEndConditions( bf_read &msg )
 {
 	int iFragLimit = (int) msg.ReadLong();
 	int iMaxRounds = (int) msg.ReadLong();
-	int iWinRounds = (int) msg.ReadLong();
 	int iTimeLimit = (int) msg.ReadLong();
 
 	IGameEvent *event = gameeventmanager->CreateEvent( "match_end_conditions" );
@@ -1711,7 +1710,6 @@ void __MsgFunc_MatchEndConditions( bf_read &msg )
 	{
 		event->SetInt( "frags", iFragLimit );
 		event->SetInt( "max_rounds", iMaxRounds );
-		event->SetInt( "win_rounds", iWinRounds );
 		event->SetInt( "time", iTimeLimit );
 		gameeventmanager->FireEventClientSide( event );
 	}

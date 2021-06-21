@@ -70,7 +70,6 @@ ConVar cl_scoreboard_dead_clan_color_blue( "cl_scoreboard_dead_clan_color_blue",
 
 
 // [tj] These ConVars are defined at various places in the global scope. Just declaring them here so we can use them
-extern ConVar mp_winlimit;
 extern ConVar mp_maxrounds;
 extern ConVar mp_timelimit;
 
@@ -1571,18 +1570,6 @@ void CCSClientScoreBoardDialog::UpdateMatchEndText()
 				V_snwprintf( wzMatchEndCause, ARRAYSIZE( wzMatchEndCause ), L"%d", mp_maxrounds.GetInt() - roundsPlayed );
 				g_pVGuiLocalize->ConstructString( wzMatchEndCausesLabel, sizeof( wzMatchEndCausesLabel ),
 					g_pVGuiLocalize->Find( "#Cstrike_Rounds_LeftVariable" ), 1, wzMatchEndCause );
-				m_pWinConditionLabel->SetText( wzMatchEndCausesLabel );
-				m_pWinConditionLabel->SetVisible( true );
-			}
-		}
-		// Win limit
-		else if ( mp_winlimit.GetInt() != 0 )
-		{
-			if ( m_pWinConditionLabel )
-			{
-				V_snwprintf( wzMatchEndCause, ARRAYSIZE( wzMatchEndCause ), L"%d", mp_winlimit.GetInt() );
-				g_pVGuiLocalize->ConstructString( wzMatchEndCausesLabel, sizeof( wzMatchEndCausesLabel ),
-					g_pVGuiLocalize->Find( "#Cstrike_Wins_NeededVariable" ), 1, wzMatchEndCause );
 				m_pWinConditionLabel->SetText( wzMatchEndCausesLabel );
 				m_pWinConditionLabel->SetVisible( true );
 			}

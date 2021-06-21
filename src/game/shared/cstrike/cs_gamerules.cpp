@@ -140,6 +140,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		RecvPropInt( RECVINFO( m_nCTTimeOuts ) ),
 
 		RecvPropInt( RECVINFO( m_iRoundTime ) ),
+		RecvPropInt( RECVINFO( m_nOvertimePlaying ) ),
 		RecvPropFloat( RECVINFO( m_fRoundStartTime ) ),
 		RecvPropFloat( RECVINFO( m_flGameStartTime ) ),
 		RecvPropInt( RECVINFO( m_iHostagesRemaining ) ),
@@ -166,6 +167,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CCSGameRules, DT_CSGameRules )
 		SendPropInt( SENDINFO( m_nCTTimeOuts ) ),
 
 		SendPropInt( SENDINFO( m_iRoundTime ), 16 ),
+		SendPropInt( SENDINFO( m_nOvertimePlaying ), 16 ),
 		SendPropFloat( SENDINFO( m_fRoundStartTime ), 32, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO( m_flGameStartTime ), 32, SPROP_NOSCALE ),
 		SendPropInt( SENDINFO( m_iHostagesRemaining ), 4 ),
@@ -312,6 +314,12 @@ ConVar mp_halftime_duration(
 	"Number of seconds that halftime lasts",
 	true, 0.0f,
 	true, 300.0f );
+
+ConVar mp_match_can_clinch(
+	"mp_match_can_clinch",
+	"1",
+	FCVAR_REPLICATED,
+	"Can a team clinch and end the match by being so far ahead that the other team has no way to catching up?" );
 
 ConVar mp_ct_default_melee(
 	"mp_ct_default_melee",
@@ -507,6 +515,12 @@ ConVar mp_halftime_pausematch(
 	"0",
 	FCVAR_REPLICATED,
 	"Set to 1 to pause match after halftime countdown elapses. Match must be resumed by vote or admin." );
+
+ConVar mp_overtime_halftime_pausetimer(
+	"mp_overtime_halftime_pausetimer",
+	"0",
+	FCVAR_REPLICATED,
+	"If set to 1 will set mp_halftime_pausetimer to 1 before every half of overtime. Set mp_halftime_pausetimer to 0 to resume the timer." );
 
 ConVar sv_allowminmodels(
 	"sv_allowminmodels",
@@ -714,6 +728,24 @@ ConVar snd_music_selection(
 		"1",
 		FCVAR_REPLICATED,
 		"Teams can earn money by performing in-game actions" );
+
+	ConVar mp_overtime_enable(
+		"mp_overtime_enable",
+		"0",
+		FCVAR_REPLICATED,
+		"If a match ends in a tie, use overtime rules to determine winner" );
+
+	ConVar mp_overtime_maxrounds(
+		"mp_overtime_maxrounds",
+		"6",
+		FCVAR_REPLICATED,
+		"When overtime is enabled play additional rounds to determine winner" );
+
+	ConVar mp_overtime_startmoney(
+		"mp_overtime_startmoney",
+		"10000",
+		FCVAR_REPLICATED,
+		"Money assigned to all players at start of every overtime half" );
 
 	ConVar mp_roundtime( 
 		"mp_roundtime",
@@ -1107,6 +1139,7 @@ ConVar snd_music_selection(
 		m_gamePhase = GAMEPHASE_PLAYING_STANDARD;
 		m_iRoundWinStatus = WINNER_NONE;
 		m_iFreezeTime = 0;
+		m_nOvertimePlaying = 0;
 
 		m_fRoundStartTime = 0;
 		m_bAllowWeaponSwitch = true;
@@ -1307,7 +1340,11 @@ ConVar snd_music_selection(
 			SetMatchWaitingForResume( true );
 		}
 
-        m_gamePhase = phase;
+		m_gamePhase = phase;
+
+		// When going to overtime halftime pause the timer if requested
+		if ( (m_gamePhase == GAMEPHASE_HALFTIME) && m_nOvertimePlaying && mp_overtime_halftime_pausetimer.GetInt() )
+			mp_halftime_pausetimer.SetValue( mp_overtime_halftime_pausetimer.GetInt() );
     }
 
 	void CCSGameRules::LoadMapProperties()
@@ -3203,12 +3240,22 @@ ConVar snd_music_selection(
 		bool bClearAccountsAfterHalftime = false;
 		if ( GetPhase() == GAMEPHASE_HALFTIME )
 		{
-			// Regulation halftime or 1st half of overtime finished, swap the CT and T scores so the scoreboard will be correct
-			int temp = m_iNumCTWins;
-			m_iNumCTWins = m_iNumTerroristWins;
-			m_iNumTerroristWins = temp;
-			UpdateTeamScores();
-			SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
+			if ( GetOvertimePlaying() && ( GetRoundsPlayed() <= ( mp_maxrounds.GetInt() + ( GetOvertimePlaying() - 1 )*mp_overtime_maxrounds.GetInt() ) ) )
+			{
+				// This is the overtime halftime at the end of a tied regulation time or at the end of a previous overtime that
+				// failed to determine the winner, we will not be switching teams at this time and we proceed into first half
+				// of next overtime period
+				SetPhase( GAMEPHASE_PLAYING_FIRST_HALF );
+			}
+			else
+			{
+				// Regulation halftime or 1st half of overtime finished, swap the CT and T scores so the scoreboard will be correct
+				int temp = m_iNumCTWins;
+				m_iNumCTWins = m_iNumTerroristWins;
+				m_iNumTerroristWins = temp;
+				UpdateTeamScores();
+				SetPhase( GAMEPHASE_PLAYING_SECOND_HALF );
+			}
 
 			// hide scoreboard
 			for ( int i = 1; i <= MAX_PLAYERS; i++ )
@@ -4124,28 +4171,25 @@ ConVar snd_music_selection(
 			return;
 		}
 
-		// have we hit the max rounds?
-		if ( CheckMaxRounds() )
-		{
-			return;
-		}
-
-		// did somebaody hit the fraglimit ?
+		// did somebody hit the fraglimit ?
 		if ( CheckFragLimit() )
 		{
 			return;
 		}
 
-		if ( CheckWinLimit() )
-		{
-			return;
-		}
+		//Check for clinch
+		int iNumWinsToClinch = GetNumWinsToClinch();
+
+		bool bTeamHasClinchedVictory = false;
 
 		//Check for halftime switching
 		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
 		{
 			//The number of rounds before halftime depends on the mode and the associated convar
-			int numRoundsBeforeHalftime = (mp_maxrounds.GetInt() / 2);
+            int numRoundsBeforeHalftime =
+				GetOvertimePlaying()
+				? ( mp_maxrounds.GetInt() + ( 2*GetOvertimePlaying() - 1 )*( mp_overtime_maxrounds.GetInt() / 2 ) )
+				: ( mp_maxrounds.GetInt() / 2 );
 
 			//Finally, check for halftime
 
@@ -4183,6 +4227,112 @@ ConVar snd_music_selection(
 
 					pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
 				}
+			}
+		}
+
+		//Check for end of half-time match
+		else if ( GetPhase() == GAMEPHASE_PLAYING_SECOND_HALF )
+		{
+			//Check for clinch
+			if ( iNumWinsToClinch > 0 && HasHalfTime() )
+			{
+				bTeamHasClinchedVictory = (m_iNumCTWins >= iNumWinsToClinch) || (m_iNumTerroristWins >= iNumWinsToClinch);
+			}
+
+			//Finally, if there have enough rounds played, end the match
+			bool bEndMatch = false;
+
+			int numRoundToEndMatch = mp_maxrounds.GetInt() + GetOvertimePlaying()*mp_overtime_maxrounds.GetInt();
+			if ( numRoundToEndMatch > 0 )
+			{
+				if ( GetRoundsPlayed() >= numRoundToEndMatch || bTeamHasClinchedVictory )
+				{
+					bEndMatch = true;
+				}
+			}
+			else if ( GetMapRemainingTime() <= 0 && m_iRoundWinStatus != WINNER_NONE )
+			{
+				bEndMatch = true;
+			}
+
+			// Check if the match ended in a tie and needs overtime
+			if ( bEndMatch && mp_overtime_enable.GetBool() && !bTeamHasClinchedVictory )
+			{
+				bEndMatch = false;
+
+				SetOvertimePlaying( GetOvertimePlaying() + 1 );
+				SetPhase( GAMEPHASE_HALFTIME );
+				m_flRestartRoundTime = gpGlobals->curtime + mp_halftime_duration.GetFloat();
+				// SwitchTeamsAtRoundReset(); -- don't switch teams, only switch at true halftimes
+				FreezePlayers();
+
+				// show scoreboard
+				for ( int i = 1; i <= MAX_PLAYERS; i++ )
+				{
+					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+					if ( !pPlayer )
+						continue;
+
+					pPlayer->ShowViewPortPanel( PANEL_SCOREBOARD );
+				}
+			}
+
+			if ( bEndMatch )
+			{
+				GoToIntermission();
+
+				if ( bTeamHasClinchedVictory && GetRoundsPlayed() < numRoundToEndMatch )
+				{
+					// Send chat message to let players know why match is ending early
+					CRecipientFilter filter;
+
+					for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+					{
+						CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+						if ( pPlayer && (pPlayer->GetTeamNumber() == TEAM_SPECTATOR || pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST) )
+						{
+							filter.AddRecipient( pPlayer );
+						}
+					}
+
+					filter.MakeReliable();
+
+					if ( m_iNumCTWins > m_iNumTerroristWins )
+					{
+						// CTs have clinched the match
+						UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_CTs_Clinched_Match" );
+					}
+					else
+					{
+						// Ts have clinched the match
+						UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#CStrike_TitlesTXT_Ts_Clinched_Match" );
+					}
+				}
+			}
+		}
+
+		//If playing a non-halftime game, check the max rounds
+		else if ( GetPhase() == GAMEPHASE_PLAYING_STANDARD )
+		{
+			// Check for a clinch
+			if ( mp_maxrounds.GetInt() > 0 && mp_match_can_clinch.GetBool() )
+			{
+				bTeamHasClinchedVictory = (m_iNumCTWins >= iNumWinsToClinch) || (m_iNumTerroristWins >= iNumWinsToClinch);
+			}
+
+			// End the match if ( ( maxrounds are used ) and ( we've reached maxrounds or clinched the game ) ) or ( we've exceeded timelimit )
+			if ( mp_maxrounds.GetInt() > 0 )
+			{
+				if ( GetRoundsPlayed() >= mp_maxrounds.GetInt() || bTeamHasClinchedVictory )
+				{
+					GoToIntermission();
+				}
+			}
+			else if ( GetMapRemainingTime() <= 0 && m_iRoundWinStatus != WINNER_NONE )
+			{
+				GoToIntermission();
 			}
 		}
 
@@ -4399,44 +4549,6 @@ ConVar snd_music_selection(
 					pPlayer->GetNetworkIDString(),
 					teamName
 					);
-				GoToIntermission();
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	bool CCSGameRules::CheckMaxRounds()
-	{
-		if ( mp_maxrounds.GetInt() != 0 )
-		{
-			if ( m_iTotalRoundsPlayed >= mp_maxrounds.GetInt() )
-			{
-				UTIL_LogPrintf("World triggered \"Intermission_Round_Limit\"\n");
-				GoToIntermission();
-				return true;
-			}
-		}
-		
-		return false;
-	}
-
-
-	bool CCSGameRules::CheckWinLimit()
-	{
-		// has one team won the specified number of rounds?
-		if ( mp_winlimit.GetInt() != 0 )
-		{
-			if ( m_iNumCTWins >= mp_winlimit.GetInt() )
-			{
-				UTIL_LogPrintf("Team \"CT\" triggered \"Intermission_Win_Limit\"\n");
-				GoToIntermission();
-				return true;
-			}
-			if ( m_iNumTerroristWins >= mp_winlimit.GetInt() )
-			{
-				UTIL_LogPrintf("Team \"TERRORIST\" triggered \"Intermission_Win_Limit\"\n");
 				GoToIntermission();
 				return true;
 			}
@@ -4914,7 +5026,6 @@ ConVar snd_music_selection(
 
 		PrintToConsole( player, str.sprintf( "fraglimit: %d\n", fraglimit.GetInt() ) );
 		PrintToConsole( player, str.sprintf( "mp_maxrounds: %d\n", mp_maxrounds.GetInt() ) );
-		PrintToConsole( player, str.sprintf( "mp_winlimit: %d\n", mp_winlimit.GetInt() ) );
 		PrintToConsole( player, str.sprintf( "bot_quota: %d\n", cv_bot_quota.GetInt() ) );
 		PrintToConsole( player, str.sprintf( "bot_quota_mode: %s\n", cv_bot_quota_mode.GetString() ) );
 		PrintToConsole( player, str.sprintf( "bot_join_after_player: %d\n", cv_bot_join_after_player.GetInt() ) );
@@ -7309,19 +7420,21 @@ bool CCSGameRules::IsFriendlyFireOn( void )
 
 bool CCSGameRules::IsLastRoundBeforeHalfTime( void )
 {
-    if ( HasHalfTime() )
-    {
+	if ( HasHalfTime() )
+	{
 		int numRoundsBeforeHalftime = -1;
 		if ( GetPhase() == GAMEPHASE_PLAYING_FIRST_HALF )
-			numRoundsBeforeHalftime = ( mp_maxrounds.GetInt() / 2 );
+			numRoundsBeforeHalftime = GetOvertimePlaying()
+			? (mp_maxrounds.GetInt() + (2 * GetOvertimePlaying() - 1) * (mp_overtime_maxrounds.GetInt() / 2))
+			: (mp_maxrounds.GetInt() / 2);
 
-        if ( ( numRoundsBeforeHalftime > 0 ) && ( m_iTotalRoundsPlayed == (numRoundsBeforeHalftime-1) ) )
-        {
-            return true;
-        }
-    }
+		if ( (numRoundsBeforeHalftime > 0) && (GetRoundsPlayed() == (numRoundsBeforeHalftime - 1)) )
+		{
+			return true;
+		}
+	}
 
-    return false;
+	return false;
 }
 
 
@@ -7529,6 +7642,13 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 		break;
 	}
 
+	bool bTeamHasClinchedVictory = false;
+	if ( IsPlayingClassic() )
+	{
+		int iNumWinsToClinch = ( mp_maxrounds.GetInt() / 2 ) + 1 + GetOvertimePlaying() * ( mp_overtime_maxrounds.GetInt() / 2 );
+		bTeamHasClinchedVictory = mp_match_can_clinch.GetBool() && ( m_iNumCTWins >= iNumWinsToClinch ) || ( m_iNumTerroristWins >= iNumWinsToClinch );
+	}
+
 	char strAmount[8];
 	Q_snprintf( strAmount, sizeof( strAmount ), "%s$%d", amount >= 0 ? "+" : "-", abs( amount ) );
 
@@ -7557,12 +7677,16 @@ void CCSGameRules::AddTeamAccount( int team, int reason, int amount, const char*
 #endif
 				pPlayer->AddAccount( amount, true, false );
 
-			ClientPrint( pPlayer, HUD_PRINTTALK, awardReasonToken, strAmount );
+			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
+				 (GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
+			{
+				ClientPrint( pPlayer, HUD_PRINTTALK, awardReasonToken, strAmount );
+			}
 		}
 		else
 		{
-			if ( !IsLastRoundBeforeHalfTime() && ( GetPhase() != GAMEPHASE_HALFTIME ) &&
-				( m_iTotalRoundsPlayed != mp_maxrounds.GetInt() ) )
+			if ( !IsLastRoundBeforeHalfTime() && (GetPhase() != GAMEPHASE_HALFTIME) &&
+				 (GetRoundsPlayed() != mp_maxrounds.GetInt() + GetOvertimePlaying() * mp_overtime_maxrounds.GetInt()) && !bTeamHasClinchedVictory )
 			{
 				// TODO: This code assumes on there only being 2 possible reasons for DoesPlayerGetRoundStartMoney returning false: Suicide or Running down the clock as T.
 				// This code should not make that assumption and the awardReasonToken should probably be plumbed to express those properly.
@@ -7586,7 +7710,7 @@ int CCSGameRules::GetStartMoney( void )
 		return atoi( mp_startmoney.GetDefault() );
 	}
 	
-	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : mp_startmoney.GetInt();
+	return IsWarmupPeriod() ? mp_maxmoney.GetInt() : (GetOvertimePlaying() ? mp_overtime_startmoney.GetInt() : mp_startmoney.GetInt());
 }
 
 bool CCSGameRules::IsPlayingClassic( void ) const
@@ -7899,7 +8023,14 @@ bool CCSGameRules::IsIntermission( void ) const
     return false;
 }
 
-#ifdef CLIENT_DLL
+#ifndef CLIENT_DLL
+int CCSGameRules::GetNumWinsToClinch() const
+{
+	int iNumWinsToClinch = (mp_maxrounds.GetInt() > 0 && mp_match_can_clinch.GetBool()) ? ( mp_maxrounds.GetInt() / 2 ) + 1 + GetOvertimePlaying() * ( mp_overtime_maxrounds.GetInt() / 2 ) : -1;
+	return iNumWinsToClinch;
+}
+
+#else
 
 CCSGameRules::CCSGameRules()
 {

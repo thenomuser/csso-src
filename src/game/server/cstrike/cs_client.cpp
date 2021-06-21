@@ -108,7 +108,6 @@ void ClientActive( edict_t *pEdict, bool bLoadGame )
 	UserMessageBegin( user, "MatchEndConditions" );
 	WRITE_LONG( fraglimit.GetInt() );
 	WRITE_LONG( mp_maxrounds.GetInt() );
-	WRITE_LONG( mp_winlimit.GetInt() );
 	WRITE_LONG( mp_timelimit.GetInt() );
 	MessageEnd();
 }

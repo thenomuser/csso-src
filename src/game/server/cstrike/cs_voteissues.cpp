@@ -23,7 +23,6 @@
 #include "tier0/memdbgon.h"
 
 extern ConVar mp_maxrounds;
-extern ConVar mp_winlimit;
 
 static bool VotableMap( const char *pszMapName )
 {
@@ -714,11 +713,6 @@ void CNextLevelIssue::ExecuteCommand( void )
 		if ( mp_maxrounds.GetInt() > 0 )
 		{
 			engine->ServerCommand( CFmtStr( "mp_maxrounds %d;", mp_maxrounds.GetInt() + 2 ) );
-		}
-		
-		if ( mp_winlimit.GetInt() > 0 )
-		{
-			engine->ServerCommand( CFmtStr( "mp_winlimit %d;", mp_winlimit.GetInt() + 2 ) );
 		}
 	}
 	else
