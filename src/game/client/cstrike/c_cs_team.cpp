@@ -15,13 +15,19 @@
 
 
 IMPLEMENT_CLIENTCLASS_DT(C_CSTeam, DT_CSTeam, CCSTeam)
+	RecvPropInt( RECVINFO(m_iScoreThisPhase)),
 END_RECV_TABLE()
+
+BEGIN_PREDICTION_DATA( C_CSTeam )
+	DEFINE_PRED_FIELD( m_iScoreThisPhase, FIELD_INTEGER, FTYPEDESC_PRIVATE ),
+END_PREDICTION_DATA();
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 C_CSTeam::C_CSTeam()
 {
+	m_iScoreThisPhase = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -29,5 +35,22 @@ C_CSTeam::C_CSTeam()
 //-----------------------------------------------------------------------------
 C_CSTeam::~C_CSTeam()
 {
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int C_CSTeam::Get_ScoreThisPhase( void )
+{
+	return m_iScoreThisPhase;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Get the C_Team for the specified team number
+//-----------------------------------------------------------------------------
+C_CSTeam *GetGlobalCSTeam( int iTeamNumber )
+{
+	return (C_CSTeam*) GetGlobalTeam( iTeamNumber );
 }
 

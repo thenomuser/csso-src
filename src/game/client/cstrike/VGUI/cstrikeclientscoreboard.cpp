@@ -8,7 +8,7 @@
 #include "cbase.h"
 #include "hud.h"
 #include "cstrikeclientscoreboard.h"
-#include "c_team.h"
+#include "c_cs_team.h"
 #include "c_cs_playerresource.h"
 #include "c_cs_player.h"
 #include "cs_gamerules.h"
@@ -657,13 +657,14 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
     for ( int teamIndex = TEAM_TERRORIST; teamIndex <= TEAM_CT; teamIndex++ )
     {
         wchar_t *teamName = NULL;
-        C_Team *team = GetGlobalTeam( teamIndex );
+        C_CSTeam *team = GetGlobalCSTeam( teamIndex );
         if ( team )
         {
             // choose dialog variables to set depending on team
             const char *pDialogVarTeamName = NULL;
             const char *pDialogVarAliveCount = NULL;
 			const char *pDialogVarTeamScore = NULL;
+			const char *pDialogVarTeamScoreThisPhase = NULL;
             switch ( teamIndex )
             {
             case TEAM_TERRORIST:
@@ -671,12 +672,14 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
                 pDialogVarTeamName = "t_teamname";
 				pDialogVarAliveCount = "t_alivecount";
 				pDialogVarTeamScore = "t_totalteamscore";
+				pDialogVarTeamScoreThisPhase = "t_phaseteamscore";
                 break;
             case TEAM_CT:
                 teamName = g_pVGuiLocalize->Find( "#Cstrike_Team_CT" );
                 pDialogVarTeamName = "ct_teamname";
 				pDialogVarAliveCount = "ct_alivecount";
 				pDialogVarTeamScore = "ct_totalteamscore";
+				pDialogVarTeamScoreThisPhase = "ct_phaseteamscore";
                 break;
             default:
                 Assert( false );
@@ -711,7 +714,11 @@ void CCSClientScoreBoardDialog::UpdateTeamInfo()
 			// Team score
             wchar_t wNumScore[16];
             V_snwprintf( wNumScore, ARRAYSIZE( wNumScore ), L"%i", team->Get_Score() );
-            SetDialogVariable( pDialogVarTeamScore, wNumScore );
+			SetDialogVariable( pDialogVarTeamScore, wNumScore );
+
+			// Team score this phase
+			V_snwprintf( wNumScore, ARRAYSIZE( wNumScore ), L"%i", team->Get_ScoreThisPhase() );
+			SetDialogVariable( pDialogVarTeamScoreThisPhase, wNumScore );
 
 			// Number of alive players
 			wchar_t numAliveString[32];

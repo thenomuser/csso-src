@@ -527,7 +527,9 @@ public:
 	bool m_bSwapTeamsOnRestart;
 
 	short m_iNumCTWins;
+	short m_iNumCTWinsThisPhase;
 	short m_iNumTerroristWins;
+	short m_iNumTerroristWinsThisPhase;
 
 	int m_iNumConsecutiveCTLoses;		//SupraFiend: the number of rounds the CTs have lost in a row.
 	int m_iNumConsecutiveTerroristLoses;//SupraFiend: the number of rounds the Terrorists have lost in a row.

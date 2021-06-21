@@ -41,6 +41,11 @@ public:
 	virtual void RemovePlayer( CBasePlayer *pPlayer );
 
 	//-----------------------------------------------------------------------------
+	// Scoring
+	//-----------------------------------------------------------------------------
+	void SetScoreThisPhase( int iScore );
+
+	//-----------------------------------------------------------------------------
 	// Utility funcs
 	//-----------------------------------------------------------------------------
 	CCSTeam*		GetEnemyTeam();
@@ -51,10 +56,12 @@ private:
 	float	m_flNextResourceTime;
 
 	int		m_iLastUpdateSentAt;
+
+	CNetworkVar( int, m_iScoreThisPhase );
 };
 
 
-extern CCSTeam *GetGlobalTFTeam( int iIndex );
+extern CCSTeam *GetGlobalCSTeam( int iIndex );
 
 
-#endif // TF_TEAM_H
+#endif // CS_TEAM_H
