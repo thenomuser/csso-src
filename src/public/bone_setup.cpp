@@ -2183,7 +2183,7 @@ void CBoneSetup::AddSequenceLayers(
 
 			if (pLayer->flags & STUDIO_AL_SPLINE)
 			{
-				s = SimpleSpline( s );
+				s = clamp( SimpleSpline( s ), 0, 1 ); // SimpleSpline imprecision can push some float values outside 0..1
 			}
 
 			if ((pLayer->flags & STUDIO_AL_XFADE) && (index > pLayer->tail))
@@ -2203,6 +2203,27 @@ void CBoneSetup::AddSequenceLayers(
 			{
 				layerCycle = (cycle - pLayer->start) / (pLayer->end - pLayer->start);
 			}
+		}
+		else if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iSequence = m_pStudioHdr->iRelativeSeq( sequence, pLayer->iSequence );
+			int iPose = m_pStudioHdr->GetSharedPoseParameter( iSequence, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)m_pStudioHdr)->pPoseParameter( iPose );
+			float s = m_flPoseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = clamp( SimpleSpline( s ), 0, 1 ); // SimpleSpline imprecision can push some float values outside 0..1
+			}
+
+			layerWeight = flWeight * s;			
 		}
 
 		int iSequence = m_pStudioHdr->iRelativeSeq( sequence, pLayer->iSequence );
@@ -5559,6 +5580,62 @@ float Studio_CPS( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int i
 			t += (panim[i]->fps / (panim[i]->numframes - 1)) * weight[i];
 		}
 	}
+
+	// FIXME: add support for more than just start 0 and end 0 pose param layers
+	for (int j = 0; j < seqdesc.numautolayers; j++)
+	{
+		mstudioautolayer_t *pLayer = seqdesc.pAutolayer( j );
+
+		if (pLayer->flags & STUDIO_AL_LOCAL)
+			continue;
+
+		float layerWeight = 0;
+
+		int iSequenceLocal = pStudioHdr->iRelativeSeq( iSequence, pLayer->iSequence );
+
+		if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iPose = pStudioHdr->GetSharedPoseParameter( iSequenceLocal, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)pStudioHdr)->pPoseParameter( iPose );
+			float s = poseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = SimpleSpline( s );
+			}
+
+			layerWeight = seqdesc.weight(0) * s;
+		}
+
+		if ( layerWeight )
+		{
+			mstudioseqdesc_t &seqdescLocal = ((CStudioHdr *)pStudioHdr)->pSeqdesc( iSequenceLocal );
+			Studio_SeqAnims( pStudioHdr, seqdescLocal, iSequenceLocal, poseParameter, panim, weight );
+
+			float flLocalT = 0;
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (weight[i] > 0 && panim[i]->numframes > 1)
+				{
+					flLocalT += (panim[i]->fps / (panim[i]->numframes - 1)) * weight[i];
+				}
+			}
+
+			if ( flLocalT )
+			{
+				t = Lerp( layerWeight, t, flLocalT );
+			}
+		}
+	}
+
 	return t;
 }
 
@@ -5786,6 +5863,80 @@ bool Studio_SeqMovement( const CStudioHdr *pStudioHdr, int iSequence, float flCy
 			}
 		}
 	}
+
+	// FIXME: add support for more than just start 0 and end 0 pose param layers (currently no cycle handling or angular delta)
+	for (int j = 0; j < seqdesc.numautolayers; j++)
+	{
+		mstudioautolayer_t *pLayer = seqdesc.pAutolayer( j );
+
+		if (pLayer->flags & STUDIO_AL_LOCAL)
+			continue;
+
+		float layerWeight = 0;
+
+		int iSequenceLocal = pStudioHdr->iRelativeSeq( iSequence, pLayer->iSequence );
+
+		if ( pLayer->start == 0 && pLayer->end == 0 && (pLayer->flags & STUDIO_AL_POSE) )
+		{
+			int iPose = pStudioHdr->GetSharedPoseParameter( iSequenceLocal, pLayer->iPose );
+			if (iPose == -1)
+				continue;
+			
+			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)pStudioHdr)->pPoseParameter( iPose );
+			float s = poseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
+
+			Assert( (pLayer->tail - pLayer->peak) != 0 );
+
+			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
+
+			if (pLayer->flags & STUDIO_AL_SPLINE)
+			{
+				s = SimpleSpline( s );
+			}
+
+			layerWeight = seqdesc.weight(0) * s;
+		}
+
+		if ( layerWeight )
+		{
+			Vector layerPos;
+			//QAngle layerAngles;
+		
+			layerPos.Init();
+			//layerAngles.Init();
+
+			bool bLayerFound = false;
+
+			mstudioseqdesc_t &seqdescLocal = ((CStudioHdr *)pStudioHdr)->pSeqdesc( iSequenceLocal );
+			Studio_SeqAnims( pStudioHdr, seqdescLocal, iSequenceLocal, poseParameter, panim, weight );
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (weight[i])
+				{
+					Vector localPos;
+					QAngle localAngles;
+
+					localPos.Init();
+					//localAngles.Init();
+
+					if ( Studio_AnimMovement( panim[i], flCycleFrom, flCycleTo, localPos, localAngles ) )
+					{
+						bLayerFound = true;
+						layerPos = layerPos + localPos * weight[i];
+						// FIXME: do angles
+						//layerAngles = layerAngles + localAngles * weight[i];
+					}
+				}
+			}
+
+			if ( bLayerFound )
+			{
+				deltaPos = Lerp( layerWeight, deltaPos, layerPos );
+			}
+		}
+	}
+
 	return found;
 }
 
