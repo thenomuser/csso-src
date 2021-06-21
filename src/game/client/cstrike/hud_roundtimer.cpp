@@ -32,6 +32,7 @@ protected:
 	void PaintTime(HFont font, int xpos, int ypos, int mins, int secs);
 
 private:
+	int m_iTimer;
 	float m_flToggleTime;
 	float m_flNextToggle;
 	CHudTexture *m_pTimerIcon;
@@ -67,6 +68,8 @@ CHudRoundTimer::CHudRoundTimer( const char *pName ) :
 
 	vgui::Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
+
+	m_iTimer = -1;
 }
 
 void CHudRoundTimer::ApplySchemeSettings(vgui::IScheme *pScheme)
@@ -98,7 +101,7 @@ bool CHudRoundTimer::ShouldDraw()
 	if ( CSGameRules() && CSGameRules()->IsWarmupPeriodPaused() )
 		return false;
 
-	if ( CSGameRules() && CSGameRules()->IsMatchWaitingForResume() && CSGameRules()->IsFreezePeriod() )
+	if ( CSGameRules() && CSGameRules()->IsMatchWaitingForResume() && CSGameRules()->IsFreezePeriod() && !CSGameRules()->IsTimeOutActive() )
 		return false;
 
 	return true;
@@ -110,62 +113,78 @@ void CHudRoundTimer::Think()
 	if ( !pRules )
 		return;
 
-	int timer = (int)ceil( pRules->GetRoundRemainingTime() );
+	m_iTimer = (int)ceil( pRules->GetRoundRemainingTime() );
 
 	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
 	{
-		timer = (int)ceil( pRules->GetWarmupRemainingTime() );
+		m_iTimer = (int)ceil( pRules->GetWarmupRemainingTime() );
 	}
 	if ( pRules->IsFreezePeriod() )
 	{
 		// in freeze period countdown to round start time
-		timer = (int)ceil(pRules->GetRoundStartTime()-gpGlobals->curtime);
+		m_iTimer = (int)ceil(pRules->GetRoundStartTime()-gpGlobals->curtime);
+	}
+	if ( pRules->IsTimeOutActive() )
+	{
+		C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+		if ( pPlayer )
+		{
+			switch ( pPlayer->GetTeamNumber() )
+			{
+				case TEAM_CT:
+					m_iTimer = (int)ceil( pRules->GetCTTimeOutRemaining() );
+					break;
+				case TEAM_TERRORIST:
+					m_iTimer = (int)ceil( pRules->GetTerroristTimeOutRemaining() );
+					break;
+			}
+		}
 	}
 
-	if(timer > 30)
+	if(m_iTimer > 30)
 	{
 		SetFgColor(m_TextColor);
 		return;
 	}
 	
-	if(timer <= 0)
+	if(m_iTimer <= 0)
 	{
-		timer = 0;
+		m_iTimer = 0;
 		SetFgColor(m_FlashColor);
 		return;
 	}
 
 	if(gpGlobals->curtime > m_flNextToggle)
 	{
-		if( timer <= 0)
+		if( m_iTimer <= 0)
 		{
 			m_bFlash = true;
 		}
-		else if( timer <= 2)
+		else if( m_iTimer <= 2)
 		{
 			m_flToggleTime = gpGlobals->curtime;
 			m_flNextToggle = gpGlobals->curtime + 0.05;
 			m_bFlash = !m_bFlash;
 		}
-		else if( timer <= 5)
+		else if( m_iTimer <= 5)
 		{
 			m_flToggleTime = gpGlobals->curtime;
 			m_flNextToggle = gpGlobals->curtime + 0.1;
 			m_bFlash = !m_bFlash;
 		}
-		else if( timer <= 10)
+		else if( m_iTimer <= 10)
 		{
 			m_flToggleTime = gpGlobals->curtime;
 			m_flNextToggle = gpGlobals->curtime + 0.2;
 			m_bFlash = !m_bFlash;
 		}
-		else if( timer <= 20)
+		else if( m_iTimer <= 20)
 		{
 			m_flToggleTime = gpGlobals->curtime;
 			m_flNextToggle = gpGlobals->curtime + 0.4;
 			m_bFlash = !m_bFlash;
 		}
-		else if( timer <= 30)
+		else if( m_iTimer <= 30)
 		{
 			m_flToggleTime = gpGlobals->curtime;
 			m_flNextToggle = gpGlobals->curtime + 0.8;
@@ -206,24 +225,12 @@ void CHudRoundTimer::Paint()
 	C_CSGameRules *pRules = CSGameRules();
 	if ( !pRules )
 		return;
-
-	int timer = (int)ceil( pRules->GetRoundRemainingTime() );
-
-	if ( pRules->IsWarmupPeriod() && !pRules->IsWarmupPeriodPaused() )
-	{
-		timer = (int)ceil( pRules->GetWarmupRemainingTime() );
-	}
-	if ( pRules->IsFreezePeriod() )
-	{
-		// in freeze period countdown to round start time
-		timer = (int)ceil(pRules->GetRoundStartTime()-gpGlobals->curtime);
-	}
-	
-	if(timer < 0) 
-		timer = 0;
 		
-	int minutes = timer / 60;
-	int seconds = timer % 60;
+	if(m_iTimer < 0) 
+		m_iTimer = 0;
+		
+	int minutes = m_iTimer / 60;
+	int seconds = m_iTimer % 60;
 
 	//Draw Timer icon
 	if( m_pTimerIcon )

@@ -1152,6 +1152,14 @@ void CHudVote::MsgFunc_CallVoteFailed( bf_read &msg )
 		case VOTE_FAILED_KICK_LIMIT_REACHED:
 			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_kick_limit" );
 			break;
+
+		case VOTE_FAILED_TIMEOUT_ACTIVE:
+			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_timeout_active" );
+			break;
+
+		case VOTE_FAILED_TIMEOUT_EXHAUSTED:
+			m_pCallVoteFailed->SetControlString( "FailedReason", "#GameUI_vote_failed_timeouts_exhausted" );
+			break;
 	}	
 }
 
