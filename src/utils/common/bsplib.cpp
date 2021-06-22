@@ -404,6 +404,42 @@ BEGIN_BYTESWAP_DATADESC( StaticPropLumpV5_t )
 	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
 END_BYTESWAP_DATADESC()
 
+BEGIN_BYTESWAP_DATADESC( StaticPropLumpV6_t )
+	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),	// QAngle
+	DEFINE_FIELD( m_PropType, FIELD_SHORT ),
+	DEFINE_FIELD( m_FirstLeaf, FIELD_SHORT ),
+	DEFINE_FIELD( m_LeafCount, FIELD_SHORT ),
+	DEFINE_FIELD( m_Solid, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Skin, FIELD_INTEGER ),
+	DEFINE_FIELD( m_FadeMinDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+END_BYTESWAP_DATADESC()
+
+BEGIN_BYTESWAP_DATADESC( StaticPropLumpV10_t )
+	DEFINE_FIELD( m_Origin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_Angles, FIELD_VECTOR ),	// QAngle
+	DEFINE_FIELD( m_PropType, FIELD_SHORT ),
+	DEFINE_FIELD( m_FirstLeaf, FIELD_SHORT ),
+	DEFINE_FIELD( m_LeafCount, FIELD_SHORT ),
+	DEFINE_FIELD( m_Solid, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Flags, FIELD_CHARACTER ),
+	DEFINE_FIELD( m_Skin, FIELD_INTEGER ),
+	DEFINE_FIELD( m_FadeMinDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_FadeMaxDist, FIELD_FLOAT ),
+	DEFINE_FIELD( m_LightingOrigin, FIELD_VECTOR ),
+	DEFINE_FIELD( m_flForcedFadeScale, FIELD_FLOAT ),
+	DEFINE_FIELD( m_nMinDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nMaxDXLevel, FIELD_SHORT ),
+	DEFINE_FIELD( m_nLightmapResolutionX, FIELD_SHORT ),
+	DEFINE_FIELD( m_nLightmapResolutionY, FIELD_SHORT ),
+END_BYTESWAP_DATADESC()
+
 BEGIN_BYTESWAP_DATADESC( StaticPropLeafLump_t )
 	DEFINE_FIELD( m_Leaf, FIELD_SHORT ),
 END_BYTESWAP_DATADESC()
@@ -1105,9 +1141,33 @@ void CGameLump::SwapGameLump( GameLumpId_t id, int version, byte *dest, byte *sr
 				dest += sizeof( StaticPropLumpV5_t );
 			}
 		}
+		else if ( version == 6 )
+		{
+			StaticPropLumpV6_t lump;
+			for ( int i = 0; i < count; ++i )
+			{
+				Q_memcpy( &lump, src, sizeof(StaticPropLumpV6_t) );
+				g_Swap.SwapFieldsToTargetEndian( &lump, &lump );
+				Q_memcpy( dest, &lump, sizeof(StaticPropLumpV6_t) );
+				src += sizeof( StaticPropLumpV6_t );
+				dest += sizeof( StaticPropLumpV6_t );
+			}
+		}
+		else if ( version == 7 || version == 10 ) // PiMoN: v7 and v10 use the same lump on this engine branch
+		{
+			StaticPropLumpV10_t lump;
+			for ( int i = 0; i < count; ++i )
+			{
+				Q_memcpy( &lump, src, sizeof(StaticPropLumpV10_t) );
+				g_Swap.SwapFieldsToTargetEndian( &lump, &lump );
+				Q_memcpy( dest, &lump, sizeof(StaticPropLumpV10_t) );
+				src += sizeof( StaticPropLumpV10_t );
+				dest += sizeof( StaticPropLumpV10_t );
+			}
+		}
 		else
 		{
-			if ( version != 6 )
+			if ( version != 11 )
 			{
 				Error( "Unknown Static Prop Lump version %d didn't get swapped!\n", version );
 			}
@@ -4379,6 +4439,16 @@ void BuildStaticPropNameTable()
 				{
 					propType = ((StaticPropLumpV5_t *)pGameLumpData)->m_PropType;
 					pGameLumpData += sizeof( StaticPropLumpV5_t );
+				}
+				else if ( nVersion == 6 )
+				{
+					propType = ((StaticPropLumpV6_t *)pGameLumpData)->m_PropType;
+					pGameLumpData += sizeof( StaticPropLumpV6_t );
+				}
+				else if ( nVersion == 7 || nVersion == 10 ) // PiMoN: v7 and v10 use the same lump on this engine branch
+				{
+					propType = ((StaticPropLumpV10_t *)pGameLumpData)->m_PropType;
+					pGameLumpData += sizeof( StaticPropLumpV10_t );
 				}
 				else
 				{
