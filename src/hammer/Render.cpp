@@ -1175,11 +1175,17 @@ void CRender::DrawDisplacement( CCoreDispInfo *pMapDisp )
 	m_pMesh->Draw();
 }
 
-void CRender::DrawModel( DrawModelInfo_t* pInfo, matrix3x4_t *pBoneToWorld, const Vector &vOrigin, float fAlpha, bool bWireFrame )
+void CRender::DrawModel( DrawModelInfo_t* pInfo, matrix3x4_t *pBoneToWorld, const Vector &vOrigin, float fAlpha, bool bWireFrame, const Color &color )
 {
 	UpdateStudioRenderConfig( true, bWireFrame );
 		
 	g_pStudioRender->SetAlphaModulation( fAlpha );
+
+	float col[3];
+	col[0] = color.r() / 255.0f;
+	col[1] = color.g() / 255.0f;
+	col[2] = color.b() / 255.0f;
+	g_pStudioRender->SetColorModulation( col );
 
 	Vector viewOrigin;
 	GetCamera()->GetViewPoint( viewOrigin );
@@ -1189,6 +1195,8 @@ void CRender::DrawModel( DrawModelInfo_t* pInfo, matrix3x4_t *pBoneToWorld, cons
 	g_pStudioRender->DrawModel( NULL, *pInfo, pBoneToWorld, NULL, NULL, vOrigin, STUDIORENDER_DRAW_ENTIRE_MODEL );
 
 	g_pStudioRender->SetAlphaModulation( 1.0f );
+	col[0] = col[1] = col[2] = 1.0f;
+	g_pStudioRender->SetColorModulation( col );
 
 	// force rendermode reset
 	SetRenderMode( RENDER_MODE_CURRENT, true );

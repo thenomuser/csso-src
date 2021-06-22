@@ -750,7 +750,7 @@ void	DetailObjects::Render3D(CRender3D *pRender)
 				Maxs[j] += fDetailDistance;
 			}
 			if ( IsPointInBox( viewPoint, Mins, Maxs ) )
-				pModel->DrawModel3D( pRender, 1, false  );
+				pModel->DrawModel3D( pRender, Color(255, 255, 255, 255), 1, false  );
 		}
 		pRender->PopRenderMode();
 

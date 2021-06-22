@@ -324,6 +324,7 @@ private:
 	// because the time at which the static props are unserialized
 	// doesn't necessarily match the time at which we can initialize the light cache
 	Vector					m_LightingOrigin;
+	Vector4D				m_DiffuseModulation;
 };
 
 
@@ -489,6 +490,10 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 	m_LeafCount = lump.m_LeafCount;
 	m_nSolidType = lump.m_Solid;
 	m_FadeIndex = INVALID_FADE_INDEX;
+	m_DiffuseModulation[0] = lump.m_DiffuseModulation.r * ( 1.0f / 255.0f );
+	m_DiffuseModulation[1] = lump.m_DiffuseModulation.g * ( 1.0f / 255.0f );
+	m_DiffuseModulation[2] = lump.m_DiffuseModulation.b * ( 1.0f / 255.0f );
+	m_DiffuseModulation[3] = lump.m_DiffuseModulation.a * ( 1.0f / 255.0f );
 
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
@@ -771,7 +776,7 @@ int CStaticProp::GetFxBlend( )
 
 void CStaticProp::GetColorModulation( float* color )
 {
-	color[0] = color[1] = color[2] = 1.0f;
+	memcpy( color, m_DiffuseModulation.Base(), sizeof( float ) * 3 );
 }
 
 
@@ -1336,9 +1341,18 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 		StaticPropLump_t lump;
 		switch ( nLumpVersion )
 		{
-			case 4: UnserializeLump<StaticPropLumpV4_t>(&lump, buf); break;
-			case 5: UnserializeLump<StaticPropLumpV5_t>(&lump, buf); break;
-			case 6: UnserializeLump<StaticPropLumpV6_t>(&lump, buf); break;
+			case 4:
+				UnserializeLump<StaticPropLumpV4_t>(&lump, buf);
+				lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
+				break;
+			case 5:
+				UnserializeLump<StaticPropLumpV5_t>(&lump, buf);				
+				lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
+				break;
+			case 6:
+				UnserializeLump<StaticPropLumpV6_t>(&lump, buf);
+				lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
+				break;
 			case 7: // Falls down to version 10. We promoted TF to version 10 to deal with SFM. 
 			case 10: UnserializeLump<StaticPropLump_t>(&lump, buf); break;
 

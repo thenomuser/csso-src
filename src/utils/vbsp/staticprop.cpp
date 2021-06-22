@@ -56,6 +56,7 @@ struct StaticPropBuild_t
 	unsigned short	m_nMaxDXLevel;
 	int		m_LightmapResolutionX;
 	int		m_LightmapResolutionY;
+	color32 m_DiffuseModulation;
 };
  
 
@@ -509,6 +510,7 @@ static void AddStaticPropToLump( StaticPropBuild_t const& build )
 	propLump.m_flForcedFadeScale = build.m_flForcedFadeScale;
 	propLump.m_nMinDXLevel = build.m_nMinDXLevel;
 	propLump.m_nMaxDXLevel = build.m_nMaxDXLevel;
+	propLump.m_DiffuseModulation = build.m_DiffuseModulation;
 	
 	if (build.m_pLightingOrigin && *build.m_pLightingOrigin)
 	{
@@ -662,6 +664,35 @@ void EmitStaticProps()
 			}
 			build.m_nMinDXLevel = (unsigned short)IntForKey( &entities[i], "mindxlevel" );
 			build.m_nMaxDXLevel = (unsigned short)IntForKey( &entities[i], "maxdxlevel" );
+
+			// FIXME: look for ComputeFXBlend and make sure that you don't
+			// need a particlar rendermode for this stuff to happen
+			// Get the per-instance render-color for this static prop
+			const char *pColorKey = ValueForKey( &entities[i], "rendercolor" );
+			if ( *pColorKey != '\0' )
+			{
+				color32 tmp;
+				V_StringToColor32( &tmp, pColorKey );
+				build.m_DiffuseModulation.r = tmp.r;
+				build.m_DiffuseModulation.g = tmp.g;
+				build.m_DiffuseModulation.b = tmp.b;
+				// don't copy alpha, legacy support uses renderamt
+			}
+			else
+			{
+				build.m_DiffuseModulation.r = build.m_DiffuseModulation.g = build.m_DiffuseModulation.b = 255;
+			}
+
+			// Get the per-instance render-alpha for this static prop
+			const char *pAlphaKey = ValueForKey( &entities[i], "renderamt" );
+			if ( *pAlphaKey != '\0' )
+			{
+				build.m_DiffuseModulation.a = Q_atoi( pAlphaKey );
+			}
+			else
+			{
+				build.m_DiffuseModulation.a = 255;
+			}
 
 			AddStaticPropToLump( build );
 

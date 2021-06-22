@@ -554,7 +554,7 @@ void StudioModel::SetupModel ( int bodypart )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void StudioModel::DrawModel3D( CRender3D *pRender, float flAlpha, bool bWireframe )
+void StudioModel::DrawModel3D( CRender3D *pRender, const Color &color, float flAlpha, bool bWireframe )
 {
 	studiohdr_t *pStudioHdr = GetStudioRenderHdr();
 	if (!pStudioHdr)
@@ -598,7 +598,7 @@ void StudioModel::DrawModel3D( CRender3D *pRender, float flAlpha, bool bWirefram
 
 		matrix3x4_t boneToWorld[MAXSTUDIOBONES];
 		SetUpBones( false, boneToWorld );
-		pRender->DrawModel( &info, boneToWorld, m_origin, flAlpha, bWireframe );
+		pRender->DrawModel( &info, boneToWorld, m_origin, flAlpha, bWireframe, color );
 		
 		m_origin = orgOrigin;
 		m_angles = orgAngles;
@@ -607,7 +607,7 @@ void StudioModel::DrawModel3D( CRender3D *pRender, float flAlpha, bool bWirefram
 	{
 		matrix3x4_t boneToWorld[MAXSTUDIOBONES];
 		SetUpBones( true, boneToWorld );
-		pRender->DrawModel( &info, boneToWorld, m_origin, flAlpha, bWireframe );
+		pRender->DrawModel( &info, boneToWorld, m_origin, flAlpha, bWireframe, color );
 
 		if ( Options.general.bShowCollisionModels )
 		{

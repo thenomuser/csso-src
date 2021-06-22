@@ -3073,6 +3073,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	info.m_bStaticLighting = false;
 
 	int drawFlags = STUDIORENDER_DRAW_ENTIRE_MODEL | STUDIORENDER_DRAW_STATIC_LIGHTING;
+	float vColorModulation[3] = {1.0f, 1.0f, 1.0f};
 	if (bShadowDepth)
 		drawFlags |= STUDIO_SHADOWDEPTHTEXTURE;
 	info.m_Decals = STUDIORENDER_DECAL_INVALID;
@@ -3095,6 +3096,11 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 		info.m_pClientEntity = static_cast<void*>(obj.pRenderable);
 		info.m_Lod = obj.lod;
 		info.m_pColorMeshes = obj.pColorMeshes;
+
+		//Include static model specific tinting.
+		obj.pRenderable->GetColorModulation( vColorModulation );
+		g_pStudioRender->SetColorModulation( vColorModulation );
+
 		g_pStudioRender->DrawModelStaticProp( info, *obj.pMatrix, drawFlags );
 	}
 
@@ -3118,6 +3124,11 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 			g_pStudioRender->SetAmbientLightColors( pState->r_boxcolor );
 			pRenderContext->SetLightingOrigin( *obj.pLightingOrigin );
 			R_SetNonAmbientLightingState( pState->numlights, pState->locallight, &nLocalLightCount, localLightDescs, true );
+
+			//Include static model specific tinting.
+			obj.pRenderable->GetColorModulation( vColorModulation );
+			g_pStudioRender->SetColorModulation( vColorModulation );
+
 			info.m_pStudioHdr = model.pStudioHdr;
 			info.m_pHardwareData = model.pStudioHWData;
 			info.m_Skin = obj.skin;
@@ -3137,6 +3148,10 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 			robject_t &obj = objectList[shadowObjects[i]];
 			rmodel_t &model = modelList[obj.modelIndex];
 			g_pShadowMgr->SetModelShadowState( obj.instance );
+
+			//Include static model specific tinting.
+			obj.pRenderable->GetColorModulation( vColorModulation );
+			g_pStudioRender->SetColorModulation( vColorModulation );
 
 			info.m_pStudioHdr = model.pStudioHdr;
 			info.m_pHardwareData = model.pStudioHWData;
@@ -3158,6 +3173,11 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 		g_pStudioRender->SetAmbientLightColors( pState->r_boxcolor );
 		pRenderContext->SetLightingOrigin( *obj.pLightingOrigin );
 		R_SetNonAmbientLightingState( pState->numlights, pState->locallight, &nLocalLightCount, localLightDescs, true );
+
+		//Include static model specific tinting.
+		obj.pRenderable->GetColorModulation( vColorModulation );
+		g_pStudioRender->SetColorModulation( vColorModulation );
+
 		info.m_pStudioHdr = model.pStudioHdr;
 		info.m_pHardwareData = model.pStudioHWData;
 		info.m_Decals = m_ModelInstances[obj.instance].m_DecalHandle;

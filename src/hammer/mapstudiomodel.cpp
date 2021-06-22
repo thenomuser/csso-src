@@ -239,6 +239,7 @@ CMapClass *CMapStudioModel::CopyFrom(CMapClass *pObject, bool bUpdateDependencie
 	m_flFadeScale = pFrom->m_flFadeScale;
 	m_flFadeMinDist = pFrom->m_flFadeMinDist;
 	m_flFadeMaxDist = pFrom->m_flFadeMaxDist;
+	m_ModelRenderColor = pFrom->m_ModelRenderColor;
 	m_iSolid = pFrom->m_iSolid;
 
 	return(this);
@@ -294,6 +295,7 @@ void CMapStudioModel::Initialize(void)
 	m_bReversePitch = false;
 	m_pStudioModel = NULL;
 	m_Skin = 0;
+	m_ModelRenderColor.SetColor( 255, 255, 255, 255 );
 
 	m_bScreenSpaceFade = false;
 	m_flFadeScale = 1.0f;
@@ -342,6 +344,12 @@ void CMapStudioModel::OnParentKeyChanged(const char* szKey, const char* szValue)
 	else if (!stricmp(szKey, "fadescale"))
 	{
 		m_flFadeScale = atof(szValue);
+	}
+	else if (!stricmp(szKey, "rendercolor"))
+	{
+		int r, g, b;
+		sscanf(szValue, "%d %d %d", &r, &g, &b);
+		m_ModelRenderColor.SetColor( r, g, b, 255 );
 	}
 	else if ( !stricmp( szKey, "solid") )
 	{
@@ -658,7 +666,7 @@ void CMapStudioModel::Render3D(CRender3D *pRender)
 				bWireframe = true;
 
 			pRender->BeginRenderHitTarget(this);
-			m_pStudioModel->DrawModel3D(pRender, flAlpha, bWireframe );
+			m_pStudioModel->DrawModel3D(pRender, m_ModelRenderColor, flAlpha, bWireframe );
 			pRender->EndRenderHitTarget();
 
 			if (IsSelected())
