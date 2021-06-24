@@ -739,6 +739,12 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 		float vShaderControls[4] = { fHasBaseAlphaPhongMask, 0.0f/*unused*/, flTintReplacementAmount, fInvertPhongMask };
 		pShaderAPI->SetPixelShaderConstant( PSREG_CONSTANT_27, vShaderControls, 1 );
 
+		if ( IsBoolSet( info.m_nNoTint, params ) )
+		{
+			float white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			pShaderAPI->SetPixelShaderConstant( 1, white );
+		}
+
 		if ( hasDetailTexture )
 		{
 #if 0														// needs constant change

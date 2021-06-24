@@ -1412,6 +1412,12 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 		float vShaderControls[4] = { fPixelFogType, fWriteDepthToAlpha, fWriteWaterFogToDestAlpha, fVertexAlpha	 };
 		DynamicCmdsOut.SetPixelShaderConstant( 12, vShaderControls, 1 );
 
+		if ( IsBoolSet( info.m_nNoTint, params ) )
+		{
+			float white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			DynamicCmdsOut.SetPixelShaderConstant( 1, white );
+		}
+
 		// flashlightfixme: put this in common code.
 		if ( bHasFlashlight )
 		{
