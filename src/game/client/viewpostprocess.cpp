@@ -19,12 +19,19 @@
 #include "filesystem.h"
 #include "tier0/vprof.h"
 #include "viewpostprocess.h"
+#include "clienteffectprecachesystem.h"
 
 #ifdef CSTRIKE_DLL
 #include "c_cs_player.h"
 #endif
 
 #include "proxyentity.h"
+
+// I just don't want to precache the entire post processing
+// material table for only one texture
+CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffectsDX80 )
+	CLIENTEFFECT_MATERIAL( "dev/engine_post" )
+CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() < 90 )
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -2350,8 +2357,7 @@ void DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 			// bloom, software-AA and colour-correction (applied in 1 pass, after generation of the bloom texture)
 			bool  bPerformSoftwareAA	= IsX360() && ( engine->GetDXSupportLevel() >= 90 ) && ( flAAStrength != 0.0f );
 			bool  bPerformBloom			= !bPostVGui && ( flBloomScale > 0.0f ) && ( engine->GetDXSupportLevel() >= 90 );
-			bool  bPerformColCorrect	= !bPostVGui && 
-										  ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 90) &&
+			bool  bPerformColCorrect	= !bPostVGui &&
 										  ( g_pMaterialSystemHardwareConfig->GetHDRType() != HDR_TYPE_FLOAT ) &&
 										  g_pColorCorrectionMgr->HasNonZeroColorCorrectionWeights() &&
 										  mat_colorcorrection.GetInt();
