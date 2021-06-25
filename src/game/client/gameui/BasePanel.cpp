@@ -1685,7 +1685,7 @@ void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 		m_iGameTitlePos.RemoveAll();
 		for ( i=0; i<m_pGameMenuButtons.Count(); ++i )
 		{
-			m_pGameMenuButtons[i]->SetFont(pClientScheme->GetFont("ClientTitleFont", true));
+			m_pGameMenuButtons[i]->SetFont(pClientScheme->GetFont(CFmtStr("ClientTitle%dFont", i+1), true));
 			m_iGameTitlePos.AddToTail( coord() );
 			m_iGameTitlePos[i].x = atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.X", i+1 ) ) );
 			m_iGameTitlePos[i].x = scheme()->GetProportionalScaledValue( m_iGameTitlePos[i].x );
