@@ -85,6 +85,7 @@ BEGIN_VS_SHADER( VertexLitGeneric_DX8,
 		// Color Replacement Pass
 		SHADER_PARAM( BLENDTINTBYBASEALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Use the base alpha to blend in the $color modulation")
 		SHADER_PARAM( BLENDTINTCOLOROVERBASE, SHADER_PARAM_TYPE_FLOAT, "0", "blend between tint acting as a multiplication versus a replace" )
+		SHADER_PARAM( NOTINT, SHADER_PARAM_TYPE_BOOL, "0", "Disable tinting" )
 
 	END_SHADER_PARAMS
 
@@ -647,6 +648,12 @@ BEGIN_VS_SHADER( VertexLitGeneric_DX8,
 				float c1[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 				c1[0] = c1[1] = c1[2] = c1[3] = params[BLENDTINTCOLOROVERBASE]->GetFloatValue();
 				pShaderAPI->SetPixelShaderConstant( 1, c1 );
+			}
+
+			if ( params[NOTINT]->GetIntValue() )
+			{
+				float white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+				pShaderAPI->SetPixelShaderConstant( 1, white );
 			}
 
 			vertexlitgeneric_vs11_Dynamic_Index vshIndex;
