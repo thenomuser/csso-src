@@ -193,8 +193,6 @@ void CGameMenuItem::ApplySettings( KeyValues *inResourceData )
 	}
 
 	_activationType = (ActivationType_t)inResourceData->GetInt( "button_activation_type", Button::ACTIVATE_ONPRESSED );
-
-	SetPaintBackgroundType( inResourceData->GetInt( "PaintBackgroundType" ) );
 }
 
 //-----------------------------------------------------------------------------

@@ -3741,8 +3741,7 @@ void Panel::SetPaintBackgroundEnabled(bool state)
 
 void Panel::SetPaintBackgroundType( int type )
 {
-	// HACK only 0 through 2 supported for now
-	m_nPaintBackgroundType = clamp( type, 0, 2 );
+	m_nPaintBackgroundType = type;
 }
 
 void Panel::SetPaintEnabled(bool state)
