@@ -247,6 +247,8 @@ public:
 	void SetMinimumWidth(int width);
 	int  GetMinimumWidth();
 
+	int GetHighestItemWidth();
+
 	// baseclass overrides to chain colors through to cascade menus
 	virtual void SetFgColor( Color newColor );
 	virtual void SetBgColor( Color newColor );

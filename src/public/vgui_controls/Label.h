@@ -65,6 +65,7 @@ public:
 	};
 
 	virtual void SetContentAlignment(Alignment alignment);
+	int GetAlignmentFromString( const char* alignmentString );
 	virtual void SetEnabled(bool state);
 	// Additional offset at the Start of the text (from whichever sides it is aligned)
 	virtual void SetTextInset(int xInset, int yInset);		

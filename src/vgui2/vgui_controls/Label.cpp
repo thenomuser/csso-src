@@ -683,6 +683,50 @@ void Label::SetContentAlignment(Alignment alignment)
 	Repaint();
 }
 
+int Label::GetAlignmentFromString( const char* alignmentString )
+{
+	int align = -1;
+
+	if ( !stricmp( alignmentString, "north-west" ) )
+	{
+		align = a_northwest;
+	}
+	else if ( !stricmp( alignmentString, "north" ) )
+	{
+		align = a_north;
+	}
+	else if ( !stricmp( alignmentString, "north-east" ) )
+	{
+		align = a_northeast;
+	}
+	else if ( !stricmp( alignmentString, "west" ) )
+	{
+		align = a_west;
+	}
+	else if ( !stricmp( alignmentString, "center" ) )
+	{
+		align = a_center;
+	}
+	else if ( !stricmp( alignmentString, "east" ) )
+	{
+		align = a_east;
+	}
+	else if ( !stricmp( alignmentString, "south-west" ) )
+	{
+		align = a_southwest;
+	}
+	else if ( !stricmp( alignmentString, "south" ) )
+	{
+		align = a_south;
+	}
+	else if ( !stricmp( alignmentString, "south-east" ) )
+	{
+		align = a_southeast;
+	}
+
+	return align;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Size the width of the label to its contents - only works from in ApplySchemeSettings or PerformLayout()
 //-----------------------------------------------------------------------------
@@ -1153,44 +1197,7 @@ void Label::ApplySettings( KeyValues *inResourceData )
 
 	// text alignment
 	const char *alignmentString = inResourceData->GetString( "textAlignment", "" );
-	int align = -1;
-
-	if ( !stricmp(alignmentString, "north-west") )
-	{
-		align = a_northwest;
-	}
-	else if ( !stricmp(alignmentString, "north") )
-	{
-		align = a_north;
-	}
-	else if ( !stricmp(alignmentString, "north-east") )
-	{
-		align = a_northeast;
-	}
-	else if ( !stricmp(alignmentString, "west") )
-	{
-		align = a_west;
-	}
-	else if ( !stricmp(alignmentString, "center") )
-	{
-		align = a_center;
-	}
-	else if ( !stricmp(alignmentString, "east") )
-	{
-		align = a_east;
-	}
-	else if ( !stricmp(alignmentString, "south-west") )
-	{
-		align = a_southwest;
-	}
-	else if ( !stricmp(alignmentString, "south") )
-	{
-		align = a_south;
-	}
-	else if ( !stricmp(alignmentString, "south-east") )
-	{
-		align = a_southeast;
-	}
+	int align = GetAlignmentFromString(alignmentString);
 
 	if ( align != -1 )
 	{

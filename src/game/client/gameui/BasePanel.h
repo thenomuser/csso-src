@@ -149,10 +149,8 @@ public:
 
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void PaintBackground( void );
-	void SetRightAlignedText( bool state );
 
 private:
-	bool		m_bRightAligned;
 	bool		m_bFadeBox;
 };
 
@@ -367,6 +365,7 @@ private:
 	};
 	CUtlVector< coord > m_iGameTitlePos;
 	coord m_iGameMenuPos;
+	int m_iGameMenuWidth;
 
 	// base dialogs
 	vgui::DHANDLE<vgui::Frame> m_hNewGameDialog;

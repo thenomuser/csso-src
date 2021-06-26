@@ -945,16 +945,7 @@ void Menu::CalculateWidth()
 	_menuWide = 0;
 	if (!m_iFixedWidth)
 	{
-		// find the biggest menu item
-		FOR_EACH_LL( m_MenuItems, i )
-		{		
-			int wide, tall;
-			m_MenuItems[i]->GetContentSize(wide, tall);
-			if (wide > _menuWide - Label::Content)
-			{
-				_menuWide =  wide + Label::Content;	
-			}
-		}	
+		_menuWide = GetHighestItemWidth();
 	}
 	
 	// enfoce a minimumWidth 
@@ -964,6 +955,26 @@ void Menu::CalculateWidth()
 	}
 
 	_recalculateWidth = false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns the highest item width
+//-----------------------------------------------------------------------------
+int Menu::GetHighestItemWidth()
+{
+	int width = 0;
+	// find the biggest menu item
+	FOR_EACH_LL( m_MenuItems, i )
+	{
+		int wide, tall;
+		m_MenuItems[i]->GetContentSize(wide, tall);
+		if (wide > width - Label::Content)
+		{
+			width = wide + Label::Content;
+		}
+	}
+
+	return width;
 }
 
 //-----------------------------------------------------------------------------
