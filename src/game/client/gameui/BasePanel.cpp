@@ -1678,10 +1678,8 @@ void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 		{
 			m_pGameMenuButtons[i]->SetFont(pClientScheme->GetFont(CFmtStr("ClientTitle%dFont", i+1), true));
 			m_iGameTitlePos.AddToTail( coord() );
-			m_iGameTitlePos[i].x = atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.X", i+1 ) ) );
-			m_iGameTitlePos[i].x = scheme()->GetProportionalScaledValue( m_iGameTitlePos[i].x );
-			m_iGameTitlePos[i].y = atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.Y", i+1 ) ) );
-			m_iGameTitlePos[i].y = scheme()->GetProportionalScaledValue( m_iGameTitlePos[i].y );
+			m_iGameTitlePos[i].x = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.X", i+1 ) ) ), true );
+			m_iGameTitlePos[i].y = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString( CFmtStr( "Main.Title%d.Y", i+1 ) ) ) );
 
 			if ( GameUI().IsConsoleUI() )
 				m_iGameTitlePos[i].x += MAIN_MENU_INDENT_X360;
@@ -1695,10 +1693,10 @@ void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 		}
 #endif // CS_BETA
 
-		m_iGameMenuPos.x = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.X")) );
+		m_iGameMenuPos.x = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.X")), true );
 		m_iGameMenuPos.y = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Y")) );
 
-		m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Width")) );
+		m_iGameMenuWidth = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.Menu.Width")), true );
 		if ( m_iGameMenuWidth < m_pGameMenu->GetHighestItemWidth() )
 			m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
 

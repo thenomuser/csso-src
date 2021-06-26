@@ -173,7 +173,7 @@ public:
 
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-	virtual int GetProportionalScaledValue(int normalizedValue);
+	virtual int GetProportionalScaledValue(int normalizedValue, bool byWidth = false);
 	virtual int GetProportionalNormalizedValue(int scaledValue);
 
 	// gets the proportional coordinates for doing screen-size independant panel layouts
@@ -192,7 +192,7 @@ public:
 
 private:
 
-	int GetProportionalScaledValue_( int rootWide, int rootTall, int normalizedValue );
+	int GetProportionalScaledValue_( int rootWide, int rootTall, int normalizedValue, bool byWidth = false );
 	int GetProportionalNormalizedValue_( int rootWide, int rootTall, int scaledValue );
 
 	// Search for already-loaded schemes
@@ -1118,11 +1118,16 @@ HScheme CSchemeManager::GetScheme(const char *tag)
 	return 1; // default scheme
 }
 
-int CSchemeManager::GetProportionalScaledValue_( int rootWide, int rootTall, int normalizedValue )
+int CSchemeManager::GetProportionalScaledValue_( int rootWide, int rootTall, int normalizedValue, bool byWidth )
 {
 	int proH, proW;
 	g_pSurface->GetProportionalBase( proW, proH );
-	double scale = (double)rootTall / (double)proH;
+
+	double scale;
+	if ( byWidth )
+		scale = (double)rootWide / (double)proW;
+	else
+		scale = (double)rootTall / (double)proH;
 
 	return (int)( normalizedValue * scale );
 }
@@ -1139,11 +1144,11 @@ int CSchemeManager::GetProportionalNormalizedValue_( int rootWide, int rootTall,
 //-----------------------------------------------------------------------------
 // Purpose: converts a value into proportional mode
 //-----------------------------------------------------------------------------
-int CSchemeManager::GetProportionalScaledValue(int normalizedValue)
+int CSchemeManager::GetProportionalScaledValue(int normalizedValue, bool byWidth)
 {
 	int wide, tall;
 	g_pSurface->GetScreenSize( wide, tall );
-	return GetProportionalScaledValue_( wide, tall, normalizedValue );
+	return GetProportionalScaledValue_( wide, tall, normalizedValue, byWidth );
 }
 
 //-----------------------------------------------------------------------------

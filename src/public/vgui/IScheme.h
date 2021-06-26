@@ -103,7 +103,7 @@ public:
 
 	// gets the proportional coordinates for doing screen-size independant panel layouts
 	// use these for font, image and panel size scaling (they all use the pixel height of the display for scaling)
-	virtual int GetProportionalScaledValue( int normalizedValue) = 0;
+	virtual int GetProportionalScaledValue( int normalizedValue, bool byWidth = false ) = 0;
 	virtual int GetProportionalNormalizedValue(int scaledValue) = 0;
 
 	// loads a scheme from a file
