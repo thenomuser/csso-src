@@ -58,7 +58,7 @@ Menu::Menu(Panel *parent, const char *panelName) : Panel(parent, panelName)
 	m_iFixedWidth = 0;
 	m_iMinimumWidth = 0;
 	m_iNumVisibleLines = -1; // No limit
-	m_iCurrentlySelectedItemID = m_MenuItems.InvalidIndex();
+	m_iCurrentlySelectedItemID = -1;
 	m_pScroller = new ScrollBar(this, "MenuScrollBar", true);
 	m_pScroller->SetVisible(false);
 	m_pScroller->AddActionSignalTarget(this);
@@ -1556,7 +1556,8 @@ void Menu::OnKeyTyped(wchar_t unichar)
 	int itemToSelect = m_iCurrentlySelectedItemID;
 	if ( itemToSelect < 0 )
 	{
-		itemToSelect = 0;
+		InvalidateLayout();
+		return;
 	}
 
 	int i;
@@ -2304,7 +2305,7 @@ void Menu::ClearCurrentlyHighlightedItem()
 	{
 		m_MenuItems[m_iCurrentlySelectedItemID]->DisarmItem();
 	}
-	m_iCurrentlySelectedItemID = m_MenuItems.InvalidIndex();
+	m_iCurrentlySelectedItemID =-1;
 }
 
 //-----------------------------------------------------------------------------
@@ -2410,6 +2411,7 @@ void Menu::OnCursorExitedMenuItem(int VPanel)
 		// unhighlight the item.
 		// note menuItems with cascading menus will stay lit.
 		item->DisarmItem();
+		ClearCurrentlyHighlightedItem();
 	}
 }
 
