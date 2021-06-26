@@ -1701,6 +1701,8 @@ void CBaseModPanel::ApplySchemeSettings(IScheme *pScheme)
 			m_iGameMenuWidth = m_pGameMenu->GetHighestItemWidth();
 
 		m_iGameMenuInset = scheme()->GetProportionalScaledValue( atoi(pClientScheme->GetResourceString("Main.BottomBorder")) );
+
+		m_pGameMenu->SetFont( pClientScheme->GetFont( "GameMenuFont", IsProportional() ) );
 	}
 	else
 	{
