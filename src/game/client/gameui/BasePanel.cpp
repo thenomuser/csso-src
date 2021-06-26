@@ -1075,7 +1075,7 @@ void CBaseModPanel::UpdateBackgroundState()
 		{
 			// fade out background tint
 			targetAlpha = 0.0f;
-			duration = 2.0f;
+			duration = 0.5f;
 		}
 
 		m_bHaveDarkenedBackground = bNeedDarkenedBackground;
@@ -1100,7 +1100,7 @@ void CBaseModPanel::UpdateBackgroundState()
 		else
 		{
 			// fade in title text
-			duration = 2.0f;
+			duration = 0.5f;
 			targetTitleAlpha = 255.0f;
 		}
 
