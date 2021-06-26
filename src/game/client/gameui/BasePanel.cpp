@@ -567,13 +567,6 @@ public:
 					menuItem->SetContentAlignment( (Label::Alignment) align );
 				}
 
-				// allow menu items to override menu width
-				int width = kv->GetInt( "MenuWidth", 0 );
-				if ( width )
-				{
-					SetFixedWidth( width );
-				}
-
 
 				menuItem->SetVisible( shouldBeVisible );
 			}
