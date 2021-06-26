@@ -148,10 +148,7 @@ public:
 	CGameMenuItem(vgui::Menu *parent, const char *name);
 
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-	virtual void PaintBackground( void );
-
-private:
-	bool		m_bFadeBox;
+	virtual void ApplySettings( KeyValues *inResourceData );
 };
 
 //-----------------------------------------------------------------------------

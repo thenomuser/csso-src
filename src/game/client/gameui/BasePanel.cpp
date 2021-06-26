@@ -135,28 +135,18 @@ VPANEL GetGameUIBasePanel()
 
 CGameMenuItem::CGameMenuItem(vgui::Menu *parent, const char *name)  : BaseClass(parent, name, "GameMenuItem") 
 {
-	m_bFadeBox = false;
 }
 
 void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 {
 	BaseClass::ApplySchemeSettings(pScheme);
-	
-	KeyValues *kv = GetUserData();
-	if ( kv )
-	{
-		m_bFadeBox = kv->GetBool( "FadeBox" );
-	}
 
 	// make fully transparent
 	SetFgColor(GetSchemeColor("MainMenu.TextColor", pScheme));
 	SetBgColor(Color(0, 0, 0, 0));
-	SetDefaultColor(GetSchemeColor("MainMenu.TextColor", pScheme), Color(0, 0, 0, 0));
-	if ( m_bFadeBox )
-		SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), GetSchemeColor("Button.ArmedBgColor", pScheme));
-	else
-		SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), Color(0, 0, 0, 0));
-	SetDepressedColor(GetSchemeColor("MainMenu.DepressedTextColor", pScheme), Color(0, 0, 0, 0));
+	SetDefaultColor(GetSchemeColor("MainMenu.TextColor", pScheme), GetSchemeColor("Button.BgColor", pScheme));
+	SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), GetSchemeColor("Button.ArmedBgColor", pScheme));
+	SetDepressedColor(GetSchemeColor("MainMenu.DepressedTextColor", pScheme), GetSchemeColor("Button.DepressedBgColor", pScheme));
 	SetContentAlignment(Label::a_west);
 	SetBorder(NULL);
 	SetDefaultBorder(NULL);
@@ -173,33 +163,38 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 	{
 		SetFont( pScheme->GetFont( "MenuLarge", IsProportional() ) );
 	}
-	if ( m_bFadeBox )
-		SetTextInset( MAIN_MENU_INDENT_X360, 0 );
-	else
-		SetTextInset( 0, 0 );
-	SetArmedSound("UI/buttonrollover.wav");
-	SetDepressedSound("UI/buttonclick.wav");
-	SetReleasedSound("UI/buttonclickrelease.wav");
-	SetButtonActivationType(Button::ACTIVATE_ONPRESSED);
+	SetTextInset( 0, 0 );
+
+	KeyValues *kv = GetUserData();
+	if ( kv )
+	{
+		ApplySettings( kv );
+	}
 }
 
-void CGameMenuItem::PaintBackground()
+void CGameMenuItem::ApplySettings( KeyValues *inResourceData )
 {
-	if ( !m_bFadeBox )
-	{
-		BaseClass::PaintBackground();
-	}
-	else
-	{
-		if ( !IsArmed() || !IsVisible() || GetParent()->GetAlpha() < 32 )
-			return;
+	BaseClass::ApplySettings(inResourceData);
 
-		int wide, tall;
-		GetSize( wide, tall );
-
-		DrawBoxFade( 0, 0, wide * 1.5, tall, GetButtonBgColor(), 1.0f, 255, 0, true );
-		DrawBoxFade( 2, 2, wide * 1.5 - 4, tall - 4, Color( 0, 0, 0, 96 ), 1.0f, 255, 0, true );
+	const char *sound = inResourceData->GetString("sound_armed", "UI/buttonrollover.wav");
+	if (*sound)
+	{
+		SetArmedSound(sound);
 	}
+	sound = inResourceData->GetString("sound_depressed", "UI/buttonclick.wav");
+	if (*sound)
+	{
+		SetDepressedSound(sound);
+	}
+	sound = inResourceData->GetString("sound_released", "UI/buttonclickrelease.wav");
+	if (*sound)
+	{
+		SetReleasedSound(sound);
+	}
+
+	_activationType = (ActivationType_t)inResourceData->GetInt( "button_activation_type", Button::ACTIVATE_ONPRESSED );
+
+	SetPaintBackgroundType( inResourceData->GetInt( "PaintBackgroundType" ) );
 }
 
 //-----------------------------------------------------------------------------
