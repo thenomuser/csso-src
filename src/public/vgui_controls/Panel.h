@@ -515,6 +515,17 @@ public:
 	virtual void DrawBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha, bool hollow = false );
 	virtual void DrawBoxFade(int x, int y, int wide, int tall, Color color, float normalizedAlpha, unsigned int alpha0, unsigned int alpha1, bool bHorizontal, bool hollow = false );
 	virtual void DrawHollowBox(int x, int y, int wide, int tall, Color color, float normalizedAlpha );
+
+	// argh, too long and complicated
+	// used for PaintBackgroundType 3
+	int GetBackgroundBoxFadeAlphaStart() { return m_iBackgroundBoxFadeAlphaStart; }
+	int GetBackgroundBoxFadeAlphaEnd() { return m_iBackgroundBoxFadeAlphaEnd; }
+
+private:
+	int m_iBackgroundBoxFadeAlphaStart;
+	int m_iBackgroundBoxFadeAlphaEnd;
+
+public:
 	//=============================================================================
 	// HPE_BEGIN:
 	//=============================================================================

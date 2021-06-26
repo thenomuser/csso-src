@@ -744,6 +744,9 @@ void Panel::Init( int x, int y, int wide, int tall )
 	m_LastNavDirection = ND_NONE;
 	m_bWorldPositionCurrentFrame = false;
 	m_bForceStereoRenderToFrameBuffer = false;
+
+	m_iBackgroundBoxFadeAlphaStart = 255;
+	m_iBackgroundBoxFadeAlphaEnd = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1350,7 +1353,7 @@ void Panel::PaintBackground()
 			break;
 		case 3:
 			{
-				DrawBoxFade( 0, 0, wide, tall, col, 1.0f, 255, 0, true );
+				DrawBoxFade( 0, 0, wide, tall, col, 1.0f, GetBackgroundBoxFadeAlphaStart(), GetBackgroundBoxFadeAlphaEnd(), true );
 			}
 			break;
 		}
@@ -4646,6 +4649,9 @@ void Panel::ApplySettings(KeyValues *inResourceData)
 	}
 
 	OnChildSettingsApplied( inResourceData, this );
+
+	m_iBackgroundBoxFadeAlphaStart = inResourceData->GetInt( "BackgroundBoxFadeAlphaStart", 255 );
+	m_iBackgroundBoxFadeAlphaEnd = inResourceData->GetInt( "BackgroundBoxFadeAlphaEnd", 0 );
 }
 
 //-----------------------------------------------------------------------------
