@@ -100,6 +100,7 @@ WeaponNameInfo s_weaponNameInfo[] =
 	{ WEAPON_KNIFE_STILETTO,	"weapon_knife_stiletto" },
 	{ WEAPON_KNIFE_URSUS,		"weapon_knife_ursus" },
 	{ WEAPON_KNIFE_WIDOWMAKER,	"weapon_knife_widowmaker" },
+	{ WEAPON_KNIFE_PUSH,		"weapon_knife_push" },
 	{ WEAPON_P90,				"weapon_p90" },
 
 	// new weapons

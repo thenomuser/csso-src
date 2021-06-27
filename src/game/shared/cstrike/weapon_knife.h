@@ -36,6 +36,7 @@
 	#define CKnifeStiletto C_KnifeStiletto
 	#define CKnifeUrsus C_KnifeUrsus
 	#define CKnifeWidowmaker C_KnifeWidowmaker
+	#define CKnifePush C_KnifePush
 
 #endif
 
@@ -385,6 +386,22 @@ public:
 
 private:
 	CKnifeWidowmaker( const CKnifeWidowmaker & ) {}
+};
+
+
+class CKnifePush: public CKnife
+{
+public:
+	DECLARE_CLASS( CKnifePush, CKnife );
+	DECLARE_NETWORKCLASS();
+	DECLARE_PREDICTABLE();
+
+	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_PUSH; }
+
+	CKnifePush() {}
+
+private:
+	CKnifePush( const CKnifePush & ) {}
 };
 
 
