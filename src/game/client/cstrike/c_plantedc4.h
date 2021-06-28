@@ -69,6 +69,7 @@ public:
 
 	float	m_flNextRadarFlashTime;	// next time to change flash state
 	bool	m_bRadarFlash;			// is the flash on or off
+	int		m_iPlantedAt;
 };
 
 extern CUtlVector< C_PlantedC4* > g_PlantedC4s;

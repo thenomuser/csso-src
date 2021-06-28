@@ -49,6 +49,8 @@ C_PlantedC4::C_PlantedC4()
 	m_flNextBeep = gpGlobals->curtime + 1.0;
 
 	SetBodygroup( FindBodygroupByName( "gift" ), UTIL_IsNewYear() );
+
+	m_iPlantedAt = -1;
 }
 
 
@@ -121,20 +123,30 @@ void C_PlantedC4::ClientThink( void )
 		
 		CSoundParameters params;
 
-		const char* szBeepSoundName = "C4.PlantSound";
-		if ( GetCSResources() )
+		if ( m_iPlantedAt == -1 )
 		{
-			// determine whether the bomb is on A or B site by comparing how close both sites are
-			Vector deltaA, deltaB;
-			VectorSubtract( WorldSpaceCenter(), GetCSResources()->GetBombsiteAPosition(), deltaA );
-			VectorSubtract( WorldSpaceCenter(), GetCSResources()->GetBombsiteBPosition(), deltaB );
-
-			if ( deltaA.Length() > deltaB.Length() )
+			if ( GetCSResources() )
 			{
-				// site B is closer than site A: use a different beep sound
-				szBeepSoundName = "C4.PlantSoundB";
+				// determine whether the bomb is on A or B site by comparing how close both sites are
+				Vector deltaA, deltaB;
+				VectorSubtract( GetAbsOrigin(), GetCSResources()->GetBombsiteAPosition(), deltaA );
+				VectorSubtract( GetAbsOrigin(), GetCSResources()->GetBombsiteBPosition(), deltaB );
+
+				if ( deltaA.Length() > deltaB.Length() )
+				{
+					// site B is closer than site A
+					m_iPlantedAt = 1;
+				}
+				else
+				{
+					m_iPlantedAt = 0;
+				}
 			}
 		}
+
+		const char* szBeepSoundName = "C4.PlantSound";
+		if ( m_iPlantedAt == 1 )
+			szBeepSoundName = "C4.PlantSoundB";
 
 		if ( ( m_flC4Blow - gpGlobals->curtime ) > 1.0f && GetParametersForSound( szBeepSoundName, params, NULL ) )
 		{
