@@ -112,7 +112,7 @@ static void RecvProxy_HDRColorScale( const CRecvProxyData *pData, void *pStruct,
 }
 
 IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_LightGlow, DT_LightGlow, CLightGlow )
-	RecvPropInt( RECVINFO(m_clrRender), 0, RecvProxy_IntToColor32 ),
+	RecvPropInt( RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32 ),
 	RecvPropInt( RECVINFO( m_nHorizontalSize ) ),
 	RecvPropInt( RECVINFO( m_nVerticalSize ) ),
 	RecvPropInt( RECVINFO( m_nMinDist ) ),

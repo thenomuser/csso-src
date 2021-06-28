@@ -122,7 +122,7 @@ void TE_DispatchEffect( IRecipientFilter& filter, float delay,
 			 const Vector &pos, const char *pName, const CEffectData &data );
 void TE_DispatchEffect( IRecipientFilter& filter, float delay, KeyValues *pKeyValues );
 void TE_PhysicsProp( IRecipientFilter& filter, float delay,
-	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, bool breakmodel, int effects );
+	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, bool breakmodel, int effects, color32 renderColor );
 void TE_PhysicsProp( IRecipientFilter& filter, float delay, KeyValues *pKeyValues );
 void TE_ConcussiveExplosion( IRecipientFilter& filter, float delay, KeyValues *pKeyValues );
 void TE_ClientProjectile( IRecipientFilter& filter, float delay,
@@ -509,11 +509,11 @@ public:
 		}
 	}
 	virtual void PhysicsProp( IRecipientFilter& filter, float delay, int modelindex, int skin,
-		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int fEffects )
+		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int fEffects, color32 renderColor )
 	{
 		if ( !SuppressTE( filter ) )
 		{
-			TE_PhysicsProp( filter, delay, modelindex, skin, pos, angles, vel, flags, fEffects );
+			TE_PhysicsProp( filter, delay, modelindex, skin, pos, angles, vel, flags, fEffects, renderColor );
 		}
 	}
 	virtual void ClientProjectile( IRecipientFilter& filter, float delay,

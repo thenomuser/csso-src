@@ -244,7 +244,7 @@ IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
 	SendPropFloat( SENDINFO( m_FOV ), 0, SPROP_NOSCALE ),
 	SendPropFloat( SENDINFO( m_Resolution ), 0, SPROP_NOSCALE ),
 	SendPropInt( SENDINFO( m_bFogEnable ), 1, SPROP_UNSIGNED ),	
-	SendPropInt( SENDINFO_STRUCTELEM( m_FogColor ), 32, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO_STRUCTELEM( m_FogColor ), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
 	SendPropFloat( SENDINFO( m_flFogStart ), 0, SPROP_NOSCALE ),	
 	SendPropFloat( SENDINFO( m_flFogEnd ), 0, SPROP_NOSCALE ),	
 	SendPropFloat( SENDINFO( m_flFogMaxDensity ), 0, SPROP_NOSCALE ),	

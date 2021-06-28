@@ -101,7 +101,7 @@ void TE_Dust( IRecipientFilter& filter, float delayt,
 void TE_DispatchEffect( IRecipientFilter& filter, float delay,
 				const Vector &pos, const char *pName, const CEffectData &data );
 void TE_PhysicsProp( IRecipientFilter& filter, float delay,
-	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects );
+	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, color32 color );
 void TE_ClientProjectile( IRecipientFilter& filter, float delay,
 	 const Vector* vecOrigin, const Vector* vecVelocity, int modelindex, int lifetime, CBaseEntity *pOwner );
 
@@ -497,11 +497,11 @@ public:
 	}
 
 	virtual void PhysicsProp( IRecipientFilter& filter, float delay, int modelindex, int skin,
-		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects )
+		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, color32 renderColor )
 	{
 		if ( !SuppressTE( filter ) )
 		{
-			TE_PhysicsProp( filter, delay, modelindex, skin, pos, angles, vel, flags, effects );
+			TE_PhysicsProp( filter, delay, modelindex, skin, pos, angles, vel, flags, effects, renderColor );
 		}
 	}
 

@@ -62,7 +62,7 @@ END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST_NOBASE(CShadowControl, DT_ShadowControl)
 	SendPropVector(SENDINFO(m_shadowDirection), -1,  SPROP_NOSCALE ),
-	SendPropInt(SENDINFO(m_shadowColor),	32, SPROP_UNSIGNED),
+	SendPropInt(SENDINFO(m_shadowColor),	32, SPROP_UNSIGNED, SendProxy_Color32ToInt32),
 	SendPropFloat(SENDINFO(m_flShadowMaxDist), 0, SPROP_NOSCALE ),
 	SendPropBool(SENDINFO(m_bDisableShadows)),
 END_SEND_TABLE()

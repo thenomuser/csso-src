@@ -43,6 +43,8 @@ extern ConVar muzzleflash_light;
 
 #define TENT_WIND_ACCEL 50
 
+color32 white = {255, 255, 255, 255};
+
 //Precache the effects
 #ifndef TF_CLIENT_DLL
 CLIENTEFFECT_REGISTER_BEGIN( PrecacheEffectMuzzleFlash )
@@ -1097,7 +1099,7 @@ void CTempEnts::BreakModel( const Vector &pos, const QAngle &angles, const Vecto
 	}
 }
 
-void CTempEnts::PhysicsProp( int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int physFlags, int physEffects )
+void CTempEnts::PhysicsProp( int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int physFlags, int physEffects, color32 renderColor )
 {
 	C_PhysPropClientside *pEntity = C_PhysPropClientside::CreateNew();
 	
@@ -1118,6 +1120,7 @@ void CTempEnts::PhysicsProp( int modelindex, int skin, const Vector& pos, const 
 	pEntity->SetAbsAngles( angles );
 	pEntity->SetPhysicsMode( PHYSICS_MULTIPLAYER_CLIENTSIDE );
 	pEntity->SetEffects( physEffects );
+	pEntity->SetRenderColor( renderColor.r, renderColor.g, renderColor.b );
 
 	if ( !pEntity->Initialize() )
 	{

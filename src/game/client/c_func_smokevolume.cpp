@@ -163,8 +163,8 @@ private:
 };
 
 IMPLEMENT_CLIENTCLASS_DT( C_FuncSmokeVolume, DT_FuncSmokeVolume, CFuncSmokeVolume )
-	RecvPropInt( RECVINFO( m_Color1 ), 0, RecvProxy_IntToColor32 ),
-	RecvPropInt( RECVINFO( m_Color2 ), 0, RecvProxy_IntToColor32 ),
+	RecvPropInt( RECVINFO( m_Color1 ), 0, RecvProxy_Int32ToColor32 ),
+	RecvPropInt( RECVINFO( m_Color2 ), 0, RecvProxy_Int32ToColor32 ),
 	RecvPropString( RECVINFO( m_MaterialName ) ),
 	RecvPropFloat( RECVINFO( m_ParticleDrawWidth ) ),
 	RecvPropFloat( RECVINFO( m_ParticleSpacingDistance ) ),

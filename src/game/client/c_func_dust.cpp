@@ -19,7 +19,7 @@
 #include "tier0/memdbgon.h"
 
 IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
-	RecvPropInt( RECVINFO(m_Color) ),
+	RecvPropInt( RECVINFO(m_Color), 0, RecvProxy_Int32ToColor32 ),
 	RecvPropInt( RECVINFO(m_SpawnRate) ),
 	RecvPropFloat( RECVINFO(m_flSizeMin) ),
 	RecvPropFloat( RECVINFO(m_flSizeMax) ),

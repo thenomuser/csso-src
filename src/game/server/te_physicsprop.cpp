@@ -37,6 +37,7 @@ public:
 	CNetworkVar( int, m_nSkin );
 	CNetworkVar( int, m_nFlags );
 	CNetworkVar( int, m_nEffects );
+	CNetworkColor32( m_clrRender );
 };
 
 //-----------------------------------------------------------------------------
@@ -53,6 +54,7 @@ CTEPhysicsProp::CTEPhysicsProp( const char *name ) :
 	m_nSkin				= 0;
 	m_nFlags			= 0;
 	m_nEffects			= 0;
+	m_clrRender			= {255, 255, 255, 255};
 }
 
 //-----------------------------------------------------------------------------
@@ -112,13 +114,14 @@ IMPLEMENT_SERVERCLASS_ST(CTEPhysicsProp, DT_TEPhysicsProp)
 	SendPropInt( SENDINFO(m_nSkin), ANIMATION_SKIN_BITS),
 	SendPropInt( SENDINFO(m_nFlags), 2, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO(m_nEffects), EF_MAX_BITS, SPROP_UNSIGNED),
+	SendPropInt( SENDINFO(m_clrRender), 32,	SPROP_UNSIGNED, SendProxy_Color32ToInt32 ),
 END_SEND_TABLE()
 
 // Singleton to fire TEBreakModel objects
 static CTEPhysicsProp s_TEPhysicsProp( "physicsprop" );
 
 void TE_PhysicsProp( IRecipientFilter& filter, float delay,
-	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects )
+	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, color32 renderColor )
 {
 	s_TEPhysicsProp.m_vecOrigin		= pos;
 	s_TEPhysicsProp.m_angRotation	= angles;
@@ -127,6 +130,7 @@ void TE_PhysicsProp( IRecipientFilter& filter, float delay,
 	s_TEPhysicsProp.m_nSkin			= skin;
 	s_TEPhysicsProp.m_nFlags		= flags;
 	s_TEPhysicsProp.m_nEffects		= effects;
+	s_TEPhysicsProp.m_clrRender		= renderColor;
 
 	// Send it over the wire
 	s_TEPhysicsProp.Create( filter, delay );

@@ -117,7 +117,7 @@ public:
 	virtual void DispatchEffect( IRecipientFilter& filter, float delay,
 				const Vector &pos, const char *pName, const CEffectData &data ) = 0;
 	virtual void PhysicsProp( IRecipientFilter& filter, float delay, int modelindex, int skin, 
-		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects ) = 0;
+		const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, color32 renderColor ) = 0;
 
 	// For playback from external tools
 	virtual void TriggerTempEntity( KeyValues *pKeyValues ) = 0;

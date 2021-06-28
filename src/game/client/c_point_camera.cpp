@@ -19,7 +19,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_PointCamera, DT_PointCamera, CPointCamera )
 	RecvPropFloat( RECVINFO( m_FOV ) ), 
 	RecvPropFloat( RECVINFO( m_Resolution ) ), 
 	RecvPropInt( RECVINFO( m_bFogEnable ) ),
-	RecvPropInt( RECVINFO( m_FogColor ) ),
+	RecvPropInt( RECVINFO( m_FogColor ), 0, RecvProxy_Int32ToColor32 ),
 	RecvPropFloat( RECVINFO( m_flFogStart ) ), 
 	RecvPropFloat( RECVINFO( m_flFogEnd ) ), 
 	RecvPropFloat( RECVINFO( m_flFogMaxDensity ) ), 

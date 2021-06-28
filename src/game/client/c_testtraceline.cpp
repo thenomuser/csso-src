@@ -37,7 +37,7 @@ private:
 IMPLEMENT_CLIENTCLASS(C_TestTraceline, DT_TestTraceline, CTestTraceline);
 
 BEGIN_RECV_TABLE_NOBASE(C_TestTraceline, DT_TestTraceline)
-	RecvPropInt(RECVINFO(m_clrRender)),
+	RecvPropInt(RECVINFO(m_clrRender), 0, RecvProxy_Int32ToColor32),
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 	RecvPropFloat( RECVINFO_NAME( m_angNetworkAngles[0], m_angRotation[0] ) ),
 	RecvPropFloat( RECVINFO_NAME( m_angNetworkAngles[1], m_angRotation[1] ) ),
