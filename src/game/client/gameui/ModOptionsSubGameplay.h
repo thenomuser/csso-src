@@ -65,6 +65,7 @@ private:
 	vgui::Label*				m_pViewmodelRecoilLabel;
 	CLabeledCommandComboBox*	m_pViewbobStyle;
 	CLabeledCommandComboBox*	m_pWeaponPos;
+	CLabeledCommandComboBox*	m_pRoundTimerPos;
 };
 
 #endif // MODOPTIONSSUBGAMEPLAY_H

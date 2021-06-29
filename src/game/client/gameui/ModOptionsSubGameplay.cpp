@@ -71,6 +71,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelRecoilLabel = new Label( this, "ViewmodelRecoilLabel", "" );
 	m_pViewbobStyle = new CLabeledCommandComboBox( this, "ViewbobStyleComboBox" );
 	m_pWeaponPos = new CLabeledCommandComboBox( this, "WeaponPositionComboBox" );
+	m_pRoundTimerPos = new CLabeledCommandComboBox( this, "RoundTimerPositionComboBox" );
 
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_1", "viewmodel_presetpos 1" );
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_2", "viewmodel_presetpos 2" );
@@ -81,6 +82,9 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Left", "cl_righthand 0" );
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Right", "cl_righthand 1" );
+
+	m_pRoundTimerPos->AddItem( "#GameUI_Gameplay_RoundTimer_Bottom", "hud_roundtimer_pos 0" );
+	m_pRoundTimerPos->AddItem( "#GameUI_Gameplay_RoundTimer_Top", "hud_roundtimer_pos 1" );
 
 	m_pCloseOnBuy->AddActionSignalTarget( this );
 	m_pUseOpensBuyMenu->AddActionSignalTarget( this );
@@ -95,6 +99,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetPreset->AddActionSignalTarget( this );
 	m_pViewbobStyle->AddActionSignalTarget( this );
 	m_pWeaponPos->AddActionSignalTarget( this );
+	m_pRoundTimerPos->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubGameplay.res" );
 }
@@ -191,12 +196,18 @@ void CModOptionsSubGameplay::OnResetData()
 	ConVarRef viewmodel_presetpos( "viewmodel_presetpos" );
 	if ( viewmodel_presetpos.IsValid() )
 		m_pViewmodelOffsetPreset->SetInitialItem( viewmodel_presetpos.GetInt() - 1 );
+
 	ConVarRef cl_use_new_headbob( "cl_use_new_headbob" );
 	if ( cl_use_new_headbob.IsValid() )
 		m_pViewbobStyle->SetInitialItem( cl_use_new_headbob.GetInt() );
+
 	ConVarRef cl_righthand( "cl_righthand" );
 	if ( cl_righthand.IsValid() )
 		m_pWeaponPos->SetInitialItem( cl_righthand.GetInt() );
+
+	ConVarRef hud_roundtimer_pos( "hud_roundtimer_pos" );
+	if ( hud_roundtimer_pos.IsValid() )
+		m_pRoundTimerPos->SetInitialItem( hud_roundtimer_pos.GetInt() );
 }
 
 //-----------------------------------------------------------------------------
@@ -217,4 +228,5 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pViewmodelRecoil->ApplyChanges();
 	m_pViewbobStyle->ApplyChanges();
 	m_pWeaponPos->ApplyChanges();
+	m_pRoundTimerPos->ApplyChanges();
 }
