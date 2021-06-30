@@ -6773,7 +6773,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 			}
 		}
 
-		if ( GetTeamNumber() == TEAM_CT )
+		else if ( GetTeamNumber() == TEAM_CT )
 		{
 			pSpot = g_pLastCTSpawn;
 			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ))
