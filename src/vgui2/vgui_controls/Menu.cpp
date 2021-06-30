@@ -968,13 +968,13 @@ int Menu::GetHighestItemWidth()
 	{
 		int wide, tall;
 		m_MenuItems[i]->GetContentSize(wide, tall);
-		if (wide > width - Label::Content)
+		if (wide > width)
 		{
-			width = wide + Label::Content;
+			width = wide;
 		}
 	}
 
-	return width;
+	return width + Label::Content;
 }
 
 //-----------------------------------------------------------------------------

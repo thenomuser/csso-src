@@ -71,7 +71,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelRecoilLabel = new Label( this, "ViewmodelRecoilLabel", "" );
 	m_pViewbobStyle = new CLabeledCommandComboBox( this, "ViewbobStyleComboBox" );
 	m_pWeaponPos = new CLabeledCommandComboBox( this, "WeaponPositionComboBox" );
-	m_pRoundTimerPos = new CLabeledCommandComboBox( this, "RoundTimerPositionComboBox" );
+	m_pPlayerCountPos = new CLabeledCommandComboBox( this, "PlayerCountPositionComboBox" );
 
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_1", "viewmodel_presetpos 1" );
 	m_pViewmodelOffsetPreset->AddItem( "#GameUI_Gameplay_Viewmodel_Preset_2", "viewmodel_presetpos 2" );
@@ -83,8 +83,8 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Left", "cl_righthand 0" );
 	m_pWeaponPos->AddItem( "#GameUI_Gameplay_Hand_Right", "cl_righthand 1" );
 
-	m_pRoundTimerPos->AddItem( "#GameUI_Gameplay_RoundTimer_Bottom", "hud_roundtimer_pos 0" );
-	m_pRoundTimerPos->AddItem( "#GameUI_Gameplay_RoundTimer_Top", "hud_roundtimer_pos 1" );
+	m_pPlayerCountPos->AddItem( "#GameUI_Gameplay_PlayerCount_Bottom", "hud_playercount_pos 0" );
+	m_pPlayerCountPos->AddItem( "#GameUI_Gameplay_PlayerCount_Top", "hud_playercount_pos 1" );
 
 	m_pCloseOnBuy->AddActionSignalTarget( this );
 	m_pUseOpensBuyMenu->AddActionSignalTarget( this );
@@ -99,7 +99,7 @@ CModOptionsSubGameplay::CModOptionsSubGameplay( vgui::Panel *parent ): vgui::Pro
 	m_pViewmodelOffsetPreset->AddActionSignalTarget( this );
 	m_pViewbobStyle->AddActionSignalTarget( this );
 	m_pWeaponPos->AddActionSignalTarget( this );
-	m_pRoundTimerPos->AddActionSignalTarget( this );
+	m_pPlayerCountPos->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubGameplay.res" );
 }
@@ -205,9 +205,9 @@ void CModOptionsSubGameplay::OnResetData()
 	if ( cl_righthand.IsValid() )
 		m_pWeaponPos->SetInitialItem( cl_righthand.GetInt() );
 
-	ConVarRef hud_roundtimer_pos( "hud_roundtimer_pos" );
-	if ( hud_roundtimer_pos.IsValid() )
-		m_pRoundTimerPos->SetInitialItem( hud_roundtimer_pos.GetInt() );
+	ConVarRef hud_playercount_pos( "hud_playercount_pos" );
+	if ( hud_playercount_pos.IsValid() )
+		m_pPlayerCountPos->SetInitialItem( hud_playercount_pos.GetInt() );
 }
 
 //-----------------------------------------------------------------------------
@@ -228,5 +228,5 @@ void CModOptionsSubGameplay::OnApplyChanges()
 	m_pViewmodelRecoil->ApplyChanges();
 	m_pViewbobStyle->ApplyChanges();
 	m_pWeaponPos->ApplyChanges();
-	m_pRoundTimerPos->ApplyChanges();
+	m_pPlayerCountPos->ApplyChanges();
 }

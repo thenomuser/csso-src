@@ -34,6 +34,7 @@ CHudNumericDisplay::CHudNumericDisplay(vgui::Panel *parent, const char *name) : 
 	m_bDisplaySecondaryValue = false;
 	m_bIndent = false;
 	m_bIsTime = false;
+	m_bCenter = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -102,6 +103,14 @@ void CHudNumericDisplay::SetIsTime(bool state)
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: data accessor
+//-----------------------------------------------------------------------------
+void CHudNumericDisplay::SetCenter(bool state)
+{
+	m_bCenter = state;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: paints a number at the specified position
 //-----------------------------------------------------------------------------
 void CHudNumericDisplay::PaintNumbers(HFont font, int xpos, int ypos, int value)
@@ -131,14 +140,25 @@ void CHudNumericDisplay::PaintNumbers(HFont font, int xpos, int ypos, int value)
 	}
 
 	// adjust the position to take into account 3 characters
-	int charWidth = surface()->GetCharacterWidth(font, '0');
-	if (value < 100 && m_bIndent)
+	int charWidth = surface()->GetCharacterWidth( font, '0' );
+	if ( m_bCenter )
 	{
-		xpos += charWidth;
+		xpos -= charWidth / 2;
+		if ( value >= 10 )
+			xpos -= charWidth / 2;
+		if ( value >= 100 )
+			xpos -= charWidth / 2;
 	}
-	if (value < 10 && m_bIndent)
+	else if ( m_bIndent )
 	{
-		xpos += charWidth;
+		if (value < 100)
+		{
+			xpos += charWidth;
+		}
+		if (value < 10)
+		{
+			xpos += charWidth;
+		}
 	}
 
 	surface()->DrawSetTextPos(xpos, ypos);
@@ -161,6 +181,11 @@ void CHudNumericDisplay::PaintLabel( void )
 //-----------------------------------------------------------------------------
 void CHudNumericDisplay::Paint()
 {
+	float alpha = m_flAlphaOverride / 255;
+	Color fgColor = GetFgColor();
+	fgColor[3] *= alpha;
+	SetFgColor( fgColor );
+
 	if (m_bDisplayValue)
 	{
 		// draw our numbers
@@ -193,6 +218,16 @@ void CHudNumericDisplay::Paint()
 	}
 
 	PaintLabel();
+}
+
+void CHudNumericDisplay::PaintBackground()
+{
+	float alpha = m_flAlphaOverride / 255;
+	Color bgColor = GetBgColor();
+	bgColor[3] *= alpha;
+	SetBgColor( bgColor );
+
+	BaseClass::PaintBackground();
 }
 
 

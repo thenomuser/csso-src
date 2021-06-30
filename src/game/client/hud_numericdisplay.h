@@ -30,6 +30,7 @@ public:
 	void SetLabelText(const wchar_t *text);
 	void SetIndent(bool state);
 	void SetIsTime(bool state);
+	void SetCenter(bool state);
 
 	bool ShouldDisplayValue( void ) { return m_bDisplayValue; }
 	bool ShouldDisplaySecondaryValue( void ) { return m_bDisplaySecondaryValue; }
@@ -39,6 +40,7 @@ public:
 protected:
 	// vgui overrides
 	virtual void Paint();
+	virtual void PaintBackground();
 	virtual void PaintLabel();
 
 	virtual void PaintNumbers(vgui::HFont font, int xpos, int ypos, int value);
@@ -51,10 +53,12 @@ protected:
 	bool m_bDisplayValue, m_bDisplaySecondaryValue;
 	bool m_bIndent;
 	bool m_bIsTime;
+	bool m_bCenter;
 
 	CPanelAnimationVar( float, m_flBlur, "Blur", "0" );
 	CPanelAnimationVar( Color, m_TextColor, "TextColor", "FgColor" );
 	CPanelAnimationVar( Color, m_Ammo2Color, "Ammo2Color", "FgColor" );
+	CPanelAnimationVar( float, m_flAlphaOverride, "Alpha", "255" );
 
 	CPanelAnimationVar( vgui::HFont, m_hNumberFont, "NumberFont", "HudNumbers" );
 	CPanelAnimationVar( vgui::HFont, m_hNumberGlowFont, "NumberGlowFont", "HudNumbersGlow" );

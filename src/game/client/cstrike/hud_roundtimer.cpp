@@ -16,7 +16,7 @@
 
 #include <vgui_controls/AnimationController.h>
 
-ConVar hud_roundtimer_pos( "hud_roundtimer_pos", "0", FCVAR_ARCHIVE, "0 = default (bottom), 1 = top" );
+ConVar hud_playercount_pos( "hud_playercount_pos", "0", FCVAR_ARCHIVE, "0 = default (bottom), 1 = top" );
 
 class CHudRoundTimer : public CHudElement, public vgui::Panel
 {
@@ -57,6 +57,8 @@ private:
 
 	float icon_tall;
 	float icon_wide;
+
+	bool m_bIsAtTheTop;
 };
 
 
@@ -78,6 +80,8 @@ CHudRoundTimer::CHudRoundTimer( const char *pName ) :
 
 	m_iOriginalXPos = -1;
 	m_iOriginalYPos = -1;
+
+	m_bIsAtTheTop = false;
 }
 
 void CHudRoundTimer::ApplySchemeSettings(vgui::IScheme *pScheme)
@@ -119,14 +123,19 @@ bool CHudRoundTimer::ShouldDraw()
 
 void CHudRoundTimer::Think()
 {
-	if ( hud_roundtimer_pos.GetInt() == 1 )
+	if ( m_bIsAtTheTop != hud_playercount_pos.GetBool() )
 	{
-		int ypos = ScreenHeight() - m_iOriginalYPos - GetTall(); // inverse its Y pos
-		SetPos( m_iOriginalXPos, ypos );
-	}
-	else
-	{
-		SetPos( m_iOriginalXPos, m_iOriginalYPos );
+		m_bIsAtTheTop = hud_playercount_pos.GetBool();
+
+		if ( m_bIsAtTheTop )
+		{
+			int ypos = ScreenHeight() - m_iOriginalYPos - GetTall(); // inverse its Y pos
+			SetPos( m_iOriginalXPos, ypos );
+		}
+		else
+		{
+			SetPos( m_iOriginalXPos, m_iOriginalYPos );
+		}
 	}
 
 	C_CSGameRules *pRules = CSGameRules();
