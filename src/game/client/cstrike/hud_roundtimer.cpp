@@ -29,6 +29,7 @@ protected:
 	virtual void Paint();
 	virtual void Think();
 	virtual bool ShouldDraw();
+	bool ShouldDrawText();
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 
 	void PaintTime(HFont font, int xpos, int ypos, int mins, int secs);
@@ -109,6 +110,11 @@ bool CHudRoundTimer::ShouldDraw()
 	if ( pPlayer && pPlayer->IsObserver() )
 		return false;
 
+	return true;
+}
+
+bool CHudRoundTimer::ShouldDrawText()
+{
 	if ( g_PlantedC4s.Count() > 0 )
 		return false;
 
@@ -264,13 +270,16 @@ void CHudRoundTimer::Paint()
 	int minutes = m_iTimer / 60;
 	int seconds = m_iTimer % 60;
 
-	//Draw Timer icon
-	if( m_pTimerIcon )
+	if ( ShouldDrawText() )
 	{
-		m_pTimerIcon->DrawSelf( icon_xpos, icon_ypos, icon_wide, icon_tall, GetFgColor() );
-	}
+		//Draw Timer icon
+		if ( m_pTimerIcon )
+		{
+			m_pTimerIcon->DrawSelf( icon_xpos, icon_ypos, icon_wide, icon_tall, GetFgColor() );
+		}
 
-	PaintTime( m_hNumberFont, digit_xpos, digit_ypos, minutes, seconds );
+		PaintTime( m_hNumberFont, digit_xpos, digit_ypos, minutes, seconds );
+	}
 }
 
 void CHudRoundTimer::PaintTime(HFont font, int xpos, int ypos, int mins, int secs)
