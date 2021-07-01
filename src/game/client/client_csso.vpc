@@ -357,6 +357,7 @@ $Project "Client (CSSO)"
 							"gameui\ModOptionsSubLoadout.cpp" \
 							"gameui\ModOptionsSubKnives.cpp" \
 							"gameui\ModOptionsSubGloves.cpp" \
+							"gameui\ModOptionsSubHUD.cpp" \
 							"gameui\ModOptionsSubCrosshair.cpp"
 					{
 						$Configuration
@@ -384,6 +385,7 @@ $Project "Client (CSSO)"
 					$File	"gameui\ModOptionsSubLoadout.h"
 					$File	"gameui\ModOptionsSubKnives.h"
 					$File	"gameui\ModOptionsSubGloves.h"
+					$File	"gameui\ModOptionsSubHUD.h"
 					$File	"gameui\ModOptionsSubCrosshair.h"
 				}
 			}
