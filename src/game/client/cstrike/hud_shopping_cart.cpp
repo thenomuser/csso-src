@@ -13,6 +13,7 @@
 #include "hud_numericdisplay.h"
 #include <vgui_controls/AnimationController.h>
 
+extern ConVar hud_account_style;
 
 class CHudShoppingCart : public CHudElement, public vgui::Panel
 {
@@ -24,18 +25,26 @@ public:
 	virtual bool ShouldDraw();	
 	virtual void Paint();
 	virtual void Init();
+	virtual void OnThink();
+
+	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 
 
 private:
 	CPanelAnimationVar( Color, m_clrIcon, "IconColor", "IconColor" );
 
+	CPanelAnimationVarAliasType( int, legacy_xpos, "legacy_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, legacy_ypos, "legacy_ypos", "0", "proportional_ypos" );
+
+	int m_iStyle;
+	int m_iOriginalXPos;
+	int m_iOriginalYPos;
+
 	CHudTexture *m_pCartIcon;
 	bool		m_bPrevState;
 };
 
-
 DECLARE_HUDELEMENT( CHudShoppingCart );
-
 
 CHudShoppingCart::CHudShoppingCart( const char *pName ) :
 	vgui::Panel( NULL, "HudShoppingCart" ), CHudElement( pName )
@@ -45,21 +54,24 @@ CHudShoppingCart::CHudShoppingCart( const char *pName ) :
 	
 	SetHiddenBits( HIDEHUD_PLAYERDEAD );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] Add this to the render group that disappears when the scoreboard is up
-	//=============================================================================
 	RegisterForRenderGroup( "hide_for_scoreboard" );
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+
+	m_iStyle = -1;
+	m_iOriginalXPos = 0;
+	m_iOriginalYPos = 0;
 }
 
+void CHudShoppingCart::ApplySchemeSettings( vgui::IScheme *pScheme )
+{
+	BaseClass::ApplySchemeSettings( pScheme );
+
+	GetPos( m_iOriginalXPos, m_iOriginalYPos );
+}
 
 void CHudShoppingCart::Init()
 {
 }
-
 
 bool CHudShoppingCart::ShouldDraw()
 {
@@ -69,6 +81,18 @@ bool CHudShoppingCart::ShouldDraw()
 	return ( pPlayer && pPlayer->IsInBuyZone() && pPlayer->GetTeamNumber() != TEAM_UNASSIGNED && !CSGameRules()->IsBuyTimeElapsed() && CHudElement::ShouldDraw() && CSGameRules()->GetGamemode() != GameModes::DEATHMATCH );
 }
 
+void CHudShoppingCart::OnThink()
+{
+	if ( m_iStyle != hud_account_style.GetInt() )
+	{
+		m_iStyle = hud_account_style.GetInt();
+
+		if ( m_iStyle == 1 )
+			SetPos( legacy_xpos, legacy_ypos );
+		else
+			SetPos( m_iOriginalXPos, m_iOriginalYPos );
+	}
+}
 
 void CHudShoppingCart::Paint()
 {

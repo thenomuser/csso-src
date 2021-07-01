@@ -46,6 +46,7 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	//=========
 	m_pPlayerCountPos = new CLabeledCommandComboBox( this, "PlayerCountPositionComboBox" );
 	m_pHealthArmorStyle = new CLabeledCommandComboBox( this, "HealthArmorStyleComboBox" );
+	m_pAccountStyle = new CLabeledCommandComboBox( this, "AccountStyleComboBox" );
 
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 0" );
 	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 1" );
@@ -54,8 +55,12 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_1", "hud_healtharmor_style 1" );
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_2", "hud_healtharmor_style 2" );
 
+	m_pAccountStyle->AddItem( "#GameUI_HUD_AccountStyle_0", "hud_account_style 0" );
+	m_pAccountStyle->AddItem( "#GameUI_HUD_AccountStyle_1", "hud_account_style 1" );
+
 	m_pPlayerCountPos->AddActionSignalTarget( this );
 	m_pHealthArmorStyle->AddActionSignalTarget( this );
+	m_pAccountStyle->AddActionSignalTarget( this );
 
 	LoadControlSettings( "Resource/ModOptionsSubHUD.res" );
 }
@@ -88,6 +93,10 @@ void CModOptionsSubHUD::OnResetData()
 	ConVarRef hud_healtharmor_style( "hud_healtharmor_style" );
 	if ( hud_healtharmor_style.IsValid() )
 		m_pHealthArmorStyle->SetInitialItem( hud_healtharmor_style.GetInt() );
+
+	ConVarRef hud_account_style( "hud_account_style" );
+	if ( hud_account_style.IsValid() )
+		m_pAccountStyle->SetInitialItem( hud_account_style.GetInt() );
 }
 
 //-----------------------------------------------------------------------------
@@ -97,4 +106,5 @@ void CModOptionsSubHUD::OnApplyChanges()
 {
 	m_pPlayerCountPos->ApplyChanges();
 	m_pHealthArmorStyle->ApplyChanges();
+	m_pAccountStyle->ApplyChanges();
 }

@@ -40,6 +40,7 @@ protected:
 private:
 	CLabeledCommandComboBox*	m_pPlayerCountPos;
 	CLabeledCommandComboBox*	m_pHealthArmorStyle;
+	CLabeledCommandComboBox*	m_pAccountStyle;
 };
 
 #endif // ModOptionsSubHUD_H

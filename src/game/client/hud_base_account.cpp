@@ -12,11 +12,19 @@
 
 using namespace vgui;
 
+ConVar hud_account_style( "hud_account_style", "0", FCVAR_ARCHIVE, "0 = default, 1 = old", true, 0, true, 1 );
+
 CHudBaseAccount::CHudBaseAccount( const char *pName ) :
 	CHudNumericDisplay( NULL, pName ), CHudElement( pName )
 {
 	SetHiddenBits( HIDEHUD_PLAYERDEAD );
 	SetIndent( false ); // don't indent small numbers in the drawing code - we're doing it manually
+
+	m_iStyle = -1;
+	m_iOriginalXPos = 0;
+	m_iOriginalYPos = 0;
+	m_iOriginalWide = 0;
+	m_iOriginalTall = 0;
 }
 
 
@@ -28,7 +36,10 @@ void CHudBaseAccount::LevelInit( void )
 	m_pszLastAnimationName = NULL;
 	m_pszQueuedAnimationName = NULL;
 
-	GetAnimationController()->StartAnimationSequence("AccountMoneyInvisible");
+	if ( m_iStyle == 1 )
+		GetAnimationController()->StartAnimationSequence("AccountMoneyLegacyInvisible");
+	else
+		GetAnimationController()->StartAnimationSequence("AccountMoneyInvisible");
 }
 
 void CHudBaseAccount::ApplySchemeSettings(vgui::IScheme *pScheme)
@@ -48,6 +59,8 @@ void CHudBaseAccount::ApplySchemeSettings(vgui::IScheme *pScheme)
 		float scale = icon_tall / (float)m_pAccountIcon->Height();
 		icon_wide = ( scale ) * (float)m_pAccountIcon->Width();
 	}
+
+	GetBounds( m_iOriginalXPos, m_iOriginalYPos, m_iOriginalWide, m_iOriginalTall );
 }
 
 
@@ -69,6 +82,19 @@ void CHudBaseAccount::Reset( void )
 	}
 }
 
+void CHudBaseAccount::OnThink()
+{
+	if ( m_iStyle != hud_account_style.GetInt() )
+	{
+		m_iStyle = hud_account_style.GetInt();
+
+		if ( m_iStyle == 1 )
+			SetBounds( legacy_xpos, legacy_ypos, legacy_wide, legacy_tall );
+		else
+			SetBounds( m_iOriginalXPos, m_iOriginalYPos, m_iOriginalWide, m_iOriginalTall );
+	}
+}
+
 
 void CHudBaseAccount::Paint()
 {
@@ -85,11 +111,17 @@ void CHudBaseAccount::Paint()
 
 		if( m_iPreviousDelta < 0 )
 		{
-			m_pszLastAnimationName = "AccountMoneyRemoved";
+			if ( m_iStyle == 1 )
+				m_pszLastAnimationName = "AccountMoneyLegacyRemoved";
+			else
+				m_pszLastAnimationName = "AccountMoneyRemoved";
 		}
 		else 
 		{
-			m_pszLastAnimationName = "AccountMoneyAdded";
+			if ( m_iStyle == 1 )
+				m_pszLastAnimationName = "AccountMoneyLegacyAdded";
+			else
+				m_pszLastAnimationName = "AccountMoneyAdded";
 		}
 		GetAnimationController()->StartAnimationSequence( m_pszLastAnimationName );
 		m_flLastAnimationEnd = gpGlobals->curtime + GetAnimationController()->GetAnimationSequenceLength( m_pszLastAnimationName );
@@ -104,38 +136,60 @@ void CHudBaseAccount::Paint()
 
 	if( m_pAccountIcon )
 	{
-		m_pAccountIcon->DrawSelf( icon_xpos, icon_ypos, icon_wide, icon_tall, GetFgColor() );
+		if ( m_iStyle == 1 )
+			m_pAccountIcon->DrawSelf( legacy_icon_xpos, legacy_icon_ypos, icon_wide, icon_tall, GetFgColor() );
+		else
+			m_pAccountIcon->DrawSelf( icon_xpos, icon_ypos, icon_wide, icon_tall, GetFgColor() );
 	}
 
-	int xpos = digit_xpos - GetNumberWidth( m_hNumberFont, account );
+	int xpos;
+	if ( m_iStyle == 1 )
+		xpos = legacy_digit_xpos - GetNumberWidth( m_hNumberFont, account );
+	else
+		xpos = digit_xpos - GetNumberWidth( m_hNumberFont, account );
 
 	// draw current account
 	vgui::surface()->DrawSetTextColor(GetFgColor());
-	PaintNumbers( m_hNumberFont, xpos, digit_ypos, account );
+	if ( m_iStyle == 1 )
+		PaintNumbers( m_hNumberFont, xpos, legacy_digit_ypos, account );
+	else
+		PaintNumbers( m_hNumberFont, xpos, digit_ypos, account );
 
 	//draw account additions / subtractions
 	if( m_iPreviousDelta < 0 )
 	{
 		if( m_pMinusIcon )
 		{
-			m_pMinusIcon->DrawSelf( icon2_xpos, icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
+			if ( m_iStyle == 1 )
+				m_pMinusIcon->DrawSelf( legacy_icon2_xpos, legacy_icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
+			else
+				m_pMinusIcon->DrawSelf( icon2_xpos, icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
 		}
 	}
 	else
 	{
 		if( m_pPlusIcon )
 		{
-			m_pPlusIcon->DrawSelf( icon2_xpos, icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
+			if ( m_iStyle == 1 )
+				m_pPlusIcon->DrawSelf( legacy_icon2_xpos, legacy_icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
+			else
+				m_pPlusIcon->DrawSelf( icon2_xpos, icon2_ypos, icon_wide, icon_tall, m_Ammo2Color );
 		}
 	}
 
 	int delta = abs(m_iPreviousDelta);
 
-	xpos = digit2_xpos - GetNumberWidth( m_hNumberFont, delta );
+	if ( m_iStyle == 1 )
+		xpos = legacy_digit2_xpos - GetNumberWidth( m_hNumberFont, delta );
+	else
+		xpos = digit2_xpos - GetNumberWidth( m_hNumberFont, delta );
 
 	// draw delta
 	vgui::surface()->DrawSetTextColor(m_Ammo2Color);
-	PaintNumbers( m_hNumberFont, xpos, digit2_ypos, delta );
+	if ( m_iStyle == 1 )
+		PaintNumbers( m_hNumberFont, xpos, legacy_digit2_ypos, delta );
+	else
+		PaintNumbers( m_hNumberFont, xpos, digit2_ypos, delta );
 }
 
 int CHudBaseAccount::GetNumberWidth(HFont font, int number)

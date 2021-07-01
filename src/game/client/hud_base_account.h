@@ -27,6 +27,7 @@ public:
 	virtual void Paint();
 	virtual void LevelInit( void );
 	virtual void Reset( void );
+	virtual void OnThink();
 
 	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 
@@ -53,8 +54,8 @@ private:
 	CPanelAnimationVarAliasType( float, icon_ypos, "icon_ypos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, icon2_xpos, "icon2_xpos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, icon2_ypos, "icon2_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, digit_xpos, "digit_xpos", "50", "proportional_float" );
-	CPanelAnimationVarAliasType( float, digit_ypos, "digit_ypos", "2", "proportional_float" );
+	CPanelAnimationVarAliasType( float, digit_xpos, "digit_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, digit_ypos, "digit_ypos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, digit2_xpos, "digit2_xpos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, digit2_ypos, "digit2_ypos", "0", "proportional_float" );
 	CPanelAnimationVar( Color, m_Ammo2Color, "Ammo2Color", "0 0 0 0" );
@@ -68,6 +69,26 @@ private:
 
 	float icon_tall;
 	float icon_wide;
+
+	CPanelAnimationVarAliasType( int, legacy_xpos, "legacy_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, legacy_ypos, "legacy_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, legacy_wide, "legacy_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, legacy_tall, "legacy_tall", "0", "proportional_height" );
+
+	CPanelAnimationVarAliasType( float, legacy_icon_xpos, "legacy_icon_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_icon_ypos, "legacy_icon_ypos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_icon2_xpos, "legacy_icon2_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_icon2_ypos, "legacy_icon2_ypos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_digit_xpos, "legacy_digit_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_digit_ypos, "legacy_digit_ypos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_digit2_xpos, "legacy_digit2_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, legacy_digit2_ypos, "legacy_digit2_ypos", "0", "proportional_float" );
+
+	int m_iStyle;
+	int m_iOriginalXPos;
+	int m_iOriginalYPos;
+	int m_iOriginalWide;
+	int m_iOriginalTall;
 };
 
 

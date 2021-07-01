@@ -41,15 +41,15 @@ private:
 	CPanelAnimationVarAliasType( float, icon_xpos, "icon_xpos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, icon_ypos, "icon_ypos", "2", "proportional_float" );
 
-	CPanelAnimationVarAliasType( float, legacy_xpos, "legacy_xpos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, legacy_ypos, "legacy_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, legacy_wide, "legacy_wide", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, legacy_tall, "legacy_tall", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( int, legacy_xpos, "legacy_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, legacy_ypos, "legacy_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, legacy_wide, "legacy_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, legacy_tall, "legacy_tall", "0", "proportional_height" );
 
-	CPanelAnimationVarAliasType( float, simple_xpos, "simple_xpos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, simple_ypos, "simple_ypos", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, simple_wide, "simple_wide", "0", "proportional_float" );
-	CPanelAnimationVarAliasType( float, simple_tall, "simple_tall", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( int, simple_xpos, "simple_xpos", "0", "proportional_xpos" );
+	CPanelAnimationVarAliasType( int, simple_ypos, "simple_ypos", "0", "proportional_ypos" );
+	CPanelAnimationVarAliasType( int, simple_wide, "simple_wide", "0", "proportional_width" );
+	CPanelAnimationVarAliasType( int, simple_tall, "simple_tall", "0", "proportional_height" );
 
 	CPanelAnimationVarAliasType( float, progress_xpos, "progress_xpos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, progress_ypos, "progress_ypos", "0", "proportional_float" );
