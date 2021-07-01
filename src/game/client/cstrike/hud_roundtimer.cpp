@@ -16,7 +16,7 @@
 
 #include <vgui_controls/AnimationController.h>
 
-ConVar hud_playercount_pos( "hud_playercount_pos", "0", FCVAR_ARCHIVE, "0 = default (bottom), 1 = top" );
+extern ConVar hud_playercount_pos;
 
 class CHudRoundTimer : public CHudElement, public vgui::Panel
 {

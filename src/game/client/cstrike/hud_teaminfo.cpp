@@ -15,7 +15,7 @@
 
 using namespace vgui;
 
-extern ConVar hud_playercount_pos;
+ConVar hud_playercount_pos( "hud_playercount_pos", "0", FCVAR_ARCHIVE, "0 = default (top), 1 = bottom" );
 
 //-----------------------------------------------------------------------------
 // Purpose: CT version
