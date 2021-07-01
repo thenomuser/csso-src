@@ -331,7 +331,7 @@ void CFlashbangProjectile::Precache()
 	BaseClass::Precache();
 }
 
-ConVar sv_flashbang_strength( "sv_flashbang_strength", "3.55", FCVAR_REPLICATED, "Flashbang strength", true, 2.0, true, 8.0 );
+ConVar sv_flashbang_strength( "sv_flashbang_strength", "3", FCVAR_REPLICATED, "Flashbang strength", true, 2.0, true, 8.0 );
 
 void CFlashbangProjectile::Detonate()
 {
