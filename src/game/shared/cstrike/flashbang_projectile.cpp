@@ -15,6 +15,7 @@
 #include "collisionutils.h"
 #include "particle_smokegrenade.h"
 #include "smoke_fog_overlay_shared.h"
+#include "cs_simple_hostage.h"
 
 #define GRENADE_MODEL "models/weapons/w_eq_flashbang_thrown.mdl"
 
@@ -22,15 +23,50 @@
 LINK_ENTITY_TO_CLASS( flashbang_projectile, CFlashbangProjectile );
 PRECACHE_WEAPON_REGISTER( flashbang_projectile );
 
+class CTraceFilterForFlashbang : public CTraceFilterNoPlayers
+{
+public:
+	CTraceFilterForFlashbang( const IHandleEntity *passentity = NULL, int collisionGroup = COLLISION_GROUP_NONE )
+		: CTraceFilterNoPlayers( passentity, collisionGroup )
+	{
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+	{
+
+		CBaseEntity *pEnt = EntityFromEntityHandle(pHandleEntity);
+		if ( pEnt )
+		{
+			// Hostages don't block flashbangs
+			CHostage* pHostage = dynamic_cast<CHostage*>(pEnt);
+			if ( pHostage )
+				return false;
+
+			// Weapons don't block flashbangs
+			CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pEnt );
+			CBaseGrenade* pGrenade = dynamic_cast< CBaseGrenade* > ( pEnt );
+			if ( pWeapon || pGrenade )
+				return false;
+		}
+
+		return CTraceFilterNoPlayers::ShouldHitEntity( pHandleEntity, contentsMask );
+	}
+};
+
 float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEntity *pevInflictor)
 {
-	float retval = 0.0f;
+	if (!(player->IsPlayer()))
+	{
+		// if this entity isn't a player, it's a hostage or some other entity, then don't bother with the expensive checks
+		// that come below.
+		return 0.0f;
+	}
 
-	trace_t tr;
+	const float FLASH_FRACTION = 0.167f;
+	const float SIDE_OFFSET = 75.0f;
 
 	Vector pos = player->EyePosition();
-	Vector vecRight, vecUp, vecForward;
-	AngleVectors( player->EyeAngles(), &vecForward );
+	Vector vecRight, vecUp;
 
 	QAngle tempAngle;
 	VectorAngles(player->EyePosition() - flashPos, tempAngle);
@@ -39,55 +75,71 @@ float PercentageOfFlashForPlayer(CBaseEntity *player, Vector flashPos, CBaseEnti
 	vecRight.NormalizeInPlace();
 	vecUp.NormalizeInPlace();
 
-	UTIL_TraceLine( flashPos, pos,
-		(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_DEBRIS|CONTENTS_MONSTER),
-		pevInflictor, COLLISION_GROUP_NONE, &tr );
+	// Set up all the ray stuff.
+	// We don't want to let other players block the flash bang so we use this custom filter.
+	Ray_t ray;
+	trace_t tr;
+	CTraceFilterForFlashbang traceFilter( pevInflictor, COLLISION_GROUP_NONE );
+	unsigned int FLASH_MASK = MASK_OPAQUE_AND_NPCS | CONTENTS_DEBRIS;
 
-	if ((tr.fraction == 1.0) || (tr.m_pEnt == player))
+	// According to comment in IsNoDrawBrush in cmodel.cpp, CONTENTS_OPAQUE is ONLY used for block light surfaces,
+	// and we want flashbang traces to pass through those, since the block light surface is only used for blocking
+	// lightmap light rays during map compilation.
+	FLASH_MASK &= ~CONTENTS_OPAQUE;
+
+	ray.Init( flashPos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
+
+	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
 	{
-		retval = 1.0;
+		return 1.0f;
 	}
-	else
+
+	float retval = 0.0f;
+
+	// check the point straight up.
+	pos = flashPos + vecUp*50.0f;
+	ray.Init( flashPos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
+	// Now shoot it to the player's eye.
+	pos = player->EyePosition();
+	ray.Init( tr.endpos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
+
+	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
 	{
-		return 0.0;
+		retval += FLASH_FRACTION;
 	}
 
-	CBaseEntity *pSGren;
+	// check the point up and right.
+	pos = flashPos + vecRight*SIDE_OFFSET + vecUp*10.0f;
+	ray.Init( flashPos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
+	// Now shoot it to the player's eye.
+	pos = player->EyePosition();
+	ray.Init( tr.endpos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-	for( pSGren = gEntList.FindEntityByClassname( NULL, "env_particlesmokegrenade" );
-		pSGren;
-		pSGren = gEntList.FindEntityByClassname( pSGren, "env_particlesmokegrenade" ) )
+	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
 	{
-		ParticleSmokeGrenade *pPSG =( ParticleSmokeGrenade* ) pSGren;
+		retval += FLASH_FRACTION;
+	}
 
-		if ( gpGlobals->curtime > pPSG->m_flSpawnTime + pPSG->m_FadeStartTime )		// ignore the smoke grenade if it's fading.
-			continue;
+	// Check the point up and left.
+	pos = flashPos - vecRight*SIDE_OFFSET + vecUp*10.0f;
+	ray.Init( flashPos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
+	// Now shoot it to the player's eye.
+	pos = player->EyePosition();
+	ray.Init( tr.endpos, pos );
+	enginetrace->TraceRay( ray, FLASH_MASK, &traceFilter,  &tr );
 
-		float flHit1, flHit2;
-
-		float flInnerRadius = SMOKEGRENADE_PARTICLERADIUS;
-//		float flOutterRadius = flInnerRadius + ( 0.5 * SMOKEPARTICLE_SIZE );
-
-		Vector vPos = pSGren->GetAbsOrigin();
-
-		/*debugoverlay->AddBoxOverlay( pSGren->GetAbsOrigin(), Vector( flInnerRadius, flInnerRadius, flInnerRadius ),
-			Vector( -flInnerRadius, -flInnerRadius, -flInnerRadius ), QAngle( 0, 0, 0 ), 0, 255, 0, 30, 10 );
-		debugoverlay->AddBoxOverlay( pSGren->GetAbsOrigin(), Vector( flOutterRadius, flOutterRadius, flOutterRadius ),
-			Vector( -flOutterRadius, -flOutterRadius, -flOutterRadius ), QAngle( 0, 0, 0 ), 255, 0, 0, 30, 10 ); */
-
-		if ( IntersectInfiniteRayWithSphere( pos, vecForward, vPos, flInnerRadius, &flHit1, &flHit2 ) )
-		{
-			retval *= 0.8;
-		}
-/*		else if ( IntersectInfiniteRayWithSphere( pos, vecForward, vPos, flOutterRadius, &flHit1, &flHit2 ) )
-		{
-			retval *= 0.9;
-		}
-*/
+	if ((tr.fraction == 1.0f) || (tr.m_pEnt == player))
+	{
+		retval += FLASH_FRACTION;
 	}
 
 	return retval;
-
 }
 
 // --------------------------------------------------------------------------------------------------- //
@@ -279,11 +331,10 @@ void CFlashbangProjectile::Precache()
 	BaseClass::Precache();
 }
 
+ConVar sv_flashbang_strength( "sv_flashbang_strength", "3.55", FCVAR_REPLICATED, "Flashbang strength", true, 2.0, true, 8.0 );
+
 void CFlashbangProjectile::Detonate()
 {
-	RadiusFlash ( GetAbsOrigin(), this, GetThrower(), 4, CLASS_NONE, DMG_BLAST );
-	EmitSound( "Flashbang.Explode" );	
-
 	// tell the bots a flashbang grenade has exploded
 	CCSPlayer *player = ToCSPlayer(GetThrower());
 	if ( player )
@@ -298,6 +349,14 @@ void CFlashbangProjectile::Detonate()
 			gameeventmanager->FireEvent( event );
 		}
 	}
+
+	RadiusFlash( GetAbsOrigin(), this, GetThrower(), sv_flashbang_strength.GetFloat(), CLASS_NONE, DMG_BLAST );
+	EmitSound( "Flashbang.Explode" );
+
+	trace_t		tr;
+	Vector		vecSpot = GetAbsOrigin() + Vector( 0, 0, 2 );
+	UTIL_TraceLine( vecSpot, vecSpot + Vector( 0, 0, -64 ), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr );
+	UTIL_DecalTrace( &tr, "Scorch" );
 
 	UTIL_Remove( this );
 }

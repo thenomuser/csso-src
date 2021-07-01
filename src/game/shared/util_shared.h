@@ -188,6 +188,17 @@ public:
 	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
 };
 
+class CTraceFilterNoPlayers : public CTraceFilterSimple
+{
+public:
+	CTraceFilterNoPlayers( const IHandleEntity *passentity = NULL, int collisionGroup = COLLISION_GROUP_NONE )
+		: CTraceFilterSimple( passentity, collisionGroup )
+	{
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
+};
+
 //-----------------------------------------------------------------------------
 // Purpose: Custom trace filter used for NPC LOS traces
 //-----------------------------------------------------------------------------

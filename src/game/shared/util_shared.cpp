@@ -364,6 +364,22 @@ bool CTraceFilterNoNPCsOrPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, 
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Trace filter that doesn't hit players
+//-----------------------------------------------------------------------------
+bool CTraceFilterNoPlayers::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+{
+	if ( CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask ) )
+	{
+		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
+		if ( !pEntity )
+			return NULL;
+
+		return !pEntity->IsPlayer();
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------
 // Trace filter that skips two entities
 //-----------------------------------------------------------------------------
 CTraceFilterSkipTwoEntities::CTraceFilterSkipTwoEntities( const IHandleEntity *passentity, const IHandleEntity *passentity2, int collisionGroup ) :
