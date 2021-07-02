@@ -55,6 +55,7 @@ static Gloves gloveNames[] =
 	{ "#GameUI_Loadout_Glove_SAS_Old",					"glove_sas_old"					},
 	{ "#GameUI_Loadout_Glove_FBI_Old",					"glove_fbi_old"					},
 	{ "#GameUI_Loadout_Glove_Phoenix_Old",				"glove_phoenix_old"				},
+	{ "#GameUI_Loadout_Glove_Leet_Old",					"glove_leet_old"				},
 	{ "#GameUI_Loadout_Glove_Bare",						"glove_bare"					},
 };
 
