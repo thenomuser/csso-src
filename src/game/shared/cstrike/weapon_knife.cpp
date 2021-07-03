@@ -101,7 +101,6 @@ void CKnife::Precache()
 {
 	BaseClass::Precache();
 
-	PrecacheScriptSound( "Weapon_Knife.Deploy" );
 	PrecacheScriptSound( "Weapon_Knife.Slash" );
 	PrecacheScriptSound( "Weapon_Knife.Stab" );
 	PrecacheScriptSound( "Weapon_Knife.Hit" );
@@ -116,10 +115,6 @@ void CKnife::Spawn()
 
 bool CKnife::Deploy()
 {
-	CPASAttenuationFilter filter( this );
-	filter.UsePredictionRules();
-	EmitSound( filter, entindex(), "Weapon_Knife.Deploy" );
-
 	if ( !BaseClass::Deploy() )
 		return false;
 
