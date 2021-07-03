@@ -222,6 +222,7 @@ $Project
 		$File	"c_baseflex.cpp"
 		$File	"c_baseplayer.cpp"
 		$File	"c_baseviewmodel.cpp"
+		$File	"c_beamspotlight.cpp"
 		$File	"c_breakableprop.cpp"
 		$File	"c_colorcorrection.cpp"
 		$File	"c_colorcorrectionvolume.cpp"
