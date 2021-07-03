@@ -287,6 +287,8 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "tm_leet_varianth",			BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_leet_varianta",			BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
 	{ "tm_leet",					BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"",																				"",																						false },
+	{ "tm_jumpsuit_varianta",		BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
+	{ "tm_jumpsuit",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
 	{ "tm_phoenix_varianta",		BARE_ARM_103,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
 	{ "tm_phoenix_variantb",		BARE_ARM_66,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
 	{ "tm_phoenix_varianti",		BARE_ARM_103,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"",																				"",																						false },
@@ -308,6 +310,8 @@ static PlayerViewmodelArmConfig s_playerViewmodelArmConfigs[] =
 	{ "tm_professional",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_fullfinger/v_glove_fullfinger.mdl",				"models/weapons/v_models/arms/professional/v_sleeve_professional.mdl",			"",																						true },
 	{ "tm_anarchist",				BARE_ARM_133,		"models/weapons/v_models/arms/anarchist/v_glove_anarchist.mdl",						"",																				"models/weapons/v_models/arms/anarchist/v_sleeve_anarchist.mdl",						false },
 	{ "tm_pirate",					BARE_ARM_55,		"models/weapons/v_models/arms/bare/v_bare_hands.mdl",								"models/weapons/v_models/arms/pirate/v_pirate_watch.mdl",						"",																						false },
+	{ "ctm_jumpsuit_varianta",		BARE_ARM_55,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
+	{ "ctm_jumpsuit",				BARE_ARM_133,		"models/weapons/v_models/arms/glove_fingerless/v_glove_fingerless.mdl",				"models/weapons/v_models/arms/jumpsuit/v_sleeve_jumpsuit.mdl",					"",																						false },
 	{ "ctm_st6_variante",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variante.mdl",				"",																						true },
 	{ "ctm_st6_variantf",			BARE_ARM_133,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_green.mdl",							"",																						true },
 	{ "ctm_st6_variantg",			BARE_ARM_66,		"models/weapons/v_models/arms/glove_hardknuckle/v_glove_hardknuckle.mdl",			"models/weapons/v_models/arms/st6/v_sleeve_st6_v2_variantg.mdl",				"",																						true },
@@ -480,8 +484,8 @@ struct CCSClassInfo
 
 const CCSClassInfo* GetCSClassInfo( int i );
 
-#define MAX_AGENTS_CT 25
-#define MAX_AGENTS_T 29
+#define MAX_AGENTS_CT 28
+#define MAX_AGENTS_T 32
 
 struct CCSAgentInfo
 {

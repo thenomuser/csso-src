@@ -63,6 +63,9 @@ static Agents agentsCT[] =
 	{ "#GameUI_Loadout_Agent_ctm_swat_variante",		"ctm_swat_variante"			},
 	{ "#GameUI_Loadout_Agent_ctm_sas_old",				"ctm_sas_old"				},
 	{ "#GameUI_Loadout_Agent_ctm_fbi_old",				"ctm_fbi_old"				},
+	{ "#GameUI_Loadout_Agent_ctm_jumpsuit_varianta",	"ctm_jumpsuit_varianta"		},
+	{ "#GameUI_Loadout_Agent_ctm_jumpsuit_variantb",	"ctm_jumpsuit_variantb"		},
+	{ "#GameUI_Loadout_Agent_ctm_jumpsuit_variantc",	"ctm_jumpsuit_variantc"		},
 };
 static Agents agentsT[] =
 {
@@ -96,6 +99,9 @@ static Agents agentsT[] =
 	{ "#GameUI_Loadout_Agent_tm_professional_varf4",		"tm_professional_varf4"			},
 	{ "#GameUI_Loadout_Agent_tm_leet_old",					"tm_leet_old"					},
 	{ "#GameUI_Loadout_Agent_tm_phoenix_old",				"tm_phoenix_old"				},
+	{ "#GameUI_Loadout_Agent_tm_jumpsuit_varianta",			"tm_jumpsuit_varianta"			},
+	{ "#GameUI_Loadout_Agent_tm_jumpsuit_variantb",			"tm_jumpsuit_variantb"			},
+	{ "#GameUI_Loadout_Agent_tm_jumpsuit_variantc",			"tm_jumpsuit_variantc"			},
 };
 
 //-----------------------------------------------------------------------------
