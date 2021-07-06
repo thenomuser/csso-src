@@ -2656,7 +2656,7 @@ ConVar snd_music_selection(
 				if ( !bNeededPlayers )
 				{
 					m_iNumCTWins++;
-					m_iNumCTWinsThisPhase;
+					m_iNumCTWinsThisPhase++;
 					// Update the clients team score
 					UpdateTeamScores();
 				}
