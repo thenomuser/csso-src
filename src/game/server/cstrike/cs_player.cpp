@@ -1593,18 +1593,21 @@ void CCSPlayer::GiveDefaultItems()
 			else if ( GetTeamNumber() == TEAM_TERRORIST )
 				secondaryString = mp_t_default_secondary.GetString();
 
-			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
-			if ( loadout_slot != SLOT_NONE )
-				secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+			if ( secondaryString && *secondaryString )
+			{
+				LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
+				if ( loadout_slot != SLOT_NONE )
+					secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
 
-			CSWeaponID weaponId = WeaponIdFromString( secondaryString );
-			if ( weaponId )
-			{
-				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
-				if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
-			{
-					GiveNamedItem( secondaryString );
-					m_bUsingDefaultPistol = true;
+				CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+				if ( weaponId )
+				{
+					const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+					if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
+					{
+						GiveNamedItem( secondaryString );
+						m_bUsingDefaultPistol = true;
+					}
 				}
 			}
 		}
@@ -1670,16 +1673,19 @@ void CCSPlayer::GiveDefaultItems()
 		else if ( GetTeamNumber() == TEAM_TERRORIST )
 			secondaryString = mp_t_default_secondary.GetString();
 
-		LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
-		if ( loadout_slot != SLOT_NONE )
-			secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-	
-		CSWeaponID weaponId = WeaponIdFromString( secondaryString );
-		if ( weaponId )
+		if ( secondaryString && *secondaryString )
 		{
-			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
-			if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
-				GiveNamedItem( secondaryString );
+			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, secondaryString + 7 ); // +7 to get rid of weapon_ prefix
+			if ( loadout_slot != SLOT_NONE )
+				secondaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+			CSWeaponID weaponId = WeaponIdFromString( secondaryString );
+			if ( weaponId )
+			{
+				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+				if ( pWeaponInfo && pWeaponInfo->m_WeaponType == WEAPONTYPE_PISTOL )
+					GiveNamedItem( secondaryString );
+			}
 		}
 	}
 
@@ -1691,16 +1697,19 @@ void CCSPlayer::GiveDefaultItems()
 		else if ( GetTeamNumber() == TEAM_TERRORIST )
 			primaryString = mp_t_default_primary.GetString();
 
-		LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, primaryString + 7 ); // +7 to get rid of weapon_ prefix
-		if ( loadout_slot != SLOT_NONE )
-			primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
-
-		CSWeaponID weaponId = WeaponIdFromString( primaryString );
-		if ( weaponId )
+		if ( primaryString && *primaryString )
 		{
-			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
-			if ( pWeaponInfo && pWeaponInfo->m_WeaponType != WEAPONTYPE_KNIFE && pWeaponInfo->m_WeaponType != WEAPONTYPE_PISTOL && pWeaponInfo->m_WeaponType != WEAPONTYPE_C4 && pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE && pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
-				GiveNamedItem( primaryString );
+			LoadoutSlot_t loadout_slot = CSLoadout()->GetSlotFromWeapon( this, primaryString + 7 ); // +7 to get rid of weapon_ prefix
+			if ( loadout_slot != SLOT_NONE )
+				primaryString = UTIL_VarArgs( "weapon_%s", CSLoadout()->GetWeaponFromSlot( this, loadout_slot ) );
+
+			CSWeaponID weaponId = WeaponIdFromString( primaryString );
+			if ( weaponId )
+			{
+				const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+				if ( pWeaponInfo && pWeaponInfo->m_WeaponType != WEAPONTYPE_KNIFE && pWeaponInfo->m_WeaponType != WEAPONTYPE_PISTOL && pWeaponInfo->m_WeaponType != WEAPONTYPE_C4 && pWeaponInfo->m_WeaponType != WEAPONTYPE_GRENADE && pWeaponInfo->m_WeaponType != WEAPONTYPE_EQUIPMENT )
+					GiveNamedItem( primaryString );
+			}
 		}
 	}
 
