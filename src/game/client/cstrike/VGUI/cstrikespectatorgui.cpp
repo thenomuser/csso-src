@@ -1682,6 +1682,10 @@ void CCSMapOverview::SetMap(const char * levelname)
 			m_nRadarMapTextureID = -1;
 	}
 
+	// make sure its cleared once we load a new map
+	if ( m_vecRadarVerticalSections.Count() )
+		m_vecRadarVerticalSections.Purge();
+
 	KeyValues* pSections = m_MapKeyValues->FindKey( "verticalsections" );
 	if ( pSections )
 	{
