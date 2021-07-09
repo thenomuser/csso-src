@@ -7786,7 +7786,12 @@ void CCSGameRules::SpawningLatePlayer( CCSPlayer* pLatePlayer )
 // when players cannot purchase anything primary weapons
 bool CCSGameRules::IsPistolRound()
 {
-	return m_iTotalRoundsPlayed == 0 && GetStartMoney() <= 800;
+    if ( !IsPlayingClassic() )
+        return false;
+
+    return ( ( m_iTotalRoundsPlayed == 0 ) ||
+		( HasHalfTime() && ( m_iTotalRoundsPlayed > 0 ) && ( m_iTotalRoundsPlayed == ( mp_maxrounds.GetInt() / 2 ) ) ) )
+		&& ( GetStartMoney() <= 800 );
 }
 
 // [tj] So game rules can react to damage taken
