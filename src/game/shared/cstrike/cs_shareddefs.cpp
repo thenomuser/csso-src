@@ -171,8 +171,8 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	// what?
-	{ "models/player/tm_leet_old.mdl",										"Leet",				CS_CLASS_L337_KREW,				false	},
 	{ "models/player/tm_phoenix_old.mdl",									"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/tm_leet_old.mdl",										"Leet",				CS_CLASS_L337_KREW,				false	},
 	// kill me
 	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
 	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
