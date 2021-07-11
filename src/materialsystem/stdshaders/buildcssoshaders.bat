@@ -5,10 +5,10 @@ rem ================================
 rem ==== MOD PATH CONFIGURATIONS ===
 
 rem == Set the absolute path to your mod's game directory here ==
-set GAMEDIR=%cd%\..\..\..\game\mod_hl2mp
+set GAMEDIR=%cd%\..\..\..\..\cs_source\mp\game\csso
 
 rem == Set the relative or absolute path to Source SDK Base 2013 Singleplayer\bin ==
-set SDKBINDIR=C:\SteamBetaLibrary\SteamApps\common\Source SDK Base 2013 Singleplayer\bin
+set SDKBINDIR="E:\Games\Steam\steamapps\common\Counter-Strike Source\bin"
 
 rem ==  Set the Path to your mod's root source code ==
 rem This should already be correct, accepts relative paths only!
@@ -19,3 +19,4 @@ rem ====================================
 
 
 call buildsdkshaders.bat
+pause

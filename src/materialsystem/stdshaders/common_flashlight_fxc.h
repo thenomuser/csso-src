@@ -650,6 +650,11 @@ float3 SpecularLight( const float3 vWorldNormal, const float3 vLightDir, const f
 	return vSpecular;
 }
 
+float RemapNormalizedValClamped( float val, float A, float B)
+{
+	return saturate( (val - A) / (B - A) );
+}
+
 void DoSpecularFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpacePosition, float3 worldNormal,  
 					float3 attenuationFactors, float farZ, sampler FlashlightSampler, sampler FlashlightDepthSampler, sampler RandomRotationSampler,
 					int nShadowLevel, bool bDoShadows, bool bAllowHighQuality, const float2 vScreenPos, const float fSpecularExponent, const float3 vEyeDir,
