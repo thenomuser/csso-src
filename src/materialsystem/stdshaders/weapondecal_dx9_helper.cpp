@@ -517,7 +517,7 @@ void DrawWeaponDecal(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 
 		if ( bEnvmapTexture )
 		{
-			DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER3, info.m_nEnvmapTexture, 0 /*info.m_nEnvmapFrame*/ );
+			DynamicCmdsOut.BindTexture( pShader, SHADER_SAMPLER3, info.m_nEnvmapTexture, -1 );
 		}
 
 		DynamicCmdsOut.End();
