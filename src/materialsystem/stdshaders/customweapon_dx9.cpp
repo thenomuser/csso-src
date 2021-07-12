@@ -113,7 +113,10 @@ SHADER_INIT_PARAMS()
 
 SHADER_FALLBACK
 {
-	if ( g_pHardwareConfig->GetDXSupportLevel() < 90 )
+	// PiMoN: this shit doesn't want to work on shader model
+	// below 3.0 and im too lazy to understand why (and idk how)
+	//if ( g_pHardwareConfig->GetDXSupportLevel() < 90 )
+	if ( !g_pHardwareConfig->SupportsShaderModel_3_0() )
 		return "VertexLitGeneric";
 
 	return 0;
