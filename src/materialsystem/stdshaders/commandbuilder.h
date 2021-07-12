@@ -228,6 +228,43 @@ public:
 	}
 
 
+	void SetVertexShaderTextureScaledTransformRotate( int vertexReg, int transformVar, int scaleVar, int rotateVar )
+	{
+		Vector2D scale( 1, 1 );
+		IMaterialVar* pScaleVar = this->Param( scaleVar );
+		if (pScaleVar)
+		{
+			if (pScaleVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
+				pScaleVar->GetVecValue( scale.Base(), 2 );
+			else if (pScaleVar->IsDefined())
+				scale[0] = scale[1] = pScaleVar->GetFloatValue();
+		}
+
+		float flRotateVar = 0.0f;
+		IMaterialVar* pRotateVar = this->Param( rotateVar );
+		if ( pRotateVar && pRotateVar->IsDefined() )
+		{
+			flRotateVar = pRotateVar->GetFloatValue();
+		}
+
+		Vector4D transformation[2];
+		IMaterialVar* pTransformationVar = this->Param( transformVar );
+		if (pTransformationVar && (pTransformationVar->GetType() == MATERIAL_VAR_TYPE_MATRIX))
+		{
+			VMatrix matRot = pTransformationVar->GetMatrixValue();
+			MatrixTranslate( matRot, Vector( 0.5, 0.5, 0 ) );
+			MatrixRotate(	 matRot, Vector( 0, 0, 1), flRotateVar );
+			MatrixTranslate( matRot, Vector( -0.5 * scale[0], -0.5 * scale[1], 0 ) );
+			matRot = matRot.Scale( Vector(scale[0], scale[1], 1) );
+
+			transformation[0].Init( matRot[0][0], matRot[0][1], matRot[0][2], matRot[0][3] );
+			transformation[1].Init( matRot[1][0], matRot[1][1], matRot[1][2], matRot[1][3] );
+
+			SetVertexShaderConstant( vertexReg, transformation[0].Base(), 2 ); 
+		}
+	}
+
+
 	void SetVertexShaderTextureScaledTransform( int vertexReg, int transformVar, int scaleVar )
 	{
 		Vector4D transformation[2];

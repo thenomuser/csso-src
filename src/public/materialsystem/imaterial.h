@@ -384,6 +384,7 @@ enum MaterialVarFlags_t
 	MATERIAL_VAR_WIREFRAME                = (1 << 28),
 	MATERIAL_VAR_ALLOWALPHATOCOVERAGE     = (1 << 29),
 	MATERIAL_VAR_IGNORE_ALPHA_MODULATION  = (1 << 30),
+	MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY  = (1 << 31),
 
 	// NOTE: Only add flags here that either should be read from
 	// .vmts or can be set directly from client code. Other, internal

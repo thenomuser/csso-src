@@ -2916,6 +2916,12 @@ bool CMaterial::IsTranslucentInternal( float fAlphaModulation ) const
 {
 	if (m_pShader && IsValidRenderState())
 	{
+		// If alpha is modified by the proxy, then we are translucent
+		// Dramatically simplifies game code to make this assumption
+		int nMyMaterialVarFlags = GetMaterialVarFlags();
+		if ( nMyMaterialVarFlags & MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY )
+			return true;
+
 		// I have to check for alpha modulation here because it isn't
 		// factored into the shader's notion of whether or not it's transparent
 		return ::IsTranslucent(&m_ShaderRenderState) || 

@@ -58,6 +58,7 @@ bool CLampBeamProxy::Init( IMaterial *pMaterial, KeyValues* pKeyValues )
 	// Need to get the color variable.
 	bool found;
 	m_pFadeValue = pMaterial->FindVar( "$alpha", &found );
+	pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
 	return found;
 }
 

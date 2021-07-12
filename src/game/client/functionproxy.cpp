@@ -138,6 +138,11 @@ bool CResultProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	if( !foundVar )
 		return false;
 
+	if ( !Q_stricmp( pResult, "$alpha" ) )
+	{
+		pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
+	}
+
 	return true;
 }
 

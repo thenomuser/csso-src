@@ -8,8 +8,10 @@
 //
 
 
-character_ps20b.fxc
-character_vs20.fxc
+//character_ps20b.fxc
+//character_vs20.fxc
+weapondecal_ps20b.fxc
+weapondecal_vs20.fxc
 
 //cloak_vs20.fxc
 //cloak_ps2x.fxc

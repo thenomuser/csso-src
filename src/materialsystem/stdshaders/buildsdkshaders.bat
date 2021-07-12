@@ -26,7 +26,7 @@ set BUILD_SHADER=call buildshaders.bat
 if "%dynamic_shaders%" == "1" set BUILD_SHADER=call buildshaders_old.bat
 set ARG_EXTRA=
 
-rem %BUILD_SHADER% stdshader_dx9_20b		-game %GAMEDIR% -source %SOURCEDIR%
+%BUILD_SHADER% stdshader_dx9_20b		-game %GAMEDIR% -source %SOURCEDIR%
 %BUILD_SHADER% stdshader_dx9_30			-game %GAMEDIR% -source %SOURCEDIR% -dx9_30	-force30
 
 
