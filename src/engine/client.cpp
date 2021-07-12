@@ -1658,7 +1658,8 @@ bool CheckSimpleMaterial( IMaterial *pMaterial )
 
 	const char *name = pMaterial->GetShaderName();
 	if ( Q_strncasecmp( name, "VertexLitGeneric", 16 ) &&
-		 Q_strncasecmp( name, "UnlitGeneric", 12 ) )
+		 Q_strncasecmp( name, "UnlitGeneric", 12 ) &&
+		 Q_strncasecmp( name, "Character", 9 ) )
 		return false;
 
 	if ( pMaterial->GetMaterialVarFlag( MATERIAL_VAR_IGNOREZ ) )
