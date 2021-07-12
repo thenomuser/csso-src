@@ -12,8 +12,10 @@
 //  These shaders use the old DirectX compiler.
 //
 
-weapondecal_vs20.fxc
-weapondecal_ps20b.fxc
+//weapondecal_ps20b.fxc
+//weapondecal_vs20.fxc
+customweapon_vs20.fxc
+customweapon_ps20b.fxc
 
 //AccumBuff4Sample_ps2x.fxc
 //accumbuff5sample_ps2x.fxc
