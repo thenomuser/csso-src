@@ -153,9 +153,13 @@ void CHudArmor::Paint()
 		if ( hud_healtharmor_style.GetInt() == HUD_STYLE_DEFAULT )
 		{
 			// draw the progress bar
-			DrawBox( progress_xpos, progress_ypos, progress_wide, progress_tall, m_ProgressBgColor, 1.0f );
+			surface()->DrawSetColor( m_ProgressBgColor );
+			surface()->DrawFilledRect( progress_xpos, progress_ypos, progress_xpos + progress_wide, progress_ypos + progress_tall );
 			if ( iArmorValue > 0 )
-				DrawBox( progress_xpos, progress_ypos, progress_wide * Clamp( iArmorValue / 100.0f, 0.0f, 1.0f ), progress_tall, m_ProgressFgColor, 1.0f );
+			{
+				surface()->DrawSetColor( m_ProgressFgColor );
+				surface()->DrawFilledRect( progress_xpos, progress_ypos, progress_xpos + progress_wide * Clamp( iArmorValue / 100.0f, 0.0f, 1.0f ), progress_ypos + progress_tall );
+			}
 		}
 
 		SetDisplayValue( iArmorValue );
