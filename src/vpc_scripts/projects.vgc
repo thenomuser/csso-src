@@ -297,6 +297,11 @@ $Project "shaderapigl"
 	"materialsystem\shaderapigl\shaderapigl.vpc" [$WIN32||$POSIX]
 }
 
+$Project "shaderlib"
+{
+	"materialsystem\shaderlib\shaderlib.vpc" [$WINDOWS||$X360||$POSIX]
+}
+
 $Project "stdshader_dbg"
 {
 	"materialsystem\stdshaders\stdshader_dbg.vpc" [$WIN32||$X360||$POSIX]
