@@ -531,16 +531,6 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 
 	SHADER_FALLBACK
 	{
-		// just use VertexLitGeneric as a fallback
-		if (g_pHardwareConfig->GetDXSupportLevel() < 70)
-			return "VertexLitGeneric_DX6";
-
-		if (g_pHardwareConfig->GetDXSupportLevel() < 80)
-			return "VertexLitGeneric_DX7";
-
-		if (g_pHardwareConfig->GetDXSupportLevel() < 90)
-			return "VertexLitGeneric_DX8";
-
 		// Character shader only works on shader model 3.0
 		if (!g_pHardwareConfig->SupportsShaderModel_3_0())
 			return "VertexLitGeneric";
