@@ -15,6 +15,7 @@
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..0"	[ps20b] [XBOX]
 // STATIC: "FASTPATH_NOBUMP"            "0..1"
 // STATIC: "BLENDTINTBYBASEALPHA"       "0..1"
+// STATIC: "PHONG_HALFLAMBERT"          "0..1"
 
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
 // DYNAMIC: "PIXELFOGTYPE"				"0..1"
@@ -24,8 +25,6 @@
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..1"	[ps30]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps30]
-// DYNAMIC: "PHONG_USE_EXPONENT_FACTOR"	"0..0"	[ps20]
-// DYNAMIC: "PHONG_USE_EXPONENT_FACTOR"	"0..1"	[ps20b] [ps30]  [PC]
 
 
 // SKIP: ($PIXELFOGTYPE == 0) && ($WRITEWATERFOGTODESTALPHA != 0)
@@ -66,7 +65,7 @@
 #include "common_flashlight_fxc.h"
 #include "shader_constant_register_map.h"
 
-const float4 g_SelfIllumTint_and_DetailBlendFactor	: register( PSREG_SELFILLUMTINT );
+const float4 g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost	: register( PSREG_SELFILLUMTINT );
 #if ( SELFILLUMFRESNEL == 1 )
 const float4 g_SelfIllumScaleBiasExpBrightness		: register( PSREG_SELFILLUM_SCALE_BIAS_EXP );
 #endif
@@ -177,7 +176,7 @@ float4 main( PS_INPUT i ) : COLOR
 
 #if DETAILTEXTURE
 	float4 detailColor = tex2D( DetailSampler, i.baseTexCoordDetailTexCoord.zw );
-	baseColor = TextureCombine( baseColor, detailColor, DETAIL_BLEND_MODE, g_SelfIllumTint_and_DetailBlendFactor.w );
+	baseColor = TextureCombine( baseColor, detailColor, DETAIL_BLEND_MODE, g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.w );
 #endif
 
 	float fogFactor = CalcPixelFogFactor( PIXELFOGTYPE, g_FogParams, g_EyePos_SpecExponent.z, vWorldPos.z, vProjPos.z );
@@ -207,7 +206,6 @@ float4 main( PS_INPUT i ) : COLOR
 	worldSpaceNormal = normalize( mul( i.tangentSpaceTranspose, tangentSpaceNormal ) );
 
 	float fFresnelRanges = Fresnel( worldSpaceNormal, vEyeDir, g_FresnelRanges );
-	float fRimFresnel = Fresnel4( worldSpaceNormal, vEyeDir );
 
 	// Break down reflect so that we can share dot(worldSpaceNormal,vEyeDir) with fresnel terms
 	float3 vReflect = 2 * worldSpaceNormal * dot(worldSpaceNormal, vEyeDir) - vEyeDir;
@@ -219,7 +217,7 @@ float4 main( PS_INPUT i ) : COLOR
 		// Summation of diffuse illumination from all local lights
 		diffuseLighting = PixelShaderDoLighting( vWorldPos, worldSpaceNormal,
 			float3( 0.0f, 0.0f, 0.0f ), false, true, vLightAtten,
-			cAmbientCube, NormalizeRandRotSampler, nNumLights, cLightInfo, true,
+			cAmbientCube, NormalizeRandRotSampler, nNumLights, cLightInfo, PHONG_HALFLAMBERT,
 
 			// These parameters aren't passed by generic shaders:
 			false, 1.0f,
@@ -247,10 +245,11 @@ float4 main( PS_INPUT i ) : COLOR
 
 	float3 vSpecularTint = 1;
 	float fRimMask = 0;
-	float fSpecExp = 1;
+	float fSpecExp = max(g_EyePos_SpecExponent.w, 0);
 
 #if ( FASTPATH_NOBUMP == 0 )
 	float4 vSpecExpMap = tex2D( SpecExponentSampler, i.baseTexCoordDetailTexCoord.xy );
+	float fSpecExpMap = vSpecExpMap.r;
 	
 	if ( !bFlashlight )
 	{
@@ -261,23 +260,33 @@ float4 main( PS_INPUT i ) : COLOR
 #if defined( _X360 )
 	[flatten]
 #endif
-	
-#if ( PHONG_USE_EXPONENT_FACTOR )
-	fSpecExp = ( 1.0f + g_EyePos_SpecExponent.w * vSpecExpMap.r );
-#else
-	fSpecExp = (g_EyePos_SpecExponent.w >= 0.0) ? g_EyePos_SpecExponent.w : (1.0f + 149.0f * vSpecExpMap.r);
-#endif
+	if ( fSpecExp == 0 )
+		fSpecExp = 1.0f - fSpecExpMap + 150.0f * fSpecExpMap;
 
 	// If constant tint is negative, tint with albedo, based upon scalar tint map
 #if defined( _X360 )
 	[flatten]
 #endif
-	vSpecularTint = lerp( float3(1.0f, 1.0f, 1.0f), baseColor.rgb, vSpecExpMap.g );
-	vSpecularTint = (g_SpecularTint.r >= 0.0) ? g_SpecularTint.rgb : vSpecularTint;
-		
-#else
-	fSpecExp = max(g_EyePos_SpecExponent.w, 0);
+	if ( g_SpecularTint.r < 0 )
+	{
+		#if ( DETAILTEXTURE )
+			vSpecularTint = g_SpecularBoost * lerp( float3( 1.0f, 1.0f, 1.0f ), baseColor.rgb, vSpecExpMap.g );
+		#else
+			vSpecularTint = lerp( ( float3 )g_SpecularBoost, g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.w * baseColor.rgb, vSpecExpMap.g );
+			#if( CUBEMAP )
+				envMapColor = fSpecExpMap * lerp( envMapColor, envMapColor * baseColor.rgb * g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.w, vSpecExpMap.g );
+			#endif
+		#endif
+	}
+	else
+		vSpecularTint = g_SpecularBoost * g_SpecularTint.rgb;
 #endif
+
+	#if ( PHONGWARPTEXTURE )
+	{
+		fFresnelRanges = Fresnel( worldSpaceNormal, vEyeDir, g_FresnelRanges );
+	}		
+	#endif	
 
 	float3 albedo = baseColor.rgb;
 
@@ -307,12 +316,12 @@ float4 main( PS_INPUT i ) : COLOR
 		#endif
 	}
 
+	// Modulate with spec mask and tint (modulated by boost above)
+	specularLighting *= fSpecMask * vSpecularTint;
+
 	// If we didn't already apply Fresnel to specular warp, modulate the specular
 	if ( !bDoSpecularWarp )
-		fSpecMask *= fFresnelRanges;
-
-	// Modulate with spec mask, boost and tint
-	specularLighting *= fSpecMask * g_SpecularBoost;
+		specularLighting *= fFresnelRanges;
 
 	if (bBlendTintByBaseAlpha)
 	{
@@ -333,11 +342,11 @@ float4 main( PS_INPUT i ) : COLOR
 		// This will apply a Fresnel term based on the vertex normal (not the per-pixel normal!) to help fake and internal glow look
 		float3 vVertexNormal = normalize( float3( i.tangentSpaceTranspose[0].z, i.tangentSpaceTranspose[1].z, i.tangentSpaceTranspose[2].z ) );
 		float flSelfIllumFresnel = ( pow( saturate( dot( vVertexNormal.xyz, vEyeDir.xyz ) ), g_SelfIllumScaleBiasExpBrightness.z ) * g_SelfIllumScaleBiasExpBrightness.x ) + g_SelfIllumScaleBiasExpBrightness.y;
-		diffuseComponent = lerp( diffuseComponent, g_SelfIllumTint_and_DetailBlendFactor.rgb * albedo * g_SelfIllumScaleBiasExpBrightness.w, baseColor.a * saturate( flSelfIllumFresnel ) );
+		diffuseComponent = lerp( diffuseComponent, g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.rgb * albedo * g_SelfIllumScaleBiasExpBrightness.w, baseColor.a * saturate( flSelfIllumFresnel ) );
 #else
 		float3 vSelfIllumMask = tex2D( SelfIllumMaskSampler, i.baseTexCoordDetailTexCoord.xy );
 		vSelfIllumMask = lerp( baseColor.aaa, vSelfIllumMask, g_SelfIllumMaskControl );
-		diffuseComponent = lerp( diffuseComponent, g_SelfIllumTint_and_DetailBlendFactor.rgb * albedo, vSelfIllumMask );
+		diffuseComponent = lerp( diffuseComponent, g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.rgb * albedo, vSelfIllumMask );
 #endif
 
 		diffuseComponent = max( 0.0f, diffuseComponent );
@@ -345,24 +354,24 @@ float4 main( PS_INPUT i ) : COLOR
 
 #if DETAILTEXTURE
 	diffuseComponent = TextureCombinePostLighting( diffuseComponent, detailColor, 
-		DETAIL_BLEND_MODE, g_SelfIllumTint_and_DetailBlendFactor.w );
+		DETAIL_BLEND_MODE, g_SelfIllumTint_and_DetailBlendFactorOrPhongAlbedoBoost.w );
 #endif
 
 	if ( bDoRimLighting && !bFlashlight )
 	{
-		float fRimMultiply = fRimMask * fRimFresnel; // both unit range: [0, 1]
+		float fRimFresnel = Fresnel4( worldSpaceNormal, vEyeDir );
 		
 		// Add in rim light modulated with tint, mask and traditional Fresnel (not using Fresnel ranges)
-		rimLighting *= fRimMultiply;
+		rimLighting *= fRimMask * fRimFresnel;;
 
 		// Fold rim lighting into specular term by using the max so that we don't really add light twice...
 		specularLighting = max( specularLighting, rimLighting );
 
 		// Add in view-ray lookup from ambient cube
-		specularLighting += (vRimAmbientCubeColor * g_fRimBoost) * saturate(fRimMultiply * worldSpaceNormal.z);
+		specularLighting += fRimFresnel * fRimMask * g_fRimBoost * PixelShaderAmbientLight( vEyeDir, cAmbientCube) * saturate(dot(worldSpaceNormal, float3(0, 0 , 1)) );
 	}
 
-	float3 result = specularLighting*vSpecularTint + envMapColor + diffuseComponent;
+	float3 result = specularLighting + envMapColor + diffuseComponent;
 
 #if WRITEWATERFOGTODESTALPHA && ( PIXELFOGTYPE == PIXEL_FOG_TYPE_HEIGHT )
 	float alpha = fogFactor;

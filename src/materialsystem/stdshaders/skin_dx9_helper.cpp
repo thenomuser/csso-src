@@ -40,6 +40,7 @@ static ConVar r_rimlight( "r_rimlight", "1", FCVAR_NONE );
 //  SHADER_SAMPLER11 Compressed wrinkle normal map
 //  SHADER_SAMPLER12 Stretched wrinkle normal map
 //  SHADER_SAMPLER13 Detail texture
+//  SHADER_SAMPLER14 Separate self illumination mask
 
 
 //-----------------------------------------------------------------------------
@@ -96,25 +97,19 @@ void InitParamsSkin_DX9( CBaseVSShader *pShader, IMaterialVar** params, const ch
 		CLEAR_FLAGS( MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK );
 	}
 
-	if ( ( info.m_nSelfIllumFresnel != -1 ) && ( !params[info.m_nSelfIllumFresnel]->IsDefined() ) )
-	{
-		params[info.m_nSelfIllumFresnel]->SetIntValue( 0 );
-	}
+	InitIntParam( info.m_nSelfIllumFresnel, params, 0 );
 
 	if ( ( info.m_nSelfIllumFresnelMinMaxExp != -1 ) && ( !params[info.m_nSelfIllumFresnelMinMaxExp]->IsDefined() ) )
 	{
 		params[info.m_nSelfIllumFresnelMinMaxExp]->SetVecValue( 0.0f, 1.0f, 1.0f );
 	}
 
-	if ( ( info.m_nBaseMapAlphaPhongMask != -1 ) && ( !params[info.m_nBaseMapAlphaPhongMask]->IsDefined() ) )
-	{
-		params[info.m_nBaseMapAlphaPhongMask]->SetIntValue( 0 );
-	}
 
-	if ( ( info.m_nEnvmapFresnel != -1 ) && ( !params[info.m_nEnvmapFresnel]->IsDefined() ) )
-	{
-		params[info.m_nEnvmapFresnel]->SetFloatValue( 0 );
-	}
+	InitIntParam( info.m_nBaseMapAlphaPhongMask, params, 0 );
+
+	InitFloatParam( info.m_nEnvmapFresnel, params, 0.0f );
+
+	InitIntParam( info.m_nPhongDisableHalfLambert, params, 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -260,18 +255,22 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 
 	// Rimlight must be set to non-zero to trigger rim light combo (also requires Phong)
 	bool bHasRimLight = r_rimlight.GetBool() && bHasPhong && (info.m_nRimLight != -1) && ( params[info.m_nRimLight]->GetIntValue() != 0 );
-	bool bHasRimMaskMap = bHasSpecularExponentTexture && bHasRimLight && (info.m_nRimMask != -1) && ( params[info.m_nRimMask]->GetIntValue() != 0 );
-
-	float fBlendFactor=( info.m_nDetailTextureBlendFactor == -1 )? 1 : params[info.m_nDetailTextureBlendFactor]->GetFloatValue();
-	bool hasDetailTexture = ( info.m_nDetail != -1 ) && params[info.m_nDetail]->IsTexture();
+	bool bHasRimMaskMap = bHasSpecularExponentTexture && bHasRimLight && (info.m_nRimMask != -1) && (params[info.m_nRimMask]->GetIntValue() != 0);
+	bool hasDetailTexture = (info.m_nDetail != -1) && params[info.m_nDetail]->IsTexture();
+	float flBlendFactorOrPhongAlbedoBoost;
+	if ( hasDetailTexture )
+	{
+		flBlendFactorOrPhongAlbedoBoost = (info.m_nDetailTextureBlendFactor == -1) ? 1 : params[info.m_nDetailTextureBlendFactor]->GetFloatValue();
+	}
+	else
+	{
+		flBlendFactorOrPhongAlbedoBoost = (info.m_nPhongAlbedoBoost == -1) ? 1.0f : params[info.m_nPhongAlbedoBoost]->GetFloatValue();
+	}
 	int nDetailBlendMode = ( hasDetailTexture && info.m_nDetailTextureCombineMode != -1 ) ? params[info.m_nDetailTextureCombineMode]->GetIntValue() : 0;
 
 	bool bBlendTintByBaseAlpha = IsBoolSet( info.m_nBlendTintByBaseAlpha, params ) && !bHasSelfIllum;	// Pixel shader can't do both BLENDTINTBYBASEALPHA and SELFILLUM, so let selfillum win
 
 	float flTintReplacementAmount = GetFloatParam( info.m_nTintReplacesBaseColor, params );
-
-	float flPhongExponentFactor =  ( info.m_nPhongExponentFactor != -1 ) ? GetFloatParam( info.m_nPhongExponentFactor, params ) : 0.0f;
-	const bool bHasPhongExponentFactor = flPhongExponentFactor != 0.0f;
 
 	BlendType_t nBlendType= pShader->EvaluateBlendRequirements( bBlendTintByBaseAlpha ? -1 : info.m_nBaseTexture, true );
 
@@ -445,6 +444,10 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, pTexCoordDim, userDataSize );
 
+		// This is to allow phong materials to disable half lambert. Half lambert has always been forced on in phong,
+		// so the only safe way to allow artists to disable half lambert is to create this param that disables the
+		// default behavior of forcing half lambert on.
+		bool bPhongHalfLambert = IS_PARAM_DEFINED( info.m_nPhongDisableHalfLambert ) ? (params[info.m_nPhongDisableHalfLambert]->GetIntValue() == 0) : true;
 
 #ifndef _X360
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
@@ -470,6 +473,7 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP, bHasEnvmap );
 			SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode );
 			SET_STATIC_PIXEL_SHADER_COMBO( CONVERT_TO_SRGB, 0 );
+			SET_STATIC_PIXEL_SHADER_COMBO( PHONG_HALFLAMBERT, bPhongHalfLambert );
 			SET_STATIC_PIXEL_SHADER_COMBO( FASTPATH_NOBUMP, pContextData->m_bFastPath );
 			SET_STATIC_PIXEL_SHADER_COMBO( BLENDTINTBYBASEALPHA, bBlendTintByBaseAlpha );
 			SET_STATIC_PIXEL_SHADER( skin_ps20b );
@@ -497,6 +501,7 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP, bHasEnvmap );
 			SET_STATIC_PIXEL_SHADER_COMBO( FLASHLIGHTDEPTHFILTERMODE, nShadowFilterMode );
 			SET_STATIC_PIXEL_SHADER_COMBO( CONVERT_TO_SRGB, 0 );
+			SET_STATIC_PIXEL_SHADER_COMBO( PHONG_HALFLAMBERT, bPhongHalfLambert );
 			SET_STATIC_PIXEL_SHADER_COMBO( FASTPATH_NOBUMP, pContextData->m_bFastPath );
 			SET_STATIC_PIXEL_SHADER_COMBO( BLENDTINTBYBASEALPHA, bBlendTintByBaseAlpha );
 			SET_STATIC_PIXEL_SHADER( skin_ps30 );
@@ -679,7 +684,6 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( PHONG_USE_EXPONENT_FACTOR, bHasPhongExponentFactor );
 			SET_DYNAMIC_PIXEL_SHADER( skin_ps20b );
 		}
 #ifndef _X360
@@ -701,7 +705,6 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( PHONG_USE_EXPONENT_FACTOR, bHasPhongExponentFactor );
 			SET_DYNAMIC_PIXEL_SHADER( skin_ps30 );
 
 			bool bUnusedTexCoords[3] = { false, false, !pShaderAPI->IsHWMorphingEnabled() || !bIsDecal };
@@ -729,7 +732,7 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 		}
 
 		pShader->SetModulationPixelShaderDynamicState_LinearColorSpace( 1 );
-		pShader->SetPixelShaderConstant_W( PSREG_SELFILLUMTINT, info.m_nSelfIllumTint, fBlendFactor );
+		pShader->SetPixelShaderConstant_W( PSREG_SELFILLUMTINT, info.m_nSelfIllumTint, flBlendFactorOrPhongAlbedoBoost );
 		bool bInvertPhongMask = ( info.m_nInvertPhongMask != -1 ) && ( params[info.m_nInvertPhongMask]->GetIntValue() != 0 );
 		float fInvertPhongMask = bInvertPhongMask ? 1 : 0;
 
@@ -817,24 +820,13 @@ void DrawSkin_DX9_Internal( CBaseVSShader *pShader, IMaterialVar** params, IShad
 		float vSpecularTint[4] = {1, 1, 1, 4};
 		pShaderAPI->GetWorldSpaceCameraPosition( vEyePos_SpecExponent );
 
-		// If we have a phong exponent factor, then use that as a multiplier against the texture.
-		if ( bHasPhongExponentFactor )
+		if ( (info.m_nPhongExponent != -1) && params[info.m_nPhongExponent]->IsDefined() )
 		{
-			vEyePos_SpecExponent[3] = flPhongExponentFactor;
+			vEyePos_SpecExponent[3] = params[info.m_nPhongExponent]->GetFloatValue(); // This overrides the channel in the map
 		}
 		else
 		{
-			// Use the alpha channel of the normal map for the exponent by default
-			vEyePos_SpecExponent[3] = -1.f;
-			if ( (info.m_nPhongExponent != -1) && params[info.m_nPhongExponent]->IsDefined() )
-			{
-				float fValue = params[info.m_nPhongExponent]->GetFloatValue();
-				if ( fValue > 0.f )
-				{
-					// Nonzero value in material overrides map channel
-					vEyePos_SpecExponent[3] = fValue;
-				}
-			}
+			vEyePos_SpecExponent[3] = 0; // Use the alpha channel of the normal map for the exponent
 		}
 
 		// Get the tint parameter

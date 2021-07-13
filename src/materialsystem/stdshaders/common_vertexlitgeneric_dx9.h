@@ -172,26 +172,27 @@ void SpecularAndRimTerms( const float3 vWorldNormal, const float3 vLightDir, con
 						  // Outputs
 						  out float3 specularLighting, out float3 rimLighting )
 {
-	rimLighting = float3(0.0f, 0.0f, 0.0f);
-
-	//float3 vReflect = reflect( -vEyeDir, vWorldNormal );				// Reflect view through normal
-	float3 vReflect = 2 * vWorldNormal * dot( vWorldNormal , vEyeDir ) - vEyeDir; // Reflect view through normal
-	float LdotR = saturate(dot( vReflect, vLightDir ));					// L.R	(use half-angle instead?)
-	specularLighting = pow( LdotR, fSpecularExponent );					// Raise to specular exponent
+	float3 vHalfAngle = normalize( vEyeDir.xyz + vLightDir.xyz );
+	float flNDotH = saturate( dot( vWorldNormal.xyz, vHalfAngle.xyz ) );
+	specularLighting = pow( flNDotH, fSpecularExponent ); // Raise to specular exponent
 
 	// Optionally warp as function of scalar specular and fresnel
 	if ( bDoSpecularWarp )
-		specularLighting *= tex2D( specularWarpSampler, float2(specularLighting.x, fFresnel) ); // Sample at { (L.R)^k, fresnel }
+	{
+		specularLighting *= tex2D( specularWarpSampler, float2(specularLighting.x, fFresnel) ).rgb; // Sample at { (N.H)^k, fresnel }
+	}
 
-	specularLighting *= saturate(dot( vWorldNormal, vLightDir ));		// Mask with N.L
-	specularLighting *= color;											// Modulate with light color
+	specularLighting *= pow( saturate( dot( vWorldNormal, vLightDir ) ), 0.5 ); // Mask with N.L raised to a power
+	specularLighting *= color;													// Modulate with light color
 
 	if ( bDoAmbientOcclusion )											// Optionally modulate with ambient occlusion
 		specularLighting *= fAmbientOcclusion;
 
-	if ( bDoRimLighting )												// Optionally do rim lighting
+	// Optionally do rim lighting
+	rimLighting = float3( 0.0, 0.0, 0.0 );
+	if ( bDoRimLighting )
 	{
-		rimLighting  = pow( LdotR, fRimExponent );						// Raise to rim exponent
+		rimLighting  = pow( flNDotH, fRimExponent );					// Raise to rim exponent
 		rimLighting *= saturate(dot( vWorldNormal, vLightDir ));		// Mask with N.L
 		rimLighting *= color;											// Modulate with light color
 	}

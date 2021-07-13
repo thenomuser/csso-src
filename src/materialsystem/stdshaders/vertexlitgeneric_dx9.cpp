@@ -53,8 +53,8 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( PHONGWARPTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "warp the specular term" )
 		SHADER_PARAM( PHONGFRESNELRANGES, SHADER_PARAM_TYPE_VEC3, "[0  0.5  1]", "Parameters for remapping fresnel output" )
 		SHADER_PARAM( PHONGBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong overbrightening factor (specular mask channel should be authored to account for this)" )
+		SHADER_PARAM( PHONGALBEDOBOOST, SHADER_PARAM_TYPE_FLOAT, "1.0", "Phong albedo overbrightening factor (specular mask channel should be authored to account for this)" )
 		SHADER_PARAM( PHONGEXPONENTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Phong Exponent map" )
-		SHADER_PARAM( PHONGEXPONENTFACTOR, SHADER_PARAM_TYPE_FLOAT, "0.0", "When using a phong exponent texture, this will be multiplied by the 0..1 that comes out of the texture." )
 		SHADER_PARAM( PHONG, SHADER_PARAM_TYPE_BOOL, "0", "enables phong lighting" )
 		SHADER_PARAM( BASEMAPALPHAPHONGMASK, SHADER_PARAM_TYPE_INTEGER, "0", "indicates that there is no normal map and that the phong mask is in base alpha" )
 		SHADER_PARAM( INVERTPHONGMASK, SHADER_PARAM_TYPE_INTEGER, "0", "invert the phong mask (0=full phong, 1=no phong)" )
@@ -137,6 +137,11 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( BLENDTINTBYBASEALPHA, SHADER_PARAM_TYPE_BOOL, "0", "Use the base alpha to blend in the $color modulation")
 		SHADER_PARAM( BLENDTINTCOLOROVERBASE, SHADER_PARAM_TYPE_FLOAT, "0", "blend between tint acting as a multiplication versus a replace" )
 		SHADER_PARAM( NOTINT, SHADER_PARAM_TYPE_BOOL, "0", "Disable tinting" )
+
+		// This is to allow phong materials to disable half lambert. Half lambert has always been forced on in phong,
+		// so the only safe way to allow artists to disable half lambert is to create this param that disables the
+		// default behavior of forcing half lambert on.
+		SHADER_PARAM( PHONGDISABLEHALFLAMBERT, SHADER_PARAM_TYPE_BOOL, "0", "Disable half lambert for phong" )
 	END_SHADER_PARAMS
 
 	void SetupVars( VertexLitGeneric_DX9_Vars_t& info )
@@ -182,7 +187,7 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nDiffuseWarpTexture = LIGHTWARPTEXTURE;
 		info.m_nPhongWarpTexture = PHONGWARPTEXTURE;
 		info.m_nPhongBoost = PHONGBOOST;
-		info.m_nPhongExponentFactor = PHONGEXPONENTFACTOR;
+		info.m_nPhongAlbedoBoost = PHONGALBEDOBOOST;
 		info.m_nPhongFresnelRanges = PHONGFRESNELRANGES;
 		info.m_nPhong = PHONG;
 		info.m_nBaseMapAlphaPhongMask = BASEMAPALPHAPHONGMASK;
@@ -215,6 +220,8 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nBlendTintByBaseAlpha = BLENDTINTBYBASEALPHA;
 		info.m_nTintReplacesBaseColor = BLENDTINTCOLOROVERBASE;
 		info.m_nNoTint = NOTINT;
+
+		info.m_nPhongDisableHalfLambert = PHONGDISABLEHALFLAMBERT;
 	}
 
 	// Cloak Pass
@@ -371,6 +378,18 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 			FleshInteriorBlendedPassVars_t info;
 			SetupVarsFleshInteriorBlendedPass( info );
 			InitParamsFleshInteriorBlendedPass( this, params, pMaterialName, info );
+		}
+
+		if ( !params[PHONGALBEDOBOOST]->IsDefined() )
+		{
+			if ( params[PHONGBOOST]->IsDefined() )
+			{
+				params[PHONGALBEDOBOOST]->SetFloatValue( params[PHONGBOOST]->GetFloatValue() );
+			}
+			else
+			{
+				params[PHONGALBEDOBOOST]->SetFloatValue( 1.0f );
+			}
 		}
 	}
 

@@ -67,8 +67,8 @@ struct VertexLitGeneric_DX9_Vars_t
 	int m_nDiffuseWarpTexture;
 	int m_nPhongWarpTexture;	
 	int m_nPhongBoost;
+	int m_nPhongAlbedoBoost;
 	int m_nPhongFresnelRanges;
-	int m_nPhongExponentFactor;
 	int m_nSelfIllumEnvMapMask_Alpha;
 	int m_nAmbientOnly;
 	int m_nHDRColorScale;
@@ -133,6 +133,8 @@ struct VertexLitGeneric_DX9_Vars_t
 	int m_nNoTint;
 
 	int m_nTintReplacesBaseColor;
+
+	int m_nPhongDisableHalfLambert;
 };
 
 void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, bool bVertexLitGeneric, VertexLitGeneric_DX9_Vars_t &info );
