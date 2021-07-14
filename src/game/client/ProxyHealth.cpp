@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "functionproxy.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -54,6 +55,6 @@ void CProxyHealth::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CProxyHealth, IMaterialProxy, "Health" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CProxyHealth, Health );
 
 

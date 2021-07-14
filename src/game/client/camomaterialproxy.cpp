@@ -18,6 +18,7 @@
 #include "datacache/idatacache.h"
 #include "materialsystem/imaterial.h"
 #include "vtf/vtf.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -579,4 +580,4 @@ IMaterial *CCamoMaterialProxy::GetMaterial()
 	return m_pMaterial;
 }
 
-EXPOSE_INTERFACE( CCamoMaterialProxy, IMaterialProxy, "Camo" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CCamoMaterialProxy, Camo );

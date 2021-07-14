@@ -13,6 +13,7 @@
 #include "texture_group_names.h"
 #include "baseanimatedtextureproxy.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -794,5 +795,5 @@ void CMaterialModifyAnimatedProxy::AnimationWrapped( void* pArg )
 }
 
 
-EXPOSE_INTERFACE( CMaterialModifyProxy, IMaterialProxy, "MaterialModify" IMATERIAL_PROXY_INTERFACE_VERSION );
-EXPOSE_INTERFACE( CMaterialModifyAnimatedProxy, IMaterialProxy, "MaterialModifyAnimated" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CMaterialModifyProxy, MaterialModify );
+EXPOSE_MATERIAL_PROXY( CMaterialModifyAnimatedProxy, MaterialModifyAnimated );

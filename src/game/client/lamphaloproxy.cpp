@@ -9,6 +9,7 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "view.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -101,4 +102,4 @@ IMaterial *CLampHaloProxy::GetMaterial()
 	return m_pFadeValue->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CLampHaloProxy, IMaterialProxy, "lamphalo" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CLampHaloProxy, lamphalo );

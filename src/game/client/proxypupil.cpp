@@ -11,6 +11,7 @@
 #include "materialsystem/itexture.h"
 #include "proxyentity.h"
 #include "functionproxy.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -124,4 +125,4 @@ IMaterial *CPupilProxy::GetMaterial()
 	return m_pAnimatedTextureVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CPupilProxy, IMaterialProxy, "Pupil" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPupilProxy, Pupil );

@@ -24,6 +24,7 @@
 #include "replay/replaycamera.h"
 #include "bitmap/tgawriter.h"
 #include "filesystem.h"
+#include "imaterialproxydict.h"
 
 #define REPLAY_RECORDING_ENABLE
 
@@ -162,7 +163,7 @@ IMaterial *CAccumBuffProxy::GetMaterial()
 
 //-----------------------------------------------------------------------------
 
-EXPOSE_INTERFACE( CAccumBuffProxy, IMaterialProxy, "accumbuff4sample" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CAccumBuffProxy, accumbuff4sample );
 
 //-----------------------------------------------------------------------------
 

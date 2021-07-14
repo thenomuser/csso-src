@@ -10,6 +10,7 @@
 #include "materialsystem/imaterialvar.h"
 #include "c_world.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -73,6 +74,6 @@ IMaterial *CWorldDimsProxy::GetMaterial()
 	return m_pMinsVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CWorldDimsProxy, IMaterialProxy, "WorldDims" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CWorldDimsProxy, WorldDims );
 
 

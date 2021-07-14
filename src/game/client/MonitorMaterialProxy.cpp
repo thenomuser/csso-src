@@ -8,6 +8,7 @@
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
+#include "imaterialproxydict.h"
 
 // $monitorTextureVar
 class CMonitorMaterialProxy : public IMaterialProxy
@@ -57,4 +58,4 @@ void CMonitorMaterialProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CMonitorMaterialProxy, IMaterialProxy, "Monitor" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CMonitorMaterialProxy, Monitor );

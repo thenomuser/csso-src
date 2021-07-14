@@ -6,6 +6,7 @@
 
 #include "cbase.h"
 #include "baseanimatedtextureproxy.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -25,7 +26,7 @@ protected:
 	float	m_flFrameOffset;
 };
 
-EXPOSE_INTERFACE( CAnimatedOffsetTextureProxy, IMaterialProxy, "AnimatedOffsetTexture" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CAnimatedOffsetTextureProxy, AnimatedOffsetTexture );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

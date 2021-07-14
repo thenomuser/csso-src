@@ -8,6 +8,7 @@
 #include "particlemgr.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -73,5 +74,5 @@ private:
 	IMaterialVar	*m_pLightColor;
 };
 
-EXPOSE_INTERFACE( ParticleSphereProxy, IMaterialProxy, "ParticleSphereProxy" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( ParticleSphereProxy, ParticleSphereProxy );
 

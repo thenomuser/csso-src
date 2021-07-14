@@ -10,6 +10,7 @@
 #include "model_types.h"
 #include "engine/ivmodelinfo.h"
 #include "c_func_breakablesurf.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -1158,4 +1159,4 @@ IMaterial *CBreakableSurfaceProxy::GetMaterial()
 	return m_BaseTextureVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CBreakableSurfaceProxy, IMaterialProxy, "BreakableSurface" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CBreakableSurfaceProxy, BreakableSurface );

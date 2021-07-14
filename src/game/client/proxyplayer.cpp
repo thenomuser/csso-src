@@ -15,6 +15,7 @@
 #include "cs_shareddefs.h"
 #include "c_cs_player.h"
 #include "cs_client_gamestats.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -68,7 +69,7 @@ void CPlayerProximityProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerProximityProxy, IMaterialProxy, "PlayerProximity" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerProximityProxy, PlayerProximity );
 
 
 //-----------------------------------------------------------------------------
@@ -112,7 +113,7 @@ void CPlayerTeamMatchProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerTeamMatchProxy, IMaterialProxy, "PlayerTeamMatch" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerTeamMatchProxy, PlayerTeamMatch );
 
 
 //-----------------------------------------------------------------------------
@@ -164,7 +165,7 @@ void CPlayerViewProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerViewProxy, IMaterialProxy, "PlayerView" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerViewProxy, PlayerView );
 
 
 //-----------------------------------------------------------------------------
@@ -205,7 +206,7 @@ void CPlayerSpeedProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerSpeedProxy, IMaterialProxy, "PlayerSpeed" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerSpeedProxy, PlayerSpeed );
 
 
 //-----------------------------------------------------------------------------
@@ -249,7 +250,7 @@ void CPlayerPositionProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerPositionProxy, IMaterialProxy, "PlayerPosition" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerPositionProxy, PlayerPosition );
 
 
 //-----------------------------------------------------------------------------
@@ -279,7 +280,7 @@ void CEntitySpeedProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CEntitySpeedProxy, IMaterialProxy, "EntitySpeed" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CEntitySpeedProxy, EntitySpeed );
 
 
 //-----------------------------------------------------------------------------
@@ -324,7 +325,7 @@ void CEntityRandomProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CEntityRandomProxy, IMaterialProxy, "EntityRandom" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CEntityRandomProxy, EntityRandom );
 
 #include "utlrbtree.h"
 
@@ -426,7 +427,7 @@ void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
 	SetFloatResult( nKillEaterAltScore );
 }
 
-EXPOSE_INTERFACE( CStatTrakDigitProxy, IMaterialProxy, "StatTrakDigit" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CStatTrakDigitProxy, StatTrakDigit );
 
 #if IRONSIGHT
 //-----------------------------------------------------------------------------
@@ -488,7 +489,7 @@ void CIronSightAmountProxy::OnBind(void *pC_BaseEntity)
 
 }
 
-EXPOSE_INTERFACE( CIronSightAmountProxy, IMaterialProxy, "IronSightAmount" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CIronSightAmountProxy, IronSightAmount );
 #endif //IRONSIGHT
 
 //-----------------------------------------------------------------------------
@@ -540,7 +541,7 @@ void CStatTrakIllumProxy::OnBind( void *pC_BaseEntity )
 
 }
 
-EXPOSE_INTERFACE( CStatTrakIllumProxy, IMaterialProxy, "StatTrakIllum" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CStatTrakIllumProxy, StatTrakIllum );
 
 //-----------------------------------------------------------------------------
 // Returns the player speed
@@ -702,7 +703,7 @@ IMaterial *CPlayerLogoProxy::GetMaterial()
 	return m_pBaseTextureVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CPlayerLogoProxy, IMaterialProxy, "PlayerLogo" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerLogoProxy, PlayerLogo );
 
 /* @note Tom Bui: This is here for reference, but we don't want people to use it!
 //-----------------------------------------------------------------------------
@@ -737,7 +738,7 @@ void CPlayerLogoOnModelProxy::OnBind( void *pC_BaseEntity )
 	}
 }
 
-EXPOSE_INTERFACE( CPlayerLogoOnModelProxy, IMaterialProxy, "PlayerLogoOnModel" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CPlayerLogoOnModelProxy, PlayerLogoOnModel );
 */
 
 //-----------------------------------------------------------------------------
@@ -779,4 +780,4 @@ void CCrossHairColorProxy::OnBind(void *pC_BaseEntity)
 						(float)m_vecLocalCrossHairColor.z * 0.0039, 1);
 	}
 }
-EXPOSE_INTERFACE( CCrossHairColorProxy, IMaterialProxy, "CrossHairColor" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CCrossHairColorProxy, CrossHairColor );

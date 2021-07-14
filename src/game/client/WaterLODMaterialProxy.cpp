@@ -10,6 +10,7 @@
 #include "materialsystem/imaterialvar.h"
 #include "iviewrender.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -80,4 +81,4 @@ IMaterial *CWaterLODMaterialProxy::GetMaterial()
 	return m_pCheapWaterStartDistanceVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CWaterLODMaterialProxy, IMaterialProxy, "WaterLOD" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CWaterLODMaterialProxy, WaterLOD );

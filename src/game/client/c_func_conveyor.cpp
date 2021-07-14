@@ -12,6 +12,7 @@
 #include <KeyValues.h>
 #include "mathlib/vmatrix.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -155,4 +156,4 @@ IMaterial *CConveyorMaterialProxy::GetMaterial()
 	return m_pTextureScrollVar ? m_pTextureScrollVar->GetOwningMaterial() : NULL;
 }
 
-EXPOSE_INTERFACE( CConveyorMaterialProxy, IMaterialProxy, "ConveyorScroll" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CConveyorMaterialProxy, ConveyorScroll );

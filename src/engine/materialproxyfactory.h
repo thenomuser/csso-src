@@ -21,9 +21,6 @@ class CMaterialProxyFactory : public IMaterialProxyFactory
 public:
 	IMaterialProxy *CreateProxy( const char *proxyName );
 	void DeleteProxy( IMaterialProxy *pProxy );
-
-private:
-	IMaterialProxy *LookupProxy( const char *proxyName, CreateInterfaceFn factory );
 };
 
 #endif // MATERIALPROXYFACTORY_H

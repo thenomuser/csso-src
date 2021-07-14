@@ -12,15 +12,19 @@
 #include "materialproxyfactory.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
+#include "cdll_int.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+extern IBaseClientDLL	*g_ClientDLL;
+#ifndef DEDICATED
 extern CSysModule		*g_ClientDLLModule;
+#endif
 
 IMaterialProxy *CMaterialProxyFactory::CreateProxy( const char *proxyName )
 {
 #if !defined(SWDS)
-	IMaterialProxy *materialProxy = LookupProxy( proxyName, Sys_GetFactory( g_ClientDLLModule ) );
+	IMaterialProxy *materialProxy = g_ClientDLL->InstantiateMaterialProxy( proxyName );
 
 	// If the client didn't have it and we're in tool mode, ask the tools...
 	if ( toolframework->InToolMode() && !materialProxy )
@@ -47,25 +51,4 @@ void CMaterialProxyFactory::DeleteProxy( IMaterialProxy *pProxy )
 		pProxy->Release();
 	}
 }
-
-
-//-----------------------------------------------------------------------------
-// Look up proxy
-//-----------------------------------------------------------------------------
-IMaterialProxy *CMaterialProxyFactory::LookupProxy( const char *proxyName, CreateInterfaceFn factory )
-{
-	if( !factory )
-		return NULL;
-
-	// allocate exactly enough memory for the versioned name on the stack.
-	char *proxyVersionedName;
-	int buflen = Q_strlen( proxyName ) + Q_strlen( IMATERIAL_PROXY_INTERFACE_VERSION ) + 1;
-
-	proxyVersionedName = ( char * )_alloca( buflen );
-	Q_strncpy( proxyVersionedName, proxyName, buflen );
-	Q_strncat( proxyVersionedName, IMATERIAL_PROXY_INTERFACE_VERSION, buflen, COPY_ALL_CHARACTERS );
-	return ( IMaterialProxy * )factory( proxyVersionedName, NULL );
-}
-
-
 

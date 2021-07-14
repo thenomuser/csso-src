@@ -12,6 +12,7 @@
 #include "mathlib/vmatrix.h"
 #include "functionproxy.h"
 #include "toolframework_client.h"
+#include "imaterialproxydict.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -124,4 +125,4 @@ IMaterial *CTextureScrollMaterialProxy::GetMaterial()
 	return m_pTextureScrollVar->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CTextureScrollMaterialProxy, IMaterialProxy, "TextureScroll" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CTextureScrollMaterialProxy, TextureScroll );

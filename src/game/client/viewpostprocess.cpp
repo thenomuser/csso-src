@@ -20,6 +20,7 @@
 #include "tier0/vprof.h"
 #include "viewpostprocess.h"
 #include "clienteffectprecachesystem.h"
+#include "imaterialproxydict.h"
 
 #ifdef CSTRIKE_DLL
 #include "c_cs_player.h"
@@ -1384,7 +1385,7 @@ IMaterial * CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & 
 	}
 }
 
-EXPOSE_INTERFACE( CEnginePostMaterialProxy, IMaterialProxy, "engine_post" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CEnginePostMaterialProxy, engine_post );
 
 
 static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext )
@@ -2715,7 +2716,7 @@ IMaterial *CMotionBlurMaterialProxy::GetMaterial()
 	return m_pMaterialParam->GetOwningMaterial();
 }
 
-EXPOSE_INTERFACE( CMotionBlurMaterialProxy, IMaterialProxy, "MotionBlur" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CMotionBlurMaterialProxy, MotionBlur );
 
 //=====================================================================================================================
 // Image-space Motion Blur ============================================================================================

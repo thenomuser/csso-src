@@ -8,6 +8,7 @@
 #include "proxyentity.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
+#include "imaterialproxydict.h"
 
 void HueToRGB( float frac, Vector& color );
 
@@ -102,4 +103,4 @@ return;
 	m_ThermalVar->SetVecValue( color[0], color[1], color[2] );
 }
 
-EXPOSE_INTERFACE( CThermalMaterialProxy, IMaterialProxy, "Thermal" IMATERIAL_PROXY_INTERFACE_VERSION );
+EXPOSE_MATERIAL_PROXY( CThermalMaterialProxy, Thermal );
