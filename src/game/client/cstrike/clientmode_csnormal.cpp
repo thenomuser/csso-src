@@ -1184,6 +1184,17 @@ void UpdateClassImageEntity(
 		origin = tr.endpos;
 	}
 
+	// Make a light so the model is well lit.
+	dlight_t *dl = effects->CL_AllocDlight( LIGHT_INDEX_TE_DYNAMIC+1 );	// use a non-zero number so we cannibalize ourselves next frame
+
+	dl->flags = DLIGHT_NO_WORLD_ILLUMINATION | DLIGHT_NO_STATIC_PROP_ILLUMINATION;
+	dl->origin = lightOrigin;
+	dl->die = gpGlobals->curtime + 0.05f; // Go away immediately so it doesn't light the world too.
+
+	dl->color.r = dl->color.g = dl->color.b = 200;
+	dl->color.exponent = 4;
+	dl->radius = 512;
+
 	// move player model in front of our view
 	pPlayerModel->SetAbsOrigin( origin );
 	pPlayerModel->SetAbsAngles( QAngle( 5, 180, 0 ) );
@@ -1212,35 +1223,11 @@ void UpdateClassImageEntity(
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
 
-	// [mhansen] We don't want to light the model in the world. We want it to 
-	// always be lit normal like even if you are standing in a dark (or green) area
-	// in the world.
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->SetLightingOrigin( vec3_origin );
-
-	LightDesc_t ld;
-	ld.InitDirectional( Vector( 0.0f, 0.0f, -1.0f ), Vector( 1.0f, 1.0f, 0.8f ) );
-	pRenderContext->SetLight( 1, ld );
-
-	static Vector white[6] = 
-	{
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-	};
-
-	g_pStudioRender->SetAmbientLightColors( white );
-	g_pStudioRender->SetLocalLights( 0, NULL );
-
 	modelrender->SuppressEngineLighting( true );
 	float color[3] = { 1.0f, 1.0f, 1.0f };
 	render->SetColorModulation( color );
 	render->SetBlend( 1.0f );
 	pPlayerModel->DrawModel( STUDIO_RENDER );
-
 	if ( pWeaponModel )
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
@@ -1249,7 +1236,6 @@ void UpdateClassImageEntity(
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
-
 	modelrender->SuppressEngineLighting( false );
 
 	render->PopView( dummyFrustum );
@@ -1425,6 +1411,17 @@ void UpdateBuyMenuImageEntity(
 		origin = tr.endpos;
 	}
 
+	// Make a light so the model is well lit.
+	dlight_t *dl = effects->CL_AllocDlight( LIGHT_INDEX_TE_DYNAMIC+1 );	// use a non-zero number so we cannibalize ourselves next frame
+
+	dl->flags = DLIGHT_NO_WORLD_ILLUMINATION | DLIGHT_NO_STATIC_PROP_ILLUMINATION;
+	dl->origin = lightOrigin;
+	dl->die = gpGlobals->curtime + 0.05f; // Go away immediately so it doesn't light the world too.
+
+	dl->color.r = dl->color.g = dl->color.b = 200;
+	dl->color.exponent = 4;
+	dl->radius = 512;
+
 	// move player model in front of our view
 	pPlayerModel->SetAbsOrigin( origin );
 	pPlayerModel->SetAbsAngles( QAngle( 0, 180, 0 ) );
@@ -1454,35 +1451,11 @@ void UpdateBuyMenuImageEntity(
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
 
-	// [mhansen] We don't want to light the model in the world. We want it to 
-	// always be lit normal like even if you are standing in a dark (or green) area
-	// in the world.
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->SetLightingOrigin( vec3_origin );
-
-	LightDesc_t ld;
-	ld.InitDirectional( Vector( 0.0f, 0.0f, -1.0f ), Vector( 1.0f, 1.0f, 0.8f ) );
-	pRenderContext->SetLight( 1, ld );
-
-	static Vector white[6] = 
-	{
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-	};
-
-	g_pStudioRender->SetAmbientLightColors( white );
-	g_pStudioRender->SetLocalLights( 0, NULL );
-
 	modelrender->SuppressEngineLighting( true );
 	float color[3] = { 1.0f, 1.0f, 1.0f };
 	render->SetColorModulation( color );
 	render->SetBlend( 1.0f );
 	pPlayerModel->DrawModel( STUDIO_RENDER );
-
 	if ( pWeaponModel )
 	{
 		pWeaponModel->DrawModel( STUDIO_RENDER );
@@ -1491,7 +1464,6 @@ void UpdateBuyMenuImageEntity(
 	{
 		pGlovesModel->DrawModel( STUDIO_RENDER );
 	}
-
 	modelrender->SuppressEngineLighting( false );
 
 	render->PopView( dummyFrustum );
