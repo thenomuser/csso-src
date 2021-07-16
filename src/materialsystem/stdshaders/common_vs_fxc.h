@@ -812,6 +812,7 @@ float CosineTermInternal( const float3 worldPos, const float3 worldNormal, int l
 	if ( !bHalfLambert )
 	{
 		NDotL = max( 0.0f, NDotL );
+		NDotL = SoftenCosineTerm( NDotL ); // For CS:GO
 	}
 	else	// Half-Lambert
 	{

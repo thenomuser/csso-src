@@ -49,6 +49,15 @@ static const HALF3 bumpBasisTranspose[3] = {
 //Note that the reversal happens in the viewport. So ONLY reading back from a depth texture should be affected. Projected math is unaffected.
 #endif
 
+// For CS:GO
+//#define SOFTEN_COSINE_EXP 1.5
+float SoftenCosineTerm( float flDot )
+{
+	return ( flDot + ( flDot * flDot ) ) * 0.5;
+	//return rsqrt( flDot ) * ( flDot * flDot );
+	//return pow( flDot, SOFTEN_COSINE_EXP );
+}
+
 HALF3 CalcReflectionVectorNormalized( HALF3 normal, HALF3 eyeVector )
 {
 	// FIXME: might be better of normalizing with a normalizing cube map and

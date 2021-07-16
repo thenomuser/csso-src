@@ -103,6 +103,7 @@ float3 DiffuseTerm(const bool bHalfLambert, const float3 worldNormal, const floa
 	else
 	{
 		fResult = saturate( NDotL );						// Saturate pure Lambertian term
+		fResult = SoftenCosineTerm( fResult );				// For CS:GO
 	}
 
 	if ( bDoAmbientOcclusion )
@@ -116,7 +117,7 @@ float3 DiffuseTerm(const bool bHalfLambert, const float3 worldNormal, const floa
 	float3 fOut = float3( fResult, fResult, fResult );
 	if ( bDoLightingWarp )
 	{
-		fOut = 2.0f * tex1D( lightWarpSampler, fResult );
+		fOut = tex1D( lightWarpSampler, fResult ).xyz;
 	}
 
 	return fOut;
