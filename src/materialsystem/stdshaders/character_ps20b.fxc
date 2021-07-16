@@ -14,8 +14,6 @@
 // STATIC:	"SHADOWSATURATION"			"0..1"		[ps30]
 // STATIC:  "BASEALPHASELFILLUMMASK"	"0..1"	
 // STATIC:  "FAKERIM"					"0..1"
-// STATIC:  "DOPREVIEW"					"0..1"
-// STATIC:  "USEPATTERN"				"0..4"
 // STATIC:  "FLASHLIGHT"				"0..1"
 // STATIC:  "FLASHLIGHTDEPTHFILTERMODE" "0..3"
 
@@ -48,12 +46,6 @@
 // SKIP: ( $BASEALPHASELFILLUMMASK == 1) && ( $BASEALPHAENVMASK == 1 )
 // SKIP: ( $BASEALPHASELFILLUMMASK == 1) && ( $BASEALPHAPHONGMASK == 1 )
 // SKIP: ( $BASEALPHAENVMASK == 1 ) && ( $BASEALPHASELFILLUMMASK )
-// SKIP: ( $DOPREVIEW == 0 ) && ( $USEPATTERN != 0 )
-// SKIP: ( $DOPREVIEW == 1 ) && ( $USEBOUNCECOLOR == 1 )
-// SKIP: ( $DOPREVIEW == 1 ) && ( $BASEALPHASELFILLUMMASK == 1)
-// SKIP: ( $DOPREVIEW == 1 ) && ( $FAKERIM == 1 )
-// SKIP: ( $DOPREVIEW == 1 ) && ( $NUM_LIGHTS > 1 )
-// SKIP: ( $DOPREVIEW == 1 ) && ( $FLASHLIGHT == 1 )
 // SKIP: ( $FLASHLIGHTDEPTHFILTERMODE > 0 ) && ( $FLASHLIGHT == 0 )
 // SKIP: ( $FLASHLIGHT == 1 ) && ( $FAKERIM == 1 )
 
@@ -65,25 +57,9 @@
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"
 
-#if ( DOPREVIEW == 1 )
-	#define GENERATEBASETEXTURE 1
-	#if ( BUMPMAP == 1 )
-		#define GENERATENORMAL 1
-	#endif
-	#if( MASKS1 == 1 )
-		#define GENERATEMASKS1 1
-	#endif
-	#define CHEAPFILTERING 1
-	#include "custom_character_fxc.h"
-#endif
-
 sampler BaseTextureSampler			: register( s0 );
 sampler NormalMapSampler			: register( s1 );
-#if ( DOPREVIEW == 1 )
-	sampler Masks1Sampler				: register( s2 );
-#else
-	sampler Masks1Sampler				: register( s10 );
-#endif
+sampler Masks1Sampler				: register( s2 );
 sampler Masks2Sampler				: register( s3 );
 sampler FresnelRangesSampler		: register( s4 );
 sampler NormalizeSampler			: register( s5 );
@@ -94,9 +70,7 @@ sampler PhongWarpSampler			: register( s7 );
 #if ( FLASHLIGHT == 1 )
 #include "common_flashlight_fxc.h"
 	sampler FlashlightSampler			: register( s8 );
-	sampler ShadowDepthSampler			: register( s11 );
-#else
-	sampler CSMDepthAtlasSampler		: register( s8 );
+	sampler ShadowDepthSampler			: register( s9 );
 #endif
 
 const float4 g_vBounceTerms							: register( c0 );
@@ -402,9 +376,6 @@ float4 main( PS_INPUT i ) : COLOR
 	#else
 		float4 vNormalSample = float4( 0.0f, 0.0f, 1.0f, 1.0f );
 	#endif
-	#if ( DOPREVIEW )
-		customizeCharacter( i.vTexCoord0.xy, vBaseTextureSample, vNormalSample, vMasks1Params );
-	#endif
 	float fAlpha = vBaseTextureSample.a;
 	float3 cBase = vBaseTextureSample.rgb;
 	float fSpecMask = 1.0f;
@@ -465,7 +436,6 @@ float4 main( PS_INPUT i ) : COLOR
 		float fAmbientReflectionMask = fFresnel * fRimMask;
 	#endif
 
-	float fCSMShadow = 1.0f;
 	float3 linearLightColor = PixelShaderDoLighting( i.vWorldPos_projZ.xyz, vWorldNormal, 
 				float3( 0.0f, 0.0f, 0.0f), false,
 				true, i.lightAtten, g_cAmbientCube, 
@@ -585,7 +555,7 @@ float4 main( PS_INPUT i ) : COLOR
 		CharacterDoSpecularLighting( i.vWorldPos_projZ.xyz, vWorldNormal, g_fPhongExponent, vEyeDir,
 										i.lightAtten, NUM_LIGHTS, g_cLightInfo,
 										( PHONGWARPTEXTURE == 1 ), PhongWarpSampler,
-										( RIMLIGHT == 1 ), g_fRimLightExponent, fCSMShadow, fWarpIndex,
+										( RIMLIGHT == 1 ), g_fRimLightExponent, 1.0f, fWarpIndex,
 										( ANISOTROPY == 1 ), fAnisotropyAmount, fAnisotropyAngle,
 										vTangent, 
 										( ( MASKS2 == 1 ) && ( fRetroReflectivityMask > 0 ) ), fRetroReflectivityMask, i.cAmbient_fRimBoost.xyz,

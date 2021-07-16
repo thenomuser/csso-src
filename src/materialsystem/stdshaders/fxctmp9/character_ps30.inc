@@ -296,48 +296,6 @@ public:
 #endif
 	}
 private:
-	int m_nDOPREVIEW;
-#ifdef _DEBUG
-	bool m_bDOPREVIEW;
-#endif
-public:
-	void SetDOPREVIEW( int i )
-	{
-		Assert( i >= 0 && i <= 1 );
-		m_nDOPREVIEW = i;
-#ifdef _DEBUG
-		m_bDOPREVIEW = true;
-#endif
-	}
-	void SetDOPREVIEW( bool i )
-	{
-		m_nDOPREVIEW = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bDOPREVIEW = true;
-#endif
-	}
-private:
-	int m_nUSEPATTERN;
-#ifdef _DEBUG
-	bool m_bUSEPATTERN;
-#endif
-public:
-	void SetUSEPATTERN( int i )
-	{
-		Assert( i >= 0 && i <= 4 );
-		m_nUSEPATTERN = i;
-#ifdef _DEBUG
-		m_bUSEPATTERN = true;
-#endif
-	}
-	void SetUSEPATTERN( bool i )
-	{
-		m_nUSEPATTERN = i ? 1 : 0;
-#ifdef _DEBUG
-		m_bUSEPATTERN = true;
-#endif
-	}
-private:
 	int m_nFLASHLIGHT;
 #ifdef _DEBUG
 	bool m_bFLASHLIGHT;
@@ -439,14 +397,6 @@ public:
 #endif // _DEBUG
 		m_nFAKERIM = 0;
 #ifdef _DEBUG
-		m_bDOPREVIEW = false;
-#endif // _DEBUG
-		m_nDOPREVIEW = 0;
-#ifdef _DEBUG
-		m_bUSEPATTERN = false;
-#endif // _DEBUG
-		m_nUSEPATTERN = 0;
-#ifdef _DEBUG
 		m_bFLASHLIGHT = false;
 #endif // _DEBUG
 		m_nFLASHLIGHT = 0;
@@ -460,13 +410,13 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bMASKS1 && m_bMASKS2 && m_bFRESNELRANGESTEXTURE && m_bPHONGWARPTEXTURE && m_bENVMAP && m_bAMBIENTREFLECTION && m_bUSEBOUNCECOLOR && m_bANISOTROPY && m_bBASEALPHAPHONGMASK && m_bBASEALPHAENVMASK && m_bBUMPALPHAENVMASK && m_bSHADOWSATURATION && m_bBASEALPHASELFILLUMMASK && m_bFAKERIM && m_bDOPREVIEW && m_bUSEPATTERN && m_bFLASHLIGHT && m_bFLASHLIGHTDEPTHFILTERMODE;
+		bool bAllStaticVarsDefined = m_bMASKS1 && m_bMASKS2 && m_bFRESNELRANGESTEXTURE && m_bPHONGWARPTEXTURE && m_bENVMAP && m_bAMBIENTREFLECTION && m_bUSEBOUNCECOLOR && m_bANISOTROPY && m_bBASEALPHAPHONGMASK && m_bBASEALPHAENVMASK && m_bBUMPALPHAENVMASK && m_bSHADOWSATURATION && m_bBASEALPHASELFILLUMMASK && m_bFAKERIM && m_bFLASHLIGHT && m_bFLASHLIGHTDEPTHFILTERMODE;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 20 * m_nMASKS1 ) + ( 40 * m_nMASKS2 ) + ( 80 * m_nFRESNELRANGESTEXTURE ) + ( 160 * m_nPHONGWARPTEXTURE ) + ( 320 * m_nENVMAP ) + ( 640 * m_nAMBIENTREFLECTION ) + ( 1280 * m_nUSEBOUNCECOLOR ) + ( 2560 * m_nANISOTROPY ) + ( 5120 * m_nBASEALPHAPHONGMASK ) + ( 10240 * m_nBASEALPHAENVMASK ) + ( 20480 * m_nBUMPALPHAENVMASK ) + ( 40960 * m_nSHADOWSATURATION ) + ( 81920 * m_nBASEALPHASELFILLUMMASK ) + ( 163840 * m_nFAKERIM ) + ( 327680 * m_nDOPREVIEW ) + ( 655360 * m_nUSEPATTERN ) + ( 3276800 * m_nFLASHLIGHT ) + ( 6553600 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
+		return ( 20 * m_nMASKS1 ) + ( 40 * m_nMASKS2 ) + ( 80 * m_nFRESNELRANGESTEXTURE ) + ( 160 * m_nPHONGWARPTEXTURE ) + ( 320 * m_nENVMAP ) + ( 640 * m_nAMBIENTREFLECTION ) + ( 1280 * m_nUSEBOUNCECOLOR ) + ( 2560 * m_nANISOTROPY ) + ( 5120 * m_nBASEALPHAPHONGMASK ) + ( 10240 * m_nBASEALPHAENVMASK ) + ( 20480 * m_nBUMPALPHAENVMASK ) + ( 40960 * m_nSHADOWSATURATION ) + ( 81920 * m_nBASEALPHASELFILLUMMASK ) + ( 163840 * m_nFAKERIM ) + ( 327680 * m_nFLASHLIGHT ) + ( 655360 * m_nFLASHLIGHTDEPTHFILTERMODE ) + 0;
 	}
 };
-#define shaderStaticTest_character_ps30 psh_forgot_to_set_static_MASKS1 + psh_forgot_to_set_static_MASKS2 + psh_forgot_to_set_static_FRESNELRANGESTEXTURE + psh_forgot_to_set_static_PHONGWARPTEXTURE + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_AMBIENTREFLECTION + psh_forgot_to_set_static_USEBOUNCECOLOR + psh_forgot_to_set_static_ANISOTROPY + psh_forgot_to_set_static_BASEALPHAPHONGMASK + psh_forgot_to_set_static_BASEALPHAENVMASK + psh_forgot_to_set_static_BUMPALPHAENVMASK + psh_forgot_to_set_static_SHADOWSATURATION + psh_forgot_to_set_static_BASEALPHASELFILLUMMASK + psh_forgot_to_set_static_FAKERIM + psh_forgot_to_set_static_DOPREVIEW + psh_forgot_to_set_static_USEPATTERN + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + 0
+#define shaderStaticTest_character_ps30 psh_forgot_to_set_static_MASKS1 + psh_forgot_to_set_static_MASKS2 + psh_forgot_to_set_static_FRESNELRANGESTEXTURE + psh_forgot_to_set_static_PHONGWARPTEXTURE + psh_forgot_to_set_static_ENVMAP + psh_forgot_to_set_static_AMBIENTREFLECTION + psh_forgot_to_set_static_USEBOUNCECOLOR + psh_forgot_to_set_static_ANISOTROPY + psh_forgot_to_set_static_BASEALPHAPHONGMASK + psh_forgot_to_set_static_BASEALPHAENVMASK + psh_forgot_to_set_static_BUMPALPHAENVMASK + psh_forgot_to_set_static_SHADOWSATURATION + psh_forgot_to_set_static_BASEALPHASELFILLUMMASK + psh_forgot_to_set_static_FAKERIM + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + 0
 class character_ps30_Dynamic_Index
 {
 private:
