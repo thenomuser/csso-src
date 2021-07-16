@@ -145,6 +145,7 @@ void CRestartGameIssue::ListIssueDetails( CBasePlayer *pForWhom )
 //-----------------------------------------------------------------------------
 ConVar sv_vote_issue_kick_allowed( "sv_vote_issue_kick_allowed", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Can people hold votes to kick players from the server?" );
 ConVar sv_vote_kick_ban_duration( "sv_vote_kick_ban_duration", "15", FCVAR_REPLICATED | FCVAR_NOTIFY, "How long should a kick vote ban someone from the server? (in minutes)" );
+ConVar sv_vote_kick_allow_other_team( "sv_vote_kick_allow_other_team", "0", FCVAR_REPLICATED | FCVAR_NOTIFY, "Can people kick players from other teams?" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -222,7 +223,7 @@ bool CKickIssue::CanCallVote( int iEntIndex, const char *pszDetails, vote_create
 			int voterTeam = pPlayer->GetTeamNumber();
 			int nSubjectTeam = pSubject->GetTeamNumber();
 
-			if ( CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
+			if ( !sv_vote_kick_allow_other_team.GetBool() || CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() )
 				bCanKickVote = (voterTeam == TEAM_TERRORIST || voterTeam == TEAM_CT) && (voterTeam == nSubjectTeam || nSubjectTeam == TEAM_SPECTATOR);
 			else
 				bCanKickVote = true;
