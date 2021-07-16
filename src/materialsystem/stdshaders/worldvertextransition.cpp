@@ -50,6 +50,7 @@ BEGIN_VS_SHADER( WorldVertexTransition_DX9, "Help for WorldVertexTransition" )
 		SHADER_PARAM( BUMPMASK, SHADER_PARAM_TYPE_TEXTURE, "models/shadertest/shader1_normal", "bump map" )
 		SHADER_PARAM( BASETEXTURE2, SHADER_PARAM_TYPE_TEXTURE, "shadertest/detail", "detail texture" )
 		SHADER_PARAM( FRAME2, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for $basetexture2" )
+		SHADER_PARAM( BASETEXTURETRANSFORM2, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "$basetexture2 texcoord transform" )
 		SHADER_PARAM( BASETEXTURENOENVMAP, SHADER_PARAM_TYPE_BOOL, "0", "" )
 		SHADER_PARAM( BASETEXTURE2NOENVMAP, SHADER_PARAM_TYPE_BOOL, "0", "" )
 		SHADER_PARAM( DETAIL_ALPHA_MASK_BASE_TEXTURE, SHADER_PARAM_TYPE_BOOL, "0", 
@@ -70,7 +71,7 @@ BEGIN_VS_SHADER( WorldVertexTransition_DX9, "Help for WorldVertexTransition" )
 		info.m_nBaseTextureTransformVar = BASETEXTURETRANSFORM;
 		info.m_nBaseTexture2Var = BASETEXTURE2;
 		info.m_nBaseTexture2FrameVar = FRAME2;
-		info.m_nBaseTexture2TransformVar = BASETEXTURETRANSFORM; // FIXME!!!!
+		info.m_nBaseTexture2TransformVar = BASETEXTURETRANSFORM2;
 	}
 
 	void SetupVars( LightmappedGeneric_DX9_Vars_t& info )
