@@ -1493,6 +1493,14 @@ bool CBaseCombatWeapon::Deploy( )
 
 Activity CBaseCombatWeapon::GetDrawActivity( void )
 {
+	CBaseCombatCharacter *pOwner = GetOwner();
+	if (pOwner)
+	{
+		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 && LookupActivity( "ACT_VM_EMPTY_DRAW" ) > 0 )
+		{
+			return ACT_VM_EMPTY_DRAW;
+		}
+	}
 	return ACT_VM_DRAW;
 }
 
@@ -2417,7 +2425,7 @@ bool CBaseCombatWeapon::SetIdealActivity( Activity ideal )
 	int nextSequence = FindTransitionSequence( GetSequence(), m_nIdealSequence, NULL );
 
 	// Don't use transitions when we're deploying
-	if ( ideal != ACT_VM_DRAW && IsWeaponVisible() && nextSequence != m_nIdealSequence )
+	if ( ideal != ACT_VM_DRAW && ideal != ACT_VM_EMPTY_DRAW && IsWeaponVisible() && nextSequence != m_nIdealSequence )
 	{
 		//Set our activity to the next transitional animation
 		SetActivity( ACT_TRANSITION );

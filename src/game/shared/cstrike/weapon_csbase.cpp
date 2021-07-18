@@ -1387,6 +1387,14 @@ void CWeaponCSBase::Precache( void )
 
 Activity CWeaponCSBase::GetDeployActivity( void )
 {
+	CBaseCombatCharacter *pOwner = GetOwner();
+	if (pOwner)
+	{
+		if ( GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 && LookupActivity( "ACT_VM_EMPTY_DRAW" ) > 0 )
+		{
+			return ACT_VM_EMPTY_DRAW;
+		}
+	}
 	return ACT_VM_DRAW;
 }
 

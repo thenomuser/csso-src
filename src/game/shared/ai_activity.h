@@ -268,6 +268,8 @@ typedef enum
 	ACT_VM_ATTACH_SILENCER,
 	ACT_VM_DETACH_SILENCER,
 
+	ACT_VM_EMPTY_DRAW,			// Deploy an Empty weapon
+
 	// TF2 Scout Pack
 	ACT_VM_DRAW_SPECIAL,
 	ACT_VM_HOLSTER_SPECIAL,
