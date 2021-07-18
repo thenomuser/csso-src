@@ -257,6 +257,16 @@ public:
 
 	// Dump keyvalues recursively into a dump context
 	bool Dump( class IKeyValuesDumpContext *pDump, int nIndentLevel = 0 );
+
+	// Merge operations describing how two keyvalues can be combined
+	enum MergeKeyValuesOp_t
+	{
+		MERGE_KV_ALL,
+		MERGE_KV_UPDATE,	// update values are copied into storage, adding new keys to storage or updating existing ones
+		MERGE_KV_DELETE,	// update values specify keys that get deleted from storage
+		MERGE_KV_BORROW,	// update values only update existing keys in storage, keys in update that do not exist in storage are discarded
+	};
+	void MergeFrom( KeyValues *kvMerge, MergeKeyValuesOp_t eOp = MERGE_KV_ALL );
 		
 	// Merge in another KeyValues, keeping "our" settings
 	void RecursiveMergeKeyValues( KeyValues *baseKV );

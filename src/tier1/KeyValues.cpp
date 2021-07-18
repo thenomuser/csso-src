@@ -2983,6 +2983,107 @@ bool KeyValues::ProcessResolutionKeys( const char *pResString )
 	return true;
 }
 
+//
+// KeyValues merge operations
+//
+
+void KeyValues::MergeFrom( KeyValues *kvMerge, MergeKeyValuesOp_t eOp /* = MERGE_KV_ALL */ )
+{
+	if ( !this || !kvMerge )
+		return;
+
+	switch ( eOp )
+	{
+	case MERGE_KV_ALL:
+		MergeFrom( kvMerge->FindKey( "update" ), MERGE_KV_UPDATE );
+		MergeFrom( kvMerge->FindKey( "delete" ), MERGE_KV_DELETE );
+		MergeFrom( kvMerge->FindKey( "borrow" ), MERGE_KV_BORROW );
+		return;
+
+	case MERGE_KV_UPDATE:
+		{
+			for ( KeyValues *sub = kvMerge->GetFirstTrueSubKey(); sub; sub = sub->GetNextTrueSubKey() )
+			{
+				char const *szName = sub->GetName();
+
+				KeyValues *subStorage = this->FindKey( szName, false );
+				if ( !subStorage )
+				{
+					AddSubKey( sub->MakeCopy() );
+				}
+				else
+				{
+					subStorage->MergeFrom( sub, eOp );
+				}
+			}
+			for ( KeyValues *val = kvMerge->GetFirstValue(); val; val = val->GetNextValue() )
+			{
+				char const *szName = val->GetName();
+
+				if ( KeyValues *valStorage = this->FindKey( szName, false ) )
+				{
+					this->RemoveSubKey( valStorage );
+					delete valStorage;
+				}
+				this->AddSubKey( val->MakeCopy() );
+			}
+		}
+		return;
+
+	case MERGE_KV_BORROW:
+		{
+			for ( KeyValues *sub = kvMerge->GetFirstTrueSubKey(); sub; sub = sub->GetNextTrueSubKey() )
+			{
+				char const *szName = sub->GetName();
+
+				KeyValues *subStorage = this->FindKey( szName, false );
+				if ( !subStorage )
+					continue;
+
+				subStorage->MergeFrom( sub, eOp );
+			}
+			for ( KeyValues *val = kvMerge->GetFirstValue(); val; val = val->GetNextValue() )
+			{
+				char const *szName = val->GetName();
+
+				if ( KeyValues *valStorage = this->FindKey( szName, false ) )
+				{
+					this->RemoveSubKey( valStorage );
+					delete valStorage;
+				}
+				else
+					continue;
+
+				this->AddSubKey( val->MakeCopy() );
+			}
+		}
+		return;
+
+	case MERGE_KV_DELETE:
+		{
+			for ( KeyValues *sub = kvMerge->GetFirstTrueSubKey(); sub; sub = sub->GetNextTrueSubKey() )
+			{
+				char const *szName = sub->GetName();
+				if ( KeyValues *subStorage = this->FindKey( szName, false ) )
+				{
+					subStorage->MergeFrom( sub, eOp );
+				}
+			}
+			for ( KeyValues *val = kvMerge->GetFirstValue(); val; val = val->GetNextValue() )
+			{
+				char const *szName = val->GetName();
+
+				if ( KeyValues *valStorage = this->FindKey( szName, false ) )
+				{
+					this->RemoveSubKey( valStorage );
+					delete valStorage;
+				}
+			}
+		}
+		return;
+	}
+}
+
 
 
 //

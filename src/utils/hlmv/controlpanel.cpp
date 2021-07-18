@@ -22,6 +22,7 @@
 // email:          mete@swissquake.ch
 // web:            http://www.swissquake.ch/chumbalum-soft/
 //
+#include "filesystem.h"
 #include "ControlPanel.h"
 #include "ViewerSettings.h"
 #include "StudioModel.h"
@@ -47,6 +48,7 @@
 #include "tier0/icommandline.h"
 #include "valve_ipc_win32.h"
 #include "mdlviewer.h"
+#include "materialsystem/imaterialvar.h"
 
 extern char g_appTitle[];
 extern IPhysicsSurfaceProps *physprop;
@@ -55,6 +57,28 @@ extern ISoundEmitterSystemBase *g_pSoundEmitterBase;
 extern CValveIpcClientUtl g_HlmvIpcClient;
 extern bool g_bHlmvMaster;
 
+bool g_OnlyEditMaterialsThatWantToBeEdited = false;
+class CTextBuffer
+{
+public:
+	CTextBuffer( void ) {}
+	~CTextBuffer( void ) {}
+	inline int GetSize( void ) { return m_buffer.Count(); }
+	inline char *GetData( void ) { return m_buffer.Base(); }
+	void WriteText( const char *pText )
+	{
+		int len = strlen( pText );
+		CopyData( pText, len );
+	}
+	void Terminate( void ) { CopyData( "\0", 1 ); }
+	void CopyData( const char *pData, int len )
+	{
+		int offset = m_buffer.AddMultipleToTail( len );
+		memcpy( m_buffer.Base() + offset, pData, len );
+	}
+private:
+	CUtlVector<char> m_buffer;
+};
 
 //-----------------------------------------------------------------------------
 // Reads all of the physics materials from surface property file
@@ -1253,11 +1277,96 @@ ControlPanel::ControlPanel( mxWindow *parent )
 	SetupAttachmentsWindow( tab );
 	SetupIKRuleWindow( tab );
 	SetupEventWindow( tab );
+	SetupMatVarWindow( tab );
 
 	g_ControlPanel = this;
 
 	iSelectionToSequence = NULL;
 	iSequenceToSelection = NULL;
+}
+
+void ControlPanel::SetupMatVarWindow( mxTab* pTab )
+{
+	mxWindow *wMatVars = new mxWindow (this, 0, 0, 0, 0);
+	tab->add (wMatVars, "Materials");
+
+	new mxLabel( wMatVars, 2, 2, 100, 18, "Materials:" );
+	cMaterialList = new mxListBox( wMatVars, 0, 20, 200, 170, IDC_MATERIALVARMATS );
+	cMaterialList->add ("None");
+	cMaterialList->select (1);
+	mxToolTip::add (cMaterialList, "Materials (VMT files) this model has loaded");
+
+	new mxLabel( wMatVars, 202, 2, 100, 18, "Material Parameters:" );
+	cMaterialParamList = new mxListBox( wMatVars, 200, 20, 200, 170, IDC_MATERIALVARPARAMS );
+	cMaterialParamList->add ("None");
+	cMaterialParamList->select (1);
+	mxToolTip::add (cMaterialParamList, "Material parameters of this material");
+
+	cMaterialParamListOnlyTextures = new mxCheckBox( wMatVars, 310, 0, 95, 20, "Only Textures", IDC_MATERIALVARMATS );
+
+	new mxLabel (wMatVars, 405, 2, 100, 18, "Modify Parameter:");
+	
+	leMaterialParamText = new mxLineEdit2(wMatVars, 405, 25, 510, 24, "", IDC_MATVAREDIT);
+	leMaterialParamText->setVisible(false);
+
+	lblMatrixRotation = new mxLabel (wMatVars, 405, 55, 70, 18, "Rotation:");
+	slMaterialParamMatrixSliderRotation = new mxSlider(wMatVars, 465, 55, 450, 20, IDC_MATVARSLIDERMATRIX);
+	slMaterialParamMatrixSliderRotation->setRange( -180.0, 180.0 );
+	slMaterialParamMatrixSliderRotation->setSteps( 1, 1 );
+	slMaterialParamMatrixSliderRotation->setValue( 0.0 );
+
+	lblMatrixScaleX = new mxLabel (wMatVars, 405, 75, 70, 18, "Scale X:");
+	slMaterialParamMatrixSliderScaleX = new mxSlider(wMatVars, 465, 75, 450, 20, IDC_MATVARSLIDERMATRIX);
+	slMaterialParamMatrixSliderScaleX->setRange( -5.0, 5.0 );
+	slMaterialParamMatrixSliderScaleX->setSteps( 1, 1 );
+	slMaterialParamMatrixSliderScaleX->setValue( 1.0 );
+
+	lblMatrixScaleY = new mxLabel (wMatVars, 405, 95, 70, 18, "Scale Y:");
+	slMaterialParamMatrixSliderScaleY = new mxSlider(wMatVars, 465, 95, 450, 20, IDC_MATVARSLIDERMATRIX);
+	slMaterialParamMatrixSliderScaleY->setRange( -5.0, 5.0 );
+	slMaterialParamMatrixSliderScaleY->setSteps( 1, 1 );
+	slMaterialParamMatrixSliderScaleY->setValue( 1.0 );
+
+	lblMatrixTranslateX = new mxLabel (wMatVars, 405, 115, 70, 18, "Translate X:");
+	slMaterialParamMatrixSliderTranslateX = new mxSlider(wMatVars, 465, 115, 450, 20, IDC_MATVARSLIDERMATRIX);
+	slMaterialParamMatrixSliderTranslateX->setRange( -2.0, 2.0 );
+	slMaterialParamMatrixSliderTranslateX->setSteps( 1, 1 );
+	slMaterialParamMatrixSliderTranslateX->setValue( 0.0 );
+
+	lblMatrixTranslateY = new mxLabel (wMatVars, 405, 135, 70, 18, "Translate Y:");
+	slMaterialParamMatrixSliderTranslateY = new mxSlider(wMatVars, 465, 135, 450, 20, IDC_MATVARSLIDERMATRIX);
+	slMaterialParamMatrixSliderTranslateY->setRange( -2.0, 2.0 );
+	slMaterialParamMatrixSliderTranslateY->setSteps( 1, 1 );
+	slMaterialParamMatrixSliderTranslateY->setValue( 0.0 );
+	
+	slMaterialParamMatrixSliderRotation->setVisible(false);
+	slMaterialParamMatrixSliderScaleX->setVisible(false);
+	slMaterialParamMatrixSliderScaleY->setVisible(false);
+	slMaterialParamMatrixSliderTranslateX->setVisible(false);
+	slMaterialParamMatrixSliderTranslateY->setVisible(false);
+	lblMatrixRotation->setVisible(false);
+	lblMatrixScaleX->setVisible(false);
+	lblMatrixScaleY->setVisible(false);
+	lblMatrixTranslateX->setVisible(false);
+	lblMatrixTranslateY->setVisible(false);
+
+	bMaterialParamColor = new mxButton( wMatVars, 405, 55, 100, 30, "Color picker", IDC_MATVARCOLORPICKER );
+	bMaterialParamColor->setVisible(false);
+
+	slMaterialParamFloat = new mxSlider(wMatVars, 405, 55, 510, 20, IDC_MATVARSLIDERFLOAT);
+	slMaterialParamFloat->setRange( -1.0, 1.0 );
+	slMaterialParamFloat->setValue( 0.0 );
+	slMaterialParamFloat->setVisible(false);
+
+	cbMaterialParamMultiEdit = new mxCheckBox (wMatVars, 505, 0, 150, 20, "Affect all loaded materials", NULL);
+
+	bMaterialParamLoad = new mxButton( wMatVars, 405, 159, 100, 20, "Replace VMT", IDC_MATVARLOAD );
+	mxToolTip::add (bMaterialParamLoad, "Temporarily replace this material with a custom set of VMT parameters.");
+	bMaterialParamLoad->setVisible(false);
+
+	bMaterialParamCopyToClipboard = new mxButton( wMatVars, 510, 159, 100, 20, "Copy to clipboard", IDC_MATVARCOPYTOCLIPBOARD );
+	mxToolTip::add (bMaterialParamCopyToClipboard, "");
+	bMaterialParamCopyToClipboard->setVisible(false);
 }
 
 
@@ -2003,6 +2112,468 @@ ControlPanel::handleEvent (mxEvent *event)
 			break;
 		}
 
+		case IDC_MATERIALVARMATS:
+		{
+			//when a material is selected, populate the material param list with all the parameters of this material
+			cMaterialParamList->removeAll();
+			
+			//hide slider controls
+			slMaterialParamMatrixSliderRotation->setVisible(false);
+			slMaterialParamMatrixSliderScaleX->setVisible(false);
+			slMaterialParamMatrixSliderScaleY->setVisible(false);
+			slMaterialParamMatrixSliderTranslateX->setVisible(false);
+			slMaterialParamMatrixSliderTranslateY->setVisible(false);
+			lblMatrixRotation->setVisible(false);
+			lblMatrixScaleX->setVisible(false);
+			lblMatrixScaleY->setVisible(false);
+			lblMatrixTranslateX->setVisible(false);
+			lblMatrixTranslateY->setVisible(false);
+			slMaterialParamFloat->setVisible(false);
+			leMaterialParamText->setVisible(false);
+			bMaterialParamColor->setVisible(false);
+			bMaterialParamLoad->setVisible(false);
+			bMaterialParamCopyToClipboard->setVisible(false);
+
+			studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+			if ( pStudioR )
+			{
+				IMaterial *pMaterials[128];
+				g_pStudioRender->GetMaterialList( pStudioR, ARRAYSIZE( pMaterials ), &pMaterials[0] );
+
+				IMaterial *pSelectedMaterial = pMaterials[ cMaterialList->getSelectedIndex() ];
+
+				if ( g_OnlyEditMaterialsThatWantToBeEdited )
+				{
+					bool bLocalHideOthersInHLMV = false;
+					pSelectedMaterial->FindVar("$hlmvallowedit", &bLocalHideOthersInHLMV, false);
+
+					if ( !bLocalHideOthersInHLMV )
+						break;
+				}
+
+				if ( !pSelectedMaterial->IsErrorMaterial() )
+				{
+					bMaterialParamLoad->setVisible( true );
+					bMaterialParamCopyToClipboard->setVisible(true);
+
+					int nShaderParams = pSelectedMaterial->ShaderParamCount();
+					IMaterialVar **pMatVars = pSelectedMaterial->GetShaderParams();
+
+					for (int n=0; n<nShaderParams; n++ )
+					{
+						IMaterialVar *pThisVar = pMatVars[n];
+						if (pThisVar->IsDefined() )
+						{
+							if ( cMaterialParamListOnlyTextures->isChecked() && !pThisVar->IsTexture() )
+								continue;
+
+							cMaterialParamList->add( pThisVar->GetName() );
+						}
+					}
+				}
+			}
+			break;
+		}
+
+		case IDC_MATERIALVARPARAMS:
+		{
+			// when a material parameter is selected, populate the lineedit control with the string value of that parameter
+			leMaterialParamText->clear();
+
+			studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+			if ( pStudioR )
+			{
+				IMaterial *pMaterials[128];
+				//int nMaterials = 
+				g_pStudioRender->GetMaterialList( pStudioR, ARRAYSIZE( pMaterials ), &pMaterials[0] );
+
+				bool bHideInHLMV = false;
+				if ( g_OnlyEditMaterialsThatWantToBeEdited )
+				{
+					bool bLocalHideOthersInHLMV = false;
+					pMaterials[cMaterialList->getSelectedIndex()]->FindVar("$hlmvallowedit", &bLocalHideOthersInHLMV, false);
+					if ( !bLocalHideOthersInHLMV )
+						bHideInHLMV = true;
+				}
+
+				leMaterialParamText->setVisible(!bHideInHLMV);
+				bMaterialParamColor->setVisible(!bHideInHLMV);
+				bMaterialParamLoad->setVisible(!bHideInHLMV);
+
+				if ( !pMaterials[ cMaterialList->getSelectedIndex() ]->IsErrorMaterial() )
+				{
+					bool bFoundParam = false;
+					IMaterialVar *pThisVar = pMaterials[cMaterialList->getSelectedIndex()]->FindVar( cMaterialParamList->getItemText(cMaterialParamList->getSelectedIndex()), &bFoundParam, false );
+					if (bFoundParam)
+					{
+
+						//hide type-specific controls
+						bMaterialParamColor->setVisible(false);
+						slMaterialParamMatrixSliderRotation->setVisible(false);
+						slMaterialParamMatrixSliderScaleX->setVisible(false);
+						slMaterialParamMatrixSliderScaleY->setVisible(false);
+						slMaterialParamMatrixSliderTranslateX->setVisible(false);
+						slMaterialParamMatrixSliderTranslateY->setVisible(false);
+						lblMatrixRotation->setVisible(false);
+						lblMatrixScaleX->setVisible(false);
+						lblMatrixScaleY->setVisible(false);
+						lblMatrixTranslateX->setVisible(false);
+						lblMatrixTranslateY->setVisible(false);
+						slMaterialParamFloat->setVisible(false);
+
+						switch ( pThisVar->GetType() )
+						{
+
+							case MATERIAL_VAR_TYPE_FLOAT:
+								{
+									slMaterialParamFloat->setVisible(true);
+									if ( pThisVar->GetFloatValue() > slMaterialParamFloat->getMaxValue() || pThisVar->GetFloatValue() < slMaterialParamFloat->getMinValue() )
+									{
+										slMaterialParamFloat->setRange( -pThisVar->GetFloatValue() * 2.0, pThisVar->GetFloatValue() * 2.0 );
+									}
+									else
+									{
+										slMaterialParamFloat->setRange( -1.0, 1.0 );
+									}
+									slMaterialParamFloat->setValue( pThisVar->GetFloatValue() );
+									leMaterialParamText->setText( pThisVar->GetStringValue() );
+								}
+								break;
+
+							case MATERIAL_VAR_TYPE_VECTOR:
+								{
+									bMaterialParamColor->setVisible(true);
+									leMaterialParamText->setText( pThisVar->GetStringValue() );
+								}
+								break;
+
+							case MATERIAL_VAR_TYPE_MATRIX:
+								{
+
+									slMaterialParamMatrixSliderRotation->setVisible(true);
+									slMaterialParamMatrixSliderScaleX->setVisible(true);
+									slMaterialParamMatrixSliderScaleY->setVisible(true);
+									slMaterialParamMatrixSliderTranslateX->setVisible(true);
+									slMaterialParamMatrixSliderTranslateY->setVisible(true);
+									lblMatrixRotation->setVisible(true);
+									lblMatrixScaleX->setVisible(true);
+									lblMatrixScaleY->setVisible(true);
+									lblMatrixTranslateX->setVisible(true);
+									lblMatrixTranslateY->setVisible(true);
+
+									VMatrix mat = pThisVar->GetMatrixValue();
+									Vector tempScale = mat.GetScale();
+									Vector tempTrans = mat.GetTranslation();
+									QAngle tempAngle;
+									MatrixToAngles( mat, tempAngle );
+
+									slMaterialParamMatrixSliderScaleX->setValue( tempScale.x );
+									slMaterialParamMatrixSliderScaleY->setValue( tempScale.y );
+									slMaterialParamMatrixSliderTranslateX->setValue( tempTrans.x );
+									slMaterialParamMatrixSliderTranslateY->setValue( tempTrans.y );
+									slMaterialParamMatrixSliderRotation->setValue( tempAngle.y );
+
+									char temp[255];
+									V_snprintf( temp, sizeof(temp), " scale %f %f translate %f %f rotate %f", tempScale.x, tempScale.y, tempTrans.x, tempTrans.y, tempAngle.y );
+
+									leMaterialParamText->setText( temp );
+								}
+								break;
+
+							default:
+								{
+									leMaterialParamText->setText( pThisVar->GetStringValue() );
+								}
+								break;
+						}
+
+					}
+				}
+			}
+			break;
+		}
+
+		case IDC_MATVAREDIT:
+		{
+			char str[ 255 ];
+			leMaterialParamText->getText( str, sizeof( str ) );
+
+			if ( V_strcmp( str, "" ) )
+			{
+				studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+				if ( pStudioR )
+				{
+					IMaterial *pMaterials[128];
+					g_pStudioRender->GetMaterialList( pStudioR, ARRAYSIZE( pMaterials ), &pMaterials[0] );
+
+					if ( !pMaterials[ cMaterialList->getSelectedIndex() ]->IsErrorMaterial() )
+					{
+						bool bFoundParam = false;
+						IMaterialVar *pThisVar = pMaterials[cMaterialList->getSelectedIndex()]->FindVar( cMaterialParamList->getItemText(cMaterialParamList->getSelectedIndex()), &bFoundParam, false );
+						if (bFoundParam)
+						{
+							pThisVar->SetValueAutodetectType( str );
+							pMaterials[cMaterialList->getSelectedIndex()]->RefreshPreservingMaterialVars();
+						}
+
+						//if affect all loaded materials is checked, loop through other materials and attempt the same change
+						if ( cbMaterialParamMultiEdit->isChecked() )
+						{
+							for ( int i=0; i<cMaterialList->getItemCount(); i++ )
+							{
+								if ( i == cMaterialList->getSelectedIndex() )
+									continue;
+
+								if ( g_OnlyEditMaterialsThatWantToBeEdited )
+								{
+									bool bLocalHideOthersInHLMV = false;
+									pMaterials[i]->FindVar("$hlmvallowedit", &bLocalHideOthersInHLMV, false);
+									if ( !bLocalHideOthersInHLMV )
+										continue;
+								}
+
+								IMaterialVar *pThisVar = pMaterials[i]->FindVar( cMaterialParamList->getItemText(cMaterialParamList->getSelectedIndex()), &bFoundParam, false );
+								if (bFoundParam)
+								{
+									pThisVar->SetValueAutodetectType( str );
+									pMaterials[i]->RefreshPreservingMaterialVars();
+								}
+
+							}
+						}
+
+					}
+
+				}
+			}
+
+			break;
+		}
+
+		case IDC_MATVARCOLORPICKER:
+		{
+			
+			char str[255];
+			char str2[255];
+			leMaterialParamText->getText(str,sizeof(str));
+
+			V_StrSubst( str, "[ ", "", str2, sizeof(str2) );
+			V_StrSubst( str2, " ]", "", str, sizeof(str) );
+
+			CUtlVector< char * > vectorComponents;
+			V_SplitString(str, " ", vectorComponents );
+
+			int r = atoi(vectorComponents[0]);
+			int g = atoi(vectorComponents[1]);
+			int b = atoi(vectorComponents[2]);
+
+			if (mxChooseColor (this, &r, &g, &b))
+			{
+				char result[255];
+				V_snprintf(result, sizeof(result), "[ %i %i %i ]", r, g, b );
+				leMaterialParamText->setText(result);
+			}
+
+			break;
+		}
+
+
+		case IDC_MATVARCOPYTOCLIPBOARD:
+		{
+			int nMatSelection = cMaterialList->getSelectedIndex();
+			if ( nMatSelection < 0 || !strcmp( cMaterialList->getItemText(nMatSelection), "None" ) )
+			{
+				mxMessageBox (this, "No material selected.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+			studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+			if ( !pStudioR )
+			{
+				mxMessageBox (this, "No loaded model.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+
+			IMaterial *pMaterials[128];
+			g_pStudioRender->GetMaterialList(pStudioR, ARRAYSIZE(pMaterials), &pMaterials[0]);
+			IMaterial *pSelectedMaterial = pMaterials[nMatSelection];
+
+			if (pSelectedMaterial->IsErrorMaterial())
+			{
+				mxMessageBox(this, "Selected material is ErrorMaterial.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+
+			// write material property KVs to clipboard
+
+			CTextBuffer out;
+			out.WriteText( pSelectedMaterial->GetShaderName() );
+			out.WriteText( "\r\n{\r\n" );
+			IMaterialVar **pMatVars = pSelectedMaterial->GetShaderParams();
+			for ( int n = 0; n < pSelectedMaterial->ShaderParamCount(); n++ )
+			{
+				IMaterialVar *pThisVar = pMatVars[n];
+				if ( pThisVar->IsDefined() )
+				{
+					char tmp[512];
+					sprintf( tmp, "\t\"%s\" \"%s\"\r\n", pThisVar->GetName(), pThisVar->GetStringValue() );
+					out.WriteText( tmp );
+				}
+			}
+			out.WriteText( "\r\n}\r\n" );
+			
+			if ( out.GetSize() )
+			{
+				char *pOutput = new char[out.GetSize()];
+				memcpy( pOutput, out.GetData(), out.GetSize() );
+				Sys_CopyStringToClipboard( pOutput );
+
+				mxMessageBox (this, "Material properties copied to clipboard.", g_appTitle, MX_MB_OK | MX_MB_INFORMATION);
+			}
+
+			break;
+		}
+
+
+		case IDC_MATVARLOAD:
+		{
+			int nMatSelection = cMaterialList->getSelectedIndex();
+			if ( nMatSelection < 0 || !strcmp( cMaterialList->getItemText(nMatSelection), "None" ) )
+			{
+				mxMessageBox (this, "Can't replace VMT parameters: No material selected.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+			studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+			if ( !pStudioR )
+			{
+				mxMessageBox (this, "Can't replace VMT parameters: No loaded model.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+
+			IMaterial *pMaterials[128];
+			g_pStudioRender->GetMaterialList(pStudioR, ARRAYSIZE(pMaterials), &pMaterials[0]);
+			IMaterial *pSelectedMaterial = pMaterials[nMatSelection];
+
+			if (pSelectedMaterial->IsErrorMaterial())
+			{
+				mxMessageBox(this, "Can't replace VMT parameters: Selected material is ErrorMaterial.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+				break;
+			}
+
+			const char *pFilePath = mxGetOpenFileName (this, 0, "*.vmt");
+			if (pFilePath)
+			{
+				KeyValues *kvLoadedFromFile = new KeyValues( pSelectedMaterial->GetShaderName() );
+
+				if ( kvLoadedFromFile->LoadFromFile( g_pFileSystem, pFilePath ) )
+				{
+					cMaterialList->deselect(nMatSelection);
+					cMaterialParamList->removeAll();
+					
+					//hide slider controls
+					slMaterialParamMatrixSliderRotation->setVisible(false);
+					slMaterialParamMatrixSliderScaleX->setVisible(false);
+					slMaterialParamMatrixSliderScaleY->setVisible(false);
+					slMaterialParamMatrixSliderTranslateX->setVisible(false);
+					slMaterialParamMatrixSliderTranslateY->setVisible(false);
+					lblMatrixRotation->setVisible(false);
+					lblMatrixScaleX->setVisible(false);
+					lblMatrixScaleY->setVisible(false);
+					lblMatrixTranslateX->setVisible(false);
+					lblMatrixTranslateY->setVisible(false);
+					slMaterialParamFloat->setVisible(false);
+					leMaterialParamText->setVisible(false);
+					bMaterialParamColor->setVisible(false);
+					bMaterialParamLoad->setVisible(false);
+					
+					KeyValues *kv = new KeyValues(pSelectedMaterial->GetShaderName());
+					IMaterialVar **pMatVars = pSelectedMaterial->GetShaderParams();
+					for (int n = 0; n < pSelectedMaterial->ShaderParamCount(); n++)
+					{
+						IMaterialVar *pThisVar = pMatVars[n];
+						if (pThisVar->IsDefined())
+							kv->SetString(pThisVar->GetName(), pThisVar->GetStringValue());
+					}
+					
+					kv->MergeFrom( kvLoadedFromFile, KeyValues::MERGE_KV_UPDATE );
+					
+					pSelectedMaterial->SetShaderAndParams( kv );
+					pSelectedMaterial->Refresh();
+
+					if (cbMaterialParamMultiEdit->isChecked())
+					{
+						for (int i = 0; i < cMaterialList->getItemCount(); i++)
+						{
+							if (i == cMaterialList->getSelectedIndex())
+								continue;
+
+							if ( g_OnlyEditMaterialsThatWantToBeEdited )
+							{
+								bool bLocalHideOthersInHLMV = false;
+								pMaterials[i]->FindVar("$hlmvallowedit", &bLocalHideOthersInHLMV, false);
+								if ( !bLocalHideOthersInHLMV )
+									continue;
+							}
+
+							pSelectedMaterial = pMaterials[i];
+
+							KeyValues *kv = new KeyValues(pSelectedMaterial->GetShaderName());
+							IMaterialVar **pMatVars = pSelectedMaterial->GetShaderParams();
+							for (int n = 0; n < pSelectedMaterial->ShaderParamCount(); n++)
+							{
+								IMaterialVar *pThisVar = pMatVars[n];
+								if (pThisVar->IsDefined())
+									kv->SetString(pThisVar->GetName(), pThisVar->GetStringValue());
+							}
+
+							kv->MergeFrom(kvLoadedFromFile, KeyValues::MERGE_KV_UPDATE);
+
+							pSelectedMaterial->SetShaderAndParams(kv);
+							pSelectedMaterial->Refresh();
+
+							if ( kv )
+								kv->deleteThis();
+
+						}
+					}
+
+					if ( kv )
+						kv->deleteThis();
+
+					if ( kvLoadedFromFile )
+						kvLoadedFromFile->deleteThis();
+					
+				}
+				else
+				{
+					mxMessageBox(this, "Failed to load vmt file.", g_appTitle, MX_MB_OK | MX_MB_ERROR);
+					break;
+				}
+
+			}
+
+		}
+
+		case IDC_MATVARSLIDERMATRIX:
+		{
+			char temp[255];
+			V_snprintf( temp, sizeof(temp), " scale %f %f translate %f %f rotate %f", 
+				slMaterialParamMatrixSliderScaleX->getValue(), slMaterialParamMatrixSliderScaleY->getValue(),
+				slMaterialParamMatrixSliderTranslateX->getValue(), slMaterialParamMatrixSliderTranslateY->getValue(),
+				slMaterialParamMatrixSliderRotation->getValue() );
+			leMaterialParamText->setText(temp);
+
+			break;
+		}
+
+		case IDC_MATVARSLIDERFLOAT:
+		{
+			char temp[255];
+			V_snprintf( temp, sizeof(temp), "%f", slMaterialParamFloat->getValue() );
+			leMaterialParamText->setText(temp);
+
+			break;
+		}
+
 		case IDC_LODCHOICE:
 		{
 			int index = cLODChoice->getSelectedIndex();
@@ -2251,6 +2822,28 @@ ControlPanel::handleEvent (mxEvent *event)
 			{
 				g_pStudioModel->SetBodygroup( cBodypart->getSelectedIndex() );
 				setBodypart (index);
+			}
+		}
+		break;
+
+		case IDC_EXPLORE_TO_VMT:
+		{
+			int index = cMessageList->getSelectedIndex();
+			if (index >= 0)
+			{
+				char szAbsPath[260];
+				V_sprintf_safe( szAbsPath, "%s\\%s\\materials\\%s.vmt", getenv("VGAME"), getenv("VMOD"), cMessageList->getItemText( index ) );
+				
+				for (char *cp = szAbsPath; *cp; cp++)
+				{
+					if (*cp == '/')
+						*cp = '\\';
+				
+					if (*cp == '\r' ||*cp == '\n')
+						*cp = '\0';
+				}
+
+				ShellExecute( 0, 0, _T(szAbsPath), 0, 0, SW_SHOW );
 			}
 		}
 		break;
@@ -3510,6 +4103,7 @@ ControlPanel::setModelInfo()
 	if ( g_pStudioModel && !m_bVMTInfoLoaded )
 	{
 		UpdateMaterialList();
+		UpdateMaterialVars();
 	}
 
 	if( checkSum == hdr->GetRenderHdr()->checksum && boneLODCount == g_DrawModelResults.m_NumHardwareBones && numBatches == g_DrawModelResults.m_NumBatches)
@@ -3583,6 +4177,73 @@ void ControlPanel::UpdateMaterialList( )
 			cMessageList->add( c_MaterialLine );
 		}
 		m_bVMTInfoLoaded = true;
+	}
+}
+
+void ControlPanel::UpdateMaterialVars( )
+{
+	cMaterialList->removeAll();
+	cMaterialParamList->removeAll();
+	leMaterialParamText->clear();
+
+	//hide slider controls
+	slMaterialParamMatrixSliderRotation->setVisible(false);
+	slMaterialParamMatrixSliderScaleX->setVisible(false);
+	slMaterialParamMatrixSliderScaleY->setVisible(false);
+	slMaterialParamMatrixSliderTranslateX->setVisible(false);
+	slMaterialParamMatrixSliderTranslateY->setVisible(false);
+	lblMatrixRotation->setVisible(false);
+	lblMatrixScaleX->setVisible(false);
+	lblMatrixScaleY->setVisible(false);
+	lblMatrixTranslateX->setVisible(false);
+	lblMatrixTranslateY->setVisible(false);
+	slMaterialParamFloat->setVisible(false);
+
+	studiohdr_t* pStudioR = g_pStudioModel->GetStudioRenderHdr();
+	if ( pStudioR )
+	{
+		IMaterial *pMaterials[128];
+		int nMaterials = g_pStudioRender->GetMaterialList( pStudioR, ARRAYSIZE( pMaterials ), &pMaterials[0] );
+
+		//first parse all materials to see if any materials want to hide any others
+		g_OnlyEditMaterialsThatWantToBeEdited = false;
+		for (int i = 0; i < nMaterials; i++)
+		{
+			bool bLocalHideOthersInHLMV = false;
+			pMaterials[i]->FindVar("$hlmvallowedit", &bLocalHideOthersInHLMV, false);
+
+			if ( bLocalHideOthersInHLMV )
+			{
+				g_OnlyEditMaterialsThatWantToBeEdited = true;
+				break;
+			}
+		}
+
+		for ( int i = 0; i < nMaterials; i++ )
+		{
+			char c_MaterialLine[256];
+			Q_strcpy( c_MaterialLine, "" );
+
+			bool bLocalHideOthersInHLMV = false;
+			pMaterials[i]->FindVar( "$hlmvallowedit", &bLocalHideOthersInHLMV, false );
+
+			if ( pMaterials[i]->IsErrorMaterial() )
+			{
+				Q_strcpy( c_MaterialLine, "[error] could not load material" );
+			}
+			else if ( g_OnlyEditMaterialsThatWantToBeEdited && !bLocalHideOthersInHLMV )
+			{
+				Q_strcpy( c_MaterialLine, "[ " );
+				Q_strcat( c_MaterialLine, V_GetFileName( pMaterials[i]->GetName() ), sizeof( c_MaterialLine ) );
+				Q_strcat( c_MaterialLine, " ]", sizeof( c_MaterialLine ) );
+			}
+			else
+			{
+				Q_strcat( c_MaterialLine, V_GetFileName( pMaterials[i]->GetName() ), sizeof( c_MaterialLine ) );
+			}
+
+			cMaterialList->add(c_MaterialLine);
+		}
 	}
 }
 
