@@ -15,9 +15,6 @@
 
 void InitParamsCustomWeapon( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, CustomWeaponVars_t &info )
 {
-	static ConVarRef gpu_level( "gpu_level" );
-	int nGPULevel = gpu_level.GetInt();
-
 	SET_PARAM_VEC_IF_NOT_DEFINED( info.m_nCamoColor0, kDefaultCamoColor0, 3 );
 	SET_PARAM_VEC_IF_NOT_DEFINED( info.m_nCamoColor1, kDefaultCamoColor1, 3 );
 	SET_PARAM_VEC_IF_NOT_DEFINED( info.m_nCamoColor2, kDefaultCamoColor2, 3 );
@@ -32,7 +29,7 @@ void InitParamsCustomWeapon( CBaseVSShader *pShader, IMaterialVar** params, cons
 
 	SET_PARAM_FLOAT_IF_NOT_DEFINED( info.m_nPhongAlbedoFactor, kDefaultPhongAlbedoFactor );
 
-	SET_PARAM_INT_IF_NOT_DEFINED( info.m_nCheap, nGPULevel < 2 );
+	SET_PARAM_INT_IF_NOT_DEFINED( info.m_nCheap, 0 );
 
 	SET_PARAM_INT_IF_NOT_DEFINED( info.m_nPreview, 0 );
 	SET_PARAM_VEC_IF_NOT_DEFINED( info.m_nPreviewPhongFresnelRanges, kDefaultPreviewPhongFresnelRanges, 3 );
