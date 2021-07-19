@@ -428,6 +428,30 @@ FORCEINLINE void InitIntParam( int nIndex, IMaterialVar **params, int nValue )
 	}
 }
 
+FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y )
+{
+	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
+	{
+		params[nIndex]->SetVecValue( x, y );
+	}
+}
+
+FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z )
+{
+	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
+	{
+		params[nIndex]->SetVecValue( x, y, z );
+	}
+}
+
+FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z, float w )
+{
+	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
+	{
+		params[nIndex]->SetVecValue( x, y, z, w );
+	}
+}
+
 
 class ConVar;
 

@@ -82,7 +82,12 @@
  
 const float4 g_EnvmapTint_TintReplaceFactor		: register( c0 );
 const float4 g_DiffuseModulation				: register( c1 );
-const float4 g_EnvmapContrast_ShadowTweaks		: register( c2 );
+const float4 g_ShadowTweaks						: register( c2 );
+const float4 g_EnvmapParams						: register( c19 );
+#define g_EnvmapContrast g_EnvmapParams.x
+#define g_DiffuseCubemapScale g_EnvmapParams.y
+#define g_fvDiffuseCubemapMin g_EnvmapParams.z
+#define g_fvDiffuseCubemapMax g_EnvmapParams.w
 const float4 g_EnvmapSaturation_SelfIllumMask	: register( c3 );
 const float4 g_SelfIllumTint_and_BlendFactor	: register( c4 );
 
@@ -402,7 +407,7 @@ float4 main( PS_INPUT i ) : COLOR
 		float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.worldPos_projPosZ.xyz, flashlightSpacePosition,
 			i.worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
 			g_FlashlightAttenuationFactors.w, FlashlightSampler, ShadowDepthSampler,
-			RandRotSampler, nShadowSampleLevel, bDoShadows, false, i.projPos.xy / i.projPos.w, false, g_EnvmapContrast_ShadowTweaks, bUseWorldNormal );
+			RandRotSampler, nShadowSampleLevel, bDoShadows, false, i.projPos.xy / i.projPos.w, false, g_ShadowTweaks, bUseWorldNormal );
 
 #if defined ( _X360 )
 		diffuseLighting += flashlightColor;
@@ -456,9 +461,13 @@ float4 main( PS_INPUT i ) : COLOR
 		specularLighting = ENV_MAP_SCALE * texCUBE( EnvmapSampler, reflectVect );
 		specularLighting *= specularFactor;
 		specularLighting *= g_EnvmapTint_TintReplaceFactor.rgb;
-		HALF3 specularLightingSquared = specularLighting * specularLighting;
-		specularLighting = lerp( specularLighting, specularLightingSquared, g_EnvmapContrast_ShadowTweaks );
-		HALF3 greyScale = dot( specularLighting, HALF3( 0.299f, 0.587f, 0.114f ) );
+
+		float3 cubemapLight = ( diffuseLighting - g_fvDiffuseCubemapMin ) * g_fvDiffuseCubemapMax;
+		specularLighting = lerp( specularLighting, specularLighting * cubemapLight, g_DiffuseCubemapScale ); //reduce the cubemap contribution when the pixel is in shadow
+
+		float3 specularLightingSquared = specularLighting * specularLighting;
+		specularLighting = lerp( specularLighting, specularLightingSquared, g_EnvmapContrast );
+		float3 greyScale = dot( specularLighting, float3( 0.299f, 0.587f, 0.114f ) );
 		specularLighting = lerp( greyScale, specularLighting, g_EnvmapSaturation );
 #endif
 	}

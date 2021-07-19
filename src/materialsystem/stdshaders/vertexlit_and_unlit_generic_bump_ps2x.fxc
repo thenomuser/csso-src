@@ -67,7 +67,12 @@
 
 const float4 g_EnvmapTint_TintReplaceFactor		: register( c0 );
 const float4 g_DiffuseModulation				: register( c1 );
-const float4 g_EnvmapContrast_ShadowTweaks		: register( c2 );
+const float4 g_ShadowTweaks						: register( c2 );
+const float4 g_EnvmapParams						: register( c19 );
+#define g_EnvmapContrast g_EnvmapParams.x
+//#define g_DiffuseCubemapScale g_EnvmapParams.y
+//#define g_fvDiffuseCubemapMin g_EnvmapParams.z
+//#define g_fvDiffuseCubemapMax g_EnvmapParams.w
 const float3 g_EnvmapSaturation					: register( c3 );
 const float4 g_SelfIllumTint_and_BlendFactor	: register( c4 );
 #define g_SelfIllumTint ( g_SelfIllumTint_and_BlendFactor.rgb)
@@ -268,7 +273,7 @@ float4 main( PS_INPUT i ) : COLOR
 		float3 flashlightColor = DoFlashlight( g_FlashlightPos, i.worldPos_projPosZ.xyz, flashlightSpacePosition,
 			worldSpaceNormal, g_FlashlightAttenuationFactors.xyz, 
 			g_FlashlightAttenuationFactors.w, FlashlightSampler, ShadowDepthSampler,
-			RandRotSampler, nShadowSampleLevel, bDoShadows, false, vProjPos, false, g_EnvmapContrast_ShadowTweaks );
+			RandRotSampler, nShadowSampleLevel, bDoShadows, false, vProjPos, false, g_ShadowTweaks );
 
 #if defined ( _X360 )
 		diffuseLighting += flashlightColor;
@@ -318,7 +323,7 @@ float4 main( PS_INPUT i ) : COLOR
 		specularLighting *= specularFactor;
 		specularLighting *= g_EnvmapTint_TintReplaceFactor.rgb;
 		float3 specularLightingSquared = specularLighting * specularLighting;
-		specularLighting = lerp( specularLighting, specularLightingSquared, g_EnvmapContrast_ShadowTweaks );
+		specularLighting = lerp( specularLighting, specularLightingSquared, g_EnvmapContrast );
 		float3 greyScale = dot( specularLighting, float3( 0.299f, 0.587f, 0.114f ) );
 		specularLighting = lerp( greyScale, specularLighting, g_EnvmapSaturation );
 	}

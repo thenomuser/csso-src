@@ -3,7 +3,7 @@
 // STATIC: "DETAILTEXTURE"				"0..1"
 // STATIC: "BUMPMAP"					"0..2"
 // STATIC: "BUMPMAP2"					"0..1"
-// STATIC: "CUBEMAP"					"0..1"
+// STATIC: "CUBEMAP"					"0..2"
 // STATIC: "ENVMAPMASK"					"0..1"
 // STATIC: "BASEALPHAENVMAPMASK"		"0..1"
 // STATIC: "SELFILLUM"					"0..1"
@@ -54,6 +54,9 @@
 //  SKIP: ($DETAIL_BLEND_MODE == 8 ) || ($DETAIL_BLEND_MODE == 9 )
 //  SKIP ($DETAIL_BLEND_MODE == 10 ) && ($BUMPMAP == 0 )
 //  SKIP ($DETAIL_BLEND_MODE == 11 ) && ($BUMPMAP != 0 )
+
+// program too complex for ps20. Don't do darkened cubemaps and 2 bump maps at the same time. Fairly arbitrary pairing just to get the damn thing compiling
+//	SKIP: ( $CUBEMAP == 2 ) && ( $BUMPMAP2 ) [ps20]
 
 #include "lightmappedgeneric_ps2_3_x.h"
 

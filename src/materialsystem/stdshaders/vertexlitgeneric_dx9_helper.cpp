@@ -150,6 +150,10 @@ void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** para
 	InitIntParam( info.m_nEnvmapMaskFrame, params, 0 );
 	InitFloatParam( info.m_nEnvmapContrast, params, 0.0 );
 	InitFloatParam( info.m_nEnvmapSaturation, params, 1.0f );
+	if ( info.m_nEnvMapLightScale != -1 )
+		InitFloatParam( info.m_nEnvMapLightScale, params, 0.0f );
+	if ( info.m_nEnvMapLightScaleMinMax != -1 )
+		InitVecParam( info.m_nEnvMapLightScaleMinMax, params, 0.0f, 1.0f );
 	InitFloatParam( info.m_nSeamlessScale, params, 0.0 );
 
 	// handle line art parms
@@ -1128,8 +1132,33 @@ static void DrawVertexLitGeneric_DX9_Internal( CBaseVSShader *pShader, IMaterial
 				pShaderAPI->SetPixelShaderConstant( 31, vScreenScale, 1 );
 			}
 
-			if ( ( !bHasFlashlight || IsX360() ) && ( info.m_nEnvmapContrast != -1 ) )
-				pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 2, info.m_nEnvmapContrast );
+			if ( bHasEnvmap && ( !bHasFlashlight || IsGameConsole() ) )
+			{
+				// This was shader reg 2, but this was conflicting with the flashlight state and we somehow never noticed it.
+				// fvEnvmapParams are contrast, lightscale, lightscale min, lightscale max
+				// If contrast is less than 0 it's invalid, but the shader is expecting something, so just set 1.0 (specular squared, the darkest).
+				float envMapParams[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+				if ( info.m_nEnvmapContrast > 0 )
+				{
+					// The shader is expecting something, so just set 1.0 (specular squared, the darkest).
+					envMapParams[0] = GetFloatParam( info.m_nEnvmapContrast, params );
+				}
+
+				if ( info.m_nEnvMapLightScale != -1 )
+				{
+					envMapParams[1] = GetFloatParam( info.m_nEnvMapLightScale, params );
+				}
+				if ( info.m_nEnvMapLightScaleMinMax != -1 )
+				{
+					float lightScaleMinMax[2] = { 0.0, 0.0 };
+					params[info.m_nEnvMapLightScaleMinMax]->GetVecValue( lightScaleMinMax, 2 );
+					envMapParams[2] = lightScaleMinMax[0];
+					envMapParams[3] = lightScaleMinMax[1] + lightScaleMinMax[0];
+
+				}
+
+				pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 19, envMapParams );
+			}
 
 			// mat_fullbright 2 handling
 			bool bLightingOnly = bVertexLitGeneric && mat_fullbright.GetInt() == 2 && !IS_FLAG_SET( MATERIAL_VAR_NO_DEBUG_OVERRIDE );

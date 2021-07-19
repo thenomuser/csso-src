@@ -135,6 +135,9 @@ struct VertexLitGeneric_DX9_Vars_t
 	int m_nTintReplacesBaseColor;
 
 	int m_nPhongDisableHalfLambert;
+
+	int m_nEnvMapLightScale;
+	int m_nEnvMapLightScaleMinMax;
 };
 
 void InitParamsVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, bool bVertexLitGeneric, VertexLitGeneric_DX9_Vars_t &info );

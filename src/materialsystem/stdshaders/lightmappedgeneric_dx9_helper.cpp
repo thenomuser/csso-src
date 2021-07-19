@@ -133,6 +133,9 @@ void InitParamsLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** pa
 	
 	if( !params[info.m_nEnvmapSaturation]->IsDefined() )
 		params[info.m_nEnvmapSaturation]->SetFloatValue( 1.0f );
+
+	if ( (info.m_nEnvMapLightScaleMinMax != -1) && !params[info.m_nEnvMapLightScaleMinMax]->IsDefined() )
+		params[info.m_nEnvMapLightScaleMinMax]->SetVecValue( 0.0, 1.0 );
 	
 	InitFloatParam( info.m_nAlphaTestReference, params, 0.0f );
 
@@ -165,6 +168,8 @@ void InitParamsLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** pa
 	{
 		params[info.m_nEnvmap]->SetUndefined();
 	}
+
+	InitFloatParam( info.m_nEnvMapLightScale, params, 0.0f );
 
 	if( !params[info.m_nBaseTextureNoEnvmap]->IsDefined() )
 	{
@@ -365,6 +370,17 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 
 			bool hasEnvmap = params[info.m_nEnvmap]->IsTexture();
 
+			int envmap_variant; //0 = no envmap, 1 = regular, 2 = darken in shadow mode
+			if( hasEnvmap )
+			{
+				//only enabled darkened cubemap mode when the scale calls for it. And not supported in ps20 when also using a 2nd bumpmap
+				envmap_variant = ((GetFloatParam( info.m_nEnvMapLightScale, params ) > 0.0f) && (g_pHardwareConfig->SupportsPixelShaders_2_b() || !hasBump2)) ? 2 : 1;
+			}
+			else
+			{
+				envmap_variant = 0; 
+			}
+
 			bool bSeamlessMapping = ( ( info.m_nSeamlessMappingScale != -1 ) && 
 									  ( params[info.m_nSeamlessMappingScale]->GetFloatValue() != 0.0 ) );
 			
@@ -554,7 +570,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 					SET_STATIC_PIXEL_SHADER_COMBO( BUMPMAP2, hasBump2 );
 					SET_STATIC_PIXEL_SHADER_COMBO( BUMPMASK, hasBumpMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
-					SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  hasEnvmap );
+					SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  envmap_variant );
 					SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPMASK,  hasEnvmapMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( BASEALPHAENVMAPMASK,  hasBaseAlphaEnvmapMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
@@ -585,7 +601,7 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 					SET_STATIC_PIXEL_SHADER_COMBO( BUMPMAP2, hasBump2 );
 					SET_STATIC_PIXEL_SHADER_COMBO( BUMPMASK, hasBumpMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( DIFFUSEBUMPMAP,  hasDiffuseBumpmap );
-					SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  hasEnvmap );
+					SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  envmap_variant );
 					SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPMASK,  hasEnvmapMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( BASEALPHAENVMAPMASK,  hasBaseAlphaEnvmapMask );
 					SET_STATIC_PIXEL_SHADER_COMBO( SELFILLUM,  hasSelfIllum );
@@ -706,6 +722,16 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 			float envmapSaturation = params[info.m_nEnvmapSaturation]->GetFloatValue();
 			float fresnelReflection = params[info.m_nFresnelReflection]->GetFloatValue();
 			bool hasEnvmap = params[info.m_nEnvmap]->IsTexture();
+			int envmap_variant; //0 = no envmap, 1 = regular, 2 = darken in shadow mode
+			if( hasEnvmap )
+			{
+				//only enabled darkened cubemap mode when the scale calls for it. And not supported in ps20 when also using a 2nd bumpmap
+				envmap_variant = ((GetFloatParam( info.m_nEnvMapLightScale, params ) > 0.0f) && (g_pHardwareConfig->SupportsPixelShaders_2_b() || !hasBump2)) ? 2 : 1;
+			}
+			else
+			{
+				envmap_variant = 0; 
+			}
 
 			pContextData->m_bPixelShaderFastPath = true;
 			bool bUsingContrast = hasEnvmap && ( (envmapContrast != 0.0f) && (envmapContrast != 1.0f) ) && (envmapSaturation != 1.0f);
@@ -751,6 +777,26 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 						0,0 );
 				}
 			}
+
+			// cubemap light scale mapping parms (c20)
+			if ( ( envmap_variant == 2 ) /*|| bEnvmapAnisotropy*/ )
+			{
+				float envMapParams[4] = { 0, 0, 0, 0 };
+				/*if ( bEnvmapAnisotropy )
+				{
+					envMapParams[0] = GetFloatParam( info.m_nEnvmapAnisotropyScale, params );
+				}*/
+				if ( envmap_variant == 2 )
+				{
+					envMapParams[1] = GetFloatParam( info.m_nEnvMapLightScale, params );
+					float lightScaleMinMax[2] = { 0.0, 0.0 };
+					params[info.m_nEnvMapLightScaleMinMax]->GetVecValue( lightScaleMinMax, 2 );
+					envMapParams[2] = lightScaleMinMax[0];
+					envMapParams[3] = lightScaleMinMax[1] + lightScaleMinMax[0];
+				}
+				pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 20, envMapParams );
+			}
+
 			// texture binds
 			if( hasBaseTexture )
 			{
