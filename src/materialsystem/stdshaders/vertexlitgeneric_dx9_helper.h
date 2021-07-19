@@ -132,6 +132,9 @@ struct VertexLitGeneric_DX9_Vars_t
 	int m_nBlendTintByBaseAlpha;
 	int m_nNoTint;
 
+	int m_nEnvMapFresnelMinMaxExp;
+	int m_nBaseAlphaEnvMapMaskMinMaxExp;
+
 	int m_nTintReplacesBaseColor;
 
 	int m_nPhongDisableHalfLambert;

@@ -138,6 +138,10 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		SHADER_PARAM( BLENDTINTCOLOROVERBASE, SHADER_PARAM_TYPE_FLOAT, "0", "blend between tint acting as a multiplication versus a replace" )
 		SHADER_PARAM( NOTINT, SHADER_PARAM_TYPE_BOOL, "0", "Disable tinting" )
 
+		// vertexlitgeneric envmap fresnel control
+		SHADER_PARAM( ENVMAPFRESNELMINMAXEXP, SHADER_PARAM_TYPE_VEC3, "[0.0 1.0 2.0]", "Min/max fresnel range and exponent for vertexlitgeneric" )
+		SHADER_PARAM( BASEALPHAENVMAPMASKMINMAXEXP, SHADER_PARAM_TYPE_VEC3, "[1.0 0.0 1.0]", "" )
+
 		// This is to allow phong materials to disable half lambert. Half lambert has always been forced on in phong,
 		// so the only safe way to allow artists to disable half lambert is to create this param that disables the
 		// default behavior of forcing half lambert on.
@@ -223,6 +227,9 @@ BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 		info.m_nBlendTintByBaseAlpha = BLENDTINTBYBASEALPHA;
 		info.m_nTintReplacesBaseColor = BLENDTINTCOLOROVERBASE;
 		info.m_nNoTint = NOTINT;
+
+		info.m_nEnvMapFresnelMinMaxExp = ENVMAPFRESNELMINMAXEXP;
+		info.m_nBaseAlphaEnvMapMaskMinMaxExp = BASEALPHAENVMAPMASKMINMAXEXP;
 
 		info.m_nPhongDisableHalfLambert = PHONGDISABLEHALFLAMBERT;
 
