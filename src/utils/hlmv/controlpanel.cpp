@@ -2277,7 +2277,7 @@ ControlPanel::handleEvent (mxEvent *event)
 									slMaterialParamMatrixSliderRotation->setValue( tempAngle.y );
 
 									char temp[255];
-									V_snprintf( temp, sizeof(temp), " scale %f %f translate %f %f rotate %f", tempScale.x, tempScale.y, tempTrans.x, tempTrans.y, tempAngle.y );
+									V_snprintf( temp, sizeof(temp), " center .5 .5 scale %f %f rotate %f translate %f %f", tempScale.x, tempScale.y, tempAngle.y, tempTrans.x, tempTrans.y );
 
 									leMaterialParamText->setText( temp );
 								}
@@ -2360,8 +2360,11 @@ ControlPanel::handleEvent (mxEvent *event)
 			char str2[255];
 			leMaterialParamText->getText(str,sizeof(str));
 
+			// replace both possible variants
 			V_StrSubst( str, "[ ", "", str2, sizeof(str2) );
 			V_StrSubst( str2, " ]", "", str, sizeof(str) );
+			V_StrSubst( str, "{ ", "", str2, sizeof(str2) );
+			V_StrSubst( str2, " }", "", str, sizeof(str) );
 
 			CUtlVector< char * > vectorComponents;
 			V_SplitString(str, " ", vectorComponents );
@@ -2373,7 +2376,7 @@ ControlPanel::handleEvent (mxEvent *event)
 			if (mxChooseColor (this, &r, &g, &b))
 			{
 				char result[255];
-				V_snprintf(result, sizeof(result), "[ %i %i %i ]", r, g, b );
+				V_snprintf(result, sizeof(result), "{ %i %i %i }", r, g, b );
 				leMaterialParamText->setText(result);
 			}
 
@@ -2559,10 +2562,10 @@ ControlPanel::handleEvent (mxEvent *event)
 		case IDC_MATVARSLIDERMATRIX:
 		{
 			char temp[255];
-			V_snprintf( temp, sizeof(temp), " scale %f %f translate %f %f rotate %f", 
+			V_snprintf( temp, sizeof(temp), " center .5 .5 scale %f %f rotate %f translate %f %f", 
 				slMaterialParamMatrixSliderScaleX->getValue(), slMaterialParamMatrixSliderScaleY->getValue(),
-				slMaterialParamMatrixSliderTranslateX->getValue(), slMaterialParamMatrixSliderTranslateY->getValue(),
-				slMaterialParamMatrixSliderRotation->getValue() );
+				slMaterialParamMatrixSliderRotation->getValue(),
+				slMaterialParamMatrixSliderTranslateX->getValue(), slMaterialParamMatrixSliderTranslateY->getValue() );
 			leMaterialParamText->setText(temp);
 
 			break;
