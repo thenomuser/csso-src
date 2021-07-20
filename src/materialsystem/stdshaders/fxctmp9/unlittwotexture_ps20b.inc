@@ -2,6 +2,27 @@
 class unlittwotexture_ps20b_Static_Index
 {
 private:
+	int m_nTRANSLUCENT;
+#ifdef _DEBUG
+	bool m_bTRANSLUCENT;
+#endif
+public:
+	void SetTRANSLUCENT( int i )
+	{
+		Assert( i >= 0 && i <= 1 );
+		m_nTRANSLUCENT = i;
+#ifdef _DEBUG
+		m_bTRANSLUCENT = true;
+#endif
+	}
+	void SetTRANSLUCENT( bool i )
+	{
+		m_nTRANSLUCENT = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bTRANSLUCENT = true;
+#endif
+	}
+private:
 	int m_nCONVERT_TO_SRGB;
 #ifdef _DEBUG
 	bool m_bCONVERT_TO_SRGB;
@@ -26,6 +47,10 @@ public:
 	unlittwotexture_ps20b_Static_Index( )
 	{
 #ifdef _DEBUG
+		m_bTRANSLUCENT = false;
+#endif // _DEBUG
+		m_nTRANSLUCENT = 0;
+#ifdef _DEBUG
 		m_bCONVERT_TO_SRGB = true;
 #endif // _DEBUG
 		m_nCONVERT_TO_SRGB =  g_pHardwareConfig->NeedsShaderSRGBConversion();
@@ -35,13 +60,13 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllStaticVarsDefined = m_bCONVERT_TO_SRGB;
+		bool bAllStaticVarsDefined = m_bTRANSLUCENT && m_bCONVERT_TO_SRGB;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 12 * m_nCONVERT_TO_SRGB ) + 0;
+		return ( 12 * m_nTRANSLUCENT ) + ( 24 * m_nCONVERT_TO_SRGB ) + 0;
 	}
 };
-#define shaderStaticTest_unlittwotexture_ps20b 0
+#define shaderStaticTest_unlittwotexture_ps20b psh_forgot_to_set_static_TRANSLUCENT + 0
 class unlittwotexture_ps20b_Dynamic_Index
 {
 private:

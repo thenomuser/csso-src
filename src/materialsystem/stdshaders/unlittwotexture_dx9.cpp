@@ -151,14 +151,8 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 
 				s_pShaderShadow->EnableSRGBWrite( true );
 
-				// Either we've got a constant modulation
-				bool isTranslucent = IsAlphaModulating();
-
-				// Or we've got a texture alpha on either texture
-				isTranslucent = isTranslucent || TextureIsTranslucent( BASETEXTURE, true ) ||
-					TextureIsTranslucent( TEXTURE2, true );
-
-				if ( isTranslucent )
+				// Either we've got a constant modulation or we've got a texture alpha on either texture
+				if ( IsAlphaModulating() || IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT ) || TextureIsTranslucent( BASETEXTURE, true ) || TextureIsTranslucent( TEXTURE2, true ) )
 				{
 					if ( IS_FLAG_SET(MATERIAL_VAR_ADDITIVE) )
 					{
@@ -191,17 +185,22 @@ BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 				}
 				pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
+				// If this is set, blend with the alpha channels of the textures and modulation color
+				bool bTranslucent = IsAlphaModulating() || IS_FLAG_SET( MATERIAL_VAR_TRANSLUCENT ) || TextureIsTranslucent( BASETEXTURE, true ) || TextureIsTranslucent( TEXTURE2, true );
+
 				DECLARE_STATIC_VERTEX_SHADER( unlittwotexture_vs20 );
 				SET_STATIC_VERTEX_SHADER( unlittwotexture_vs20 );
 
 				if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 				{
 					DECLARE_STATIC_PIXEL_SHADER( unlittwotexture_ps20b );
+					SET_STATIC_PIXEL_SHADER_COMBO( TRANSLUCENT, bTranslucent );
 					SET_STATIC_PIXEL_SHADER( unlittwotexture_ps20b );
 				}
 				else
 				{
 					DECLARE_STATIC_PIXEL_SHADER( unlittwotexture_ps20 );
+					SET_STATIC_PIXEL_SHADER_COMBO( TRANSLUCENT, bTranslucent );
 					SET_STATIC_PIXEL_SHADER( unlittwotexture_ps20 );
 				}
 

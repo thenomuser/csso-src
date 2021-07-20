@@ -1,3 +1,4 @@
+// STATIC: "TRANSLUCENT"				"0..1"
 // DYNAMIC: "PIXELFOGTYPE"				"0..1"
 // DYNAMIC: "LIGHTING_PREVIEW"			"0..2"	[PC]
 // DYNAMIC: "LIGHTING_PREVIEW"			"0..0"	[XBOX]
@@ -67,10 +68,14 @@ float4 main( PS_INPUT i ) : COLOR
 	HALF4 baseColor = tex2D( BaseTextureSampler, i.baseTexCoord.xy );
 	HALF4 baseColor2 = tex2D( BaseTextureSampler2, i.baseTexCoord2.xy );
 	HALF4 result = baseColor * baseColor2 * g_DiffuseModulation;
-	float alpha = 1.0f;
+
+	// This material can only get a non-opaque alpha if the material is marked as translucent
+# if ( TRANSLUCENT == 0 )
+	result.a = 1.0f;
+# endif
 	
 	float fogFactor = CalcPixelFogFactor( PIXELFOGTYPE, g_FogParams, g_EyePos_SpecExponent.z, i.worldPos_projPosZ.z, i.worldPos_projPosZ.w );
-	return FinalOutput( float4( result.rgb, alpha ), fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, (WRITE_DEPTH_TO_DESTALPHA != 0), i.worldPos_projPosZ.w );
+	return FinalOutput( result, fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR, (WRITE_DEPTH_TO_DESTALPHA != 0), i.worldPos_projPosZ.w );
 #endif
 }
 
