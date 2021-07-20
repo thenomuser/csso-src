@@ -248,6 +248,63 @@ struct StaticPropLump_t
 	unsigned short  m_nLightmapResolutionX;
 	unsigned short  m_nLightmapResolutionY;
 	color32			m_DiffuseModulation;	// per instance color and alpha modulation
+
+
+	StaticPropLump_t& operator=(const StaticPropLumpV4_t& _rhs)
+	{
+		m_Origin				= _rhs.m_Origin;
+		m_Angles				= _rhs.m_Angles;
+		m_PropType				= _rhs.m_PropType;
+		m_FirstLeaf				= _rhs.m_FirstLeaf;
+		m_LeafCount				= _rhs.m_LeafCount;
+		m_Solid					= _rhs.m_Solid;
+		m_Flags					= _rhs.m_Flags;
+		m_Skin					= _rhs.m_Skin;
+		m_FadeMinDist			= _rhs.m_FadeMinDist;
+		m_FadeMaxDist			= _rhs.m_FadeMaxDist;
+		m_LightingOrigin		= _rhs.m_LightingOrigin;
+
+		// These get potentially set twice--once here and once in the caller.
+		// Value judgement: This makes the code easier to work with, so unless it's a perf issue...
+		m_flForcedFadeScale		= 1.0f;
+		m_nMinDXLevel			= 0;
+		m_nMaxDXLevel			= 0;
+		m_nLightmapResolutionX	= 0;
+		m_nLightmapResolutionY	= 0;
+		m_DiffuseModulation		= color32{ 255, 255, 255, 255 };
+
+		// Older versions don't want this.
+		m_Flags					|= STATIC_PROP_NO_PER_TEXEL_LIGHTING;
+		return *this;
+	}
+
+	StaticPropLump_t& operator=(const StaticPropLumpV5_t& _rhs)
+	{
+		(*this) = reinterpret_cast<const StaticPropLumpV4_t&>(_rhs);
+
+		m_flForcedFadeScale = _rhs.m_flForcedFadeScale;
+		return *this;
+	}
+
+	StaticPropLump_t& operator=(const StaticPropLumpV6_t& _rhs)
+	{
+		(*this) = reinterpret_cast<const StaticPropLumpV5_t&>(_rhs);
+
+		m_nMinDXLevel = _rhs.m_nMinDXLevel;
+		m_nMaxDXLevel = _rhs.m_nMaxDXLevel;
+		return *this;
+	}
+
+	StaticPropLump_t& operator=(const StaticPropLumpV10_t& _rhs)
+	{
+		(*this) = reinterpret_cast<const StaticPropLumpV6_t&>(_rhs);
+
+		m_nLightmapResolutionX = _rhs.m_nLightmapResolutionX;
+		m_nLightmapResolutionY = _rhs.m_nLightmapResolutionY;
+
+		m_Flags = _rhs.m_Flags;
+		return *this;
+	}
 };
 
 
