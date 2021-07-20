@@ -2026,7 +2026,11 @@ ControlPanel::handleEvent (mxEvent *event)
 			case '2':
 			case '3':
 			case '4':
-				g_viewerSettings.renderMode = event->key - '1';
+				// don't do quick keys when in edit mode
+				if ( tab->getSelectedIndex() < 4 ) // physics tab
+				{
+					g_viewerSettings.renderMode = event->key - '1';
+				}
 				break;
 
 			case '-':
