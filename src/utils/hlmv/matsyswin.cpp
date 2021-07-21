@@ -502,12 +502,7 @@ MatSysWindow::handleEvent (mxEvent *event)
 	{
 		switch (event->key)
 		{
-		case VK_F5: // F5
-			{
-				g_MDLViewer->Refresh();
-				break;
-			}
-		case 32:
+		case VK_SPACE:
 			{
 				int iSeq = g_pStudioModel->GetSequence ();
 				if (iSeq == g_pStudioModel->SetSequence (iSeq + 1))
