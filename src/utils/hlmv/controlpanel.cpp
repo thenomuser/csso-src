@@ -3303,7 +3303,15 @@ void ControlPanel::OnLoadModel( void )
 		{
 			setFOV( 54.0f );
 		}
+		else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\v_models\\" ) )
+		{
+			setFOV( 54.0f );
+		}
 		else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_" ) )
+		{
+			setFOV( 90.0f );
+		}
+		else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_models\\" ) )
 		{
 			setFOV( 90.0f );
 		}

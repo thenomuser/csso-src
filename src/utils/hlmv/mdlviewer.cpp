@@ -973,7 +973,15 @@ MDLViewer::handleEvent (mxEvent *event)
 				{
 					g_ControlPanel->setFOV( 54.0f );
 				}
+				else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\v_models\\" ) )
+				{
+					g_ControlPanel->setFOV( 54.0f );
+				}
 				else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_" ) )
+				{
+					g_ControlPanel->setFOV( 90.0f );
+				}
+				else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_models\\" ) )
 				{
 					g_ControlPanel->setFOV( 90.0f );
 				}
