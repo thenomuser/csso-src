@@ -3291,6 +3291,23 @@ void ControlPanel::OnLoadModel( void )
 		centerView();
 		centerView();
 	}
+
+	if ( g_viewerSettings.guessModelFOV )
+	{
+		// guess the category and set a reasonable default fov
+		if ( V_stristr( g_pStudioModel->GetFileName(), "\\player\\" ) )
+		{
+			setFOV( 90.0f );
+		}
+		else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\v_" ) )
+		{
+			setFOV( 54.0f );
+		}
+		else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_" ) )
+		{
+			setFOV( 90.0f );
+		}
+	}
 }
 
 
@@ -4317,7 +4334,8 @@ void ControlPanel::centerView( )
 	g_viewerSettings.lightrot[0] = 0.0f;
 	g_viewerSettings.lightrot[1] = 180.0f; // light should aim at models front
 	g_viewerSettings.lightrot[2] = 0.0f;
-	setFOV( 65.0f );
+	if ( !g_viewerSettings.guessModelFOV )
+		setFOV( 65.0f );
 	d_MatSysWindow->redraw();
 }
 
@@ -4333,7 +4351,8 @@ void ControlPanel::viewmodelView()
 	g_viewerSettings.lightrot[0] = 0.0f;
 	g_viewerSettings.lightrot[1] = 180.0f; // light should aim at models front
 	g_viewerSettings.lightrot[2] = 0.0f;
-	setFOV( 54.0f );
+	if ( !g_viewerSettings.guessModelFOV )
+		setFOV( 54.0f );
 	d_MatSysWindow->redraw();
 }
 

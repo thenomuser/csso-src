@@ -337,6 +337,7 @@ MDLViewer::MDLViewer ()
 	menuView->setChecked( IDC_VIEW_ORBIT_CIRCLE, false );
 	menuView->add ("Enable orbit yaw", IDC_VIEW_ORBIT_YAW);
 	menuView->setChecked( IDC_VIEW_ORBIT_YAW, false );
+	menuView->add ("Auto guess model FOV", IDC_VIEW_GUESS_MODEL_FOV);
 
 #ifdef WIN32
 	menuHelp->add ("Goto Homepage...", IDC_HELP_GOTOHOMEPAGE);
@@ -374,6 +375,7 @@ MDLViewer::MDLViewer ()
 	menuView->setChecked( IDC_VIEW_ACTIVITIES, g_viewerSettings.showActivities );
 	menuView->setChecked( IDC_VIEW_HIDDEN, g_viewerSettings.showHidden );
 	menuView->setChecked( IDC_VIEW_SORT_SEQUENCES, g_viewerSettings.sortSequences );
+	menuView->setChecked( IDC_VIEW_GUESS_MODEL_FOV, g_viewerSettings.guessModelFOV );
 
 	setBounds( g_viewerSettings.xpos, g_viewerSettings.ypos, g_viewerSettings.width, g_viewerSettings.height );
 	setVisible (true);
@@ -955,6 +957,27 @@ MDLViewer::handleEvent (mxEvent *event)
 		case IDC_VIEW_ORBIT_YAW:
 			g_viewerSettings.allowOrbitYaw = !g_viewerSettings.allowOrbitYaw;
 			menuView->setChecked( event->action, g_viewerSettings.allowOrbitYaw );
+			break;
+
+		case IDC_VIEW_GUESS_MODEL_FOV:
+			g_viewerSettings.guessModelFOV = !g_viewerSettings.guessModelFOV;
+			menuView->setChecked( event->action, g_viewerSettings.guessModelFOV );
+			if ( g_viewerSettings.guessModelFOV )
+			{
+				// guess the category and set a reasonable default fov
+				if ( V_stristr( g_pStudioModel->GetFileName(), "\\player\\" ) )
+				{
+					g_ControlPanel->setFOV( 90.0f );
+				}
+				else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\v_" ) )
+				{
+					g_ControlPanel->setFOV( 54.0f );
+				}
+				else if ( V_stristr( g_pStudioModel->GetFileName(), "weapons\\w_" ) )
+				{
+					g_ControlPanel->setFOV( 90.0f );
+				}
+			}
 			break;
 
 #ifdef WIN32

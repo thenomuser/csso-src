@@ -87,6 +87,7 @@ struct ViewerSettings
 	bool showShadow;
 	bool showOrbitCircle;
 	bool allowOrbitYaw;
+	bool guessModelFOV;
 	int texture;
 	int skin;
 	int materialIndex;

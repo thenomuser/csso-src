@@ -54,6 +54,8 @@ void InitViewerSettings ( const char *subkey )
 	g_viewerSettings.showOrbitCircle = false;
 	g_viewerSettings.allowOrbitYaw = false;
 
+	g_viewerSettings.guessModelFOV = false;
+
 	strcpy( g_viewerSettings.registrysubkey, subkey );
 
 	g_pStudioModel->m_angles.Init( -90.0f, 0.0f, 0.0f );
@@ -626,6 +628,7 @@ bool LoadViewerRootSettings( void )
 	RegReadBool( hRootKey, "showHidden", &g_viewerSettings.showHidden );
 	RegReadBool( hRootKey, "showActivities", &g_viewerSettings.showActivities );
 	RegReadBool( hRootKey, "sortSequences", &g_viewerSettings.sortSequences );
+	RegReadBool( hRootKey, "guessModelFOV", &g_viewerSettings.guessModelFOV );
 
 	return true;
 }
@@ -713,6 +716,7 @@ bool SaveViewerRootSettings( void )
 	RegWriteInt( hRootKey, "showHidden", g_viewerSettings.showHidden ? 1 : 0 );
 	RegWriteInt( hRootKey, "showActivities", g_viewerSettings.showActivities ? 1 : 0 );
 	RegWriteInt( hRootKey, "sortSequences", g_viewerSettings.sortSequences ? 1 : 0 );
+	RegWriteInt( hRootKey, "guessModelFOV", g_viewerSettings.guessModelFOV ? 1 : 0 );
 
 	return true;
 }
