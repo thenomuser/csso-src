@@ -645,6 +645,8 @@ static const char* s_pShaderStateString[] =
 	"$halflambert",
 	"$wireframe",
 	"$allowalphatocoverage",
+	"$ignorealphamodulation",
+	"$alphamodifiedbyproxy_DO_NOT_SET_IN_VMT", // This one is only used as a flag from code externally.  Isnt' to be st in vmt files.
 
 	""			// last one must be null
 };
