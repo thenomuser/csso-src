@@ -9,6 +9,7 @@
 #include "hud.h"
 #include "clientmode_csnormal.h"
 #include "cdll_client_int.h"
+#include <engine/ivdebugoverlay.h>
 #include "iinput.h"
 #include "vgui/ISurface.h"
 #include "vgui/IPanel.h"
@@ -368,6 +369,19 @@ void ClientModeCSNormal::InitViewport()
 	m_pViewport->Start( gameuifuncs, gameeventmanager );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void ClientModeCSNormal::LevelShutdown( void )
+{
+	BaseClass::LevelShutdown();
+
+	// Remove any lingering debug overlays, since it's possible they won't get cleaned up automatically later.
+	// This is in response to anecdotal reports that players can 'mark' the world with showimpacts or grenade trajectories,
+	// then use them to their advantage on subsequent games played immediately on the same map.
+	debugoverlay->ClearAllOverlays();
+}
+
 
 void ClientModeCSNormal::Update()
 {
@@ -683,6 +697,9 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		enginesound->StopAllSounds( true );
 
 		Soundscape_OnStopAllSounds();	// Tell the soundscape system.
+
+		// Remove any left over particle effects from the last round.
+		ParticleMgr()->SetRemoveAllParticleEffects();
 	}
 	else if ( Q_strcmp( "round_end", eventname ) == 0 )
 	{

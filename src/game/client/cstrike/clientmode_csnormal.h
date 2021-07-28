@@ -29,6 +29,8 @@ public:
 	virtual void	InitViewport();
 	virtual void	Update();
 
+	virtual void	LevelShutdown( void );
+
 	virtual int		KeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
 
 	virtual float	GetViewModelFOV( void );

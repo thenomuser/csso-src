@@ -514,6 +514,8 @@ CWeaponCSBase::CWeaponCSBase()
 	m_fLastShotTime = 0.0f;
 	m_weaponMode = Primary_Mode;
 
+	ResetPostponeFireReadyTime();
+
 	m_bReloadVisuallyComplete = false;
 
 	m_flDoneSwitchingSilencer = 0.0f;

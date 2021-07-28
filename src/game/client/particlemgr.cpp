@@ -2022,6 +2022,16 @@ void CParticleMgr::UpdateAllEffects( float flTimeDelta )
 	}
 }
 
+void CParticleMgr::SetRemoveAllParticleEffects()
+{
+	for( CNewParticleEffect *pNewEffect=m_NewEffects.m_pHead; pNewEffect;
+		pNewEffect=pNewEffect->m_pNext )
+	{
+		pNewEffect->StopEmission( false, true, true );
+		pNewEffect->SetRemoveFlag();
+	}
+}
+
 CParticleSubTextureGroup* CParticleMgr::FindOrAddSubTextureGroup( IMaterial *pPageMaterial )
 {
 	for ( int i=0; i < m_SubTextureGroups.Count(); i++ )

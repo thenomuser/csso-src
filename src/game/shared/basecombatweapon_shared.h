@@ -533,6 +533,7 @@ public:
 	virtual int				GetWorldModelIndex( void );
 
 	virtual void			GetToolRecordingState( KeyValues *msg );
+	bool					IsFirstPersonSpectated( void ); //true if the weapon is held by someone we're spectating in first person
 
 	virtual void			GetWeaponCrosshairScale( float &flScale ) { flScale = 1.f; }
 

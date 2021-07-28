@@ -2945,8 +2945,13 @@ int C_BaseAnimating::DrawModel( int flags )
 	{
 		MDLCACHE_CRITICAL_SECTION();
 
+		if ( !sv_cheats )
+		{
+			sv_cheats = cvar->FindVar( "sv_cheats" );
+		}
+
 		int extraFlags = 0;
-		if ( r_drawothermodels.GetInt() == 2 )
+		if ( sv_cheats->GetBool() && r_drawothermodels.GetInt() == 2 )
 		{
 			extraFlags |= STUDIO_WIREFRAME;
 		}

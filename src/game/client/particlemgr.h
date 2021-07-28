@@ -693,6 +693,8 @@ public:
 	void RenderParticleSystems( bool bEnable );
 	bool ShouldRenderParticleSystems() const;
 
+	void SetRemoveAllParticleEffects( void );	// Flags all the particle effects for removal.
+
 	// Quick profiling (counts only, not clock cycles).
 	bool		m_bStatsRunning;
 	int			m_nStatsFramesSinceLastAlert;

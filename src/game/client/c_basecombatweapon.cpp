@@ -461,6 +461,24 @@ bool C_BaseCombatWeapon::ShouldDrawPickup( void )
 
 	return true;
 }
+
+bool C_BaseCombatWeapon::IsFirstPersonSpectated( void )
+{
+	// check if local player chases owner of this weapon in first person
+	C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
+	if ( localplayer && localplayer->IsObserver() && GetOwner() )
+	{
+		// don't draw weapon if chasing this guy as spectator
+		// we don't check that in ShouldDraw() since this may change
+		// without notification 
+		if ( localplayer->GetObserverMode() == OBS_MODE_IN_EYE &&
+			localplayer->GetObserverTarget() == GetOwner() &&
+			localplayer->GetObserverInterpState() != C_BasePlayer::OBSERVER_INTERP_TRAVELING ) 
+			return true;
+	}
+
+	return false;
+}
 		   
 //-----------------------------------------------------------------------------
 // Purpose: Render the weapon. Draw the Viewmodel if the weapon's being carried
@@ -473,6 +491,9 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 		return 0;
 
 	if ( !IsVisible() )
+		return 0;
+
+	if ( IsFirstPersonSpectated() )
 		return 0;
 
 	// check if local player chases owner of this weapon in first person
