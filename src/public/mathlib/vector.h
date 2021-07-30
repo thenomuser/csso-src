@@ -64,7 +64,7 @@ class VectorByValue;
 //=========================================================
 // 3D Vector
 //=========================================================
-class Vector					
+class Vector
 {
 public:
 	// Members
@@ -209,7 +209,8 @@ private:
 #endif
 };
 
-FORCEINLINE void NetworkVarConstruct( Vector &v ) { v.Zero(); }
+// Zero the object -- necessary for CNetworkVar and possibly other cases.
+inline void EnsureValidValue( Vector &x ) { x.Zero(); }
 
 
 #define USE_M64S ( ( !defined( _X360 ) ) )
@@ -1745,8 +1746,6 @@ public:
 extern void AngleQuaternion( RadianEuler const &angles, Quaternion &qt );
 extern void QuaternionAngles( Quaternion const &q, RadianEuler &angles );
 
-FORCEINLINE void NetworkVarConstruct( Quaternion &q ) { q.x = q.y = q.z = q.w = 0.0f; }
-
 inline Quaternion::Quaternion(RadianEuler const &angle)
 {
 	AngleQuaternion( angle, *this );
@@ -1824,7 +1823,7 @@ inline vec_t RadianEuler::operator[](int i) const
 //-----------------------------------------------------------------------------
 class QAngleByValue;
 
-class QAngle					
+class QAngle
 {
 public:
 	// Members
@@ -1894,7 +1893,8 @@ private:
 #endif
 };
 
-FORCEINLINE void NetworkVarConstruct( QAngle &q ) { q.x = q.y = q.z = 0.0f; }
+// Zero the object -- necessary for CNetworkVar and possibly other cases.
+inline void EnsureValidValue( QAngle &x ) { x.Init(); }
 
 //-----------------------------------------------------------------------------
 // Allows us to specifically pass the vector by value when we need to
