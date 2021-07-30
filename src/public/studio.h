@@ -402,7 +402,8 @@ private:
 #define BONE_FIXED_ALIGNMENT		0x00100000	// bone can't spin 360 degrees, all interpolation is normalized around a fixed orientation
 
 #define BONE_HAS_SAVEFRAME_POS		0x00200000	// Vector48
-#define BONE_HAS_SAVEFRAME_ROT		0x00400000	// Quaternion64
+#define BONE_HAS_SAVEFRAME_ROT64	0x00400000	// Quaternion64
+#define BONE_HAS_SAVEFRAME_ROT32	0x00800000	// Quaternion32
 
 // bone controllers
 struct mstudiobonecontroller_t

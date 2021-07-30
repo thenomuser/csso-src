@@ -99,6 +99,7 @@ float g_flDefaultMotionRollback = 0.3f;
 int g_minSectionFrameLimit = 120;
 int g_sectionFrames = 30;
 bool g_bNoAnimblockStall = false;
+bool g_bZeroFramesHighres = false;
 
 char g_path[MAX_PATH];
 Vector g_vecMinWorldspace = Vector( MIN_COORD_INTEGER, MIN_COORD_INTEGER, MIN_COORD_INTEGER );
@@ -2663,6 +2664,10 @@ void Cmd_AnimBlockSize( void )
 		if (!Q_stricmp( token, "nostall" ))
 		{
 			g_bNoAnimblockStall = true;
+		}
+		else if (!Q_stricmp( token, "cachehighres" ))
+		{
+			g_bZeroFramesHighres = true;
 		}
 	}
 }
@@ -9082,6 +9087,7 @@ void Cmd_BoneSaveFrame( )
 
 	tmp.bSavePos = false;
 	tmp.bSaveRot = false;
+	tmp.bSaveRot64 = false;
 	while (TokenAvailable(  ))
 	{
 		GetToken( false );
@@ -9092,6 +9098,10 @@ void Cmd_BoneSaveFrame( )
 		else if (stricmp( "rotation", token ) == 0)
 		{
 			tmp.bSaveRot = true;
+		}
+		else if (stricmp( "rotation64", token ) == 0)
+		{
+			tmp.bSaveRot64 = true;
 		}
 		else
 		{

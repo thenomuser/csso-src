@@ -1329,6 +1329,7 @@ struct s_bonesaveframe_t
 	char		name[ MAXSTUDIOHITBOXSETNAME ];
 	bool		bSavePos;
 	bool		bSaveRot;
+	bool		bSaveRot64;
 };
 
 EXTERN CUtlVector< s_bonesaveframe_t > g_bonesaveframe;
@@ -1593,6 +1594,7 @@ extern float g_flDefaultMotionRollback;
 extern int g_minSectionFrameLimit;
 extern int g_sectionFrames;
 extern bool g_bNoAnimblockStall;
+extern bool g_bZeroFramesHighres;
 
 extern Vector g_vecMinWorldspace;
 extern Vector g_vecMaxWorldspace;

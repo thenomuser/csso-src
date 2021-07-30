@@ -820,7 +820,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 				}
 				pData += sizeof( Vector48 );
 			}
-			if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT)
+			if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT64)
 			{
 				if ((i >= 0) && (pStudioHdr->boneFlags(i) & boneMask))
 				{
@@ -829,6 +829,16 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 					Assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion64 );
+			}
+			else if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT32)
+			{
+				if ((i >= 0) && (pStudioHdr->boneFlags(i) & boneMask))
+				{
+					Quaternion q0 = *(Quaternion32 *)pData;
+					QuaternionBlend( q[i], q0, flWeight, q[i] );
+					Assert( q[i].IsValid() );
+				}
+				pData += sizeof( Quaternion32 );
 			}
 		}
 	}
@@ -862,14 +872,23 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 					Vector p0 = *(((Vector48 *)pData) + i0);
 					Vector p1 = *(((Vector48 *)pData) + i1);
 					Vector p2 = *(((Vector48 *)pData) + i2);
-					Vector p3;
-					Hermite_Spline( p0, p1, p2, s1, p3 );
-					pos[i] = pos[i] * (1.0f - flWeight) + p3 * flWeight;
+					if (flWeight == 1.0f)
+					{
+						// don't blend into an uninitialized value
+						Hermite_Spline( p0, p1, p2, s1, pos[i] );
+					}
+					else
+					{
+						Vector p3;
+						Hermite_Spline( p0, p1, p2, s1, p3 );
+						pos[i] = pos[i] * (1.0f - flWeight) + p3 * flWeight;
+					}
+
 					Assert( pos[i].IsValid() );
 				}
 				pData += sizeof( Vector48 ) * animdesc.zeroframecount;
 			}
-			if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT)
+			if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT64)
 			{
 				if ((i >= 0) && (pStudioHdr->boneFlags(i) & boneMask))
 				{
@@ -878,6 +897,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 					Quaternion q2 = *(((Quaternion64 *)pData) + i2);
 					if (flWeight == 1.0f)
 					{
+						// don't blend into an uninitialized value
 						Hermite_Spline( q0, q1, q2, s1, q[i] );
 					}
 					else
@@ -889,6 +909,28 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 					Assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion64 ) * animdesc.zeroframecount;
+			}
+			else if (pAnimbone[j].flags & BONE_HAS_SAVEFRAME_ROT32)
+			{
+				if ((i >= 0) && (pStudioHdr->boneFlags(i) & boneMask))
+				{
+					Quaternion q0 = *(((Quaternion32 *)pData) + i0);
+					Quaternion q1 = *(((Quaternion32 *)pData) + i1);
+					Quaternion q2 = *(((Quaternion32 *)pData) + i2);
+					if (flWeight == 1.0f)
+					{
+						// don't blend into an uninitialized value
+						Hermite_Spline( q0, q1, q2, s1, q[i] );
+					}
+					else
+					{
+						Quaternion q3;
+						Hermite_Spline( q0, q1, q2, s1, q3 );
+						QuaternionBlend( q[i], q3, flWeight, q[i] );
+					}
+					Assert( q[i].IsValid() );
+				}
+				pData += sizeof( Quaternion32 ) * animdesc.zeroframecount;
 			}
 		}
 	}
