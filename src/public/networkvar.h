@@ -201,6 +201,13 @@ public:
 	{ 
 		return Set( ( const Type )val.m_Value ); 
 	}
+
+	const Type& SetDirect( const Type &val )
+	{
+		NetworkStateChanged();
+		m_Value = val;
+		return m_Value;
+	}
 	
 	const Type& Set( const Type &val )
 	{

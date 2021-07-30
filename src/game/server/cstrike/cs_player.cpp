@@ -261,6 +261,7 @@ public:
 	CNetworkVector( m_vecRagdollOrigin );
 	CNetworkVar(int, m_iDeathPose );
 	CNetworkVar(int, m_iDeathFrame );
+	CNetworkVar(float, m_flDeathYaw );
 };
 
 LINK_ENTITY_TO_CLASS( cs_ragdoll, CCSRagdoll );
@@ -277,6 +278,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CCSRagdoll, DT_CSRagdoll )
 	SendPropInt( SENDINFO( m_iDeathFrame ), 5 ),
 	SendPropInt( SENDINFO(m_iTeamNum), TEAMNUM_NUM_BITS, 0),
 	SendPropInt( SENDINFO( m_bClientSideAnimation ), 1, SPROP_UNSIGNED ),
+	SendPropFloat( SENDINFO( m_flDeathYaw ), 0, SPROP_NOSCALE ),
 END_SEND_TABLE()
 
 
@@ -369,6 +371,11 @@ BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
 	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
 	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
 
+	SendPropFloat( SENDINFO( m_flLowerBodyYawTarget ), 8, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO( m_bStrafing ) ),
+
+	SendPropFloat( SENDINFO( m_flThirdpersonRecoil ), 8, SPROP_NOSCALE ),
+
 END_SEND_TABLE()
 
 
@@ -421,6 +428,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bIsGrabbingHostage ) ),
 	SendPropEHandle( SENDINFO( m_hCarriedHostage ) ),
 	SendPropEHandle( SENDINFO( m_hCarriedHostageProp ) ),
+	SendPropBool( SENDINFO( m_bIsScoped ) ),
 	SendPropBool( SENDINFO( m_bIsWalking ) ),
 	SendPropFloat( SENDINFO( m_flGroundAccelLinearFracLastTime ), 0, SPROP_CHANGES_OFTEN ),
 
@@ -514,6 +522,7 @@ ConCommand cc_CreatePredictionError( "CreatePredictionError", cc_CreatePredictio
 CCSPlayer::CCSPlayer()
 {
 	m_PlayerAnimState = CreatePlayerAnimState( this, this, LEGANIM_9WAY, true );
+	m_PlayerAnimStateCSGO = CreateCSGOPlayerAnimstate( this );
 
 	UseClientSideAnimation();
 	m_numRoundsSurvived = 0;
@@ -527,6 +536,8 @@ CCSPlayer::CCSPlayer()
 	m_iClass = (int)CS_CLASS_NONE;
 	m_iSkin = 0;
 	m_angEyeAngles.Init();
+
+	m_flThirdpersonRecoil = 0;
 
 	SetViewOffset( VEC_VIEW_SCALED( this ) );
 
@@ -661,7 +672,12 @@ CCSPlayer::~CCSPlayer()
 
 	// delete the records of damage taken and given
 	ResetDamageCounters();
-	m_PlayerAnimState->Release();
+
+	if ( m_PlayerAnimState )
+		m_PlayerAnimState->Release();
+
+	if ( m_PlayerAnimStateCSGO )
+		m_PlayerAnimStateCSGO->Release();
 }
 
 
@@ -1459,7 +1475,8 @@ void CCSPlayer::Spawn()
 	m_applyDeafnessTime = 0.0f;
 
 	m_cycleLatch = 0;
-	m_cycleLatchTimer.Start( RandomFloat( 0.0f, CycleLatchInterval ) );
+	if ( !m_bUseNewAnimstate )
+		m_cycleLatchTimer.Start( RandomFloat( 0.0f, CycleLatchInterval ) );
 
 	StockPlayerAmmo();
 
@@ -1523,6 +1540,13 @@ void CCSPlayer::Spawn()
 		{
 			EmitSound( "Player.Respawn" );
 		}
+	}
+
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->Reset();
+		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH], true );
+		DoAnimationEvent( PLAYERANIMEVENT_DEPLOY ); // re-deploy default weapon when spawning
 	}
 
 	if ( GetTeamNumber() == TEAM_CT )
@@ -1781,6 +1805,7 @@ void CCSPlayer::CreateRagdollEntity()
 		pRagdoll->m_vecForce = m_vecTotalBulletForce;
 		pRagdoll->m_iDeathPose = m_iDeathPose;
 		pRagdoll->m_iDeathFrame = m_iDeathFrame;
+		pRagdoll->m_flDeathYaw = m_flDeathYaw;
 		pRagdoll->Init();
 	}
 
@@ -2496,6 +2521,13 @@ void CCSPlayer::PostThink()
 			StopLookingAtWeapon();
 	}
 
+	// failsafe to show active world model if it fails to unhide by the time deploy is complete
+	CWeaponCSBase *pCSWeapon = GetActiveCSWeapon();
+	if ( pCSWeapon && pCSWeapon->GetActivity() != pCSWeapon->GetDeployActivity() )
+	{
+		pCSWeapon->ShowWeaponWorldModel( true );
+	}
+
 	UpdateAddonBits();
 
 	UpdateRadar();
@@ -2532,7 +2564,9 @@ void CCSPlayer::PostThink()
 	// Store the eye angles pitch so the client can compute its animation state correctly.
 	m_angEyeAngles = EyeAngles();
 
-	m_PlayerAnimState->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] );
+	m_flThirdpersonRecoil = GetAimPunchAngle()[PITCH];
+
+	m_bUseNewAnimstate ? m_PlayerAnimStateCSGO->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] ) : m_PlayerAnimState->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] );
 
 	// check if we need to apply a deafness DSP effect.
 	if ((m_applyDeafnessTime != 0.0f) && (m_applyDeafnessTime <= gpGlobals->curtime))
@@ -2545,8 +2579,8 @@ void CCSPlayer::PostThink()
 		StopSound( "Player.AmbientUnderWater" );
 		SetPlayerUnderwater( false );
 	}
-
-	if( IsAlive() && m_cycleLatchTimer.IsElapsed() )
+	
+	if( !m_bUseNewAnimstate && IsAlive() && m_cycleLatchTimer.IsElapsed() )
 	{
 		m_cycleLatchTimer.Start( CycleLatchInterval );
 
@@ -2590,6 +2624,20 @@ void CCSPlayer::PushawayThink()
 	SetNextThink( gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL, CS_PUSHAWAY_THINK_CONTEXT );
 }
 
+
+void CCSPlayer::SetModel( const char *szModelName )
+{
+	BaseClass::SetModel( szModelName );
+
+	// lets just check if a unique bone is existing...
+	m_bUseNewAnimstate = (LookupBone( "spine_0" ) != -1);
+
+	if ( m_bUseNewAnimstate )
+	{
+		if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+			m_PlayerAnimStateCSGO->Reset();
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether or not we can switch to the given weapon.
@@ -3692,6 +3740,36 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 		m_flFlashDuration = flNewDuration;
 		m_flFlashMaxAlpha = Max( m_flFlashMaxAlpha.Get(), startingAlpha );
 	}
+
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		// Magic numbers to reduce the fade time to within 'perceptible' range.
+		// Players can see well enough to shoot back somewhere around 50% white plus burn-in effect.
+		// Varies by player and amount of panic ;)
+		// So this makes raised arm goes down earlier, making it a better representation of actual blindness.
+		float flAdjustedHold = holdTime * 0.45f;
+		float flAdjustedEnd = fadeTime * 0.7f;
+
+		//DevMsg( "Flashing. Time is: %f. Params: holdTime: %f, fadeTime: %f, alpha: %f\n", gpGlobals->curtime, holdTime, fadeTime, m_flFlashMaxAlpha );
+
+		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart = gpGlobals->curtime + flAdjustedHold;
+		m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd = gpGlobals->curtime + flAdjustedEnd;
+
+		// This check moves the ease-out start and end to account for a non-255 starting alpha.
+		// However it looks like starting alpha is ALWAYS 255, since no current code path seems to ever pass in less.
+		if ( m_flFlashMaxAlpha < 255 )
+		{
+			float flScaleBack = 1.0f - (( flAdjustedEnd / 255.0f ) * m_flFlashMaxAlpha);
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= flScaleBack;
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutEnd -= flScaleBack;
+		}
+
+		// when fade out time is very soon, don't pull the arm up all the way. It looks silly and robotic.
+		if ( flAdjustedEnd < 1.5f )
+		{
+			m_PlayerAnimStateCSGO->m_flFlashedAmountEaseOutStart -= 1.0f;
+		}
+	}
 }
 
 void CCSPlayer::Deafen( float flDistance )
@@ -3866,6 +3944,18 @@ bool CCSPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*
 			if ( pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
 			{	// When switching to grenade remember the preferred grenade
 				m_nPreferredGrenadeDrop = pCSWeapon->GetCSWeaponID();
+			}
+
+			MDLCACHE_CRITICAL_SECTION();
+			// Add a deploy event to let the 3rd person animation system know to update to the current weapon and optionally play a deploy animation if it exists.
+			if ( (gpGlobals->curtime - pWeapon->m_flLastTimeInAir) < 0.1f )
+			{
+				// if the weapon was flying through the air VERY recently, assume we 'caught' it and play a catch anim
+				DoAnimationEvent( PLAYERANIMEVENT_CATCH_WEAPON );
+			}
+			else
+			{
+				DoAnimationEvent( PLAYERANIMEVENT_DEPLOY );
 			}
 		}
 	}
@@ -4077,6 +4167,11 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 {
 	bool bSuccess = false;
 
+	CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
+
+	if ( pWeapon )
+		pWeapon->ShowWeaponWorldModel( false );
+
 	if ( HasShield() && bDropShield == true )
 	{
 		DropShield();
@@ -4099,14 +4194,15 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 		pWeapon->SetSolidFlags( FSOLID_NOT_STANDABLE | FSOLID_TRIGGER | FSOLID_USE_TRIGGER_BOUNDS );
 		pWeapon->SetMoveCollide( MOVECOLLIDE_FLY_BOUNCE );
 
-		CWeaponCSBase *pCSWeapon = dynamic_cast< CWeaponCSBase* >( pWeapon );
-
 		if( pCSWeapon )
 		{
-			pCSWeapon->SetWeaponModelIndex( pCSWeapon->GetCSWpnData().szWorldModel );
+			pCSWeapon->SetModel( pCSWeapon->GetWorldModel() );
+
+			// set silencer bodygroup
+			pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );
 
 			//Find out the index of the ammo type
-			/*int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
+			int iAmmoIndex = pCSWeapon->GetPrimaryAmmoType();
 
 			//If it has an ammo type, find out how much the player has
 			if( iAmmoIndex != -1 )
@@ -4117,7 +4213,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				{
 					for ( int i=0; i<MAX_WEAPONS; ++i )
 					{
-						CBaseCombatWeapon *pOtherWeapon = GetWeapon(i);
+						CBaseCombatWeapon *pOtherWeapon = GetWeapon( i );
 						if ( pOtherWeapon && pOtherWeapon != pWeapon && pOtherWeapon->GetPrimaryAmmoType() == iAmmoIndex )
 						{
 							bAmmoTypeInUse = true;
@@ -4129,14 +4225,18 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 				if ( !bAmmoTypeInUse )
 				{
 					int iAmmoToDrop = GetAmmoCount( iAmmoIndex );
+					
+					// only add 1 ammo to dropped grenades
+					if( pCSWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
+						iAmmoToDrop = 0;
 
-					//Add this much to the dropped weapon
-					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
+//					//Add this much to the dropped weapon
+//					pCSWeapon->SetExtraAmmoCount( iAmmoToDrop );
 
 					//Remove all ammo of this type from the player
 					SetAmmoCount( 0, iAmmoIndex );
 				}
-			}*/
+			}
 		}
 
 		//=========================================
@@ -4146,79 +4246,151 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 		int iWeaponBoneIndex = -1;
 
 		MDLCACHE_CRITICAL_SECTION();
-		CStudioHdr *hdr = pWeapon->GetModelPtr();
-		// If I have a hand, set the weapon position to my hand bone position.
-		if ( hdr && hdr->numbones() > 0 )
+
+
+		if ( !m_bUseNewAnimstate )
 		{
-			// Assume bone zero is the root
-			for ( iWeaponBoneIndex = 0; iWeaponBoneIndex < hdr->numbones(); ++iWeaponBoneIndex )
+
+			// now we use the weapon_bone to drop the item from.  Previously we were incorrectly using the root position from the character
+			iBIndex = LookupBone( "ValveBiped.weapon_bone" );
+			iWeaponBoneIndex = pWeapon->LookupBone( "ValveBiped.weapon_bone" );
+
+			// dkorus: If we hit this assert, the model changed and we no longer have a valid "ValveBiped.weapon_bone" to use for our weapon drop position
+			//		   This code will have to change to match the new bone name
+			AssertMsg( iBIndex != -1, "Missing weapon bone from player!  Make sure the bone exists and or that the string is updated." );
+
+			if ( iBIndex == -1 || iWeaponBoneIndex == -1 )
 			{
-				iBIndex = LookupBone( hdr->pBone( iWeaponBoneIndex )->pszName() );
-				// Found one!
-				if ( iBIndex != -1 )
+				iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
+				iWeaponBoneIndex = 0; // use the root
+			}
+
+			if ( iBIndex != -1 )  
+			{
+				Vector origin;
+				QAngle angles;
+				matrix3x4_t transform;
+
+				// Get the transform for the weapon bonetoworldspace in the NPC
+				GetBoneTransform( iBIndex, transform );
+
+				// find offset of root bone from origin in local space
+				// Make sure we're detached from hierarchy before doing this!!!
+				pWeapon->StopFollowingEntity();
+				MatrixAngles( transform, angles, origin );
+
+				pWeapon->SetAbsOrigin( Vector( 0, 0, 0 ) );
+				pWeapon->SetAbsAngles( QAngle( 0, 0, 0 ) );
+				pWeapon->InvalidateBoneCache();
+				matrix3x4_t rootLocal;
+				pWeapon->GetBoneTransform( iWeaponBoneIndex, rootLocal );
+
+				// invert it
+				matrix3x4_t rootInvLocal;
+				MatrixInvert( rootLocal, rootInvLocal );
+
+				matrix3x4_t weaponMatrix;
+				ConcatTransforms( transform, rootInvLocal, weaponMatrix );
+				MatrixAngles( weaponMatrix, angles, origin );
+
+				// run a hull trace to prevent throwing guns through walls or world geometry
+				trace_t trDropTrace;
+				UTIL_TraceHull( EyePosition(), origin, Vector( -5, -5, -5 ), Vector( 5, 5, 5 ), MASK_SOLID, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trDropTrace );
+				if ( trDropTrace.fraction != 1.0 )
 				{
-					break;
+					////uncomment to see debug visualization
+					//debugoverlay->AddBoxOverlay( origin, Vector(-5,-5,-5), Vector(5,5,5), QAngle(0,0,0), 0,200,0,128, 4.0f );
+					//debugoverlay->AddBoxOverlay( EyePosition(), Vector(-5,-5,-5), Vector(5,5,5), QAngle(0,0,0), 200,0,0,128, 4.0f );
+					//debugoverlay->AddLineOverlay( EyePosition(), origin, 255,0,0, true, 4.0f );
+
+					// move the weapon drop position to a valid point between the player's eyes (assumed valid) and their right hand (assumed invalid)
+					origin -= (( origin - EyePosition() ) * trDropTrace.fraction);
+
+					//debugoverlay->AddBoxOverlay( origin, Vector(-5,-5,-5), Vector(5,5,5), QAngle(0,0,0), 0,0,200,128, 4.0f );
+				}
+
+				pWeapon->Teleport( &origin, &angles, NULL );
+			
+				//Have to teleport the physics object as well
+				IPhysicsObject *pWeaponPhys = pWeapon->VPhysicsGetObject();
+
+				if( pWeaponPhys )
+				{
+					Vector vPos;
+					QAngle vAngles;
+
+					pWeaponPhys->GetPosition( &vPos, &vAngles );
+					pWeaponPhys->SetPosition( vPos, vAngles, true );
+
+					AngularImpulse	angImp(0,0,0 );
+					Vector vecAdd = (GetAbsVelocity() * 0.5f) + Vector( 0, 0, 110 );
+					pWeaponPhys->AddVelocity( &vecAdd, &angImp );
 				}
 			}
 
-			if ( iWeaponBoneIndex == hdr->numbones() )
-				 return true;
-
-			if ( iBIndex == -1 )
-			{
-				iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
-			}
 		}
 		else
 		{
-			iBIndex = LookupBone( "ValveBiped.Bip01_R_Hand" );
-		}
+			Assert( pWeapon->GetModel() );
 
-		if ( iBIndex != -1)
-		{
-			Vector origin;
-			QAngle angles;
-			matrix3x4_t transform;
+			Vector vecWeaponThrowFromPos = EyePosition();
+			QAngle angWeaponThrowFromAngle = EyeAngles();
 
-			// Get the transform for the weapon bonetoworldspace in the NPC
-			GetBoneTransform( iBIndex, transform );
+			int nPlayerRightHandAttachment = LookupAttachment( "weapon_hand_R" );
+			if ( nPlayerRightHandAttachment != -1 )
+			{
+				bool bAttachSuccess = GetAttachment( nPlayerRightHandAttachment, vecWeaponThrowFromPos );
+				Assert( bAttachSuccess ); bAttachSuccess;
+			}
+			else
+			{
+				DevWarning( "Warning: Can't find player's right hand attachment! [weapon_hand_R]\n" );
+			}
 
-			// find offset of root bone from origin in local space
-			// Make sure we're detached from hierarchy before doing this!!!
 			pWeapon->StopFollowingEntity();
-			pWeapon->SetAbsOrigin( Vector( 0, 0, 0 ) );
-			pWeapon->SetAbsAngles( QAngle( 0, 0, 0 ) );
-			pWeapon->InvalidateBoneCache();
-			matrix3x4_t rootLocal;
-			pWeapon->GetBoneTransform( iWeaponBoneIndex, rootLocal );
 
-			// invert it
-			matrix3x4_t rootInvLocal;
-			MatrixInvert( rootLocal, rootInvLocal );
+			// run a hull trace to prevent throwing guns through walls or world geometry
+			// Note we do a conservative trace here that blocks against more stuff than is absolutely necessary
+			// (we could figure out what kind of object is being thrown, and use a different trace based on that,
+			// but it doesn't really matter since it will just move the drop point slightly back towards your head)
+			trace_t trDropTrace;
+			UTIL_TraceHull( EyePosition(), vecWeaponThrowFromPos, Vector( -5, -5, -5 ), Vector( 5, 5, 5 ), MASK_PLAYERSOLID|CONTENTS_GRENADECLIP, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trDropTrace );
+			if ( trDropTrace.fraction != 1.0 )
+			{
 
-			matrix3x4_t weaponMatrix;
-			ConcatTransforms( transform, rootInvLocal, weaponMatrix );
-			MatrixAngles( weaponMatrix, angles, origin );
+				//uncomment to see debug visualization
+				//debugoverlay->AddBoxOverlay( vecWeaponThrowFromPos, Vector(-5,-5,-5), Vector(5,5,5), QAngle(0,0,0), 0,200,0,128, 4.0f );
+				//debugoverlay->AddBoxOverlay( EyePosition(), Vector(-5,-5,-5), Vector(5,5,5), QAngle(0,0,0), 200,0,0,128, 4.0f );
+				//debugoverlay->AddLineOverlay( EyePosition(), vecWeaponThrowFromPos, 255,0,0, true, 4.0f );
 
-			pWeapon->Teleport( &origin, &angles, NULL );
+				// move the weapon drop position to a valid point between the player's eyes (assumed valid) and their right hand (assumed invalid)
+				vecWeaponThrowFromPos -= (( vecWeaponThrowFromPos - EyePosition() ) * trDropTrace.fraction);
+			}
+			
+			//debugoverlay->AddBoxOverlay( vecWeaponThrowFromPos, Vector(-1,-1,-1), Vector(1,1,1), QAngle(0,0,0), 0,0,200,128, 4.0f );
+
+			pWeapon->SetAbsOrigin( vecWeaponThrowFromPos );
+			pWeapon->SetAbsAngles( angWeaponThrowFromAngle );
+			
+			pWeapon->Teleport( &vecWeaponThrowFromPos, &angWeaponThrowFromAngle, NULL );
 
 			//Have to teleport the physics object as well
-
 			IPhysicsObject *pWeaponPhys = pWeapon->VPhysicsGetObject();
 
 			if( pWeaponPhys )
 			{
 				Vector vPos;
 				QAngle vAngles;
-				pWeaponPhys->GetPosition( &vPos, &vAngles );
-				pWeaponPhys->SetPosition( vPos, angles, true );
 
-				AngularImpulse	angImp(0,0,0);
-				Vector vecAdd = GetAbsVelocity();
+				pWeaponPhys->GetPosition( &vPos, &vAngles );
+				pWeaponPhys->SetPosition( vPos, vAngles, true );
+
+				AngularImpulse	angImp(0,0,0 );
+				Vector vecAdd = (GetAbsVelocity() * 0.5f) + Vector( 0, 0, 110 );
 				pWeaponPhys->AddVelocity( &vecAdd, &angImp );
 			}
 		}
-
+		
 		bSuccess = true;
 	}
 
@@ -7392,6 +7564,13 @@ void CCSPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 	}
 
 	BaseClass::Weapon_Equip( pWeapon );
+
+	// old players don't know how to unhide their world models a little bit into their deploys,
+	// because old players don't have deploy animations at all.
+	if ( !m_bUseNewAnimstate && pWeapon && pWeapon->GetWeaponWorldModel() )
+	{
+		pWeapon->ShowWeaponWorldModel( true );
+	}
 }
 
 bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
@@ -8720,17 +8899,26 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pszName, int iSubType )
 
 void CCSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 {
-	if ( event == PLAYERANIMEVENT_THROW_GRENADE )
+	if ( m_bUseNewAnimstate )
 	{
-		// Grenade throwing has to synchronize exactly with the player's grenade weapon going away,
-		// and events get delayed a bit, so we let CCSPlayerAnimState pickup the change to this
-		// variable.
-		m_iThrowGrenadeCounter = (m_iThrowGrenadeCounter+1) % (1<<THROWGRENADE_COUNTER_BITS);
+		// run the event on the server
+		m_PlayerAnimStateCSGO->DoAnimationEvent( event, nData );
+		return;
 	}
 	else
 	{
-		m_PlayerAnimState->DoAnimationEvent( event, nData );
-		TE_PlayerAnimEvent( this, event, nData );	// Send to any clients who can see this guy.
+		if ( event == PLAYERANIMEVENT_THROW_GRENADE )
+		{
+			// Grenade throwing has to synchronize exactly with the player's grenade weapon going away,
+			// and events get delayed a bit, so we let CCSPlayerAnimState pickup the change to this
+			// variable.
+			m_iThrowGrenadeCounter = (m_iThrowGrenadeCounter+1 ) % (1<<THROWGRENADE_COUNTER_BITS );
+		}
+		else
+		{
+			m_PlayerAnimState->DoAnimationEvent( event, nData );
+			TE_PlayerAnimEvent( this, event, nData );	// Send to any clients who can see this guy.
+		}
 	}
 }
 
@@ -9624,7 +9812,17 @@ void CCSPlayer::SelectDeathPose( const CTakeDamageInfo &info )
 	Activity aActivity = ACT_INVALID;
 	int iDeathFrame = 0;
 
-	SelectDeathPoseActivityAndFrame( this, info, m_LastHitGroup, aActivity, iDeathFrame );
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		float flDeathYaw = 0;
+		m_PlayerAnimStateCSGO->SelectDeathPose( info, m_LastHitGroup, aActivity, flDeathYaw );
+		SetDeathPoseYaw( flDeathYaw );
+	}
+	else
+	{
+		SelectDeathPoseActivityAndFrame( this, info, m_LastHitGroup, aActivity, iDeathFrame );
+	}
+
 	if ( aActivity == ACT_INVALID )
 	{
 		SetDeathPose( ACT_INVALID );
@@ -9643,6 +9841,31 @@ void CCSPlayer::HandleAnimEvent( animevent_t *pEvent )
 	{
 		// Ignore these for now - soon we will be playing footstep sounds based on these events
 		// that mark footfalls in the anims.
+	}
+	else if ( pEvent->event == AE_WPN_UNHIDE )
+	{
+		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+		if ( pWeapon && pWeapon->GetWeaponWorldModel() )
+		{
+			pWeapon->ShowWeaponWorldModel( true );
+		}
+	}
+	else if ( pEvent->event == AE_CL_EJECT_MAG || pEvent->event == AE_CL_EJECT_MAG_UNHIDE )
+	{
+		CAnimationLayer *pWeaponLayer = GetAnimOverlay( ANIMATION_LAYER_WEAPON_ACTION );
+		if ( pWeaponLayer && pWeaponLayer->m_nDispatchedDst != ACT_INVALID )
+		{
+			// If the weapon is running a dispatched animation, we can eat these events from the player.
+			// The weapon itself assumes the responsibility for these events when dispatched.
+		}
+		else
+		{
+			CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+			if ( pWeapon && pWeapon->GetWeaponWorldModel() )
+			{
+				pWeapon->GetWeaponWorldModel()->HandleAnimEvent( pEvent );
+			}
+		}
 	}
 	else
 	{

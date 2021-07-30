@@ -913,7 +913,7 @@ void CCSPlayerAnimState::UpdateLayerSequenceGeneric( CStudioHdr *pStudioHdr, int
 	pLayer->m_nSequence = iSequence;
 
 	// find cycle rate for the layer
-	float flSequenceCycleRate = m_pPlayer->GetSequenceCycleRate( pStudioHdr, iSequence );
+	float flSequenceCycleRate = m_pPlayer->GetLayerSequenceCycleRate( pLayer, iSequence );
 
 	// weapon vs self
 	flCurCycle += flSequenceCycleRate * gpGlobals->frametime;

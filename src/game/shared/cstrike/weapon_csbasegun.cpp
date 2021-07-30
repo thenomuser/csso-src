@@ -55,6 +55,26 @@ bool CWeaponCSBaseGun::Deploy()
 	return BaseClass::Deploy();
 }
 
+void CWeaponCSBaseGun::ItemBusyFrame()
+{
+	CCSPlayer *pPlayer = GetPlayerOwner();
+
+	if ( !pPlayer )
+		return;
+
+	// if we're scoped during a reload, pull us out of the scope for the duration (and set resumezoom so we'll re-zoom when reloading is done)
+	if (pPlayer->m_bIsScoped && m_bInReload )
+	{
+		//m_zoomLevel = 0; //don't affect zoom level, so it'll restore when reloading is done
+		pPlayer->m_bIsScoped = false;
+		pPlayer->m_bResumeZoom = true;
+		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
+		m_weaponMode = Primary_Mode;
+	}
+
+	BaseClass::ItemBusyFrame();
+}
+
 void CWeaponCSBaseGun::ItemPostFrame()
 {
 	CCSPlayer *pPlayer = GetPlayerOwner();
@@ -73,6 +93,7 @@ void CWeaponCSBaseGun::ItemPostFrame()
 			m_weaponMode = Secondary_Mode;
 			pPlayer->SetFOV( pPlayer, pPlayer->m_iLastZoom, 0.05f );
 			m_zoomFullyActiveTime = gpGlobals->curtime + 0.05f;// Make sure we think that we are zooming on the server so we don't get instant acc bonus
+			pPlayer->m_bIsScoped = true;
 		}
 	}
 
@@ -255,9 +276,10 @@ bool CWeaponCSBaseGun::Reload()
 
 	pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	if ((iResult) && (pPlayer->GetFOV() != pPlayer->GetDefaultFOV()))
+	if ( pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
 	{
-		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV() );
+		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.0f );
+		pPlayer->m_bIsScoped = false;
 	}
 
 	pPlayer->m_iShotsFired = 0;

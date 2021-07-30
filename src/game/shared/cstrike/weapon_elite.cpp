@@ -47,9 +47,6 @@ public:
 	virtual int GetMuzzleAttachmentIndex( C_BaseAnimating* pAnimating, bool isThirdPerson );
 #endif
 
-	virtual const char		*GetWorldModel( void ) const;
-	virtual int				GetWorldModelIndex( void );
-
 protected:
 	bool FiringLeft() const;
 
@@ -57,9 +54,6 @@ private:
 	
 	CWeaponElite( const CWeaponElite & );
 	float		m_flLastFire;
-
-	int m_droppedModelIndex;
-	bool m_inPrecache;
 };
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponElite, DT_WeaponElite )
@@ -79,7 +73,6 @@ PRECACHE_WEAPON_REGISTER( weapon_elite );
 CWeaponElite::CWeaponElite()
 {
 	m_flLastFire = gpGlobals->curtime;
-	m_inPrecache = false;
 }
 
 
@@ -91,43 +84,16 @@ void CWeaponElite::Spawn( )
 
 void CWeaponElite::Precache()
 {
-	m_inPrecache = true;
 	BaseClass::Precache();
 
 	PrecacheModel( "models/weapons/w_eq_eholster_elite.mdl" );
 	PrecacheModel( "models/weapons/w_eq_eholster.mdl" );
 	PrecacheModel( "models/weapons/w_pist_elite_single.mdl" );
-	m_droppedModelIndex = CBaseEntity::PrecacheModel( GetCSWpnData().m_szDroppedModel );
-	m_inPrecache = false;
 }
 
 bool CWeaponElite::Deploy( )
 {
 	return BaseClass::Deploy();
-}
-
-int CWeaponElite::GetWorldModelIndex( void )
-{
-	if ( GetOwner() || m_inPrecache )
-	{
-		return m_iWorldModelIndex;
-	}
-	else
-	{
-		return m_droppedModelIndex;
-	}
-}
-
-const char * CWeaponElite::GetWorldModel( void ) const
-{
-	if ( GetOwner() || m_inPrecache )
-	{
-		return BaseClass::GetWorldModel();
-	}
-	else
-	{
-		return GetCSWpnData().m_szDroppedModel;
-	}
 }
 
 

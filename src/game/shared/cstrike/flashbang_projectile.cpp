@@ -16,6 +16,7 @@
 #include "particle_smokegrenade.h"
 #include "smoke_fog_overlay_shared.h"
 #include "cs_simple_hostage.h"
+#include "animation.h"
 
 #define GRENADE_MODEL "models/weapons/w_eq_flashbang_thrown.mdl"
 
@@ -37,10 +38,15 @@ public:
 		CBaseEntity *pEnt = EntityFromEntityHandle(pHandleEntity);
 		if ( pEnt )
 		{
-			// Hostages don't block flashbangs
-			CHostage* pHostage = dynamic_cast<CHostage*>(pEnt);
-			if ( pHostage )
-				return false;
+			CBaseAnimating* pAnimating = dynamic_cast< CBaseAnimating* >( pEnt );
+			if ( pAnimating )
+			{
+				// look for the flashbang passable animtag
+				float flFlashbangPassable = pAnimating->GetAnySequenceAnimTag( pAnimating->GetSequence(), ANIMTAG_FLASHBANG_PASSABLE, -1 );
+
+				if ( flFlashbangPassable != -1 )
+					return false; // model animation is tagged to allow flashbangs through
+			}
 
 			// Weapons don't block flashbangs
 			CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* >( pEnt );

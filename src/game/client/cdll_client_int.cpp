@@ -2223,6 +2223,8 @@ void OnRenderStart()
 	g_pPortalRender->UpdatePortalPixelVisibility(); //updating this one or two lines before querying again just isn't cutting it. Update as soon as it's cheap to do so.
 #endif
 
+	C_BaseAnimating::EnableInvalidateBoneCache( true );
+
 	::partition->SuppressLists( PARTITION_ALL_CLIENT_EDICTS, true );
 	C_BaseEntity::SetAbsQueriesValid( false );
 
@@ -2338,6 +2340,8 @@ void OnRenderEnd()
 {
 	// Disallow access to bones (access is enabled in CViewRender::SetUpView).
 	C_BaseAnimating::PopBoneAccess( "CViewRender::SetUpView->OnRenderEnd" );
+
+	C_BaseAnimating::EnableInvalidateBoneCache( false );
 
 	UpdatePVSNotifiers();
 

@@ -14,6 +14,9 @@
 #include "rangecheckedvar.h"
 #include "lerp_functions.h"
 #include "networkvar.h"
+#include "ai_activity.h"
+
+class C_BaseAnimatingOverlay;
 
 class C_AnimationLayer
 {
@@ -25,7 +28,8 @@ public:
 	C_AnimationLayer();
 	void Reset();
 
-	void SetOrder( int order );
+	void SetOwner( C_BaseAnimatingOverlay *pOverlay );
+	C_BaseAnimatingOverlay *GetOwner() const;
 
 public:
 
@@ -34,29 +38,40 @@ public:
 	CRangeCheckedVar<int, -1, 65535, 0>	m_nSequence;
 	CRangeCheckedVar<float, -2, 2, 0>	m_flPrevCycle;
 	CRangeCheckedVar<float, -5, 5, 0>	m_flWeight;
+	CRangeCheckedVar<float, -5, 5, 0>	m_flWeightDeltaRate;
 	int		m_nOrder;
 
 	// used for automatic crossfades between sequence changes
 	CRangeCheckedVar<float, -50, 50, 1>		m_flPlaybackRate;
 	CRangeCheckedVar<float, -2, 2, 0>		m_flCycle;
 
+	C_BaseAnimatingOverlay	*m_pOwner;
+
 	float GetFadeout( float flCurTime );
 
+	void SetOrder( int order );
 	void SetSequence( int nSequence );
 	void SetCycle( float flCycle );
 	void SetPlaybackRate( float flPlaybackRate );
 	void SetWeight( float flWeight );
+	void SetWeightDeltaRate( float flDelta );
 
 	int   GetOrder() const;
 	int   GetSequence() const;
 	float GetCycle() const;
 	float GetPlaybackRate() const;
 	float GetWeight() const;
+	float GetWeightDeltaRate() const;
 
 	void BlendWeight();
 
 	float	m_flLayerAnimtime;
 	float	m_flLayerFadeOuttime;
+
+	// dispatch flags
+	CStudioHdr	*m_pDispatchedStudioHdr;
+	int		m_nDispatchedSrc;
+	int		m_nDispatchedDst;
 
 	float   m_flBlendIn;
 	float   m_flBlendOut;
@@ -69,6 +84,11 @@ public:
 
 inline C_AnimationLayer::C_AnimationLayer()
 {
+	m_pOwner = NULL;
+	m_pDispatchedStudioHdr = NULL;
+	m_nDispatchedSrc = ACT_INVALID;
+	m_nDispatchedDst = ACT_INVALID;
+
 	Reset();
 }
 
@@ -92,6 +112,11 @@ FORCEINLINE void C_AnimationLayer::SetPlaybackRate( float flPlaybackRate )
 	m_flPlaybackRate = flPlaybackRate;
 }
 
+FORCEINLINE void C_AnimationLayer::SetWeightDeltaRate( float flDelta )
+{
+	m_flWeightDeltaRate = flDelta;
+}
+
 FORCEINLINE int	C_AnimationLayer::GetSequence( ) const
 {
 	return m_nSequence;
@@ -112,9 +137,24 @@ FORCEINLINE float C_AnimationLayer::GetWeight( ) const
 	return m_flWeight;
 }
 
+FORCEINLINE float C_AnimationLayer::GetWeightDeltaRate() const
+{
+	return m_flWeightDeltaRate;
+}
+
 FORCEINLINE int C_AnimationLayer::GetOrder() const
 {
 	return m_nOrder;
+}
+
+FORCEINLINE void C_AnimationLayer::SetOwner( C_BaseAnimatingOverlay *pOverlay )
+{
+	m_pOwner = pOverlay;
+}
+
+FORCEINLINE C_BaseAnimatingOverlay *C_AnimationLayer::GetOwner() const
+{
+	return m_pOwner;
 }
 
 inline void C_AnimationLayer::Reset()
@@ -122,6 +162,7 @@ inline void C_AnimationLayer::Reset()
 	m_nSequence = 0;
 	m_flPrevCycle = 0;
 	m_flWeight = 0;
+	m_flWeightDeltaRate = 0;
 	m_flPlaybackRate = 0;
 	m_flCycle = 0;
 	m_flLayerAnimtime = 0;
@@ -166,6 +207,8 @@ inline float C_AnimationLayer::GetFadeout( float flCurTime )
 
 inline C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_AnimationLayer& to )
 {
+	Assert( from.GetOwner() == to.GetOwner() );
+
 	C_AnimationLayer output;
 
 	output.m_nSequence = to.m_nSequence;
@@ -176,11 +219,14 @@ inline C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_
 
 	output.m_flLayerAnimtime = to.m_flLayerAnimtime;
 	output.m_flLayerFadeOuttime = to.m_flLayerFadeOuttime;
+	output.SetOwner( to.GetOwner() );
 	return output;
 }
 
 inline C_AnimationLayer Lerp( float flPercent, const C_AnimationLayer& from, const C_AnimationLayer& to )
 {
+	Assert( from.GetOwner() == to.GetOwner() );
+
 	C_AnimationLayer output;
 
 	output.m_nSequence = to.m_nSequence;
@@ -191,11 +237,15 @@ inline C_AnimationLayer Lerp( float flPercent, const C_AnimationLayer& from, con
 
 	output.m_flLayerAnimtime = to.m_flLayerAnimtime;
 	output.m_flLayerFadeOuttime = to.m_flLayerFadeOuttime;
+	output.SetOwner( to.GetOwner() );
 	return output;
 }
 
 inline C_AnimationLayer LoopingLerp_Hermite( float flPercent, C_AnimationLayer& prev, C_AnimationLayer& from, C_AnimationLayer& to )
 {
+	Assert( prev.GetOwner() == from.GetOwner() );
+	Assert( from.GetOwner() == to.GetOwner() );
+
 	C_AnimationLayer output;
 
 	output.m_nSequence = to.m_nSequence;
@@ -206,12 +256,16 @@ inline C_AnimationLayer LoopingLerp_Hermite( float flPercent, C_AnimationLayer& 
 
 	output.m_flLayerAnimtime = to.m_flLayerAnimtime;
 	output.m_flLayerFadeOuttime = to.m_flLayerFadeOuttime;
+	output.SetOwner( to.GetOwner() );
 	return output;
 }
 
 // YWB:  Specialization for interpolating euler angles via quaternions...
 inline C_AnimationLayer Lerp_Hermite( float flPercent, const C_AnimationLayer& prev, const C_AnimationLayer& from, const C_AnimationLayer& to )
 {
+	Assert( prev.GetOwner() == from.GetOwner() );
+	Assert( from.GetOwner() == to.GetOwner() );
+
 	C_AnimationLayer output;
 
 	output.m_nSequence = to.m_nSequence;
@@ -222,6 +276,7 @@ inline C_AnimationLayer Lerp_Hermite( float flPercent, const C_AnimationLayer& p
 
 	output.m_flLayerAnimtime = to.m_flLayerAnimtime;
 	output.m_flLayerFadeOuttime = to.m_flLayerFadeOuttime;
+	output.SetOwner( to.GetOwner() );
 	return output;
 }
 

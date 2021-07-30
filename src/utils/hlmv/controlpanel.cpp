@@ -1045,10 +1045,12 @@ bool CBoneControlWindow::SerializeQC( CUtlBuffer& buf )
 			{
 				mstudiobbox_t &hitbox = list[j].m_BBox;
 				mstudiobone_t* pBone = hdr->pBone( hitbox.bone );
-				buf.Printf( "$hbox %d \"%s\"\t  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f", 
+				buf.Printf( "$hbox %d \"%s\"\t  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f  %7.2f %7.2f %7.2f %7.2f", 
 					hitbox.group, pBone->pszName(), 
 					hitbox.bbmin.x, hitbox.bbmin.y, hitbox.bbmin.z,
-					hitbox.bbmax.x, hitbox.bbmax.y, hitbox.bbmax.z );
+					hitbox.bbmax.x, hitbox.bbmax.y, hitbox.bbmax.z,
+					hitbox.angOffsetOrientation.x, hitbox.angOffsetOrientation.y, hitbox.angOffsetOrientation.z,
+					hitbox.flCapsuleRadius );
 				if ( !list[j].m_Name.IsEmpty() )
 				{
 					buf.Printf( " \"%s\"", list[j].m_Name.Get() );

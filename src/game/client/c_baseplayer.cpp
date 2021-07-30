@@ -598,9 +598,28 @@ CBaseEntity	*C_BasePlayer::GetObserverTarget() const	// returns players target o
 	}
 }
 
+void UpdateWorldmodelVisibility( C_BasePlayer *player )
+{
+	for ( int i = 0; i < player->WeaponCount(); i++ )
+	{
+		CBaseCombatWeapon *pWeapon = player->GetWeapon(i);
+		if ( pWeapon )
+		{
+			CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+			if ( pWeaponWorldModel )
+			{
+				pWeaponWorldModel->UpdateVisibility();
+			}
+		}
+	}
+}
+
 // Helper method to fix up visiblity across split screen for view models when observer target or mode changes
 void UpdateViewmodelVisibility( C_BasePlayer *player )
 {
+	// also update world models
+	UpdateWorldmodelVisibility( player );
+
 	// Update view model visibility
 	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
 	{

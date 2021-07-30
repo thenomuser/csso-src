@@ -523,6 +523,101 @@ void RenderLine( const Vector& v1, const Vector& v2, Color c, bool bZBuffer )
 	pMesh->Draw();
 }
 
+// todo: draw a capsule procedurally instead of using these baked-in unit capsule verts
+#define CAPSULE_VERTS 74
+#define CAPSULE_LINES 117
+
+float g_capsuleVertPositions[CAPSULE_VERTS][3] = {
+	{ -0.01, -0.01, 1.0 },	{ 0.51, 0.0, 0.86 },	{ 0.44, 0.25, 0.86 },	{ 0.25, 0.44, 0.86 },	{ -0.01, 0.51, 0.86 },	{ -0.26, 0.44, 0.86 },	{ -0.45, 0.25, 0.86 },	{ -0.51, 0.0, 0.86 },	{ -0.45, -0.26, 0.86 },
+	{ -0.26, -0.45, 0.86 },	{ -0.01, -0.51, 0.86 },	{ 0.25, -0.45, 0.86 },	{ 0.44, -0.26, 0.86 },	{ 0.86, 0.0, 0.51 },	{ 0.75, 0.43, 0.51 },	{ 0.43, 0.75, 0.51 },	{ -0.01, 0.86, 0.51 },	{ -0.44, 0.75, 0.51 },
+	{ -0.76, 0.43, 0.51 },	{ -0.87, 0.0, 0.51 },	{ -0.76, -0.44, 0.51 },	{ -0.44, -0.76, 0.51 },	{ -0.01, -0.87, 0.51 },	{ 0.43, -0.76, 0.51 },	{ 0.75, -0.44, 0.51 },	{ 1.0, 0.0, 0.01 },		{ 0.86, 0.5, 0.01 },
+	{ 0.49, 0.86, 0.01 },	{ -0.01, 1.0, 0.01 },	{ -0.51, 0.86, 0.01 },	{ -0.87, 0.5, 0.01 },	{ -1.0, 0.0, 0.01 },	{ -0.87, -0.5, 0.01 },	{ -0.51, -0.87, 0.01 },	{ -0.01, -1.0, 0.01 },	{ 0.49, -0.87, 0.01 },
+	{ 0.86, -0.51, 0.01 },	{ 1.0, 0.0, -0.02 },	{ 0.86, 0.5, -0.02 },	{ 0.49, 0.86, -0.02 },	{ -0.01, 1.0, -0.02 },	{ -0.51, 0.86, -0.02 },	{ -0.87, 0.5, -0.02 },	{ -1.0, 0.0, -0.02 },	{ -0.87, -0.5, -0.02 },
+	{ -0.51, -0.87, -0.02 },{ -0.01, -1.0, -0.02 },	{ 0.49, -0.87, -0.02 },	{ 0.86, -0.51, -0.02 },	{ 0.86, 0.0, -0.51 },	{ 0.75, 0.43, -0.51 },	{ 0.43, 0.75, -0.51 },	{ -0.01, 0.86, -0.51 },	{ -0.44, 0.75, -0.51 },
+	{ -0.76, 0.43, -0.51 },	{ -0.87, 0.0, -0.51 },	{ -0.76, -0.44, -0.51 },{ -0.44, -0.76, -0.51 },{ -0.01, -0.87, -0.51 },{ 0.43, -0.76, -0.51 },	{ 0.75, -0.44, -0.51 },	{ 0.51, 0.0, -0.87 },	{ 0.44, 0.25, -0.87 },
+	{ 0.25, 0.44, -0.87 },	{ -0.01, 0.51, -0.87 },	{ -0.26, 0.44, -0.87 },	{ -0.45, 0.25, -0.87 },	{ -0.51, 0.0, -0.87 },	{ -0.45, -0.26, -0.87 },{ -0.26, -0.45, -0.87 },{ -0.01, -0.51, -0.87 },{ 0.25, -0.45, -0.87 },
+	{ 0.44, -0.26, -0.87 },	{ 0.0, 0.0, -1.0 },
+};
+
+int g_capsuleLineIndices[CAPSULE_LINES] = { -1,
+	14,		0,	4,	16,	28,	40,	52,	64,	73,	70,	58,	46,	34,	22,	10,		-1,
+	14,		0,	1,	13,	25,	37,	49,	61,	73,	67,	55,	43,	31,	19,	7,		-1,
+	12,		61,	62,	63,	64,	65,	66,	67,	68,	69,	70,	71,	72,				-1,
+	12,		49,	50,	51,	52,	53,	54,	55,	56,	57,	58,	59,	60,				-1,
+	12,		37,	38,	39,	40,	41,	42,	43,	44,	45,	46,	47,	48,				-1,
+	12,		25,	26,	27,	28,	29,	30,	31,	32,	33,	34,	35,	36,				-1,
+	12,		13,	14,	15,	16,	17,	18,	19,	20,	21,	22,	23,	24,				-1,
+	12,		1,	2,	3,	4,	5,	6,	7,	8,	9,	10,	11,	12,				-1
+};
+
+void RenderCapsule( const Vector &vStart, const Vector &vEnd, const float &flRadius, Color c, IMaterial *pMaterial )
+{
+	InitializeStandardMaterials();
+
+	CMatRenderContextPtr pRenderContext( materials );
+
+	//RenderLine( vStart, vEnd, c, false );
+
+	Vector vecCapsuleCoreNormal = ( vStart - vEnd ).Normalized();
+
+	matrix3x4_t matCapsuleRotationSpace;
+	VectorMatrix( Vector(0,0,1), matCapsuleRotationSpace );
+
+	matrix3x4_t matCapsuleSpace;
+	VectorMatrix( vecCapsuleCoreNormal, matCapsuleSpace );
+
+	Vector v[CAPSULE_VERTS];
+	Vector vecLen = (vEnd - vStart);
+	for ( int i=0; i<CAPSULE_VERTS; i++ )
+	{
+		Vector vecCapsuleVert = Vector( g_capsuleVertPositions[i][0], g_capsuleVertPositions[i][1], g_capsuleVertPositions[i][2] );
+		
+		VectorRotate( vecCapsuleVert, matCapsuleRotationSpace, vecCapsuleVert );
+		VectorRotate( vecCapsuleVert, matCapsuleSpace, vecCapsuleVert );
+
+		vecCapsuleVert *= flRadius;
+
+		if ( g_capsuleVertPositions[i][2] > 0 )
+		{
+			vecCapsuleVert += vecLen;
+		}
+
+		v[i] = vecCapsuleVert + vStart;
+	}
+
+	unsigned char chRed = c.r();
+	unsigned char chGreen = c.g();
+	unsigned char chBlue = c.b();
+	unsigned char chAlpha = c.a();
+
+	pRenderContext->Bind( s_pWireframeIgnoreZ );
+
+	IMesh* pMesh = pRenderContext->GetDynamicMesh( );
+	CMeshBuilder meshBuilder;
+
+	for ( int i=0; i<CAPSULE_LINES; i++ )
+	{
+		if ( g_capsuleLineIndices[i] == -1 )
+		{
+			if ( i > 0 )
+			{
+				meshBuilder.End( false, true );
+
+				if ( i == CAPSULE_LINES - 1 )
+					break;
+			}
+			
+			i++;
+			meshBuilder.Begin( pMesh, MATERIAL_LINE_LOOP, g_capsuleLineIndices[i] );
+			i++;
+		}
+
+		meshBuilder.Position3fv (v[g_capsuleLineIndices[i]].Base());
+		meshBuilder.Color4ub( chRed, chGreen, chBlue, chAlpha );
+		meshBuilder.AdvanceVertex();
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Draws a triangle

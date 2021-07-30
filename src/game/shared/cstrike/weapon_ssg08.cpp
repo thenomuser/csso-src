@@ -91,16 +91,19 @@ void CWeaponSSG08::SecondaryAttack()
 		pPlayer->SetFOV( pPlayer, cSSG08MidZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
 		m_fAccuracyPenalty += GetCSWpnData().m_fInaccuracyAltSwitch;
+		pPlayer->m_bIsScoped = true;
 	}
 	else if (pPlayer->GetFOV() == cSSG08MidZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, cSSG08MaxZoomFOV, kZoomTime );
 		m_weaponMode = Secondary_Mode;
+		pPlayer->m_bIsScoped = true;
 	}
 	else if (pPlayer->GetFOV() == cSSG08MaxZoomFOV)
 	{
 		pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), kZoomTime );
 		m_weaponMode = Primary_Mode;
+		pPlayer->m_bIsScoped = false;
 	}
 
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.3f;   
@@ -156,6 +159,7 @@ void CWeaponSSG08::PrimaryAttack( void )
 		}
 		
 // 		#ifndef CLIENT_DLL
+			pPlayer->m_bIsScoped = false;
 			pPlayer->m_bResumeZoom = true;
 			pPlayer->SetFOV( pPlayer, pPlayer->GetDefaultFOV(), 0.05f );
 			m_weaponMode = Primary_Mode;

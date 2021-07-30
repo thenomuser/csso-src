@@ -1522,6 +1522,7 @@ bool CWeaponCSBase::Deploy()
 	if ( pPlayer )
 	{
 		pPlayer->m_iLastZoom = 0;
+		pPlayer->m_bIsScoped = false;
 		pPlayer->SetFOV( pPlayer, 0 );
 	}
 #else
@@ -2172,7 +2173,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 			if ( !pPlayer )
 				return true;
 
-			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() )
+			if ( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
 				return true;
 
 			// hide particle effects when we're interpolating between observer targets
@@ -2220,7 +2221,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 		else if ( event == AE_CLIENT_EJECT_BRASS )
 		{
 			C_CSPlayer *pPlayer = ToCSPlayer( GetOwner() );
-			if ( pPlayer && pPlayer->GetFOV() < pPlayer->GetDefaultFOV() )
+			if( pPlayer && pPlayer->GetFOV() != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
 				return true;
 
 			Vector origin;

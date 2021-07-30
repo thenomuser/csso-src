@@ -66,6 +66,8 @@
 static ConVar cl_SetupAllBones( "cl_SetupAllBones", "0" );
 ConVar r_sequence_debug( "r_sequence_debug", "" );
 
+bool C_BaseAnimating::s_bEnableInvalidateBoneCache = true;
+
 // If an NPC is moving faster than this, he should play the running footstep sound
 const float RUN_SPEED_ESTIMATE_SQR = 150.0f * 150.0f;
 
@@ -682,6 +684,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_iv_flPoseParameter( "C_BaseAnimating::m_iv_flPoseParameter" ),
 	m_iv_flEncodedController("C_BaseAnimating::m_iv_flEncodedController")
 {
+	m_bMaintainSequenceTransitions = true;
+
 	m_vecForce.Init();
 	m_nForceBone = -1;
 	
@@ -1164,6 +1168,30 @@ void C_BaseAnimating::GetBonePosition ( int iBone, Vector &origin, QAngle &angle
 	MatrixAngles( bonetoworld, angles, origin );
 }
 
+//=========================================================
+//=========================================================
+void C_BaseAnimating::GetHitboxBonePosition ( int iBone, Vector &origin, QAngle &angles, QAngle hitboxOrientation )
+{
+	matrix3x4_t bonetoworld;
+	GetBoneTransform( iBone, bonetoworld );
+	
+	matrix3x4_t temp;
+	AngleMatrix( hitboxOrientation, temp);
+	MatrixMultiply( bonetoworld, temp, temp );
+
+	MatrixAngles( temp, angles, origin );
+}
+
+void C_BaseAnimating::GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation, matrix3x4_t &pOut )
+{
+	matrix3x4_t bonetoworld;
+	GetBoneTransform( iBone, bonetoworld );
+
+	matrix3x4_t temp;
+	AngleMatrix( hitboxOrientation, temp );
+	MatrixMultiply( bonetoworld, temp, pOut );
+}
+
 void C_BaseAnimating::GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld )
 {
 	CStudioHdr *hdr = GetModelPtr();
@@ -1355,6 +1383,20 @@ void C_BaseAnimating::GetPoseParameters( CStudioHdr *pStudioHdr, float poseParam
 		DevMsgRT( "\n" );
 	}
 #endif
+}
+
+//-----------------------------------------------------------------------------
+
+float C_BaseAnimating::GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart, float flEnd )
+{
+	Assert( GetModelPtr() );
+	return ::GetFirstSequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flStart, flEnd );
+}
+
+float C_BaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault )
+{
+	Assert( GetModelPtr() );
+	return ::GetAnySequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flDefault );
 }
 
 
@@ -1757,6 +1799,9 @@ CollideType_t C_BaseAnimating::GetCollideType( void )
 void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float flCycle, Vector pos[], Quaternion q[] )
 {
 	VPROF( "C_BaseAnimating::MaintainSequenceTransitions" );
+
+	if ( !m_bMaintainSequenceTransitions )
+		return;
 
 	if ( !boneSetup.GetStudioHdr() )
 		return;
@@ -2741,6 +2786,12 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 
 				CalculateIKLocks( currentTime );
 				m_pIk->SolveDependencies( pos, q, m_BoneAccessor.GetBoneArrayForWrite(), boneComputed );
+
+				if ( IsPlayer() && ( (BONE_USED_BY_VERTEX_LOD0 & boneMask) == BONE_USED_BY_VERTEX_LOD0 ) )
+				{
+					// only do extra bone processing when setting up bones that influence renderable vertices, and not for attachment position requests
+					DoExtraBoneProcessing( hdr, pos, q, m_BoneAccessor.GetBoneArrayForWrite(), boneComputed, m_pIk );
+				}
 			}
 
 			BuildTransformations( hdr, pos, q, parentTransform, bonesMaskNeedRecalc, boneComputed );
@@ -2810,6 +2861,9 @@ C_BaseAnimating* C_BaseAnimating::FindFollowedEntity()
 
 void C_BaseAnimating::InvalidateBoneCache()
 {
+	if ( !s_bEnableInvalidateBoneCache )
+		return;
+
 	m_iMostRecentModelBoneCounter = g_iModelBoneCounter - 1;
 	m_flLastBoneSetupTime = -FLT_MAX; 
 }
@@ -4854,7 +4908,7 @@ bool C_BaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	HitboxToWorldTransforms( hitboxbones );
 
-	if ( TraceToStudio( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetRenderOrigin(), GetModelScale(), tr ) )
+	if ( TraceToStudioCsgoHitgroupsPriority( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetRenderOrigin(), GetModelScale(), tr ) )
 	{
 		mstudiobbox_t *pbox = set->pHitbox( tr.hitbox );
 		const mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
@@ -5262,6 +5316,10 @@ int C_BaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSequ
 
 void C_BaseAnimating::SetBodygroup( int iGroup, int iValue )
 {
+	// PiMoN: this can happen if a bodygroup is not guaranteed to be existing which will result in a crash
+	if ( iGroup == -1 )
+		return;
+
 	// SetBodygroup is not supported on pending dynamic models. Wait for it to load!
 	// XXX TODO we could buffer up the group and value if we really needed to. -henryg
 	Assert( GetModelPtr() );
@@ -5430,9 +5488,21 @@ void C_BaseAnimating::DrawClientHitboxes( float duration /*= 0.0f*/, bool monoco
 			b = ( int ) ( 255.0f * hullcolor[j][2] );
 		}
 
-		if ( debugoverlay )
+		if ( pbox->flCapsuleRadius > 0 )
 		{
-			debugoverlay->AddBoxOverlay( position, pbox->bbmin, pbox->bbmax, angles, r, g, b, 0, duration );
+			matrix3x4_t temp;
+			GetHitboxBoneTransform( pbox->bone, pbox->angOffsetOrientation, temp );
+
+			Vector vecCapsuleCenters[ 2 ];
+			VectorTransform( pbox->bbmin, temp, vecCapsuleCenters[0] );
+			VectorTransform( pbox->bbmax, temp, vecCapsuleCenters[1] );
+			
+			debugoverlay->AddCapsuleOverlay( vecCapsuleCenters[0], vecCapsuleCenters[1], pbox->flCapsuleRadius, r, g, b, 255, duration );
+		}
+		else
+		{
+			GetHitboxBonePosition( pbox->bone, position, angles, pbox->angOffsetOrientation );
+			debugoverlay->AddBoxOverlay( position, pbox->bbmin, pbox->bbmax, angles, r, g, b, 0 ,duration );
 		}
 	}
 }

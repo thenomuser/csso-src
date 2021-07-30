@@ -29,9 +29,19 @@ public:
 
 	virtual CStudioHdr *OnNewModel();
 
-	C_AnimationLayer* GetAnimOverlay( int i );
+	C_AnimationLayer* GetAnimOverlay( int i, bool bUseOrder = true );
 	void SetNumAnimOverlays( int num );	// This makes sure there is space for this # of layers.
 	int GetNumAnimOverlays() const;
+
+	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence );
+	void AccumulateDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
+	void RegenerateDispatchedLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
+
+	void AccumulateInterleavedDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime, bool bSetupInvisibleWeapon = false );
+
+	virtual void	NotifyOnLayerChangeSequence( const CAnimationLayer* pLayer, const int nNewSequence ) {};
+	virtual void	NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight ) {};
+	virtual void	NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle ) {};
 
 	virtual void	GetRenderBounds( Vector& theMins, Vector& theMaxs );
 

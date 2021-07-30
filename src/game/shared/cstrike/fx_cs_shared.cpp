@@ -178,9 +178,9 @@ void FX_FireBullets(
 	if ( pPlayer && !pPlayer->IsDormant() )
 	{
 		if ( iMode == Primary_Mode )
-			pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
 		else
-			pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_SECONDARY );
+			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_SECONDARY );
 	}
 
 #ifndef CLIENT_DLL
@@ -316,13 +316,13 @@ void FX_PlantBomb( int iPlayerIndex, const Vector &vOrigin, PlantBombOption_t op
 		{
 		case PLANTBOMB_PLANT:
 			{
-				pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
+				pPlayer->DoAnimationEvent( PLAYERANIMEVENT_FIRE_GUN_PRIMARY );
 			}
 			break;
 
 		case PLANTBOMB_ABORT:
 			{
-				pPlayer->GetPlayerAnimState()->DoAnimationEvent( PLAYERANIMEVENT_CLEAR_FIRING );
+				pPlayer->DoAnimationEvent( PLAYERANIMEVENT_CLEAR_FIRING );
 			}
 			break;
 		}

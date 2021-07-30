@@ -157,6 +157,8 @@ public:
 	//
 	virtual CMouthInfo *GetMouth();
 	virtual void	ControlMouth( CStudioHdr *pStudioHdr );
+
+	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) { Assert(false); }
 	
 	// override in sub-classes
 	virtual void DoAnimationEvents( CStudioHdr *pStudio );
@@ -183,6 +185,7 @@ public:
 	virtual	void StandardBlendingRules( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], float currentTime, int boneMask );
 	void UnragdollBlend( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime );
 
+	bool m_bMaintainSequenceTransitions; // kill-switch so entities can opt out of automatic transitions
 	void MaintainSequenceTransitions( IBoneSetup &boneSetup, float flCycle, Vector pos[], Quaternion q[] );
 	virtual void AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
 
@@ -208,6 +211,9 @@ public:
 
 	// [menglish] Finds the bone associated with the given hitbox
 	int		GetHitboxBone( int hitboxIndex );
+
+	void	GetHitboxBonePosition( int iBone, Vector &origin, QAngle &angles, QAngle hitboxOrientation );
+	void	GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation, matrix3x4_t &pOut );
 
 	void	CopySequenceTransitions( C_BaseAnimating *pCopyFrom );
 
@@ -326,6 +332,8 @@ public:
 	void							GetBlendedLinearVelocity( Vector *pVec );
 	int								LookupSequence ( const char *label );
 	int								LookupActivity( const char *label );
+	float							GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart = 0, float flEnd = 1 );
+	float							GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault );
 	char const						*GetSequenceName( int iSequence ); 
 	char const						*GetSequenceActivityName( int iSequence );
 	Activity						GetSequenceActivity( int iSequence );
@@ -335,6 +343,7 @@ public:
 	// Clientside animation
 	virtual float					FrameAdvance( float flInterval = 0.0f );
 	virtual float					GetSequenceCycleRate( CStudioHdr *pStudioHdr, int iSequence );
+	virtual float					GetLayerSequenceCycleRate( C_AnimationLayer *pLayer, int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
 	virtual void					UpdateClientSideAnimation();
 	void							ClientSideAnimationChanged();
 	virtual unsigned int			ComputeClientSideAnimationFlags();
@@ -404,6 +413,8 @@ public:
 
 	// Invalidate bone caches so all SetupBones() calls force bone transforms to be regenerated.
 	static void						InvalidateBoneCaches();
+	// Enable/Disable Invalidation of Bone Caches
+	static void						EnableInvalidateBoneCache( bool bEnable ) { s_bEnableInvalidateBoneCache = bEnable; };
 
 	// Purpose: My physics object has been updated, react or extract data
 	virtual void					VPhysicsUpdate( IPhysicsObject *pPhysics );
@@ -515,6 +526,8 @@ protected:
 	C_BaseAnimating *				m_pNextForThreadedBoneSetup;
 	int								m_iPrevBoneMask;
 	int								m_iAccumulatedBoneMask;
+
+	static bool						s_bEnableInvalidateBoneCache;
 
 	CBoneAccessor					m_BoneAccessor;
 	CThreadFastMutex				m_BoneSetupLock;
@@ -638,6 +651,8 @@ private:
 	mutable MDLHandle_t				m_hStudioHdr;
 	CThreadFastMutex				m_StudioHdrInitLock;
 	bool							m_bHasAttachedParticles;
+
+	friend class C_BaseAnimatingOverlay;
 };
 
 enum 

@@ -67,35 +67,52 @@ void CMolotovGrenade::UpdateParticles( void )
 	if ( !pPlayer )
 		return;
 
-	//int nRenderFlags = 0;
-
 	CWeaponCSBase *pCSWeapon = (CWeaponCSBase*)pPlayer->GetActiveWeapon();
 	if ( !pCSWeapon )
 		return;
 
-	if ( pCSWeapon->GetCSWeaponID() == WEAPON_MOLOTOV )
+	int iWeaponId = pCSWeapon->GetCSWeaponID();
+
+	if ( iWeaponId == WEAPON_MOLOTOV )
 	{
-		if ( m_molotovParticleEffect.IsValid() )
+		bool bIsFirstOrThirdpersonMolotovVisible = pCSWeapon->IsWeaponVisible();
+		
+		CBaseAnimating *pWeaponBaseAnimating = pCSWeapon->GetBaseAnimating();
+
+		CBaseWeaponWorldModel *pWeaponWorldModel = pCSWeapon->GetWeaponWorldModel();
+		if ( pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() )
 		{
-			//		m_molotovParticleEffect->SetDormant( pPlayer->GetPlayerAnimState()->ShouldHideWeapon() ); // ShouldHideWeapon is a Terror Codebase function, not CStrike15
-			m_molotovParticleEffect->SetDormant( !pCSWeapon->IsVisible() ); // Is the weapon Hidden?
+			pWeaponBaseAnimating = pWeaponWorldModel->GetBaseAnimating();
+			bIsFirstOrThirdpersonMolotovVisible = true;
 		}
 
-		if ( m_bPinPulled )
+		if ( m_molotovParticleEffect.IsValid() ) 
 		{
-			if ( !m_molotovParticleEffect() )
+//			m_molotovParticleEffect->SetDormant( pPlayer->GetPlayerAnimState()->ShouldHideWeapon() ); // ShouldHideWeapon is a Terror Codebase function, not CStrike15
+			m_molotovParticleEffect->SetDormant( !bIsFirstOrThirdpersonMolotovVisible ); // Is the weapon Hidden?
+		}
+
+		if ( bIsFirstOrThirdpersonMolotovVisible )
+		{	
+			if ( m_bPinPulled )
 			{
-				// TEST: [mlowrance] This is to test for attachment.
-				int iAttachment = pCSWeapon->LookupAttachment( "Wick" );
-
-				if ( iAttachment >= 0 )
+				if ( !m_molotovParticleEffect() )
 				{
-					// FIXME: Precache 'Wick' attachment index
-					m_molotovParticleEffect = pCSWeapon->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
-					EmitSound( "Molotov.IdleLoop" );
-					SetLoopingSoundPlaying( true );
+					// TEST: [mlowrance] This is to test for attachment.
+					int iAttachment = -1;
+					if ( pWeaponBaseAnimating )
+						iAttachment = pWeaponBaseAnimating->LookupAttachment( "Wick" );
 
-					//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 1\n" );
+					if ( iAttachment >= 0 )
+					{
+						// FIXME: Precache 'Wick' attachment index
+						m_molotovParticleEffect = pCSWeapon->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
+						EmitSound( "Molotov.IdleLoop" );
+						SetLoopingSoundPlaying( true );
+
+						//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 1\n" );
+
+					}
 				}
 			}
 		}

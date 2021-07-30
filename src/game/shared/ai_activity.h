@@ -2199,11 +2199,6 @@ typedef enum
 	ACT_MELEE_VM_INSPECT_IDLE,
 	ACT_MELEE_VM_INSPECT_END,
 
-	ACT_DEFUSE,
-	ACT_DEFUSE_WITH_KIT,
-	ACT_DEFUSE_CROUCH,
-	ACT_DEFUSE_WITH_KIT_CROUCH,
-
 
 	// csgo death anims that don't require direction (direction is pose-param driven for more granularity)
 	ACT_DIE_STAND,
