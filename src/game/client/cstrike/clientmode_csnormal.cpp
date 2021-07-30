@@ -1262,7 +1262,7 @@ void UpdateClassImageEntity(
 // (player image with active weapon) and CCSBuyMenuImagePanel
 // (player image with selected weapon in buy menu)
 void UpdateBuyMenuImageEntity(
-	const char *pModelName, const char *pAnimName,
+	const char *pWeaponClassname,
 	int x, int y, int width, int height,
 	int viewX, int viewY, int viewZ )
 {
@@ -1279,16 +1279,9 @@ void UpdateBuyMenuImageEntity(
 	bool m_bSilenced = true;
 
 	// check if its CCSBuyMenuPlayerImagePanel
-	if ( pModelName == NULL || pAnimName == NULL )
+	if ( pWeaponClassname == NULL )
 	{
-		if ( Q_strncmp( V_UnqualifiedFileName( modelinfo->GetModelName( pLocalPlayer->GetModel() ) ), "ctm_", 4 ) == 0 )
-		{
-			// give CTs a m4
-			pWeaponName = "models/weapons/w_rif_m4a4.mdl";
-			pWeaponSequence = "UI_BuyMenu_M4";
-		}
-
-		if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
+		if ( pLocalPlayer->GetActiveWeapon() )
 		{
 			C_WeaponCSBase *pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
 
@@ -1297,7 +1290,10 @@ void UpdateBuyMenuImageEntity(
 			{
 				m_bSilenced = pWeapon->IsSilenced() ? true : false;
 				pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-				pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+				if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
+					pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
+				else
+					pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
 			}
 			else
 			{
@@ -1307,7 +1303,10 @@ void UpdateBuyMenuImageEntity(
 				{
 					m_bSilenced = pWeapon->IsSilenced() ? true : false;
 					pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-					pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+					if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
+						pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
+					else
+						pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
 				}
 				else
 				{
@@ -1317,16 +1316,63 @@ void UpdateBuyMenuImageEntity(
 					{
 						m_bSilenced = pWeapon->IsSilenced() ? true : false;
 						pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-						pWeaponSequence = VarArgs( "UI_BuyMenu_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+						if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
+							pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
+						else
+							pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
 					}
 				}
 			}
 		}
+		else
+		{
+			Warning( "UpdateBuyMenuImageEntity: Unable to find active weapon for player." );
+			return;
+		}
 	}
 	else
 	{
-		pWeaponName = pModelName;
-		pWeaponSequence = pAnimName;
+		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponClassname );
+		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
+		{
+			if ( Q_strcmp( pWeaponClassname, "item_defuser" ) == 0 )
+			{
+				pWeaponName = "models/weapons/w_defuser.mdl";
+				pWeaponSequence = "t_buymenu_defuser";
+			}
+			else if ( Q_strcmp( pWeaponClassname, "item_kevlar" ) == 0 )
+			{
+				pWeaponName = "models/weapons/w_eq_armor.mdl";
+				pWeaponSequence = "t_buymenu_armor_helmet";
+			}
+			else if ( Q_strcmp( pWeaponClassname, "item_assaultsuit" ) == 0 )
+			{
+				pWeaponName = "models/weapons/w_eq_armor_helmet.mdl";
+				pWeaponSequence = "t_buymenu_armor_helmet";
+			}
+			else
+			{
+				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+				return;
+			}
+		}
+		else
+		{
+			CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+			if ( pWeaponInfo )
+			{
+				pWeaponName = pWeaponInfo->szWorldModel;
+				if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
+					pWeaponSequence = pWeaponInfo->m_szBuyMenuAnimT;
+				else
+					pWeaponSequence = pWeaponInfo->m_szBuyMenuAnim;
+			}
+			else
+			{
+				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+				return;
+			}
+		}
 	}
 
 	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
@@ -1546,7 +1592,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 10;
 
-			UpdateBuyMenuImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+			UpdateBuyMenuImageEntity( NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 			return;
 		}
 	}
@@ -1568,67 +1614,58 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 10;
 
-			const char *szAnimName = NULL;
-			const char *szModelName = NULL;
-			if ( V_strcmp( pPanel->m_ModelName, "fiveseven_cz75" ) == 0 )
+			const char *szWeaponName = NULL;
+			if ( V_strcmp( pPanel->m_WeaponName, "fiveseven_cz75" ) == 0 )
 			{
-				szAnimName = "UI_BuyMenu_pistol";
-				szModelName = !loadout_slot_fiveseven_weapon.GetBool() ? "models/weapons/w_pist_fiveseven.mdl" : "models/weapons/w_pist_cz_75.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_fiveseven_weapon.GetBool() ? "weapon_fiveseven" : "weapon_cz75";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "hkp2000_usp" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "hkp2000_usp" ) == 0 )
 			{
-				szAnimName = "UI_BuyMenu_pistol";
-				szModelName = !loadout_slot_hkp2000_weapon.GetBool() ? "models/weapons/w_pist_hkp2000.mdl" : "models/weapons/w_pist_usp.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_hkp2000_weapon.GetBool() ? "weapon_hkp2000" : "weapon_usp_silencer";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "m4a4_m4a1" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "m4a4_m4a1" ) == 0 )
 			{
-				szAnimName = "UI_BuyMenu_m4";
-				szModelName = !loadout_slot_m4_weapon.GetBool() ? "models/weapons/w_rif_m4a4.mdl" : "models/weapons/w_rif_m4a1_silencer.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_m4_weapon.GetBool() ? "weapon_m4a4" : "weapon_m4a1_silencer";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "mp7_mp5sd_ct" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "mp7_mp5sd_ct" ) == 0 )
 			{
-				szAnimName = !loadout_slot_mp7_weapon_ct.GetBool() ? "UI_BuyMenu_mp7" : "UI_BuyMenu_mp5";
-				szModelName = !loadout_slot_mp7_weapon_ct.GetBool() ? "models/weapons/w_smg_mp7.mdl" : "models/weapons/w_smg_mp5sd.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_mp7_weapon_ct.GetBool() ? "weapon_mp7" : "weapon_mp5sd";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "mp7_mp5sd_t" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "mp7_mp5sd_t" ) == 0 )
 			{
-				szAnimName = !loadout_slot_mp7_weapon_t.GetBool() ? "UI_BuyMenu_mp7" : "UI_BuyMenu_mp5";
-				szModelName = !loadout_slot_mp7_weapon_t.GetBool() ? "models/weapons/w_smg_mp7.mdl" : "models/weapons/w_smg_mp5sd.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_mp7_weapon_t.GetBool() ? "weapon_mp7" : "weapon_mp5sd";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "tec9_cz75" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "tec9_cz75" ) == 0 )
 			{
-				szAnimName = !loadout_slot_tec9_weapon.GetBool() ? "UI_BuyMenu_tec9" : "UI_BuyMenu_pistol";
-				szModelName = !loadout_slot_tec9_weapon.GetBool() ? "models/weapons/w_pist_tec9.mdl" : "models/weapons/w_pist_cz_75.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_tec9_weapon.GetBool() ? "weapon_tec9" : "weapon_cz75";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "deagle_revolver_ct" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "deagle_revolver_ct" ) == 0 )
 			{
-				szAnimName = !loadout_slot_deagle_weapon_ct.GetBool() ? "UI_BuyMenu_Pistol" : "UI_BuyMenu_Revolver";
-				szModelName = !loadout_slot_deagle_weapon_ct.GetBool() ? "models/weapons/w_pist_deagle.mdl" : "models/weapons/w_pist_revolver.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_deagle_weapon_ct.GetBool() ? "weapon_deagle" : "weapon_revolver";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
-			else if ( V_strcmp( pPanel->m_ModelName, "deagle_revolver_t" ) == 0 )
+			else if ( V_strcmp( pPanel->m_WeaponName, "deagle_revolver_t" ) == 0 )
 			{
-				szAnimName = !loadout_slot_deagle_weapon_t.GetBool() ? "UI_BuyMenu_Pistol" : "UI_BuyMenu_Revolver";
-				szModelName = !loadout_slot_deagle_weapon_t.GetBool() ? "models/weapons/w_pist_deagle.mdl" : "models/weapons/w_pist_revolver.mdl";
-				UpdateBuyMenuImageEntity( szModelName, szAnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				szWeaponName = !loadout_slot_deagle_weapon_t.GetBool() ? "weapon_deagle" : "weapon_revolver";
+				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
 			else
 			{
-				UpdateBuyMenuImageEntity( pPanel->m_ModelName, g_BuyMenuImagePanels[i]->m_AnimName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+				UpdateBuyMenuImageEntity( pPanel->m_WeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
 				return;
 			}
 		}

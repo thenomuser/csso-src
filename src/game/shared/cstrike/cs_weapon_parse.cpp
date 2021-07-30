@@ -542,8 +542,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the dropped model.
 	Q_strncpy( m_szDroppedModel, pKeyValuesData->GetString( "DroppedModel" ), sizeof( m_szDroppedModel ) );
 
-	// Read the silencer model.
-	//Q_strncpy( m_szSilencerModel, pKeyValuesData->GetString( "SilencerModel" ), sizeof( m_szSilencerModel ) );
+	// Read the buy menu animation.
+	Q_strncpy( m_szBuyMenuAnim, pKeyValuesData->GetString( "BuyMenuAnim" ), sizeof( m_szBuyMenuAnim ) );
+	Q_strncpy( m_szBuyMenuAnimT, pKeyValuesData->GetString( "BuyMenuAnimT", m_szBuyMenuAnim ), sizeof( m_szBuyMenuAnimT ) );
 
 #ifndef CLIENT_DLL
 	// Enforce consistency for the weapon here, since that way we don't need to save off the model bounds
