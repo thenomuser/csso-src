@@ -222,6 +222,7 @@ public:
 	virtual CBaseAnimatingOverlay *	GetBaseAnimatingOverlay() { return this; }
 	
 	virtual void	OnRestore();
+	virtual void	SetModel( const char *szModelName );
 
 	virtual void	StudioFrameAdvance();
 	virtual	void	DispatchAnimEvents ( CBaseAnimating *eventHandler );

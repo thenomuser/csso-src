@@ -115,17 +115,16 @@ void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 	m_nSequence = 0;
 	m_nPriority = 0;
 	m_nOrder.Set( CBaseAnimatingOverlay::MAX_OVERLAYS );
-
-	m_flBlendIn = 0.0;
-	m_flBlendOut = 0.0;
-
 	m_flKillRate = 100.0;
 	m_flKillDelay = 0.0;
 	m_flPlaybackRate.SetDirect( 1.0f );
-	m_flLastEventCheck = 0.0;
 	m_flLastAccess = gpGlobals->curtime;
 	m_flLayerAnimtime = 0;
 	m_flLayerFadeOuttime = 0;
+	m_bLooping	= false;
+	m_flBlendIn = 0.0f;
+	m_flBlendOut = 0.0f;
+	m_flLastEventCheck = 0.0f;
 	m_pDispatchedStudioHdr = NULL;
 	m_nDispatchedSrc = ACT_INVALID;
 	m_nDispatchedDst = ACT_INVALID;
@@ -363,6 +362,21 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 }
 
 
+//-----------------------------------------------------------------------------
+// Purpose: Sets the entity's model, clearing animation data
+// Input  : *szModelName - 
+//-----------------------------------------------------------------------------
+void CBaseAnimatingOverlay::SetModel( const char *szModelName )
+{
+	for ( int j=0; j<m_AnimOverlay.Count(); ++j )
+	{
+		m_AnimOverlay[j].Init( this );
+	}
+
+	BaseClass::SetModel( szModelName );
+}
+
+
 //------------------------------------------------------------------------------
 // Purpose : advance the animation frame up to the current time
 //			 if an flInterval is passed in, only advance animation that number of seconds
@@ -487,7 +501,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		return;
 	}
 
-	if ( m_nSequence >= pstudiohdr->GetNumSeq() )
+	if ( m_nSequence < 0 || m_nSequence >= pstudiohdr->GetNumSeq() )
 		return;
 	
 	// don't fire if here are no events
@@ -508,7 +522,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		if (flEnd >= flLastVisibleCycle || flEnd < 0.0) 
 		{
 			m_bSequenceFinished = true;
-			flEnd = 1.0f;
+			flEnd = 1.01f;
 		}
 	}
 	m_flLastEventCheck = flEnd;
@@ -922,6 +936,7 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 
 		iOpenLayer = m_AnimOverlay.AddToTail();
 		m_AnimOverlay[iOpenLayer].Init( this );
+		m_AnimOverlay[iOpenLayer].NetworkStateChanged();
 	}
 
 	// make sure there's always an empty unused layer so that history slots will be available on the client when it is used
@@ -931,6 +946,7 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 		{
 			i = m_AnimOverlay.AddToTail();
 			m_AnimOverlay[i].Init( this );
+			m_AnimOverlay[i].NetworkStateChanged();
 		}
 	}
 
@@ -1362,10 +1378,12 @@ void CBaseAnimatingOverlay::SetNumAnimOverlays( int num )
 	if ( m_AnimOverlay.Count() < num )
 	{
 		m_AnimOverlay.AddMultipleToTail( num - m_AnimOverlay.Count() );
+		NetworkStateChanged();
 	}
 	else if ( m_AnimOverlay.Count() > num )
 	{
 		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		NetworkStateChanged();
 	}
 }
 
