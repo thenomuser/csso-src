@@ -3172,6 +3172,8 @@ bool C_CSPlayer::IsAnyBoneSnapshotPending( void )
 #define cl_player_toe_length 4.5
 void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext )
 {
+	// PiMoN: IK is broken as always ;(
+#if 0
 	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
 		return;
 	
@@ -3253,6 +3255,7 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 
 	Studio_SolveIK( pLeftFootChain->pLink( 0 )->bone, pLeftFootChain->pLink( 1 )->bone, nLeftFootBoneIndex, vecLeftFootPos, boneToWorld );
 	Studio_SolveIK( pRightFootChain->pLink( 0 )->bone, pRightFootChain->pLink( 1 )->bone, nRightFootBoneIndex, vecRightFootPos, boneToWorld );
+#endif
 }
 
 bool FindWeaponAttachmentBone( C_BaseCombatWeapon *pWeapon, int &iWeaponBone )
