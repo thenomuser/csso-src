@@ -1628,8 +1628,22 @@ void C_CSPlayer::CreateAddonModel( int i )
 	pAddon->m_iAddon = i;
 	pAddon->m_iAttachmentPoint = iAttachment;
 	pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
-	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
-	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+
+	int iHolsterBone = pEnt->LookupBone( "weapon_holster_center" );
+	if ( iHolsterBone != -1 )
+	{
+		Vector holsterBonePos;
+		QAngle holsterBoneAng;
+		pEnt->GetBonePosition( iHolsterBone, holsterBonePos, holsterBoneAng );
+		pEnt->SetLocalOrigin( -holsterBonePos );
+		pEnt->SetLocalAngles( holsterBoneAng );
+	}
+	else
+	{
+		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
+		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	}
+
 	pEnt->SetModelScale( iScale );
 	if ( IsLocalPlayer() )
 	{
