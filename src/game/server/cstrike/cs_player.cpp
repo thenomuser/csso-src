@@ -393,7 +393,7 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
 	SendPropExclude( "DT_BaseAnimating", "m_nMuzzleFlashParity" ),
 	SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
-	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
+	//SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
 
 	// cs_playeranimstate and clientside animation takes care of these on the client
 	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),

@@ -115,51 +115,60 @@ const char *s_m_iv_AnimOverlayNames[C_BaseAnimatingOverlay::MAX_OVERLAYS] =
 void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len )
 {
 	C_BaseAnimatingOverlay *pEnt = (C_BaseAnimatingOverlay*)pStruct;
-	CUtlVector < C_AnimationLayer > *pVec = &pEnt->m_AnimOverlay;
-	CUtlVector< CInterpolatedVar< C_AnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
+	CUtlVector < CAnimationLayer > *pVec = &pEnt->m_AnimOverlay;
+	CUtlVector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
 	
 	Assert( (char*)pVec - (char*)pEnt == offsetToUtlVector );
-	Assert( pVec->Count() == pVecIV->Count() );
+	Assert( pVec->Count() == pVecIV->Count() || pVecIV->Count() == 0 );
 	Assert( pVec->Count() <= C_BaseAnimatingOverlay::MAX_OVERLAYS );
 	
 	int diff = len - pVec->Count();
-
-	
-
-	if ( diff == 0 )
-		return;
-
-	// remove all entries
-	for ( int i=0; i < pVec->Count(); i++ )
+	if ( diff != 0 )
 	{
-		pEnt->RemoveVar( &pVec->Element( i ) );
-	}
-
-	// adjust vector sizes
-	if ( diff > 0 )
-	{
-		for ( int i = 0; i < diff; ++i )
+		// remove all entries
+		for ( int i=0; i < pVec->Count(); i++ )
 		{
-			int j = pVec->AddToTail();
-			(*pVec)[j].SetOwner( pEnt );
+			pEnt->RemoveVar( &pVec->Element( i ) );
 		}
-		pVecIV->AddMultipleToTail( diff );
-	}
-	else
-	{
-		pVec->RemoveMultiple( len, -diff );
-		pVecIV->RemoveMultiple( len, -diff );
+
+		pEnt->InvalidatePhysicsRecursive( ANIMATION_CHANGED );
+
+		// adjust vector sizes
+		if ( diff > 0 )
+		{
+			for ( int i = 0; i < diff; ++i )
+			{
+				int j = pVec->AddToTail( );
+				(*pVec)[j].SetOwner( pEnt );
+			}
+			pVecIV->AddMultipleToTail( diff );
+		}
+		else
+		{
+			pVec->RemoveMultiple( len, -diff );
+			pVecIV->RemoveMultiple( len, -diff );
+		}
+
+		// Rebind all the variables in the ent's list.
+		for ( int i=0; i < len; i++ )
+		{
+			IInterpolatedVar *pWatcher = &pVecIV->Element( i );
+			pWatcher->SetDebugName( s_m_iv_AnimOverlayNames[i] );
+			pEnt->AddVar( &pVec->Element( i ), pWatcher, LATCH_ANIMATION_VAR, true );
+		}
 	}
 
-	// Rebind all the variables in the ent's list.
-	for ( int i=0; i < len; i++ )
-	{
-		IInterpolatedVar *pWatcher = &pVecIV->Element( i );
-		pWatcher->SetDebugName( s_m_iv_AnimOverlayNames[i] );
-		pEnt->AddVar( &pVec->Element( i ), pWatcher, LATCH_ANIMATION_VAR, true );
-	}
 	// FIXME: need to set historical values of nOrder in pVecIV to MAX_OVERLAY
-	
+
+	// Ensure capacity
+	pVec->EnsureCapacity( len );
+
+	int nNumAllocated = pVec->NumAllocated();
+
+	// This is important to do because EnsureCapacity doesn't actually call the constructors
+	// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
+	// values which will piss off the datatable encoder.
+	UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
 }
 
 
