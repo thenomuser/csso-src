@@ -114,6 +114,16 @@ void BuildBoneChain(
 	matrix3x4_t *pBoneToWorld,
 	CBoneBitList &boneComputed );
 
+void BuildBoneChainPartial(
+	const CStudioHdr *pStudioHdr,
+	const matrix3x4_t &rootxform,
+	const Vector pos[],
+	const Quaternion q[],
+	int	iBone,
+	matrix3x4_t *pBoneToWorld,
+	CBoneBitList &boneComputed,
+	int iRoot );
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 

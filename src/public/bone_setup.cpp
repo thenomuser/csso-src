@@ -257,7 +257,7 @@ void BuildBoneChain(
 	matrix3x4_t *pBoneToWorld )
 {
 	CBoneBitList boneComputed;
-	BuildBoneChain( pStudioHdr, rootxform, pos, q, iBone, pBoneToWorld, boneComputed );
+	BuildBoneChainPartial( pStudioHdr, rootxform, pos, q, iBone, pBoneToWorld, boneComputed, -1 );
 	return;
 }
 
@@ -691,17 +691,12 @@ static void CalcLocalHierarchyAnimation(
 	int boneMask
 	)
 {
-#ifdef STAGING_ONLY
-	Assert( iNewParent == -1 || (iNewParent >= 0 && iNewParent < MAXSTUDIOBONES) );
-	Assert( iBone > 0 );
-	Assert( iBone < MAXSTUDIOBONES );
-#endif // STAGING_ONLY
-
 	Vector localPos;
 	Quaternion localQ;
 
 	// make fake root transform
-	static ALIGN16 matrix3x4_t rootXform ALIGN16_POST ( 1.0f, 0, 0, 0,   0, 1.0f, 0, 0,  0, 0, 1.0f, 0 );
+	static matrix3x4_t rootXform;
+	SetIdentityMatrix( rootXform );
 
 	// FIXME: missing check to see if seq has a weight for this bone
 	float weight = 1.0f;
@@ -733,20 +728,25 @@ static void CalcLocalHierarchyAnimation(
 
 	CalcDecompressedAnimation( pHierarchy->pLocalAnim(), iFrame - pHierarchy->iStart, flFraq, localPos, localQ );
 
-	BuildBoneChain( pStudioHdr, rootXform, pos, q, iBone, boneToWorld, boneComputed );
+	// find first common root bone
+	int iRoot1 = iBone;
+	int iRoot2 = iNewParent;
+	while (iRoot1 != iRoot2 && iRoot1 != -1)
+	{
+		if (iRoot1 > iRoot2)
+			iRoot1 = pStudioHdr->boneParent( iRoot1 );
+		else
+			iRoot2 = pStudioHdr->boneParent( iRoot2 );
+	}
+
+	// BUGBUG: pos and q only valid if local weight
+	BuildBoneChainPartial( pStudioHdr, rootXform, pos, q, iBone, boneToWorld, boneComputed, iRoot1 );
+	BuildBoneChainPartial( pStudioHdr, rootXform, pos, q, iNewParent, boneToWorld, boneComputed, iRoot1 );
 
 	matrix3x4_t localXform;
-	AngleMatrix( localQ, localPos, localXform );
+	AngleMatrix( RadianEuler(localQ), localPos, localXform );
 
-	if ( iNewParent != -1 )
-	{
-		BuildBoneChain( pStudioHdr, rootXform, pos, q, iNewParent, boneToWorld, boneComputed );
-		ConcatTransforms( boneToWorld[iNewParent], localXform, boneToWorld[iBone] );
-	}
-	else
-	{
-		boneToWorld[iBone] = localXform;
-	}
+	ConcatTransforms( boneToWorld[iNewParent], localXform, boneToWorld[iBone] );
 
 	// back solve
 	Vector p1;
@@ -762,7 +762,8 @@ static void CalcLocalHierarchyAnimation(
 		{
 			MatrixAngles( boneToWorld[iBone], q1, p1 );
 			QuaternionSlerp( q[iBone], q1, weight, q[iBone] );
-			pos[iBone] = Lerp( weight, p1, pos[iBone] );
+			//pos[iBone] = Lerp( weight, p1, pos[iBone] );
+			pos[iBone] = p1 + (pos[iBone] - p1) * weight;
 		}
 	}
 	else
@@ -780,7 +781,8 @@ static void CalcLocalHierarchyAnimation(
 		{
 			MatrixAngles( local, q1, p1 );
 			QuaternionSlerp( q[iBone], q1, weight, q[iBone] );
-			pos[iBone] = Lerp( weight, p1, pos[iBone] );
+			//pos[iBone] = Lerp( weight, p1, pos[iBone] );
+			pos[iBone] = p1 + (pos[iBone] - p1) * weight;
 		}
 	}
 }
@@ -1436,12 +1438,12 @@ void WorldSpaceSlerp(
 //-----------------------------------------------------------------------------
 void SlerpBones( 
 	const CStudioHdr *pStudioHdr,
-	Quaternion q1[MAXSTUDIOBONES], 
-	Vector pos1[MAXSTUDIOBONES], 
+	Quaternion * RESTRICT q1, 
+	Vector * RESTRICT pos1, 
 	mstudioseqdesc_t &seqdesc,  // source of q2 and pos2
 	int sequence, 
-	const QuaternionAligned q2[MAXSTUDIOBONES], 
-	const Vector pos2[MAXSTUDIOBONES], 
+	const QuaternionAligned * RESTRICT q2, // [MAXSTUDIOBONES], 
+	const Vector * RESTRICT pos2, // [MAXSTUDIOBONES], 
 	float s,
 	int boneMask )
 {
@@ -1455,7 +1457,9 @@ void SlerpBones(
 	if ( (seqdesc.flags & STUDIO_WORLD) || (seqdesc.flags & STUDIO_WORLD_AND_RELATIVE) )
 	{
 		WorldSpaceSlerp( pStudioHdr, q1, pos1, seqdesc, sequence, q2, pos2, s, boneMask );
-		return;
+		
+		if (seqdesc.flags & STUDIO_WORLD)
+			return;
 	}
 
 	int			i, j;
@@ -1514,10 +1518,6 @@ void SlerpBones(
 				fltx4 result = QuaternionMASIMD( q1simd, s2, q2simd );
 				StoreUnalignedSIMD( q1[i].Base(), result );
 #endif
-				// FIXME: are these correct?
-				pos1[i][0] = pos1[i][0] + pos2[i][0] * s2;
-				pos1[i][1] = pos1[i][1] + pos2[i][1] * s2;
-				pos1[i][2] = pos1[i][2] + pos2[i][2] * s2;
 			}
 			else
 			{
@@ -1530,11 +1530,17 @@ void SlerpBones(
 				StoreUnalignedSIMD( q1[i].Base(), result );
 #endif
 
-				// FIXME: are these correct?
-				pos1[i][0] = pos1[i][0] + pos2[i][0] * s2;
-				pos1[i][1] = pos1[i][1] + pos2[i][1] * s2;
-				pos1[i][2] = pos1[i][2] + pos2[i][2] * s2;
 			}
+			// do this explicitly to make the scheduling better
+			// (otherwise it might think pos1 and pos2 overlap,
+			// and thus save one before starting the next)
+			float x,y,z;
+			x = pos1[i][0] + pos2[i][0] * s2;
+			y = pos1[i][1] + pos2[i][1] * s2;
+			z = pos1[i][2] + pos2[i][2] * s2;
+			pos1[i][0] = x;
+			pos1[i][1] = y;
+			pos1[i][2] = z;
 		}
 		return;
 	}
@@ -3635,6 +3641,20 @@ void BuildBoneChain(
 	matrix3x4_t *pBoneToWorld,
 	CBoneBitList &boneComputed )
 {
+	BuildBoneChainPartial( pStudioHdr, rootxform, pos, q, iBone, pBoneToWorld, boneComputed, -1 );
+}
+
+
+void BuildBoneChainPartial(
+	const CStudioHdr *pStudioHdr,
+	const matrix3x4_t &rootxform,
+	const Vector pos[], 
+	const Quaternion q[], 
+	int	iBone,
+	matrix3x4_t *pBoneToWorld,
+	CBoneBitList &boneComputed,
+	int iRoot )
+{
 	if ( boneComputed.IsBoneMarked(iBone) )
 		return;
 
@@ -3642,16 +3662,17 @@ void BuildBoneChain(
 	QuaternionMatrix( q[iBone], pos[iBone], bonematrix );
 
 	int parent = pStudioHdr->boneParent( iBone );
-	if (parent == -1) 
+	if (parent == -1 || iBone == iRoot) 
 	{
 		ConcatTransforms( rootxform, bonematrix, pBoneToWorld[iBone] );
 	}
 	else
 	{
 		// evil recursive!!!
-		BuildBoneChain( pStudioHdr, rootxform, pos, q, parent, pBoneToWorld, boneComputed );
+		BuildBoneChainPartial( pStudioHdr, rootxform, pos, q, parent, pBoneToWorld, boneComputed, iRoot );
 		ConcatTransforms( pBoneToWorld[parent], bonematrix, pBoneToWorld[iBone]);
 	}
+
 	boneComputed.MarkBone(iBone);
 }
 
