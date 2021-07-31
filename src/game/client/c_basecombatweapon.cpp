@@ -158,14 +158,6 @@ void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 			}
 		}
 	}
-	else // weapon carried by other player or not at all
-	{
-		int overrideModelIndex = CalcOverrideModelIndex();
-		if( overrideModelIndex != -1 && overrideModelIndex != GetModelIndex() )
-		{
-			SetModelIndex( overrideModelIndex );
-		}
-	}
 
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
@@ -488,28 +480,6 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 	}
 
 	return BaseClass::DrawModel( flags );
-}
-
-
-//-----------------------------------------------------------------------------
-// Allows the client-side entity to override what the network tells it to use for
-// a model. This is used for third person mode, specifically in HL2 where the
-// the weapon timings are on the view model and not the world model. That means the
-// server needs to use the view model, but the client wants to use the world model.
-//-----------------------------------------------------------------------------
-int C_BaseCombatWeapon::CalcOverrideModelIndex() 
-{ 
-	C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
-	if ( localplayer && 
-		localplayer == GetOwner() &&
-		ShouldDrawLocalPlayerViewModel() )
-	{
-		return BaseClass::CalcOverrideModelIndex();
-	}
-	else
-	{
-		return GetWorldModelIndex();
-	}
 }
 
 

@@ -353,7 +353,6 @@ public:
 
 #ifdef CLIENT_DLL
 	virtual void			CreateMove( float flInputSampleTime, CUserCmd *pCmd, const QAngle &vecOldViewAngles ) {}
-	virtual int				CalcOverrideModelIndex() OVERRIDE;
 
 	virtual void			FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 #endif
