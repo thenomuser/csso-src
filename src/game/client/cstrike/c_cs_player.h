@@ -675,6 +675,7 @@ public:
 
 public:
 
+	virtual bool	GetAttachment( int number, matrix3x4_t &matrix );
 	virtual bool	GetAttachment( int number, Vector &origin );
 	virtual	bool	GetAttachment( int number, Vector &origin, QAngle &angles );
 

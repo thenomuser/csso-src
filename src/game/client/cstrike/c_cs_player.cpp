@@ -2898,6 +2898,18 @@ bool C_CSPlayer::ShouldDraw( void )
 
 #define APPROX_CENTER_PLAYER Vector(0,0,50)
 
+bool C_CSPlayer::GetAttachment( int number, matrix3x4_t &matrix )
+{
+	if ( IsDormant() )
+	{
+		MatrixCopy( EntityToWorldTransform(), matrix );
+		matrix.SetOrigin( matrix.GetOrigin() + APPROX_CENTER_PLAYER );
+		return true;
+	}
+
+	return BaseClass::GetAttachment( number, matrix );
+}
+
 bool C_CSPlayer::GetAttachment( int number, Vector &origin )
 {
 	if ( IsDormant() )
@@ -2998,7 +3010,7 @@ void CBoneSnapshot::Update( CBaseAnimating* pEnt, bool bReadOnly )
 	}
 
 	C_CSPlayer* pPlayer = ToCSPlayer( m_pEnt );
-	if ( pPlayer && (gpGlobals->curtime - pPlayer->m_flLastSpawnTimeIndex) <= 0.5f )
+	if ( pPlayer && ( gpGlobals->curtime - pPlayer->m_flLastSpawnTimeIndex) <= 0.5f )
 	{
 		AbandonAnyPending();
 		return;
@@ -3172,7 +3184,6 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 
 	int nLeftFootBoneIndex = LookupBone( "ankle_L" );
 	int nRightFootBoneIndex = LookupBone( "ankle_R" );
-	int nLeftHandBoneIndex = LookupBone( "hand_L" );
 
 	Assert( nLeftFootBoneIndex != -1 && nRightFootBoneIndex != -1 && nLeftHandBoneIndex != -1 );
 
@@ -3187,12 +3198,8 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 		{
 			pRightFootChain = pchain;
 		}
-		else if ( nLeftHandBoneIndex == pchain->pLink( 2 )->bone )
-		{
-			pLeftArmChain = pchain;
-		}
 
-		if ( pLeftFootChain && pRightFootChain && pLeftArmChain )
+		if ( pLeftFootChain && pRightFootChain )
 			break;
 	}
 	

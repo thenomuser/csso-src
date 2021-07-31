@@ -419,8 +419,7 @@ void CBaseViewModel::PostBuildTransformations( CStudioHdr *pStudioHdr, Vector *p
 			m_angCamDriverLastAng[YAW] = -m_angCamDriverLastAng[YAW];
 			m_vecCamDriverLastPos.y = -m_vecCamDriverLastPos.y;
 		}
-
-}
+	}
 }
 #endif
 
