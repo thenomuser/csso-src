@@ -1675,7 +1675,11 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 	BaseClass::CalcView( eyeOrigin, eyeAngles, zNear, zFar, fov );
 
 	//only modify the eye position for first-person players or observers
-	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	// PiMoN: this shit is broken as well, it uses "head_0" bone to attach camera
+	// by origin to it but for some reason when it gets the bone's position its
+	// not... correct? or something like that, which results in camera going below
+	// the ground or a lot above the ground if you're stuck in something when crouching
+	/*if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 	{
 		if ( IsLocalPlayer() && IsAlive() && ( !::input->CAM_IsThirdPerson() ) )
 		{
@@ -1689,7 +1693,7 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 				pTargetPlayer->m_PlayerAnimStateCSGO->ModifyEyePosition( eyeOrigin );
 			}
 		}
-	}
+	}*/
 
 #if IRONSIGHT
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
