@@ -175,7 +175,7 @@ private:
 public:
 	CBaseAnimating*	FindFollowedEntity();
 
-	int  LookupBone( const char *szName );
+	virtual int  LookupBone( const char *szName );
 	void GetBonePosition( const char *szName, Vector &origin, QAngle &angles );
 	void GetBonePosition( int iBone, Vector &origin, QAngle &angles );
 	int	GetPhysicsBone( int boneIndex );

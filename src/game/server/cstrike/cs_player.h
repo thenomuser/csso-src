@@ -608,6 +608,8 @@ public:
 	virtual bool WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
 
 
+	virtual int  LookupBone( const char *szName ) OVERRIDE;
+
 // ------------------------------------------------------------------------------------------------ //
 // Player state management.
 // ------------------------------------------------------------------------------------------------ //

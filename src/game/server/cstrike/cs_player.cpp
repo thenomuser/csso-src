@@ -2627,16 +2627,26 @@ void CCSPlayer::PushawayThink()
 
 void CCSPlayer::SetModel( const char *szModelName )
 {
-	BaseClass::SetModel( szModelName );
-
-	// lets just check if a unique bone is existing...
-	m_bUseNewAnimstate = (LookupBone( "spine_0" ) != -1);
-
-	if ( m_bUseNewAnimstate )
+	// PiMoN: pure shitcode but there's no other way to check
+	// if that bone is existing before the model is actually set
+	const model_t *pModel = modelinfo->GetModel( modelinfo->GetModelIndex( szModelName ) );
+	if ( pModel )
 	{
-		if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
-			m_PlayerAnimStateCSGO->Reset();
+		CStudioHdr pStudioHDR( modelinfo->GetStudiomodel(pModel), mdlcache );
+		if ( pStudioHDR.IsValid() )
+		{
+			m_bUseNewAnimstate = (Studio_BoneIndexByName( &pStudioHDR, "spine_0" ) != -1);
+		}
+		else
+			m_bUseNewAnimstate = false;
 	}
+	else
+		m_bUseNewAnimstate = false;
+
+	if (m_bUseNewAnimstate && m_PlayerAnimStateCSGO)
+		m_PlayerAnimStateCSGO->Reset();
+
+	BaseClass::SetModel( szModelName );
 }
 
 //-----------------------------------------------------------------------------
@@ -5876,6 +5886,32 @@ bool CCSPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const 
 	}
 
 	return BaseClass::WantsLagCompensationOnEntity( pPlayer, pCmd, pEntityTransmitBits );
+}
+
+int CCSPlayer::LookupBone( const char *szName )
+{
+	if ( m_bUseNewAnimstate )
+	{
+		// Try to fix up some common old bone names to new bone names, until I can go through the code and fix all cases or write a data-driven solution.
+		if ( Q_stristr( szName, "weapon_bone" ) )
+		{
+			szName = "hand_R";
+		}
+		else if ( Q_stristr( szName, "Head" ) )
+		{
+			szName = "head_0";
+		}
+		else if ( Q_stristr( szName, "L_Hand" ) )
+		{
+			szName = "hand_L";
+		}
+		else if ( Q_stristr( szName, "R_Hand" ) )
+		{
+			szName = "hand_R";
+		}
+	}
+
+	return BaseClass::LookupBone(szName);
 }
 
 // Handles the special "radio" alias commands we're creating to accommodate the scripts players use
