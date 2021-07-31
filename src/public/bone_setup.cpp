@@ -1105,17 +1105,6 @@ static void CalcAnimation( const CStudioHdr *pStudioHdr,	Vector *pos, Quaternion
 		return;
 	}
 
-#if _DEBUG
-	extern IDataCache *g_pDataCache;
-#ifndef _GAMECONSOLE
-	// Consoles don't need to lock the modeldata cache since it never flushes
-	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
-#endif
-	static IDataCacheSection *pAnimblockCache = g_pDataCache->FindSection( "AnimBlock" );
-	AssertOnce( pAnimblockCache->IsFrameLocking() );
-#endif
-
 	mstudioanimdesc_t &animdesc = ((CStudioHdr *)pStudioHdr)->pAnimdesc( animation );
 	const mstudiobone_t *pbone = pStudioHdr->pBone( 0 );
 	const mstudiolinearbone_t *pLinearBones = pStudioHdr->pLinearBones();
@@ -1863,7 +1852,6 @@ void InitPose(
 	{
 		int numBones = pStudioHdr->numbones();
 
-		Assert( sizeof(Quaternion) == sizeof(BoneQuaternion) );
 		memcpy( q, (((byte *)pLinearBones) + pLinearBones->quatindex), sizeof( Quaternion ) * numBones );
 
 		if( sizeof(Vector) == sizeof(Vector) )

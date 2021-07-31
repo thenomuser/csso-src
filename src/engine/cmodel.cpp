@@ -39,6 +39,8 @@ CCollisionBSPData g_BSPData;								// the global collision bsp
 CCollisionCounts  g_CollisionCounts;						// collision test counters
 #endif
 
+static const float kBoxCheckFloatEpsilon = 0.01f; // Used for box trace assert checks below.
+
 csurface_t CCollisionBSPData::nullsurface = { "**empty**", 0, 0 };				// generic null collision model surface
 
 csurface_t *CCollisionBSPData::GetSurfaceAtIndex( unsigned short surfaceIndex )

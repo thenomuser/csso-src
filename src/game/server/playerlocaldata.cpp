@@ -184,8 +184,7 @@ END_DATADESC()
 CPlayerLocalData::CPlayerLocalData()
 {
 #ifdef _DEBUG
-	m_vecOverViewpoint.Init();
-	m_vecPunchAngle.Init();
+	m_vecOverViewpoint.Zero();
 #endif
 	m_audio.soundscapeIndex = 0;
 	m_audio.localBits = 0;
