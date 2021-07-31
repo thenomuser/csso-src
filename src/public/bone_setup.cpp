@@ -3163,6 +3163,9 @@ bool Studio_IKAnimationError( const CStudioHdr *pStudioHdr, mstudioikrule_t *pRu
 	float fraq;
 	int iFrame;
 
+	if (!pRule)
+		return false;
+
 	flWeight = Studio_IKRuleWeight( *pRule, panim, flCycle, iFrame, fraq );
 	Assert( fraq >= 0.0 && fraq < 1.0 );
 	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
@@ -3215,7 +3218,7 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 	ikRule.start = ikRule.peak = ikRule.tail = ikRule.end = 0;
 
 
-	mstudioikrule_t *prevRule = NULL;
+	float prevStart = 0.0f;
 
 	// find overall influence
 	for (i = 0; i < 4; i++)
@@ -3229,30 +3232,63 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 			}
 
 			mstudioikrule_t *pRule = panim[i]->pIKRule( iRule );
-			if (pRule == NULL)
-				return false;
-
-			float dt = 0.0;
-			if (prevRule != NULL)
+			if (pRule != NULL)
 			{
-				if (pRule->start - prevRule->start > 0.5)
+				float dt = 0.0f;
+				if (prevStart != 0.0f)
 				{
-					dt = -1.0;
+					if (pRule->start - prevStart > 0.5)
+					{
+						dt = -1.0;
+					}
+					else if (pRule->start - prevStart < -0.5)
+					{
+						dt = 1.0;
+					}
 				}
-				else if (pRule->start - prevRule->start < -0.5)
+				else
 				{
-					dt = 1.0;
+					prevStart = pRule->start;
 				}
+
+				ikRule.start += (pRule->start + dt) * weight[i];
+				ikRule.peak += (pRule->peak + dt) * weight[i];
+				ikRule.tail += (pRule->tail + dt) * weight[i];
+				ikRule.end += (pRule->end + dt) * weight[i];
 			}
 			else
 			{
-				prevRule = pRule;
-			}
+				mstudioikrulezeroframe_t *pZeroFrameRule = panim[i]->pIKRuleZeroFrame( iRule );
+				if (pZeroFrameRule)
+				{
+					float dt = 0.0f;
+					if (prevStart != 0.0f)
+					{
+						if (pZeroFrameRule->start.GetFloat() - prevStart > 0.5)
+						{
+							dt = -1.0;
+						}
+						else if (pZeroFrameRule->start.GetFloat() - prevStart < -0.5)
+						{
+							dt = 1.0;
+						}
+					}
+					else
+					{
+						prevStart = pZeroFrameRule->start.GetFloat();
+					}
 
-			ikRule.start += (pRule->start + dt) * weight[i];
-			ikRule.peak += (pRule->peak + dt) * weight[i];
-			ikRule.tail += (pRule->tail + dt) * weight[i];
-			ikRule.end += (pRule->end + dt) * weight[i];
+					ikRule.start += (pZeroFrameRule->start.GetFloat() + dt) * weight[i];
+					ikRule.peak += (pZeroFrameRule->peak.GetFloat() + dt) * weight[i];
+					ikRule.tail += (pZeroFrameRule->tail.GetFloat() + dt) * weight[i];
+					ikRule.end += (pZeroFrameRule->end.GetFloat() + dt) * weight[i];
+				}
+				else
+				{
+					// Msg("%s %s - IK Stall\n", pStudioHdr->name(), seqdesc.pszLabel() );
+					return false;
+				}
+			}
 		}
 	}
 	if (ikRule.start > 1.0)
@@ -3274,12 +3310,19 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 	if (ikRule.flWeight <= 0.001f)
 	{
 		// go ahead and allow IK_GROUND rules a virtual looping section
-		if ( panim[0]->pIKRule( iRule ) == NULL ) 
-			return false;
-		if ((panim[0]->flags & STUDIO_LOOPING) && panim[0]->pIKRule( iRule )->type == IK_GROUND && ikRule.end - ikRule.start > 0.75 )
+		if ( weight[0] )
 		{
-			ikRule.flWeight = 0.001;
-			flCycle = ikRule.end - 0.001;
+			if ( panim[ 0 ]->pIKRule( iRule ) == NULL )
+				return false;
+			if ( ( panim[ 0 ]->flags & STUDIO_LOOPING ) && panim[ 0 ]->pIKRule( iRule )->type == IK_GROUND && ikRule.end - ikRule.start > 0.75 )
+			{
+				ikRule.flWeight = 0.001;
+				flCycle = ikRule.end - 0.001;
+			}
+			else
+			{
+				return false;
+			}
 		}
 		else
 		{
@@ -3303,19 +3346,38 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 			float w;
 
 			mstudioikrule_t *pRule = panim[i]->pIKRule( iRule );
-			if (pRule == NULL)
-				return false;
+			if (pRule != NULL)
+			{
+				ikRule.chain = pRule->chain;	// FIXME: this is anim local
+				ikRule.bone = pRule->bone;		// FIXME: this is anim local
+				ikRule.type = pRule->type;
+				ikRule.slot = pRule->slot;
 
-			ikRule.chain = pRule->chain;	// FIXME: this is anim local
-			ikRule.bone = pRule->bone;		// FIXME: this is anim local
-			ikRule.type = pRule->type;
-			ikRule.slot = pRule->slot;
-
-			ikRule.height += pRule->height * weight[i];
-			ikRule.floor += pRule->floor * weight[i];
-			ikRule.radius += pRule->radius * weight[i];
-			ikRule.drop += pRule->drop * weight[i];
-			ikRule.top += pRule->top * weight[i];
+				ikRule.height += pRule->height * weight[i];
+				ikRule.floor += pRule->floor * weight[i];
+				ikRule.radius += pRule->radius * weight[i];
+				ikRule.drop += pRule->drop * weight[i];
+				ikRule.top += pRule->top * weight[i];
+			}
+			else
+			{
+				// look to see if there's a zeroframe version of the rule
+				mstudioikrulezeroframe_t *pZeroFrameRule = panim[i]->pIKRuleZeroFrame( iRule );
+				if (pZeroFrameRule)
+				{
+					// zeroframe doesn't contain details, so force a IK_RELEASE
+					ikRule.type = IK_RELEASE;
+					ikRule.chain = pZeroFrameRule->chain;
+					ikRule.slot = pZeroFrameRule->slot;
+					ikRule.bone = -1;
+					// Msg("IK_RELEASE %d %d : %.2f\n", ikRule.chain, ikRule.slot, ikRule.flWeight );
+				}
+				else
+				{
+					// Msg("%s %s - IK Stall\n", pStudioHdr->name(), seqdesc.pszLabel() );
+					return false;
+				}
+			}
 
 			// keep track of tail condition
 			ikRule.release += Studio_IKTail( ikRule, flCycle ) * weight[i];

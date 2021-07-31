@@ -1631,6 +1631,23 @@ int ByteswapMDLFile( void *pDestBase, void *pSrcBase, const int fileSize )
 				}
 			}
 		}
+
+		// write zero frame IK release rules
+		if ( pAnimDesc->pIKRuleZeroFrame( 0 ) )
+		{
+			int offset = (byte *)pAnimDesc->pIKRuleZeroFrame( 0 ) - (byte *)pAnimDesc;
+
+			// printf("%d : %d  (%x %x)\n", offset, pAnimDesc->numikrules, pAnimDescSrc->ikrulezeroframeindex, pAnimDescDest->ikrulezeroframeindex );
+
+			// Base address of the animation in the animblock
+			byte *pIKRuleZeroFrameSrc = (byte *)pAnimDescSrc + offset;
+			byte *pIKRuleZeroFrameDest = (byte *)pAnimDescDest + offset;
+
+			for ( int j = 0; j < pAnimDesc->numikrules; j++)
+			{
+				WriteBuffer<short>( &pIKRuleZeroFrameDest, &pIKRuleZeroFrameSrc, 6 );
+			}
+		}
 	}
 
 	/** SEQUENCE INFO **/
@@ -2741,7 +2758,8 @@ BEGIN_BYTESWAP_DATADESC( mstudioanimdesc_t )
 	DEFINE_FIELD( numframes, FIELD_INTEGER ),
 	DEFINE_FIELD( nummovements, FIELD_INTEGER ),
 	DEFINE_INDEX( movementindex, FIELD_INTEGER ),
-	DEFINE_ARRAY( unused1, FIELD_INTEGER, 6 ),
+	DEFINE_INDEX( ikrulezeroframeindex, FIELD_INTEGER ),
+	DEFINE_ARRAY( unused1, FIELD_INTEGER, 5 ),
 	DEFINE_FIELD( animblock, FIELD_INTEGER ),
 	DEFINE_INDEX( animindex, FIELD_INTEGER ),
 	DEFINE_FIELD( numikrules, FIELD_INTEGER ),

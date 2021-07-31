@@ -1687,6 +1687,39 @@ static byte *WriteAnimations( byte *pData, byte *pStart, studiohdr_t *phdr )
 					}
 				}
 			}
+			ALIGN4( pData );
+
+			// write zero frame IK data
+			if (panimdesc[i].numikrules)
+			{
+				mstudioikrulezeroframe_t *pdestikrule = (mstudioikrulezeroframe_t *)pData;
+				panimdesc[i].ikrulezeroframeindex = pData - (byte *)&panimdesc[i];
+				pData += sizeof( *pdestikrule ) * panimdesc[i].numikrules;
+
+				// printf("%s : %d : %d %x : %x %x\n", phdr->name, destanim->numikrules, destanim->animblock, destanim->ikruleindex, destanim->animblockikruleindex, destanim->ikrulezeroframeindex );
+
+				mstudioikrule_t *psrcikrule;
+
+				if (panimdesc[i].ikruleindex)
+				{
+					psrcikrule = (mstudioikrule_t *)((byte *)&panimdesc[i] + panimdesc[i].ikruleindex);
+				}
+				else
+				{
+					psrcikrule = (mstudioikrule_t *)(g_animblock[panimdesc[i].animblock].start + panimdesc[i].animblockikruleindex);
+				}
+
+				for (j = 0; j < panimdesc[i].numikrules; j++, psrcikrule++, pdestikrule++ )
+				{
+					pdestikrule->slot = psrcikrule->slot;
+					pdestikrule->chain = psrcikrule->chain;
+					pdestikrule->start.SetFloat( psrcikrule->start );
+					pdestikrule->peak.SetFloat( psrcikrule->peak );
+					pdestikrule->tail.SetFloat( psrcikrule->tail );
+					pdestikrule->end.SetFloat( psrcikrule->end );
+				}
+			}
+			ALIGN4( pData );
 		}
 	}
 
