@@ -333,6 +333,8 @@ void CDecoyProjectile::Spawn( void )
 {
 	SetModel( GRENADE_MODEL );
  	BaseClass::Spawn();
+
+	SetThrownBodygroup();
 }
 
 void CDecoyProjectile::Precache( void )

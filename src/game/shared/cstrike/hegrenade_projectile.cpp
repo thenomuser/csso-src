@@ -57,6 +57,8 @@ void CHEGrenadeProjectile::Spawn()
 {
 	SetModel( GRENADE_MODEL );
 	BaseClass::Spawn();
+
+	SetThrownBodygroup();
 }
 
 void CHEGrenadeProjectile::Precache()

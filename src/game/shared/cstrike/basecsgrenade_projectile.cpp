@@ -165,6 +165,17 @@ END_NETWORK_TABLE()
 		}
 	}
 
+	void CBaseCSGrenadeProjectile::SetThrownBodygroup( void )
+	{
+		int iBodygroup = FindBodygroupByName("pin");
+		if ( iBodygroup )
+			SetBodygroup( iBodygroup, 1 );
+
+		iBodygroup = FindBodygroupByName( "spoon" );
+		if ( iBodygroup )
+			SetBodygroup( iBodygroup, 1 );
+	}
+
 	void CBaseCSGrenadeProjectile::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity )
 	{
 		//Assume all surfaces have the same elasticity

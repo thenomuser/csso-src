@@ -325,6 +325,8 @@ void CFlashbangProjectile::Spawn()
 {
 	SetModel( GRENADE_MODEL );
 	BaseClass::Spawn();
+
+	SetThrownBodygroup();
 }
 
 void CFlashbangProjectile::Precache()

@@ -199,7 +199,7 @@ void CMolotovProjectile::Spawn( void )
 	if ( this->m_bIsIncGrenade )
 	{
 		SetModel( INCGREN_MODEL );
-		//SetBodygroupPreset( "thrown" );
+		SetThrownBodygroup();
 	}
 	else
 	{
