@@ -372,42 +372,68 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 		return ACTIVITY_NOT_AVAILABLE;
 	}
 	const HashValueType * __restrict actData = &m_ActToSeqHash[handle];
-
-	// go through each sequence and give it a score
+	
+	// go through each sequence and give actmod matches preference. LACK of an actmod is a detriment
 	int top_score = -1;
 	CUtlVector<int> topScoring( actData->count, actData->count );	
 	for ( int i = 0; i < actData->count; i++ )
 	{
 		SequenceTuple * __restrict sequenceInfo = m_pSequenceTuples + actData->startingIdx + i;
 		int score = 0;
-		// count matching activity modifiers
-		for ( int m = 0; m < iModifierCount; m++ )
+
+		int num_seq_modifiers = sequenceInfo->iNumActivityModifiers;
+		for ( int k = 0; k < num_seq_modifiers; k++ )
 		{
-			int num_modifiers = sequenceInfo->iNumActivityModifiers;
-			for ( int k = 0; k < num_modifiers; k++ )
+			bool bFoundMod = false;
+
+			for ( int m = 0; m < iModifierCount; m++ )
 			{
 				if ( sequenceInfo->pActivityModifiers[ k ] == pActivityModifiers[ m ] )
 				{
-					score++;
-					break;
+					bFoundMod = true;
 				}
 			}
+
+			if ( bFoundMod )
+			{
+				score += 2;
+			}
+			else
+			{
+				score--;
+			}
+
 		}
-		if ( score > top_score )
+		
+		if ( score >= top_score )
 		{
-			topScoring.RemoveAll();
-			topScoring.AddToTail( sequenceInfo->seqnum );
+			if ( score > top_score )
+			{
+				topScoring.RemoveAll();
+			}
+		
+			for ( int n=0; n<sequenceInfo->weight; n++ )
+			{
+				topScoring.AddToTail( sequenceInfo->seqnum );
+			}
+		
 			top_score = score;
 		}
 	}
 
 	// randomly pick between the highest scoring sequences ( NOTE: this method of selecting a sequence ignores activity weights )
-	if ( IsInPrediction() )
+	//if ( IsInPrediction() )
+	//{
+	//	return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
+	//}
+	if ( topScoring.Count() )
 	{
-		return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
+		return topScoring[ RandomInt( 0, topScoring.Count() - 1 ) ];
 	}
-	
-	return topScoring[ RandomInt( 0, topScoring.Count() - 1 ) ];
+	else
+	{
+		return -1;
+	}
 }
 
 
