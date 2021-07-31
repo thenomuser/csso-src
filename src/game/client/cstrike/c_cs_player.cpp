@@ -80,8 +80,6 @@ extern ConVar	spec_freeze_target_fov_long;
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
-ConVar cl_left_hand_ik( "cl_left_hand_ik", "1", 0, "Attach player's left hand to rifle with IK." );
-
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
 
 ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Sets the view fov if cheats are on." );
