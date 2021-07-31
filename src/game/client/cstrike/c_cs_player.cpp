@@ -1472,24 +1472,6 @@ int C_CSPlayer::GetTargetedWeapon( void ) const
 }
 
 
-void InitializeAddonModelFromWeapon( CWeaponCSBase *weapon, C_BreakableProp *addon )
-{
-	if ( !weapon )
-	{
-		return;
-	}
-
-	const CCSWeaponInfo& weaponInfo = weapon->GetCSWpnData();
-	if ( weaponInfo.m_szAddonModel[0] == 0 )
-	{
-		addon->InitializeAsClientEntity( weaponInfo.szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-	else
-	{
-		addon->InitializeAsClientEntity( weaponInfo.m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-}
-
 class C_PlayerAddonModel : public C_BreakableProp
 {
 public:
@@ -1565,7 +1547,10 @@ void C_CSPlayer::CreateAddonModel( int i )
 		}
 		if ( weaponInfo->m_szAddonModel[0] == 0 )
 		{
-			pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			if ( weaponInfo->szWorldDroppedModel[0] != 0 )
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+			else
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 		}
 		else
 		{
@@ -1608,9 +1593,16 @@ void C_CSPlayer::CreateAddonModel( int i )
 		if ( pWeaponInfo )
 		{
 			if ( pWeaponInfo->m_szAddonModel[0] == 0 )
-				pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			{
+				if ( pWeaponInfo->szWorldDroppedModel[0] != 0 )
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+				else
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 			else
+			{
 				pEnt->InitializeAsClientEntity( pWeaponInfo->m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 		}
 		else
 		{
@@ -2825,12 +2817,12 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 		return;
 
 	// Muzzle Flash Effect.
-	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeapon );
-	const char* pszEffect = pWeapon->GetMuzzleFlashEffectName( true );
 	CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
-
 	if ( !pWeaponWorldModel )
 		return;
+
+	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeaponWorldModel );
+	const char* pszEffect = pWeapon->GetMuzzleFlashEffectName( true );
 
 	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
@@ -2839,8 +2831,8 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 
 #if 0
 	// Brass Eject Effect.
-	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex_3rdPerson();
-	pszEffect = pWeapon->GetEjectBrassEffectName();
+	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeaponWorldModel );
+	pszEffect = pWeapon->GetEjectBrassEffectName( true );
 	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false );

@@ -1671,6 +1671,8 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 	SetOwnerEntity( NULL );
 	SetOwner( NULL );
 
+	VerifyAndSetContextSensitiveWeaponModel();
+
 	m_bReloadVisuallyComplete = false;
 
 #if IRONSIGHT

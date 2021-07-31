@@ -74,7 +74,7 @@ void C_DecoyProjectile::Simulate()
 
 #else // GAME_DLL
 
-#define GRENADE_MODEL "models/weapons/w_eq_decoy_thrown.mdl"
+#define GRENADE_MODEL "models/Weapons/w_eq_decoy_dropped.mdl"
 
 LINK_ENTITY_TO_CLASS( decoy_projectile, CDecoyProjectile );
 PRECACHE_REGISTER( decoy_projectile );

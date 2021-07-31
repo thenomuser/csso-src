@@ -621,10 +621,7 @@ void CBaseCombatWeapon::Spawn( void )
 
 	GiveDefaultAmmo();
 
-	if ( GetWorldModel() )
-	{
-		SetModel( GetWorldModel() );
-	}
+	VerifyAndSetContextSensitiveWeaponModel();
 
 #if !defined( CLIENT_DLL )
 	if( IsX360() )
@@ -751,6 +748,7 @@ void CBaseCombatWeapon::Precache( void )
 		// Precache models (preload to avoid hitch)
 		m_iViewModelIndex = 0;
 		m_iWorldModelIndex = 0;
+		m_iWorldDroppedModelIndex = 0;
 		if ( GetViewModel() && GetViewModel()[0] )
 		{
 			m_iViewModelIndex = CBaseEntity::PrecacheModel( GetViewModel() );
@@ -758,6 +756,10 @@ void CBaseCombatWeapon::Precache( void )
 		if ( GetWorldModel() && GetWorldModel()[0] )
 		{
 			m_iWorldModelIndex = CBaseEntity::PrecacheModel( GetWorldModel() );
+		}
+		if ( GetWorldDroppedModel() && GetWorldDroppedModel()[0] )
+		{
+			m_iWorldDroppedModelIndex = CBaseEntity::PrecacheModel( GetWorldDroppedModel() );
 		}
 
 		// Precache sounds, too
@@ -808,6 +810,22 @@ const char *CBaseCombatWeapon::GetViewModel( int /*viewmodelindex = 0 -- this is
 const char *CBaseCombatWeapon::GetWorldModel( void ) const
 {
 	return GetWpnData().szWorldModel;
+}
+
+
+const char *CBaseCombatWeapon::GetWorldDroppedModel( void ) const
+{
+	const char *szWorldDroppedModel = GetWpnData().szWorldDroppedModel;
+
+	// world dropped model path is optional, but always built. Make sure the model exists before returning it.
+	if ( szWorldDroppedModel )
+	{
+		MDLHandle_t modelHandle = mdlcache->FindMDL( szWorldDroppedModel );
+		if ( !mdlcache->IsErrorModel( modelHandle ) )
+			return szWorldDroppedModel;
+	}
+
+	return GetWorldModel();
 }
 
 //-----------------------------------------------------------------------------
@@ -1481,36 +1499,115 @@ void CBaseCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 	VPhysicsDestroyObject();
 #endif
 
-	if ( pOwner->IsPlayer() )
+	VerifyAndSetContextSensitiveWeaponModel();
+}
+
+CStudioHdr* CBaseCombatWeapon::OnNewModel()
+{
+	ClassifyWeaponModel();
+	return BaseClass::OnNewModel();
+}
+
+void CBaseCombatWeapon::ClassifyWeaponModel( void )
+{
+	// I don't like this either, but the model's aren't tagged in content,
+	// nor are they tagged coming in from multiple years of legacy demos in
+	// their various forms. Game code pushes new models by raw path all over
+	// the place, and I just need a way to verify and set the model as the
+	// appropriate kind without doing an expensive string comparison or
+	// model loop up by string each time.
+
+	const char *pszModelName = NULL;
+	if ( GetModel() )
+		pszModelName = modelinfo->GetModelName(GetModel());
+
+	if ( !pszModelName || pszModelName[0] == 0 )
 	{
-		SetModel( GetViewModel() );
+		m_WeaponModelClassification = WEAPON_MODEL_IS_UNCLASSIFIED;
+	}
+	else if ( V_stristr( pszModelName, "models/weapons/v_" ) )
+	{
+		m_WeaponModelClassification = WEAPON_MODEL_IS_VIEWMODEL;
+	}
+	else if ( V_stristr( pszModelName, "models/weapons/w_" ) )
+	{
+		if ( V_stristr( pszModelName, "_dropped.mdl" ) )
+		{
+			m_WeaponModelClassification = WEAPON_MODEL_IS_DROPPEDMODEL;
+		}
+		else
+		{
+			m_WeaponModelClassification = WEAPON_MODEL_IS_WORLDMODEL;
+		}
 	}
 	else
 	{
-		// Make the weapon ready as soon as any NPC picks it up.
-		m_flNextPrimaryAttack = gpGlobals->curtime;
-		m_flNextSecondaryAttack = gpGlobals->curtime;
-		SetModel( GetWorldModel() );
+		// valid path, just didn't match anything we were looking for.
+		m_WeaponModelClassification = WEAPON_MODEL_IS_UNRECOGNIZED;
 	}
 }
 
-void CBaseCombatWeapon::SetActivity( Activity act, float duration ) 
-{ 
-	//Adrian: Oh man...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
-	SetModel( GetWorldModel() );
+void CBaseCombatWeapon::VerifyAndSetContextSensitiveWeaponModel( void )
+{
+	// Check that the weapon model is the right kind (viewmodel, worldmodel, etc )
+	// Using a fast, non-string comparison check. If it's the wrong type,
+	// set the model to the correct version, then update the record so
+	// future checks are fast and don't need to continuously re-set the
+	// model unnecessarily.
+
+	WeaponModelClassification_t tClassification = GetWeaponModelClassification();
+
+#ifdef CLIENT_DLL
+	if ( tClassification == WEAPON_MODEL_IS_UNCLASSIFIED )
+	{
+		if ( GetOwner() )
+		{
+			SetModel( GetWorldModel() );
+		}
+		else
+		{
+			SetModel( GetWorldDroppedModel() );
+		}
+	}
+	else if ( tClassification == WEAPON_MODEL_IS_VIEWMODEL )
+	{
+		if ( !GetOwner() )
+		{
+			SetModel( GetWorldDroppedModel() );
+		}
+		else if ( GetOwner()->ShouldDraw() )
+		{
+			SetModel( GetWorldModel() );
+		}
+	}
+#else
+	if ( tClassification != WEAPON_MODEL_IS_VIEWMODEL && GetOwner() )
+	{
+		SetModel( GetViewModel() );
+	}
+	else if ( tClassification == WEAPON_MODEL_IS_UNCLASSIFIED || (tClassification == WEAPON_MODEL_IS_VIEWMODEL && !GetOwner()) )
+	{
+		SetModel( GetWorldDroppedModel() );
+	}
 #endif
-	
+}
+
+WeaponModelClassification_t	CBaseCombatWeapon::GetWeaponModelClassification( void )
+{
+	if ( m_WeaponModelClassification == WEAPON_MODEL_IS_UNCLASSIFIED )
+	{
+		ClassifyWeaponModel();
+	}
+	return m_WeaponModelClassification;
+}
+
+void CBaseCombatWeapon::SetActivity( Activity act, float duration ) 
+{ 	
 	int sequence = SelectWeightedSequence( act ); 
 	
 	// FORCE IDLE on sequences we don't have (which should be many)
 	if ( sequence == ACTIVITY_NOT_AVAILABLE )
 		sequence = SelectWeightedSequence( ACT_VM_IDLE );
-
-	//Adrian: Oh man again...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
-	SetModel( GetViewModel() );
-#endif
 
 	if ( sequence != ACTIVITY_NOT_AVAILABLE )
 	{
@@ -1523,7 +1620,8 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 		{
 			// FIXME: does this even make sense in non-shoot animations?
 			m_flPlaybackRate = SequenceDuration( sequence ) / duration;
-			m_flPlaybackRate = MIN( m_flPlaybackRate, 12.0);  // FIXME; magic number!, network encoding range
+			m_flPlaybackRate = fpmin( m_flPlaybackRate, 12.0f);  // FIXME; magic number!, network encoding range
+			Assert( IsFinite( m_flPlaybackRate ) );
 		}
 		else
 		{
@@ -3076,6 +3174,7 @@ BEGIN_PREDICTION_DATA( CBaseCombatWeapon )
 	DEFINE_PRED_FIELD( m_iState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),			 
 	DEFINE_PRED_FIELD( m_iViewModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
 	DEFINE_PRED_FIELD( m_iWorldModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
+	DEFINE_PRED_FIELD( m_iWorldDroppedModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
 	DEFINE_PRED_FIELD_TOL( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),	
 	DEFINE_PRED_FIELD_TOL( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
 	DEFINE_PRED_FIELD_TOL( m_flTimeWeaponIdle, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
@@ -3355,6 +3454,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	SendPropDataTable("LocalActiveWeaponData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponData), SendProxy_SendActiveLocalWeaponDataTable ),
 	SendPropModelIndex( SENDINFO(m_iViewModelIndex) ),
 	SendPropModelIndex( SENDINFO(m_iWorldModelIndex) ),
+	SendPropModelIndex( SENDINFO(m_iWorldDroppedModelIndex) ),
 	SendPropInt( SENDINFO(m_iState ), 8, SPROP_UNSIGNED ),
 	SendPropEHandle( SENDINFO(m_hOwner) ),
 
@@ -3366,6 +3466,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	RecvPropDataTable("LocalActiveWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponData)),
 	RecvPropInt( RECVINFO(m_iViewModelIndex)),
 	RecvPropInt( RECVINFO(m_iWorldModelIndex)),
+	RecvPropInt( RECVINFO(m_iWorldDroppedModelIndex)),
 	RecvPropInt( RECVINFO(m_iState), 0, &CBaseCombatWeapon::RecvProxy_WeaponState ),
 	RecvPropEHandle( RECVINFO(m_hOwner ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryReserveAmmoCount)),

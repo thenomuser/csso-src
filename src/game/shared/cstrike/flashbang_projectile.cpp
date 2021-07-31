@@ -18,7 +18,7 @@
 #include "cs_simple_hostage.h"
 #include "animation.h"
 
-#define GRENADE_MODEL "models/weapons/w_eq_flashbang_thrown.mdl"
+#define GRENADE_MODEL "models/Weapons/w_eq_flashbang_dropped.mdl"
 
 
 LINK_ENTITY_TO_CLASS( flashbang_projectile, CFlashbangProjectile );

@@ -11,7 +11,7 @@
 #include "KeyValues.h"
 #include "weapon_csbase.h"
 
-#define GRENADE_MODEL "models/weapons/w_eq_fraggrenade_thrown.mdl"
+#define GRENADE_MODEL "models/Weapons/w_eq_fraggrenade_dropped.mdl"
 
 
 LINK_ENTITY_TO_CLASS( hegrenade_projectile, CHEGrenadeProjectile );

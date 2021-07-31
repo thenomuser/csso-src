@@ -4205,7 +4205,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, bool bDropShield, bool
 
 		if( pCSWeapon )
 		{
-			pCSWeapon->SetModel( pCSWeapon->GetWorldModel() );
+			pCSWeapon->SetModel( pCSWeapon->GetWorldDroppedModel() );
 
 			// set silencer bodygroup
 			pCSWeapon->SetBodygroup( pCSWeapon->FindBodygroupByName( "silencer" ), pCSWeapon->IsSilenced() ? 0 : 1 );

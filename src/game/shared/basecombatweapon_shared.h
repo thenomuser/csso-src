@@ -178,6 +178,15 @@ enum WeaponHoldsPlayerAnimCapability_t
 	WEAPON_PLAYER_ANIMS_NOT_AVAILABLE
 };
 
+enum WeaponModelClassification_t
+{
+	WEAPON_MODEL_IS_UNCLASSIFIED = 0,
+	WEAPON_MODEL_IS_VIEWMODEL,
+	WEAPON_MODEL_IS_WORLDMODEL,
+	WEAPON_MODEL_IS_DROPPEDMODEL,
+	WEAPON_MODEL_IS_UNRECOGNIZED
+};
+
 class CBaseWeaponWorldModel : public CBaseAnimatingOverlay
 {
 	DECLARE_CLASS( CBaseWeaponWorldModel, CBaseAnimatingOverlay );
@@ -433,6 +442,7 @@ public:
 	const FileWeaponInfo_t	&GetWpnData( void ) const;
 	virtual const char		*GetViewModel( int viewmodelindex = 0 ) const;
 	virtual const char		*GetWorldModel( void ) const;
+	virtual const char		*GetWorldDroppedModel( void ) const;
 	virtual const char		*GetAnimPrefix( void ) const;
 	virtual int				GetMaxClip1( void ) const;
 	virtual int				GetMaxClip2( void ) const;
@@ -664,6 +674,7 @@ public:
 	// Weapon art
 	CNetworkVar( int, m_iViewModelIndex );
 	CNetworkVar( int, m_iWorldModelIndex );
+	CNetworkVar( int, m_iWorldDroppedModelIndex );
 
 	CNetworkVar( int, m_iNumEmptyAttacks );
 
@@ -732,7 +743,14 @@ public:
 
 	IPhysicsConstraint		*GetConstraint() { return m_pConstraint; }
 
+	virtual CStudioHdr			*OnNewModel() OVERRIDE;
+	void						ClassifyWeaponModel( void );
+	WeaponModelClassification_t	GetWeaponModelClassification( void );
+	void						VerifyAndSetContextSensitiveWeaponModel( void );
+
 private:
+	WeaponModelClassification_t m_WeaponModelClassification;
+
 	WEAPON_FILE_INFO_HANDLE	m_hWeaponFileInfo;
 	IPhysicsConstraint		*m_pConstraint;
 

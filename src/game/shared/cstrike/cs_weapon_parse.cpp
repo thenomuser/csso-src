@@ -539,9 +539,6 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the StatTrak model.
 	Q_strncpy( m_szStatTrakModel, pKeyValuesData->GetString( "StatTrakModel" ), sizeof( m_szStatTrakModel ) );
 
-	// Read the dropped model.
-	Q_strncpy( m_szDroppedModel, pKeyValuesData->GetString( "DroppedModel" ), sizeof( m_szDroppedModel ) );
-
 	// Read the buy menu animation.
 	Q_strncpy( m_szBuyMenuAnim, pKeyValuesData->GetString( "BuyMenuAnim" ), sizeof( m_szBuyMenuAnim ) );
 	Q_strncpy( m_szBuyMenuAnimT, pKeyValuesData->GetString( "BuyMenuAnimT", m_szBuyMenuAnim ), sizeof( m_szBuyMenuAnimT ) );

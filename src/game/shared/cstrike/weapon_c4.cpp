@@ -39,7 +39,7 @@
 
 
 #define BLINK_INTERVAL 2.0
-#define PLANTED_C4_MODEL "models/weapons/w_c4_planted.mdl"
+#define PLANTED_C4_MODEL "models/weapons/w_c4_dropped.mdl"
 #define HEIST_MODE_C4_TIME 25
 
 int g_sModelIndexC4Glow = -1;

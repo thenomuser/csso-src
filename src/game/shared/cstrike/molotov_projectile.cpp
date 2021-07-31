@@ -87,8 +87,8 @@ ConVar weapon_molotov_maxdetonateslope(
 	true, 90.0 );
 
 
-#define MOLOTOV_MODEL "models/Weapons/w_eq_molotov_thrown.mdl"
-#define INCGREN_MODEL "models/Weapons/w_eq_incendiarygrenade_thrown.mdl"
+#define MOLOTOV_MODEL "models/Weapons/w_eq_molotov_dropped.mdl"
+#define INCGREN_MODEL "models/Weapons/w_eq_incendiarygrenade_dropped.mdl"
 
 
 LINK_ENTITY_TO_CLASS( molotov_projectile, CMolotovProjectile );
