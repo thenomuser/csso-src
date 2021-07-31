@@ -1210,7 +1210,6 @@ void CCSPlayer::SetModelFromClass( void )
 	}
 	else
 	{
-		// todo: can we actually get here?
 		Assert( false ); // we shouldn't be here
 		//SetModel( CTST6PlayerModels[0] );
 	}
