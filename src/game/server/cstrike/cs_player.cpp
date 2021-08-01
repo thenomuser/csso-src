@@ -239,16 +239,19 @@ public:
 
 	void Init( void )
 	{
+		CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( m_hPlayer.Get() );
+
 		SetSolid( SOLID_BBOX );
 		SetMoveType( MOVETYPE_STEP );
 		SetFriction( 1.0f );
 		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 		m_takedamage = DAMAGE_NO;
-		SetCollisionGroup( COLLISION_GROUP_DEBRIS );
-		SetAbsOrigin( m_hPlayer->GetAbsOrigin() );
-		SetAbsVelocity( m_hPlayer->GetAbsVelocity() );
+ 		SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+		SetAbsAngles( QAngle( 0, m_flAbsYaw, 0 ) );
+		SetAbsOrigin( pPlayer->GetAbsOrigin() );
+		SetAbsVelocity( pPlayer->GetAbsVelocity() );
 		AddSolidFlags( FSOLID_NOT_SOLID );
-		ChangeTeam( m_hPlayer->GetTeamNumber() );
+		ChangeTeam( pPlayer->GetTeamNumber() );
 		UseClientSideAnimation();
 	}
 
@@ -262,6 +265,7 @@ public:
 	CNetworkVar(int, m_iDeathPose );
 	CNetworkVar(int, m_iDeathFrame );
 	CNetworkVar(float, m_flDeathYaw );
+	CNetworkVar(float, m_flAbsYaw );
 };
 
 LINK_ENTITY_TO_CLASS( cs_ragdoll, CCSRagdoll );
@@ -279,6 +283,7 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CCSRagdoll, DT_CSRagdoll )
 	SendPropInt( SENDINFO(m_iTeamNum), TEAMNUM_NUM_BITS, 0),
 	SendPropInt( SENDINFO( m_bClientSideAnimation ), 1, SPROP_UNSIGNED ),
 	SendPropFloat( SENDINFO( m_flDeathYaw ), 0, SPROP_NOSCALE ),
+	SendPropFloat( SENDINFO( m_flAbsYaw ), 0, SPROP_NOSCALE )
 END_SEND_TABLE()
 
 
@@ -1805,6 +1810,7 @@ void CCSPlayer::CreateRagdollEntity()
 		pRagdoll->m_iDeathPose = m_iDeathPose;
 		pRagdoll->m_iDeathFrame = m_iDeathFrame;
 		pRagdoll->m_flDeathYaw = m_flDeathYaw;
+		pRagdoll->m_flAbsYaw = GetAbsAngles()[YAW];
 		pRagdoll->Init();
 	}
 

@@ -305,6 +305,7 @@ private:
 	CNetworkVar(int, m_iDeathPose );
 	CNetworkVar(int, m_iDeathFrame );
 	CNetworkVar(float, m_flDeathYaw );
+	CNetworkVar(float, m_flAbsYaw );
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
@@ -325,6 +326,7 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_CSRagdoll, DT_CSRagdoll, CCSRagdoll )
 	RecvPropInt(RECVINFO(m_iTeamNum)),
 	RecvPropInt( RECVINFO(m_bClientSideAnimation)),
 	RecvPropFloat( RECVINFO(m_flDeathYaw) ),
+	RecvPropFloat( RECVINFO(m_flAbsYaw) ),
 END_RECV_TABLE()
 
 
@@ -433,8 +435,6 @@ void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 		}
 	}
 }
-
-
 
 ConVar cl_random_taser_bone_y( "cl_random_taser_bone_y", "-1.0", 0, "The Y position used for the random taser force." );
 ConVar cl_random_taser_force_y( "cl_random_taser_force_y", "-1.0", 0, "The Y position used for the random taser force." );
@@ -553,6 +553,39 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 
 		SetAbsAngles( pPlayer->GetRenderAngles() );
 		SetNetworkAngles( pPlayer->GetRenderAngles() );
+
+		// add a separate gloves model if needed
+		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			m_pGlovesModel = new C_BaseAnimating;
+			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+			{
+				// hide the gloves first
+				SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+
+				m_pGlovesModel->FollowEntity( this ); // attach to player model
+				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+
+				int skin = 0;
+				if ( pPlayer->m_pViewmodelArmConfig )
+					skin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
+				else
+				{
+					CStudioHdr *pHdr = pPlayer->GetModelPtr();
+					if ( pHdr )
+						skin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+				}
+
+				m_pGlovesModel->m_nSkin = skin; // set the corrent skin tone
+			}
+			else
+			{
+				m_pGlovesModel->Release();
+				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			}
+		}
+
+		pPlayer->MoveBoneAttachments( this );
 	}
 
 	int iDeathAnim = RandomInt( iMinDeathAnim, iMaxDeathAnim );
@@ -563,6 +596,8 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 
 	Interp_Reset( GetVarMapping() );
 }
+
+ConVar cl_ragdoll_workaround_threshold( "cl_ragdoll_workaround_threshold", "4", FCVAR_NONE, "Mainly cosmetic, client-only effect: when client doesn't know the last position of another player that spawns a ragdoll, the ragdoll creation is simplified and ragdoll is created in the right place. If you increase this significantly, ragdoll positions on your client may be dramatically wrong, but it won't affect other clients" );
 
 void C_CSPlayer::SetSequence( int nSequence )
 {
@@ -583,6 +618,8 @@ void C_CSRagdoll::CreateCSRagdoll()
 	// then we can make ourselves start out exactly where the player is.
 	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
 
+	//	DevMsg( "Ragdoll %d player %d (s:%d) %s\n", entindex(), m_hPlayer.GetEntryIndex(), m_hPlayer.GetSerialNumber(), pPlayer ? " ok" : " unresolved" ); // replay
+
 	// mark this to prevent model changes from overwriting the death sequence with the server sequence
 	SetReceivedSequence();
 
@@ -590,34 +627,33 @@ void C_CSRagdoll::CreateCSRagdoll()
 	{
 		// move my current model instance to the ragdoll's so decals are preserved.
 		pPlayer->SnatchModelInstance( this );
-
+	
 		VarMapping_t *varMap = GetVarMapping();
 
 		// Copy all the interpolated vars from the player entity.
 		// The entity uses the interpolated history to get bone velocity.
-		bool bRemotePlayer = (pPlayer != C_BasePlayer::GetLocalPlayer());
+		bool bRemotePlayer = ( pPlayer != C_BasePlayer::GetLocalPlayer() );			
 		if ( bRemotePlayer )
 		{
 			Interp_Copy( pPlayer );
 
-			SetAbsAngles( pPlayer->GetRenderAngles() );
+			SetAbsAngles( QAngle( 0, m_flAbsYaw, 0 ) );
 			GetRotationInterpolator().Reset();
 
 			m_flAnimTime = pPlayer->m_flAnimTime;
 			SetSequence( pPlayer->GetSequence() );
-			m_flPlaybackRate = pPlayer->GetPlaybackRate();
 		}
 		else
 		{
 			// This is the local player, so set them in a default
 			// pose and slam their velocity, angles and origin
 			SetAbsOrigin( m_vecRagdollOrigin );
-
-			SetAbsAngles( pPlayer->GetRenderAngles() );
-
+			
+			SetAbsAngles( QAngle( 0, m_flAbsYaw, 0 ) );
+			
 			SetAbsVelocity( m_vecRagdollVelocity );
 		}
-
+		
 		// in addition to base cycle, duplicate overlay layers and pose params onto the ragdoll, 
 		// so the starting pose is as accurate as possible.
 
@@ -651,18 +687,16 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 		m_flPlaybackRate = pPlayer->GetPlaybackRate();
 
-
 		if ( !bRemotePlayer )
 		{
 			Interp_Reset( varMap );
 		}
 
 		CopySequenceTransitions( pPlayer );
-
+		
 		// add a separate gloves model if needed
 		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
-
 			m_pGlovesModel = new C_BaseAnimating;
 			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
 			{
@@ -705,46 +739,74 @@ void C_CSRagdoll::CreateCSRagdoll()
 		Interp_Reset( GetVarMapping() );
 	}
 
+	bool bDissolveEntity = true;
 	// Turn it into a ragdoll.
 	if ( cl_ragdoll_physics_enable.GetInt() )
 	{
-		// Make us a ragdoll..
-		m_nRenderFX = kRenderFxRagdoll;
-
-		matrix3x4_t boneDelta0[MAXSTUDIOBONES];
-		matrix3x4_t boneDelta1[MAXSTUDIOBONES];
-		matrix3x4_t currentBones[MAXSTUDIOBONES];
-		const float boneDt = 0.05f;
-
-		// use death pose and death frame differently for new animstate player
-		if ( pPlayer->m_bUseNewAnimstate )
+		if ( pPlayer )
 		{
-			GetRagdollInitBoneArraysYawMode( boneDelta0, boneDelta1, currentBones, boneDt );
-		}
-		else
-		{
-			// We used to get these values from the local player object when he ragdolled, but he was some bad values when using prediction.
-			// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
-			ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
-			if ( cl_ragdoll_crumple.GetBool() )
+			bDissolveEntity = false;
+			// Make us a ragdoll..
+			m_nRenderFX = kRenderFxRagdoll;
+			Vector vRagdollOrigin = GetAbsOrigin(), vPlayerOrigin = pPlayer->GetAbsOrigin();
+
+			matrix3x4_t currentBones[ MAXSTUDIOBONES ];
+			const float boneDt = 0.05f;
+		
+			bool bleedOut = false;
+#if USE_VIOLENT_RAGDOLLS
+			bleedOut = ( pPlayer ? !pPlayer->m_bKilledByTaser : true );
+#endif
+
+			if ( ( vRagdollOrigin - vPlayerOrigin ).LengthSqr() > Sqr( cl_ragdoll_workaround_threshold.GetFloat() ) )  // ragdoll origin is set from the player's origin on server. If they aren't the same, it means we haven't seen the player in a while.
 			{
-				BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+				// The player isn't even visible right now, so we don't need to run the complicated and hacky logic to make ragdoll transition seamless. That logic would teleport the ragdoll to the last known position of the now-dormant player
+
+				SetupBones( currentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
+				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt, bleedOut );
 			}
 			else
 			{
-				GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+				matrix3x4_t boneDelta0[ MAXSTUDIOBONES ];
+				matrix3x4_t boneDelta1[ MAXSTUDIOBONES ];
+				// use death pose and death frame differently for new animstate player
+				if ( pPlayer->m_bUseNewAnimstate )
+				{
+					GetRagdollInitBoneArraysYawMode( boneDelta0, boneDelta1, currentBones, boneDt );
+				}
+				else
+				{
+					// We used to get these values from the local player object when he ragdolled, but he was some bad values when using prediction.
+					// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
+					ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
+					if ( cl_ragdoll_crumple.GetBool() )
+					{
+						BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+					}
+					else
+					{
+						GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+					}
+				}
+
+				//Vector vResultOrigin = GetAbsOrigin();
+
+				//Msg( "C_CSRagdoll::CreateCSRagdoll at {%.1f,%.1f,%.1f}, player at {%.1f,%.1f,%.1f}, spawning at {%.1f,%.1f,%.1f}\n", vRagdollOrigin.x, vRagdollOrigin.y, vRagdollOrigin.z, vPlayerOrigin.x, vPlayerOrigin.y, vPlayerOrigin.z, vResultOrigin.x, vResultOrigin.y, vResultOrigin.z );
+
+				InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt, bleedOut );
 			}
 		}
-
-		InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt );
-		m_flRagdollSinkStart = -1;
 	}
-	else
+	
+	if ( bDissolveEntity )
 	{
+		SetRenderMode( kRenderTransTexture );
 		m_flRagdollSinkStart = gpGlobals->curtime;
 		DestroyShadow();
 		ClientLeafSystem()->SetRenderGroup( GetRenderHandle(), RENDER_GROUP_TRANSLUCENT_ENTITY );
 	}
+
 	m_bInitialized = true;
 }
 
