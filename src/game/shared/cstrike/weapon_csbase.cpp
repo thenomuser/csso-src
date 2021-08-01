@@ -2564,6 +2564,44 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 					}
 				}
 			}
+			else if ( nEvent == AE_CL_SHOW_SILENCER )
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 0 );
+				}
+
+				//world model
+				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+				if ( pWorldModel )
+				{
+					pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "silencer" ), 0 );
+				}
+				else
+				{
+					SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
+				}
+			}
+			else if ( nEvent == AE_CL_HIDE_SILENCER )
+			{
+				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
+				{
+					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
+						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 1 );
+				}
+
+				//world model
+				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+				if ( pWorldModel )
+				{
+					pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "silencer" ), 1 );
+				}
+				else
+				{
+					SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
+				}
+			}
 			else if ( nEvent == AE_CL_EJECT_MAG )
 			{
 				SetBodygroup( FindBodygroupByName( "magazine" ), 1 );

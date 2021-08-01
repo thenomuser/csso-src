@@ -236,46 +236,6 @@ void CWeaponUSP::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChara
 				m_weaponMode = Primary_Mode;
 				break;
 			}
-			case AE_CL_SHOW_SILENCER:
-			{
-				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
-				{
-					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
-						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 0 );
-				}
-
-				//world model
-				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
-				if ( pWorldModel )
-				{
-					pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "show_silencer" ), 0 );
-				}
-				else
-				{
-					SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
-				}
-				break;
-			}
-			case AE_CL_HIDE_SILENCER:
-			{
-				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
-				{
-					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
-						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 1 );
-				}
-
-				//world model
-				CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
-				if ( pWorldModel )
-				{
-					pWorldModel->SetBodygroup( pWorldModel->FindBodygroupByName( "show_silencer" ), 1 );
-				}
-				else
-				{
-					SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
-				}
-				break;
-			}
 		}
 	}
 
