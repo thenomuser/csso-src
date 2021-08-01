@@ -3460,6 +3460,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 
 	SendPropInt( SENDINFO( m_iPrimaryReserveAmmoCount ), 10),
 	SendPropInt( SENDINFO( m_iSecondaryReserveAmmoCount ), 10 ),
+	SendPropEHandle( SENDINFO(m_hWeaponWorldModel) ),
 	SendPropInt( SENDINFO( m_iNumEmptyAttacks ), 8 ),
 #else
 	RecvPropDataTable("LocalWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalWeaponData)),
@@ -3471,6 +3472,7 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	RecvPropEHandle( RECVINFO(m_hOwner ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryReserveAmmoCount)),
 	RecvPropInt( RECVINFO( m_iSecondaryReserveAmmoCount)),
+	RecvPropEHandle( RECVINFO(m_hWeaponWorldModel) ),
 	RecvPropInt( RECVINFO( m_iNumEmptyAttacks )),
 #endif
 END_NETWORK_TABLE()
