@@ -230,7 +230,7 @@ void CBaseAnimatingOverlay::AccumulateDispatchedLayers( CBaseAnimatingOverlay *p
 
 	IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, pWeapon->GetPoseParameterArray() );
 	Vector weaponPos[MAXSTUDIOBONES];
-	QuaternionAligned weaponQ[MAXSTUDIOBONES];
+	Quaternion weaponQ[MAXSTUDIOBONES];
 
 	// copy player bones to weapon setup bones
 	pWeapon->m_pBoneMergeCache->CopyFromFollow( pos, q, BONE_USED_BY_BONE_MERGE, weaponPos, weaponQ );
@@ -644,7 +644,7 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Q
 
 		IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, pWeaponWorldModel->GetPoseParameterArray() );
 		Vector weaponPos[MAXSTUDIOBONES];
-		QuaternionAligned weaponQ[MAXSTUDIOBONES];
+		Quaternion weaponQ[MAXSTUDIOBONES];
 
 		weaponSetup.InitPose( weaponPos, weaponQ );
 

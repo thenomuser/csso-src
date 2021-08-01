@@ -553,7 +553,7 @@ void C_BaseAnimatingOverlay::AccumulateInterleavedDispatchedLayers( C_BaseAnimat
 
 		IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, poseparam );
 		Vector weaponPos[MAXSTUDIOBONES];
-		QuaternionAligned weaponQ[MAXSTUDIOBONES];
+		Quaternion weaponQ[MAXSTUDIOBONES];
 
 		int nSequences = boneSetup.GetStudioHdr()->GetNumSeq();
 		for ( int nLayerIdx = 0; nLayerIdx < GetNumAnimOverlays(); nLayerIdx++ )
@@ -648,7 +648,7 @@ void C_BaseAnimatingOverlay::AccumulateDispatchedLayers( C_BaseAnimatingOverlay 
 
 	IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, poseparam );
 	Vector weaponPos[MAXSTUDIOBONES];
-	QuaternionAligned weaponQ[MAXSTUDIOBONES];
+	Quaternion weaponQ[MAXSTUDIOBONES];
 
 	// copy player bones to weapon setup bones
 	pWeapon->m_pBoneMergeCache->CopyFromFollow( pos, q, BONE_USED_BY_BONE_MERGE, weaponPos, weaponQ );

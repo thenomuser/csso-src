@@ -3403,44 +3403,6 @@ void ApplyDifferenceTransformToChildren(
 }
 
 
-void GetCorrectionMatrices(
-	const matrix3x4_t &mShoulder,
-	const matrix3x4_t &mElbow,
-	const matrix3x4_t &mHand,
-	matrix3x4_t &mShoulderCorrection,
-	matrix3x4_t &mElbowCorrection
-	)
-{
-	extern void Studio_AlignIKMatrix( matrix3x4_t &mMat, const Vector &vAlignTo );
-
-	// Get the positions of each node so we can get the direction vectors.
-	Vector vShoulder, vElbow, vHand;
-	MatrixPosition( mShoulder, vShoulder );
-	MatrixPosition( mElbow, vElbow );
-	MatrixPosition( mHand, vHand );
-
-	// Get rid of the translation.
-	matrix3x4_t mOriginalShoulder = mShoulder;
-	matrix3x4_t mOriginalElbow = mElbow;
-	MatrixSetColumn( Vector( 0, 0, 0 ), 3, mOriginalShoulder );
-	MatrixSetColumn( Vector( 0, 0, 0 ), 3, mOriginalElbow );
-
-	// Let the IK code align them like it would if we did IK on the joint.
-	matrix3x4_t mAlignedShoulder = mOriginalShoulder;
-	matrix3x4_t mAlignedElbow = mOriginalElbow;
-	Studio_AlignIKMatrix( mAlignedShoulder, vElbow-vShoulder );
-	Studio_AlignIKMatrix( mAlignedElbow, vHand-vElbow );
-
-	// Figure out the transformation from the aligned bones to the original ones.
-	matrix3x4_t mInvAlignedShoulder, mInvAlignedElbow;
-	MatrixInvert( mAlignedShoulder, mInvAlignedShoulder );
-	MatrixInvert( mAlignedElbow, mInvAlignedElbow );
-
-	ConcatTransforms( mInvAlignedShoulder, mOriginalShoulder, mShoulderCorrection );
-	ConcatTransforms( mInvAlignedElbow, mOriginalElbow, mElbowCorrection );
-}
-
-
 void C_CSPlayer::BuildTransformations( CStudioHdr *pHdr, Vector *pos, Quaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed )
 {
 	// First, setup our model's transformations like normal.
