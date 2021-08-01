@@ -1347,7 +1347,7 @@ void WorldSpaceSlerp(
 		pSeqGroup = pVModel->pSeqGroup( sequence );
 	}
 
-	mstudiobone_t *pbone = pStudioHdr->pBone( 0 );
+	const mstudiobone_t *pbone = pStudioHdr->pBone( 0 );
 
 	for (i = 0; i < pStudioHdr->numbones(); i++)
 	{
@@ -1384,12 +1384,7 @@ void WorldSpaceSlerp(
 			}
 		}
 
-		if (s1 == 1.0 && s2 == 1.0)
-		{
-			pos1[i] = pos2[i];
-			q1[i] = q2[i];
-		}
-		else if (s2 > 0.0)
+		if ( s2 > 0.0 || s1 > 0.0 )
 		{
 			Quaternion srcQ, destQ;
 			Vector srcPos, destPos;
@@ -1404,7 +1399,7 @@ void WorldSpaceSlerp(
 			MatrixAngles( srcBoneToWorld[i], srcQ, srcPos );
 
 			QuaternionSlerp( destQ, srcQ, s2, targetQ );
-			AngleMatrix( targetQ, destPos, targetBoneToWorld[i] );
+			AngleMatrix( RadianEuler(targetQ), destPos, targetBoneToWorld[i] );
 
 			// back solve
 			if (n == -1)
@@ -1421,7 +1416,8 @@ void WorldSpaceSlerp(
 				MatrixAngles( local, q1[i], tmp );
 
 				// blend bone lengths (local space)
-				pos1[i] = Lerp( s2, pos1[i], pos2[i] );
+				//pos1[i] = Lerp( s2, pos1[i], pos2[i] );
+				pos1[i] = pos1[i] + (pos2[i] - pos1[i]) * s2;
 			}
 		}
 	}
