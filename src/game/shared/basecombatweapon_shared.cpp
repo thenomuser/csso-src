@@ -547,6 +547,12 @@ CBaseCombatWeapon::~CBaseCombatWeapon( void )
 	}
 	OnBaseCombatWeaponDestroyed( this );
 #endif
+
+	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+	if ( pWeaponWorldModel )
+	{
+		UTIL_Remove( pWeaponWorldModel );
+	}
 }
 
 void CBaseCombatWeapon::Activate( void )

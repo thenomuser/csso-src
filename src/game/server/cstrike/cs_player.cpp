@@ -2304,8 +2304,16 @@ void CCSPlayer::UpdateAddonBits()
 {
 	int iNewBits = 0;
 
+	//it's ok to show the active weapon as a holstered weapon if it's not yet visible (still deploying)
+	CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
+	bool bActiveWeaponIsVisible = true;
+	if ( pActiveWeapon && pActiveWeapon->GetWeaponWorldModel() )
+	{
+		bActiveWeaponIsVisible = !pActiveWeapon->GetWeaponWorldModel()->IsEffectActive( EF_NODRAW );
+	}
+
 	int nFlashbang = GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_FLASHBANG ) );
-	if ( dynamic_cast< CFlashbang* >( GetActiveWeapon() ) )
+	if ( dynamic_cast< CFlashbang* >( GetActiveWeapon() ) && bActiveWeaponIsVisible )
 	{
 		--nFlashbang;
 	}
@@ -2317,31 +2325,31 @@ void CCSPlayer::UpdateAddonBits()
 		iNewBits |= ADDON_FLASHBANG_2;
 
 	if ( GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_HEGRENADE ) ) &&
-		!dynamic_cast< CHEGrenade* >( GetActiveWeapon() ) )
+		( !dynamic_cast< CHEGrenade* >( GetActiveWeapon() ) || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_HE_GRENADE;
 	}
 
 	if ( GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_SMOKEGRENADE ) ) &&
-		!dynamic_cast< CSmokeGrenade* >( GetActiveWeapon() ) )
+		( !dynamic_cast< CSmokeGrenade* >( GetActiveWeapon() ) || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_SMOKE_GRENADE;
 	}
 
 	if ( GetAmmoCount( GetAmmoDef()->Index( AMMO_TYPE_DECOY ) ) &&
-		!dynamic_cast< CDecoyGrenade* >( GetActiveWeapon() ) )
+		( !dynamic_cast< CDecoyGrenade* >( GetActiveWeapon() ) || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_DECOY;
 	}
 
-	if ( HasC4() && !dynamic_cast< CC4* >( GetActiveWeapon() ) )
+	if ( HasC4() && ( !dynamic_cast< CC4* >( GetActiveWeapon() ) || !bActiveWeaponIsVisible ) )
 		iNewBits |= ADDON_C4;
 
 	if ( HasDefuser() )
 		iNewBits |= ADDON_DEFUSEKIT;
 
 	CWeaponCSBase *weapon = dynamic_cast< CWeaponCSBase * >(Weapon_GetSlot( WEAPON_SLOT_RIFLE ));
-	if ( weapon && weapon != GetActiveWeapon() )
+	if ( weapon && ( weapon != GetActiveWeapon() || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_PRIMARY;
 		m_iPrimaryAddon = weapon->GetWeaponID();
@@ -2352,7 +2360,7 @@ void CCSPlayer::UpdateAddonBits()
 	}
 
 	weapon = dynamic_cast< CWeaponCSBase * >(Weapon_GetSlot( WEAPON_SLOT_PISTOL ));
-	if ( weapon && weapon != GetActiveWeapon() )
+	if ( weapon && ( weapon != GetActiveWeapon() || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_PISTOL;
 		if ( weapon->GetWeaponID() == WEAPON_ELITE )
@@ -2374,7 +2382,7 @@ void CCSPlayer::UpdateAddonBits()
 	}
 
 	weapon = dynamic_cast< CWeaponCSBase * >(Weapon_GetSlot( WEAPON_SLOT_KNIFE ));
-	if ( weapon && weapon != GetActiveWeapon() )
+	if ( weapon && ( weapon != GetActiveWeapon() || !bActiveWeaponIsVisible ) )
 	{
 		iNewBits |= ADDON_KNIFE;
 		m_iKnifeAddon = weapon->GetWeaponID();
