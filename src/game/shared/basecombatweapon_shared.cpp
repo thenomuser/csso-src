@@ -1866,36 +1866,39 @@ bool CBaseCombatWeapon::UsesSecondaryAmmo( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::SetWeaponVisible( bool visible )
 {
+	CBaseViewModel *vm = NULL;
+
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( !pOwner )
-		return;
-
-	// PiMoN: had to re-write the whole code so it won't
-	// just hide the primary viewmodel but every viewmodel
-	// existing as we now have separate hands viewmodel
-	if ( visible )
+	if ( pOwner )
 	{
-		RemoveEffects( EF_NODRAW );
-		int i;
-		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
-		{
-			CBaseViewModel *vm = pOwner->GetViewModel( i );
-			if ( !vm )
-				continue;
+		vm = pOwner->GetViewModel( m_nViewModelIndex );
+	}
 
-			vm->RemoveEffects( EF_NODRAW );
-		}
+	if ( pOwner )
+	{
+		AddEffects( EF_NODRAW ); // The combatweapon hides when held by a player. The weaponworldmodel renders instead.
 	}
 	else
 	{
-		AddEffects( EF_NODRAW );
-		int i;
-		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
+		if ( visible )
 		{
-			CBaseViewModel *vm = pOwner->GetViewModel( i );
-			if ( !vm )
-				continue;
+			RemoveEffects( EF_NODRAW );
+		}
+		else
+		{
+			AddEffects( EF_NODRAW );
+		}
+	}
 
+	// viewmodel
+	if ( vm )
+	{
+		if ( visible )
+		{
+			vm->RemoveEffects( EF_NODRAW );
+		}
+		else
+		{
 			vm->AddEffects( EF_NODRAW );
 		}
 	}
