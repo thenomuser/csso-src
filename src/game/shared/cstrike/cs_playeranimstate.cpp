@@ -439,13 +439,13 @@ void CCSPlayerAnimState::InitCS( CBaseAnimatingOverlay *pEntity, ICSPlayerAnimSt
 	//Since this value is intended to be more than m_flMaxBodyYawDegrees, it will set the new yaw PAST the midpoint.
 	//This looks a little more lifelike when the player is rapidly turning, and if the player halts, it makes the facefront that follows more obvious.
 	config.m_flMaxBodyYawDegreesCorrectionAmount = 90;
-
+	/*
 	//Disable foot plant tunring if the feet are lagging behind by more than this angle
-	//config.m_flIdleFootPlantMaxYaw = 110;
+	config.m_flIdleFootPlantMaxYaw = 110;
 
 	//Turning less than this amount? Don't lift the feet, just shuffle them over.
-	//config.m_flIdleFootPlantFootLiftDelta = 25;
-
+	config.m_flIdleFootPlantFootLiftDelta = 25;
+	*/
 	config.m_LegAnimType = legAnimType;
 	config.m_bUseAimSequences = bUseAimSequences;
 
@@ -898,8 +898,8 @@ int CCSPlayerAnimState::CalcReloadLayerSequence( PlayerAnimEvent_t animEvent )
 	char szName[512];
 	int iReloadSequence = -1;
 
-// Avoid doing this look up since we don't need it for CSGO
-#if !defined( CSTRIKE15 )
+// Avoid doing this look up since we don't need it for CSSO
+#if !defined( CSTRIKE_DLL )
 
 	Q_snprintf( szName, sizeof( szName ), "%s_reload_%s%s", prefix, weaponSuffix, reloadSuffix );
 	iReloadSequence = m_pOuter->LookupSequence( szName );
@@ -1553,7 +1553,7 @@ const char* CCSPlayerAnimState::GetWeaponSuffix()
 	if ( !pWeapon )
 		return NULL;
 
-	const char *pSuffix = pWeapon->GetCSWpnData().szAnimationPrefix;
+	const char *pSuffix = pWeapon->GetCSWpnData().m_szAnimExtension;
 
 #ifdef CS_SHIELD_ENABLED
 	if ( m_pOuter->HasShield() == true )
@@ -1574,6 +1574,10 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 	// Figure out the weapon suffix.
 	CWeaponCSBase *pWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
 	if ( !pWeapon )
+		return -1;
+
+	// PiMoN: I cant be bothered to make more animations... for now
+	if ( pWeapon->GetWeaponID() == WEAPON_HEALTHSHOT )
 		return -1;
 
 	const char *pSuffix = GetWeaponSuffix();
