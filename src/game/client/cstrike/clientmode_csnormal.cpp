@@ -312,6 +312,9 @@ void ClientModeCSNormal::Init()
 
 	ListenForGameEvent( "round_end" );
 	ListenForGameEvent( "round_start" );
+	ListenForGameEvent( "round_time_warning" );
+	ListenForGameEvent( "cs_round_start_beep" );
+	ListenForGameEvent( "cs_round_final_beep" );
 	ListenForGameEvent( "player_team" );
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "bomb_planted" );
@@ -321,7 +324,6 @@ void ClientModeCSNormal::Init()
 	ListenForGameEvent( "hostage_killed" );
 	ListenForGameEvent( "hostage_hurt" );
 	ListenForGameEvent( "round_freeze_end" );
-	ListenForGameEvent( "round_time_warning" );
 	ListenForGameEvent( "round_mvp" );
 	ListenForGameEvent( "bot_takeover" );
 
@@ -987,11 +989,48 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( V_strcmp( "round_time_warning", eventname ) == 0 )
+	if ( V_strcmp( "round_time_warning", eventname ) == 0 )
 	{
-		if ( !CSGameRules()->m_bBombPlanted )
+		if(	!CSGameRules()->m_bBombPlanted )
 		{
 			PlayMusicSelection( filter, CSMUSIC_ROUNDTEN );
+			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+			{
+				CCSPlayer* pPlayer = ToCSPlayer(UTIL_PlayerByIndex(i));
+				if( !pPlayer )
+					continue;
+			}	
+		}
+	}
+	else if ( V_strcmp( "cs_round_start_beep", eventname ) == 0 )
+	{
+		bool bTeamPanelActive = ( gViewPortInterface->GetActivePanel() &&  ( V_strcmp( gViewPortInterface->GetActivePanel()->GetName(), PANEL_TEAM ) == 0 ) );
+	
+		if( !bTeamPanelActive )
+		{
+			CLocalPlayerFilter filter;
+			CBaseEntity::EmitSound( filter, 0, "UI.CounterBeep" );
+		}
+	}
+	else if ( V_strcmp( "cs_round_final_beep", eventname ) == 0 )
+	{
+		bool bTeamPanelActive = ( gViewPortInterface->GetActivePanel() && ( V_strcmp( gViewPortInterface->GetActivePanel()->GetName(), PANEL_TEAM ) == 0 ) );
+
+		if( !bTeamPanelActive )
+		{
+			CBaseEntity::EmitSound( filter, 0, "UI.CounterDoneBeep" );
+		}
+
+		int nObsMode = pLocalPlayer->GetObserverMode();
+		if( nObsMode == OBS_MODE_FIXED || nObsMode == OBS_MODE_ROAMING )
+		{
+			C_CSPlayer *pCSLocalPlayer = ToCSPlayer(pLocalPlayer);
+			if(pCSLocalPlayer->GetCurrentMusic() == CSMUSIC_START )
+			{
+				CLocalPlayerFilter filter;
+				PlayMusicSelection(filter, CSMUSIC_ACTION);
+				pCSLocalPlayer->SetCurrentMusic(CSMUSIC_ACTION);
+			}
 		}
 	}
 	else if ( V_strcmp( "round_mvp", eventname ) == 0 )

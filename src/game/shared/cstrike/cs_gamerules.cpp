@@ -1185,6 +1185,8 @@ ConVar snd_music_selection(
 		m_iSpawnPointCount_Terrorist = 0;
 		m_iSpawnPointCount_CT = 0;
 
+		m_nLastFreezeEndBeep = -1;
+
 		m_bTCantBuy = false;
 		m_bCTCantBuy = false;
 		m_bMapHasBuyZone = false;
@@ -4623,6 +4625,21 @@ ConVar snd_music_selection(
 					EndCTTimeOut();
 				}
 			}
+#ifndef CLIENT_DLL
+			else 
+			{
+				int nTimeToStart = (int) ((startTime - gpGlobals->curtime) + 1.0);
+				if( nTimeToStart <= 3 && m_nLastFreezeEndBeep != nTimeToStart )
+				{
+					m_nLastFreezeEndBeep = nTimeToStart;
+					IGameEvent *pRoundStartBeepEvent = gameeventmanager->CreateEvent( "cs_round_start_beep" );
+					if( pRoundStartBeepEvent )
+					{
+						gameeventmanager->FireEvent( pRoundStartBeepEvent );
+					}
+				}
+			}
+#endif
 
 			return; // not time yet to start round
 		}

@@ -601,6 +601,8 @@ public:
 
 	void GetPlayerCounts(TeamPlayerCounts teamCounts[TEAM_MAXCOUNT]);
 
+	int m_nLastFreezeEndBeep;
+
     //=============================================================================
     // HPE_END
     //=============================================================================
