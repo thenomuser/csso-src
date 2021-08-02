@@ -3238,90 +3238,106 @@ bool C_CSPlayer::IsAnyBoneSnapshotPending( void )
 #define cl_player_toe_length 4.5
 void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext )
 {
-	// PiMoN: IK is broken as always ;(
-#if 0
 	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
 		return;
 	
 	if ( !IsVisible() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
 
-	mstudioikchain_t *pLeftFootChain = NULL;
-	mstudioikchain_t *pRightFootChain = NULL;
 	mstudioikchain_t *pLeftArmChain = NULL;
 
-	int nLeftFootBoneIndex = LookupBone( "ankle_L" );
-	int nRightFootBoneIndex = LookupBone( "ankle_R" );
+	int nLeftHandBoneIndex = LookupBone( "hand_L" );
 
-	Assert( nLeftFootBoneIndex != -1 && nRightFootBoneIndex != -1 && nLeftHandBoneIndex != -1 );
+	Assert( nLeftHandBoneIndex != -1 );
 
 	for( int i = 0; i < pStudioHdr->numikchains(); i++ )
 	{
 		mstudioikchain_t *pchain = pStudioHdr->pIKChain( i );
-		if ( nLeftFootBoneIndex == pchain->pLink( 2 )->bone )
+		if ( nLeftHandBoneIndex == pchain->pLink( 2 )->bone )
 		{
-			pLeftFootChain = pchain;
+			pLeftArmChain = pchain;
 		}
-		else if ( nRightFootBoneIndex == pchain->pLink( 2 )->bone )
-		{
-			pRightFootChain = pchain;
-		}
-
-		if ( pLeftFootChain && pRightFootChain )
-			break;
 	}
-	
-	Assert( pLeftFootChain && pRightFootChain );
-	
-	Vector vecAnimatedLeftFootPos = boneToWorld[nLeftFootBoneIndex].GetOrigin();
-	Vector vecAnimatedRightFootPos = boneToWorld[nRightFootBoneIndex].GetOrigin();
 
-	m_PlayerAnimStateCSGO->DoProceduralFootPlant( boneToWorld, pLeftFootChain, pRightFootChain, pos );
-	
-
-	// hack - keep the toes above the ground
-	if ( (GetFlags() & FL_ONGROUND) && (GetMoveType() == MOVETYPE_WALK) )
+	int nLeftHandIkBoneDriver = LookupBone( "lh_ik_driver" );
+	if ( nLeftHandIkBoneDriver > 0 && pos[nLeftHandIkBoneDriver].x > 0 )
 	{
-		float flZMaxToe = GetAbsOrigin().z + 0.75f;
+		MDLCACHE_CRITICAL_SECTION();
 
-		int nLeftToeBoneIndex = LookupBone( "ball_L" );
-		int nRightToeBoneIndex = LookupBone( "ball_R" );
-
-		if ( nLeftToeBoneIndex > 0 )
+		int nRightHandWepBoneIndex = LookupBone( "weapon_hand_R" );
+		if ( nRightHandWepBoneIndex > 0 )
 		{
-			// need to build an extended toe position
-			Vector vecToeLeft = boneToWorld[nLeftFootBoneIndex].TransformVector( pos[nLeftToeBoneIndex] );
-			Vector vecForward;
-			MatrixGetColumn( boneToWorld[nLeftToeBoneIndex], 0, vecForward );
-			vecToeLeft += vecForward * cl_player_toe_length;
-			if ( vecToeLeft.z < flZMaxToe )
-			{
-				boneToWorld[nLeftFootBoneIndex][2][3] += (flZMaxToe - vecToeLeft.z);
-			}
-		}
+			// early out if the bone isn't in the ikcontext mask
+			CStudioHdr *pPlayerHdr = GetModelPtr();
+			if ( !(pPlayerHdr->boneFlags( nRightHandWepBoneIndex ) & pIKContext->GetBoneMask()) )
+				return;
 
-		if ( nRightToeBoneIndex > 0 )
-		{
-			Vector vecToeRight = boneToWorld[nRightFootBoneIndex].TransformVector( pos[nRightToeBoneIndex] );
-			Vector vecForward;
-			MatrixGetColumn( boneToWorld[nRightToeBoneIndex], 0, vecForward );
-			vecToeRight -= vecForward * cl_player_toe_length; // right toe bone is backwards...
-			if ( vecToeRight.z < flZMaxToe )
+			C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
+			if ( pWeapon )
 			{
-				boneToWorld[nRightFootBoneIndex][2][3] += (flZMaxToe - vecToeRight.z);
+				CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
+				if ( pWeaponWorldModel && pWeaponWorldModel->IsVisible() && pWeaponWorldModel->GetLeftHandAttachBoneIndex() != -1 )
+				{
+					int nWepAttach = pWeaponWorldModel->GetLeftHandAttachBoneIndex();
+					if ( nWepAttach > -1 )
+					{
+						CStudioHdr *pHdr = pWeaponWorldModel->GetModelPtr();
+						if ( pHdr->boneParent( nWepAttach ) != -1 && pWeaponWorldModel->isBoneAvailableForRead(nWepAttach) )
+						{
+							pIKContext->BuildBoneChain( pos, q, nRightHandWepBoneIndex, boneToWorld, boneComputed );
+
+							// Turns out the weapon hand attachment bone is sometimes expected to independently animate.
+							// hack: derive the local position offset from cached bones, since otherwise the weapon (a child of the 
+							// player) will try and set up the player before itself, then place itself in the wrong spot relative to
+							// the player that's in the position we're setting up NOW
+							Vector vecRelTarget;
+							int nParent = pHdr->pBone(nWepAttach)->parent;
+							if ( nParent != -1 )
+							{
+								matrix3x4_t matAttach;
+								pWeaponWorldModel->GetCachedBoneMatrix( nWepAttach, matAttach );
+								
+								matrix3x4_t matAttachParent;
+								pWeaponWorldModel->GetCachedBoneMatrix( nParent, matAttachParent );
+
+								matrix3x4_t matRel = ConcatTransforms( matAttachParent.InverseTR(), matAttach );
+								vecRelTarget = matRel.GetOrigin();
+							}
+							else
+							{
+								vecRelTarget = pHdr->pBone(nWepAttach)->pos;
+							}
+
+							Vector vecLHandAttach = boneToWorld[nRightHandWepBoneIndex].TransformVector( vecRelTarget );
+							Vector vecTarget = Lerp( pos[nLeftHandIkBoneDriver].x, boneToWorld[nLeftHandBoneIndex].GetOrigin(), vecLHandAttach );
+
+							// let the ik fail gracefully with an elastic-y pull instead of hyper-extension
+							float flDist = vecTarget.DistToSqr( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin() );
+							if ( flDist > CS_ARM_HYPEREXTENSION_LIM_SQR )
+							{
+								// HACK: force a valid elbow dir (down z)
+								boneToWorld[pLeftArmChain->pLink( 1 )->bone][2][3] -= 0.5f;
+
+								Vector vecShoulderToHand = (vecTarget - boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin()).Normalized() * CS_ARM_HYPEREXTENSION_LIM;
+								vecTarget = vecShoulderToHand + boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin();							
+							}
+
+							//debugoverlay->AddBoxOverlay( vecTarget, Vector(-0.1,-0.1,-0.1), Vector(0.1,0.1,0.1), QAngle(0,0,0), 0,255,0,255, 0 );
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), 80,80,80,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 80,80,80,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 80,80,80,true,0);
+
+							Studio_SolveIK( pLeftArmChain->pLink( 0 )->bone, pLeftArmChain->pLink( 1 )->bone, pLeftArmChain->pLink( 2 )->bone, vecTarget, boneToWorld );
+
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), 255,0,0,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 255,0,0,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 0,0,255,true,0);
+						}
+					}
+				}
 			}
 		}
 	}
-
-	Vector vecLeftFootPos = boneToWorld[nLeftFootBoneIndex].GetOrigin();
-	Vector vecRightFootPos = boneToWorld[nRightFootBoneIndex].GetOrigin();
-
-	boneToWorld[nLeftFootBoneIndex].SetOrigin( vecAnimatedLeftFootPos );
-	boneToWorld[nRightFootBoneIndex].SetOrigin( vecAnimatedRightFootPos );
-
-	Studio_SolveIK( pLeftFootChain->pLink( 0 )->bone, pLeftFootChain->pLink( 1 )->bone, nLeftFootBoneIndex, vecLeftFootPos, boneToWorld );
-	Studio_SolveIK( pRightFootChain->pLink( 0 )->bone, pRightFootChain->pLink( 1 )->bone, nRightFootBoneIndex, vecRightFootPos, boneToWorld );
-#endif
 }
 
 bool FindWeaponAttachmentBone( C_BaseCombatWeapon *pWeapon, int &iWeaponBone )

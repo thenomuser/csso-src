@@ -302,12 +302,15 @@ public:
 
 	void CopyTo( CIKContext* pOther, const unsigned short * iRemapping );
 
+	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
+
+	const int GetBoneMask( void ) { return m_boneMask; }
+
 private:
 
 	CStudioHdr const *m_pStudioHdr;
 
 	bool Estimate( int iSequence, float flCycle, int iTarget, const float poseParameter[], float flWeight = 1.0f ); 
-	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
 
 	// virtual IK rules, filtered and combined from each sequence
 	CUtlVector< CUtlVector< ikcontextikrule_t > > m_ikChainRule;
