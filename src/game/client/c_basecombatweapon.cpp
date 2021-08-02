@@ -159,10 +159,7 @@ void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 		}
 	}
 
-	if ( updateType == DATA_UPDATE_CREATED )
-	{
-		UpdateVisibility();
-	}
+	UpdateVisibility();
 
 	m_iOldState = m_iState;
 
