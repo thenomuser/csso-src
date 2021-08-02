@@ -4617,12 +4617,14 @@ void CBasePlayer::PostThink()
 			// If he's in a vehicle, sit down
 			if ( IsInAVehicle() )
 				SetAnimation( PLAYER_IN_VEHICLE );
-			else if (!GetAbsVelocity().x && !GetAbsVelocity().y)
-				SetAnimation( PLAYER_IDLE );
-			else if ((GetAbsVelocity().x || GetAbsVelocity().y) && ( GetFlags() & FL_ONGROUND ))
-				SetAnimation( PLAYER_WALK );
-			else if (GetWaterLevel() > 1)
-				SetAnimation( PLAYER_WALK );
+
+			// why is player animation being overridden here in post think? This should be taken care of in player animstate update?
+			//else if (!GetAbsVelocity().x && !GetAbsVelocity().y)
+			//	SetAnimation( PLAYER_IDLE );
+			//else if ((GetAbsVelocity().x || GetAbsVelocity().y) && ( GetFlags() & FL_ONGROUND ))
+			//	SetAnimation( PLAYER_WALK );
+			//else if (GetWaterLevel() > 1)
+			//	SetAnimation( PLAYER_WALK );
 		}
 
 		// Don't allow bogus sequence on player
@@ -4631,9 +4633,10 @@ void CBasePlayer::PostThink()
 			SetSequence( 0 );
 		}
 
-		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-StudioFrameAdvance" );
-		StudioFrameAdvance();
-		VPROF_SCOPE_END();
+		// why is player animation being overridden here in post think? This should be taken care of in player animstate update?
+		//VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-StudioFrameAdvance" );
+		//StudioFrameAdvance();
+		//VPROF_SCOPE_END();
 
 		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-DispatchAnimEvents" );
 		DispatchAnimEvents( this );
