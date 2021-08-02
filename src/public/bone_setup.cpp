@@ -408,8 +408,8 @@ void CalcBoneQuaternion( int frame, float s,
 
 	if (s > 0.001f)
 	{
-		QuaternionAligned	q1, q2;
-		RadianEuler			angle1, angle2;
+		Quaternion	q1, q2;
+		RadianEuler	angle1, angle2;
 
 		ExtractAnimValue( frame, pValuesPtr->pAnimvalue( 0 ), baseRotScale.x, angle1.x, angle2.x );
 		ExtractAnimValue( frame, pValuesPtr->pAnimvalue( 1 ), baseRotScale.y, angle1.y, angle2.y );
@@ -431,15 +431,7 @@ void CalcBoneQuaternion( int frame, float s,
 			AngleQuaternion( angle1, q1 );
 			AngleQuaternion( angle2, q2 );
 
-	#ifdef _X360
-			fltx4 q1simd, q2simd, qsimd;
-			q1simd = LoadAlignedSIMD( q1 );
-			q2simd = LoadAlignedSIMD( q2 );
-			qsimd = QuaternionBlendSIMD( q1simd, q2simd, s );
-			StoreUnalignedSIMD( q.Base(), qsimd );
-	#else
 			QuaternionBlend( q1, q2, s, q );
-	#endif
 		}
 		else
 		{
@@ -1438,7 +1430,7 @@ void SlerpBones(
 	Vector * RESTRICT pos1, 
 	mstudioseqdesc_t &seqdesc,  // source of q2 and pos2
 	int sequence, 
-	const QuaternionAligned * RESTRICT q2, // [MAXSTUDIOBONES], 
+	const Quaternion * RESTRICT q2, // [MAXSTUDIOBONES], 
 	const Vector * RESTRICT pos2, // [MAXSTUDIOBONES], 
 	float s,
 	int boneMask )
@@ -1506,26 +1498,11 @@ void SlerpBones(
 
 			if ( seqdesc.flags & STUDIO_POST )
 			{
-#ifndef _X360
 				QuaternionMA( q1[i], s2, q2[i], q1[i] );
-#else
-				fltx4 q1simd = LoadUnalignedSIMD( q1[i].Base() );
-				fltx4 q2simd = LoadAlignedSIMD( q2[i] );
-				fltx4 result = QuaternionMASIMD( q1simd, s2, q2simd );
-				StoreUnalignedSIMD( q1[i].Base(), result );
-#endif
 			}
 			else
 			{
-#ifndef _X360
 				QuaternionSM( s2, q2[i], q1[i], q1[i] );
-#else
-				fltx4 q1simd = LoadUnalignedSIMD( q1[i].Base() );
-				fltx4 q2simd = LoadAlignedSIMD( q2[i] );
-				fltx4 result = QuaternionSMSIMD( s2, q2simd, q1simd );
-				StoreUnalignedSIMD( q1[i].Base(), result );
-#endif
-
 			}
 			// do this explicitly to make the scheduling better
 			// (otherwise it might think pos1 and pos2 overlap,
@@ -1541,7 +1518,7 @@ void SlerpBones(
 		return;
 	}
 
-	QuaternionAligned q3;
+	Quaternion q3;
 	for (i = 0; i < nBoneCount; i++)
 	{
 		s2 = pS2[i];
@@ -1549,37 +1526,19 @@ void SlerpBones(
 			continue;
 
 		s1 = 1.0 - s2;
-
-#ifdef _X360
-		fltx4  q1simd, q2simd, result;
-		q1simd = LoadUnalignedSIMD( q1[i].Base() );
-		q2simd = LoadAlignedSIMD( q2[i] );
-#endif
 		if ( pStudioHdr->boneFlags(i) & BONE_FIXED_ALIGNMENT )
 		{
-#ifndef _X360
 			QuaternionSlerpNoAlign( q2[i], q1[i], s1, q3 );
-#else
-			result = QuaternionSlerpNoAlignSIMD( q2simd, q1simd, s1 );
-#endif
 		}
 		else
 		{
-#ifndef _X360
 			QuaternionSlerp( q2[i], q1[i], s1, q3 );
-#else
-			result = QuaternionSlerpSIMD( q2simd, q1simd, s1 );
-#endif
 		}
 
-#ifndef _X360
 		q1[i][0] = q3[0];
 		q1[i][1] = q3[1];
 		q1[i][2] = q3[2];
 		q1[i][3] = q3[3];
-#else
-		StoreUnalignedSIMD( q1[i].Base(), result );
-#endif
 
 		pos1[i][0] = pos1[i][0] * s1 + pos2[i][0] * s2;
 		pos1[i][1] = pos1[i][1] * s1 + pos2[i][1] * s2;
@@ -2526,7 +2485,7 @@ void CBoneSetup::AccumulatePose(
 	// 	BoneVector		pos2[MAXSTUDIOBONES];
 	// 	BoneQuaternion	q2[MAXSTUDIOBONES];
 	Vector *pos2 = g_VectorPool.Alloc();
-	QuaternionAligned * q2 = ( QuaternionAligned * ) g_QuaternionPool.Alloc();
+	Quaternion * q2 = ( Quaternion * ) g_QuaternionPool.Alloc();
 
 	PREFETCH360( pos2, 0 );
 	PREFETCH360( q2, 0 );
@@ -2579,8 +2538,7 @@ void CBoneSetup::AccumulatePose(
 			AngleMatrix( RadianEuler(q[0]), pos[0], rootToMove );
 
 			matrix3x4_t rootMoved;
-			//ConcatTransforms_Aligned( rootDriverXform, rootToMove, rootMoved );
-			ConcatTransforms( rootDriverXform, rootToMove, rootMoved ); // PiMoN: im still scared to use aligned version!
+			ConcatTransforms( rootDriverXform, rootToMove, rootMoved );
 
 			MatrixAngles( rootMoved, q2[0], pos2[0] );
 		}
