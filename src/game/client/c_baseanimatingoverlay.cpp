@@ -493,7 +493,6 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, Vector pos
 		}
 #endif
 	}
-	//RegenerateDispatchedLayers( boneSetup, pos, q, currentTime );
 }
 
 //-----------------------------------------------------------------------------
@@ -681,41 +680,6 @@ void C_BaseAnimatingOverlay::AccumulateDispatchedLayers( C_BaseAnimatingOverlay 
 
 	// merge weapon bones back
 	pWeapon->m_pBoneMergeCache->CopyToFollow( weaponPos, weaponQ, BONE_USED_BY_BONE_MERGE, pos, q );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Duplicate parent models dispatched overlay sequences so that any local bones get animated
-//-----------------------------------------------------------------------------
-	
-void C_BaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime )
-{
-	// find who I'm following and see if I'm their dispatched model
-	if ( m_pBoneMergeCache && m_pBoneMergeCache->IsCopied() )
-	{
-		C_BaseEntity *pFollowEnt = GetFollowedEntity();
-		if ( pFollowEnt )
-		{
-			C_BaseAnimatingOverlay *pFollow = pFollowEnt->GetBaseAnimatingOverlay();
-			if ( pFollow )
-			{
-				for ( int i=0; i < pFollow->GetNumAnimOverlays(); i++ )
-				{
-					CAnimationLayer *pLayer = pFollow->GetAnimOverlay( i );
-					if ( pLayer->m_pDispatchedStudioHdr == NULL || pLayer->GetOrder() >= MAX_OVERLAYS || pLayer->GetSequence() == -1 || pLayer->GetWeight() <= 0.0f )
-						continue;
-
-					// FIXME: why do the CStudioHdr's not match?
-					if ( pLayer->m_pDispatchedStudioHdr->GetRenderHdr() == boneSetup.GetStudioHdr()->GetRenderHdr() )
-					{
-						if ( pLayer->m_nDispatchedDst != ACT_INVALID )
-						{
-							boneSetup.AccumulatePose( pos, q, pLayer->m_nDispatchedDst, pLayer->m_flCycle, pLayer->m_flWeight, currentTime, m_pIk );
-						}
-					}
-				}
-			}
-		}
-	}
 }
 
 void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )

@@ -278,37 +278,6 @@ void CBaseAnimatingOverlay::AccumulateDispatchedLayers( CBaseAnimatingOverlay *p
 	pWeapon->m_pBoneMergeCache->CopyToFollow( weaponPos, weaponQ, BONE_USED_BY_BONE_MERGE, pos, q );
 }
 
-void CBaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime )
-{
-	// find who I'm following and see if I'm their dispatched model
-	if ( m_pBoneMergeCache && m_pBoneMergeCache->IsCopied() )
-	{
-		CBaseEntity *pFollowEnt = GetFollowedEntity();
-		if ( pFollowEnt )
-		{
-			CBaseAnimatingOverlay *pFollow = pFollowEnt->GetBaseAnimatingOverlay();
-			if ( pFollow )
-			{
-				for ( int i=0; i < pFollow->GetNumAnimOverlays(); i++ )
-				{
-					CAnimationLayer *pLayer = pFollow->GetAnimOverlay( i );
-					if ( pLayer->m_pDispatchedStudioHdr == NULL || pLayer->m_nOrder >= MAX_OVERLAYS || pLayer->GetSequence() == -1 || pLayer->GetWeight() <= 0.0f )
-						continue;
-
-					// FIXME: why do the CStudioHdr's not match?
-					if ( pLayer->m_pDispatchedStudioHdr->GetRenderHdr() == boneSetup.GetStudioHdr()->GetRenderHdr() )
-					{
-						if ( pLayer->m_nDispatchedDst != ACT_INVALID )
-						{
-							boneSetup.AccumulatePose( pos, q, pLayer->m_nDispatchedDst, pLayer->m_flCycle, pLayer->m_flWeight, currentTime, m_pIk );
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 void CBaseAnimatingOverlay::VerifyOrder( void )
 {
 #ifdef _DEBUG
@@ -704,9 +673,6 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Q
 		boneSetup.CalcAutoplaySequences( pos, q, gpGlobals->curtime, NULL );
 	}
 	boneSetup.CalcBoneAdj( pos, q, GetEncodedControllerArray() );
-
-	// Do we care about local weapon bones on the server? They don't drive hitboxes... so I don't think we do.
-	//RegenerateDispatchedLayers( boneSetup, pos, q, gpGlobals->curtime );
 }
 
 

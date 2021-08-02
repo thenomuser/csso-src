@@ -278,7 +278,6 @@ public:
 
 	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence );
 	void AccumulateDispatchedLayers( CBaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
-	void RegenerateDispatchedLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
 
 private:
 	int		AllocateLayer( int iPriority = 0 ); // lower priorities are processed first

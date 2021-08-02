@@ -35,7 +35,6 @@ public:
 
 	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence );
 	void AccumulateDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
-	void RegenerateDispatchedLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime );
 
 	void AccumulateInterleavedDispatchedLayers( C_BaseAnimatingOverlay *pWeapon, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime, bool bSetupInvisibleWeapon = false );
 
