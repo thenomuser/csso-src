@@ -544,7 +544,7 @@ CCSPlayer::CCSPlayer()
 
 	m_flThirdpersonRecoil = 0;
 
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 
 	m_pCurStateInfo = NULL;	// no state yet
 	m_iThrowGrenadeCounter = 0;
@@ -1376,7 +1376,7 @@ void CCSPlayer::Spawn()
 	AddFlag(FL_ONGROUND); // set the player on the ground at the start of the round.
 
 	// Override what CBasePlayer set for the view offset.
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 
 	//
 	// Our player movement speed is set once here. This will override the cl_xxxx
@@ -10527,8 +10527,8 @@ CBaseEntity* CCSPlayer::GetNearestSurfaceBelow(float maxTrace)
 	Vector traceEnd = traceStart;
 	traceEnd.z -= maxTrace;
 
-	Vector minExtent = this->m_Local.m_bDucked  ? VEC_DUCK_HULL_MIN_SCALED( this ) : VEC_HULL_MIN_SCALED( this );
-	Vector maxExtent = this->m_Local.m_bDucked  ? VEC_DUCK_HULL_MAX_SCALED( this ) : VEC_HULL_MAX_SCALED( this );
+	Vector minExtent = this->m_Local.m_bDucked ? VEC_DUCK_HULL_MIN : VEC_HULL_MIN;
+	Vector maxExtent = this->m_Local.m_bDucked ? VEC_DUCK_HULL_MAX : VEC_HULL_MAX;
 
 	ray.Init( traceStart, traceEnd, minExtent, maxExtent );
 	UTIL_TraceRay( ray, MASK_PLAYERSOLID, this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );

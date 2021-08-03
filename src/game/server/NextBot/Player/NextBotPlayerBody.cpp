@@ -789,7 +789,7 @@ bool PlayerBody::IsArousal( ArousalType arousal ) const
  */
 float PlayerBody::GetHullWidth( void ) const
 {
-	return VEC_HULL_MAX_SCALED( m_player ).x - VEC_HULL_MIN_SCALED( m_player ).x;
+	return VEC_HULL_MAX.x - VEC_HULL_MIN.x;
 }
 
 
@@ -814,7 +814,7 @@ float PlayerBody::GetHullHeight( void ) const
  */
 float PlayerBody::GetStandHullHeight( void ) const
 {
-	return VEC_HULL_MAX_SCALED( m_player ).z - VEC_HULL_MIN_SCALED( m_player ).z;
+	return VEC_HULL_MAX.z - VEC_HULL_MIN.z;
 }
 
 
@@ -824,7 +824,7 @@ float PlayerBody::GetStandHullHeight( void ) const
  */
 float PlayerBody::GetCrouchHullHeight( void ) const
 {
-	return VEC_DUCK_HULL_MAX_SCALED( m_player ).z - VEC_DUCK_HULL_MIN_SCALED( m_player ).z;
+	return VEC_DUCK_HULL_MAX.z - VEC_DUCK_HULL_MIN.z;
 }
 
 
@@ -836,13 +836,13 @@ const Vector &PlayerBody::GetHullMins( void ) const
 {
 	if ( m_posture == CROUCH )
 	{
-		m_hullMins = VEC_DUCK_HULL_MIN_SCALED( m_player );
+		m_hullMins = VEC_DUCK_HULL_MIN;
 	}
 	else
 	{
-		m_hullMins = VEC_HULL_MIN_SCALED( m_player );
+		m_hullMins = VEC_HULL_MIN;
 	}
-	
+
 	return m_hullMins;
 }
 
@@ -855,14 +855,14 @@ const Vector &PlayerBody::GetHullMaxs( void ) const
 {
 	if ( m_posture == CROUCH )
 	{
-		m_hullMaxs = VEC_DUCK_HULL_MAX_SCALED( m_player );
+		m_hullMaxs = VEC_DUCK_HULL_MAX;
 	}
 	else
 	{
-		m_hullMaxs = VEC_HULL_MAX_SCALED( m_player );
+		m_hullMaxs = VEC_HULL_MAX;
 	}
 
-	return m_hullMaxs;	
+	return m_hullMaxs;
 }
 
 

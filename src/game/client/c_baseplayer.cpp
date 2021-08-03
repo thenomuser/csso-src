@@ -55,6 +55,7 @@
 
 #ifdef CSTRIKE_DLL
 #include "cs_shareddefs.h"
+#include "basecsgrenade_projectile.h"
 #endif
 
 // NVNT haptics system interface
@@ -311,6 +312,8 @@ END_RECV_TABLE()
 #if defined USES_ECON_ITEMS
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
+
+		RecvPropEHandle		( RECVINFO( m_hViewEntity ) ),		// L4D: send view entity to everyone for first-person spectating
 		
 		RecvPropFloat	(RECVINFO(m_flDuckAmount)),
 		RecvPropFloat	(RECVINFO(m_flDuckSpeed)),
@@ -435,6 +438,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_vecLadderNormal.Init();
 	m_vecOldViewAngles.Init();
 #endif
+	m_hViewEntity = NULL;
 
 	m_pFlashlight = NULL;
 
@@ -921,7 +925,11 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 		if ( flTimeDelta > 0  &&  !( IsNoInterpolationFrame() || bForceEFNoInterp ) )
 		{
 			Vector newVelo = (GetNetworkOrigin() - GetOldOrigin()  ) / flTimeDelta;
-			SetAbsVelocity( newVelo);
+			// This code used to call SetAbsVelocity, which is a no-no since we are in networking and if
+			//  in hieararchy, the parent velocity might not be set up yet.
+			// On top of that GetNetworkOrigin and GetOldOrigin are local coordinates
+			// So we'll just set the local vel and avoid an Assert here
+			SetLocalVelocity( newVelo );
 		}
 	}
 
@@ -1512,23 +1520,19 @@ Vector C_BasePlayer::GetChaseCamViewOffset( CBaseEntity *target )
 {
 	C_BasePlayer *player = ToBasePlayer( target );
 	
-	if ( player )
+	if ( player && player->IsAlive() )
 	{
-		if ( player->IsAlive() )
-		{
-			if ( player->GetFlags() & FL_DUCKING )
-			{
-				return VEC_DUCK_VIEW_SCALED( player );
-			}
+		if( player->GetFlags() & FL_DUCKING )
+			return VEC_DUCK_VIEW;
 
-			return VEC_VIEW_SCALED( player );
-		}
-		else
-		{
-			// assume it's the players ragdoll
-			return VEC_DEAD_VIEWHEIGHT_SCALED( player );
-		}
+		return VEC_VIEW;
 	}
+
+#ifdef CSTRIKE_DLL
+	CBaseCSGrenadeProjectile *pGrenade = dynamic_cast< CBaseCSGrenadeProjectile* >( target );
+	if ( pGrenade )
+		return Vector( 0, 0, 8 );
+#endif
 
 	// assume it's the players ragdoll
 	return VEC_DEAD_VIEWHEIGHT;
@@ -1704,8 +1708,6 @@ void C_BasePlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, floa
 
 	// Zoom towards our target
 	float flCurTime = (gpGlobals->curtime - m_flFreezeFrameStartTime);
-	float flBlendPerc = clamp( flCurTime / spec_freeze_traveltime.GetFloat(), 0.f, 1.f );
-	flBlendPerc = SimpleSpline( flBlendPerc );
 
 	Vector vecCamDesired = pTarget->GetObserverCamOrigin();	// Returns ragdoll origin if they're ragdolled
 	VectorAdd( vecCamDesired, GetChaseCamViewOffset( pTarget ), vecCamDesired );
@@ -1713,12 +1715,12 @@ void C_BasePlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, floa
 	if ( pTarget->IsAlive() )
 	{
 		// Look at their chest, not their head
-		Vector maxs = pTarget->GetBaseAnimating() ? VEC_HULL_MAX_SCALED( pTarget->GetBaseAnimating() ) : VEC_HULL_MAX;
+		Vector maxs = GameRules()->GetViewVectors()->m_vHullMax;
 		vecCamTarget.z -= (maxs.z * 0.5);
 	}
 	else
 	{
-		vecCamTarget.z += pTarget->GetBaseAnimating() ? VEC_DEAD_VIEWHEIGHT_SCALED( pTarget->GetBaseAnimating() ).z : VEC_DEAD_VIEWHEIGHT.z;	// look over ragdoll, not through
+		vecCamTarget.z += VEC_DEAD_VIEWHEIGHT.z;	// look over ragdoll, not through
 	}
 
 	// Figure out a view position in front of the target
@@ -1758,7 +1760,7 @@ void C_BasePlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, floa
 	VectorNormalize( vecToTarget );
 	VectorAngles( vecToTarget, eyeAngles );
 	
-	VectorLerp( m_vecFreezeFrameStart, vecTargetPos, flBlendPerc, eyeOrigin );
+	VectorLerp( m_vecFreezeFrameStart, vecTargetPos, 0.0f, eyeOrigin );
 
 	if ( flCurTime >= spec_freeze_traveltime.GetFloat() && !m_bSentFreezeFrame )
 	{
@@ -1798,6 +1800,9 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 
 	eyeAngles = target->EyeAngles();
 	eyeOrigin = target->GetAbsOrigin();
+		
+	CalcViewBob( eyeOrigin );
+	CalcViewRoll( eyeAngles );
 
 	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
 
@@ -1808,27 +1813,23 @@ void C_BasePlayer::CalcInEyeCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	VectorAdd( eyeAngles, GetAimPunchAngle() * view_recoil_tracking.GetFloat(), eyeAngles );
 
 #if defined( REPLAY_ENABLED )
-	if( engine->IsHLTV() || g_pEngineClientReplay->IsPlayingReplayDemo() )
+	if( engine->IsHLTV() || engine->IsReplay() )
 #else
 	if( engine->IsHLTV() )
 #endif
 	{
-		C_BaseAnimating *pTargetAnimating = target->GetBaseAnimating();
 		if ( target->GetFlags() & FL_DUCKING )
 		{
-			eyeOrigin += pTargetAnimating ? VEC_DUCK_VIEW_SCALED( pTargetAnimating ) : VEC_DUCK_VIEW;
+			eyeOrigin += VEC_DUCK_VIEW;
 		}
 		else
 		{
-			eyeOrigin += pTargetAnimating ? VEC_VIEW_SCALED( pTargetAnimating ) : VEC_VIEW;
+			eyeOrigin += VEC_VIEW;
 		}
 	}
 	else
 	{
-		Vector offset = GetViewOffset();
-#ifdef HL2MP
-		offset = target->GetViewOffset();
-#endif
+		Vector offset = m_vecViewOffset;
 		eyeOrigin += offset; // hack hack
 	}
 
@@ -1861,16 +1862,15 @@ void C_BasePlayer::CalcDeathCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 	QAngle aForward = eyeAngles;
 	Vector origin = EyePosition();			
 
-	// NOTE:  This will create the ragdoll in CSS if m_hRagdoll is set, but m_pRagdoll is not yet presetn
 	IRagdoll *pRagdoll = GetRepresentativeRagdoll();
 	if ( pRagdoll )
 	{
 		origin = pRagdoll->GetRagdollOrigin();
-		origin.z += VEC_DEAD_VIEWHEIGHT_SCALED( this ).z;
+		origin.z += VEC_DEAD_VIEWHEIGHT.z; // look over ragdoll, not through
 	}
 	
 	if ( pKiller && pKiller->IsPlayer() && (pKiller != this) ) 
-	{														
+	{
 		Vector vKiller = pKiller->EyePosition() - origin;
 		QAngle aKiller; VectorAngles( vKiller, aKiller );
 		InterpolateAngles( aForward, aKiller, eyeAngles, interpolation );
@@ -2118,14 +2118,7 @@ void C_BasePlayer::PostThink( void )
 	if ( IsAlive())
 	{
 		// Need to do this on the client to avoid prediction errors
-		if ( GetFlags() & FL_DUCKING )
-		{
-			SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
-		}
-		else
-		{
-			SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
-		}
+		UpdateCollisionBounds();
 		
 		if ( !CommentaryModeShouldSwallowInput( this ) )
 		{

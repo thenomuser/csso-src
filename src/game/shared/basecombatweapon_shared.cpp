@@ -375,8 +375,6 @@ bool CBaseWeaponWorldModel::ShouldDraw( void )
 	if ( !pWeaponParentOwner || !pWeaponParentOwner->IsPlayer() || !pWeaponParent->GetOwner()->ShouldDraw() || HasDormantOwner() )
 		return false; // don't draw if our parent weapon is unheld, or held by a dormant or invisible player
 
-	// <sergiy> 2016/01/05 - there was a bug here, where (at least in replay, possibly in other spectator type situations) the weapon owner would substitute his active weapon with the active weapon of the observer target. 
-	//                       This is seemingly done to simplify the code that deals with local player's active weapon (e.g. ironsight and effects rendering): GetLocalPlayer()->GetActiveWeapon(), when in the In-Eye mode, will always return the weapon to use for local effects (the one in the hands of the observer target).
 	CBaseCombatWeapon *pParentWeaponPlayerPrimary = pWeaponParentOwner->GetActiveWeapon();
 
 	if ( !pParentWeaponPlayerPrimary || pParentWeaponPlayerPrimary != pWeaponParent )
@@ -1646,14 +1644,7 @@ int CBaseCombatWeapon::UpdateClientData( CBasePlayer *pPlayer )
 
 	if ( pPlayer->GetActiveWeapon() == this )
 	{
-		if ( pPlayer->m_fOnTarget ) 
-		{
-			iNewState = WEAPON_IS_ONTARGET;
-		}
-		else
-		{
-			iNewState = WEAPON_IS_ACTIVE;
-		}
+		iNewState = WEAPON_IS_ACTIVE;
 	}
 	else
 	{

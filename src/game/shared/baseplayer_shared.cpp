@@ -344,6 +344,11 @@ const QAngle &CBasePlayer::EyeAngles( )
 
 	if ( !pMoveParent )
 	{
+		// if in camera mode, use that
+		if ( GetViewEntity() != NULL )
+		{
+			return GetViewEntity()->EyeAngles();
+		}
 		return pl.v_angle;
 	}
 
@@ -379,7 +384,7 @@ Vector CBasePlayer::EyePosition( )
 #ifdef CLIENT_DLL
 		if ( IsObserver() )
 		{
-			if ( GetObserverMode() == OBS_MODE_CHASE || GetObserverMode() == OBS_MODE_POI )
+			if ( m_iObserverMode == OBS_MODE_CHASE )
 			{
 				if ( IsLocalPlayer() )
 				{
@@ -388,7 +393,31 @@ Vector CBasePlayer::EyePosition( )
 			}
 		}
 #endif
+		// if in camera mode, use that
+		if ( GetViewEntity() != NULL )
+		{
+			return GetViewEntity()->EyePosition();
+		}
+
+#ifdef CLIENT_DLL
+		if ( !IsLocalPlayer() && IsAlive() )
+		{
+			if( ( GetFlags() & FL_DUCKING ) || m_Local.m_bDucked )
+			{
+				return GetAbsOrigin() + VEC_DUCK_VIEW;
+			}
+			else
+			{
+				return GetAbsOrigin() + VEC_VIEW;
+			}
+		}
+		else
+		{
+			return BaseClass::EyePosition();
+		}
+#else
 		return BaseClass::EyePosition();
+#endif
 	}
 }
 
@@ -402,17 +431,17 @@ const Vector CBasePlayer::GetPlayerMins( void ) const
 {
 	if ( IsObserver() )
 	{
-		return VEC_OBS_HULL_MIN_SCALED( this );	
+		return VEC_OBS_HULL_MIN;
 	}
 	else
 	{
 		if ( GetFlags() & FL_DUCKING )
 		{
-			return VEC_DUCK_HULL_MIN_SCALED( this );
+			return VEC_DUCK_HULL_MIN;
 		}
 		else
 		{
-			return VEC_HULL_MIN_SCALED( this );
+			return VEC_HULL_MIN;
 		}
 	}
 }
@@ -423,23 +452,40 @@ const Vector CBasePlayer::GetPlayerMins( void ) const
 // Output : const Vector
 //-----------------------------------------------------------------------------
 const Vector CBasePlayer::GetPlayerMaxs( void ) const
-{	
+{
 	if ( IsObserver() )
 	{
-		return VEC_OBS_HULL_MAX_SCALED( this );	
+		return VEC_OBS_HULL_MAX;
 	}
 	else
 	{
 		if ( GetFlags() & FL_DUCKING )
 		{
-			return VEC_DUCK_HULL_MAX_SCALED( this );
+			return VEC_DUCK_HULL_MAX;
 		}
 		else
 		{
-			return VEC_HULL_MAX_SCALED( this );
+			return VEC_HULL_MAX;
 		}
 	}
 }
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::UpdateCollisionBounds( void )
+{
+	if ( GetFlags() & FL_DUCKING )
+	{
+		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
+	}
+	else
+	{
+		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Update the vehicle view, or simply return the cached position and angles
@@ -519,7 +565,7 @@ void CBasePlayer::EyePositionAndVectors( Vector *pPosition, Vector *pForward,
 	}
 	else
 	{
-		VectorCopy( BaseClass::EyePosition(), *pPosition );
+		VectorCopy( EyePosition(), *pPosition );
 		AngleVectors( EyeAngles(), pForward, pRight, pUp );
 	}
 }
@@ -1084,12 +1130,6 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 			continue;
 		}
 
-#if defined( CLIENT_DLL )
-		if ( e->IsClientCreated() && prediction->InPrediction() && !prediction->IsFirstTimePredicted() )
-		{
-			continue;
-		}
-#endif
 		Assert( e->IsPlayerSimulated() );
 		Assert( e->GetSimulatingPlayer() == this );
 
@@ -1111,13 +1151,6 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 			m_SimulatedByThisPlayer.Remove( i );
 			continue;
 		}
-
-#if defined( CLIENT_DLL )
-		if ( e->IsClientCreated() && prediction->InPrediction() && !prediction->IsFirstTimePredicted() )
-		{
-			continue;
-		}
-#endif
 
 		Assert( e->IsPlayerSimulated() );
 		Assert( e->GetSimulatingPlayer() == this );
@@ -2428,14 +2461,17 @@ void CBasePlayer::UpdateUnderwaterState( void )
 		SetPlayerUnderwater( false );
 	}
 
-	if ( GetWaterLevel() == 0 )
+	if ( GetWaterLevel() == WL_NotInWater )
 	{
 		if ( GetFlags() & FL_INWATER )
 		{
 #ifndef CLIENT_DLL
 			if ( m_iHealth > 0 && IsAlive() )
 			{
-				EmitSound( "Player.Wade" );
+				if ( GetAbsVelocity().Length() >= 135 )
+				{
+					EmitSound( "Player.Wade" );
+				}
 			}
 #endif
 			RemoveFlag( FL_INWATER );
@@ -2447,7 +2483,10 @@ void CBasePlayer::UpdateUnderwaterState( void )
 		// player enter water sound
 		if (GetWaterType() == CONTENTS_WATER)
 		{
-			EmitSound( "Player.Wade" );
+			if ( GetAbsVelocity().Length() >= 135 )
+			{
+				EmitSound( "Player.Wade" );
+			}
 		}
 #endif
 
