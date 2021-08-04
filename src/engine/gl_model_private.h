@@ -372,6 +372,8 @@ struct model_t
 	Vector				mins, maxs;
 	float				radius;
 
+	KeyValues			*m_pKeyValues;
+
 	union
 	{
 		brushdata_t		brush;

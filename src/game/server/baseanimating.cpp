@@ -288,10 +288,17 @@ CBaseAnimating::CBaseAnimating()
 	m_fadeMaxDist = 0;
 	m_flFadeScale = 0.0f;
 	m_fBoneCacheFlags = 0;
+
+	if ( m_pBoneMergeCache )
+	{
+		delete m_pBoneMergeCache;
+		m_pBoneMergeCache = NULL;
+	}
 }
 
 CBaseAnimating::~CBaseAnimating()
 {
+	delete m_pBoneMergeCache;
 	Studio_DestroyBoneCache( m_boneCacheHandle );
 	delete m_pIk;
 	UnlockStudioHdr();
@@ -687,6 +694,20 @@ int CBaseAnimating::LookupActivity( const char *label )
 {
 	AssertMsg( GetModelPtr(), "GetModelPtr NULL. %s", STRING(GetEntityName()) ? STRING(GetEntityName()) : "" );
 	return ::LookupActivity( GetModelPtr(), label );
+}
+
+//=========================================================
+//=========================================================
+float CBaseAnimating::GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart, float flEnd )
+{
+	Assert( GetModelPtr() );
+	return ::GetFirstSequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flStart, flEnd );
+}
+
+float CBaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault )
+{
+	Assert( GetModelPtr() );
+	return ::GetAnySequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flDefault );
 }
 
 //=========================================================
@@ -1427,6 +1448,55 @@ void CBaseAnimating::GetBonePosition ( int iBone, Vector &origin, QAngle &angles
 	MatrixAngles( bonetoworld, angles, origin );
 }
 
+//=========================================================
+//=========================================================
+void CBaseAnimating::GetHitboxBonePosition ( int iBone, Vector &origin, QAngle &angles, QAngle hitboxOrientation )
+{
+	CStudioHdr *pStudioHdr = GetModelPtr( );
+	if (!pStudioHdr)
+	{
+		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		return;
+	}
+
+	if (iBone < 0 || iBone >= pStudioHdr->numbones())
+	{
+		Assert(!"CBaseAnimating::GetBonePosition: invalid bone index");
+		return;
+	}
+
+	matrix3x4_t bonetoworld;
+	GetBoneTransform( iBone, bonetoworld );
+	
+	matrix3x4_t temp;
+	AngleMatrix( hitboxOrientation, temp);
+	MatrixMultiply( bonetoworld, temp, temp );
+
+	MatrixAngles( temp, angles, origin );
+}
+
+void CBaseAnimating::GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation, matrix3x4_t &pOut )
+{
+	CStudioHdr *pStudioHdr = GetModelPtr( );
+	if (!pStudioHdr)
+	{
+		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		return;
+	}
+
+	if (iBone < 0 || iBone >= pStudioHdr->numbones())
+	{
+		Assert(!"CBaseAnimating::GetBonePosition: invalid bone index");
+		return;
+	}
+
+	matrix3x4_t bonetoworld;
+	GetBoneTransform( iBone, bonetoworld );
+	
+	matrix3x4_t temp;
+	AngleMatrix( hitboxOrientation, temp);
+	MatrixMultiply( bonetoworld, temp, pOut );
+}
 
 
 //=========================================================
@@ -1830,30 +1900,47 @@ void CBaseAnimating::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 		}
 	}
 	
-	CBaseAnimating *pParent = dynamic_cast< CBaseAnimating* >( GetMoveParent() );
-	if ( pParent )
+	if ( GetMoveParent() && IsEffectActive(EF_BONEMERGE) )
 	{
-		// We're doing bone merging, so do special stuff here.
-		CBoneCache *pParentCache = pParent->GetBoneCache();
-		if ( pParentCache )
+		CBaseAnimating *pParent = GetMoveParent()->GetBaseAnimating();
+		if ( pParent )
 		{
-			BuildMatricesWithBoneMerge( 
-				pStudioHdr, 
-				GetAbsAngles(), 
-				adjOrigin, 
-				pos, 
-				q, 
-				pBoneToWorld, 
-				pParent, 
-				pParentCache );
-			
-			RemoveEFlags( EFL_SETTING_UP_BONES );
-			if (ai_setupbones_debug.GetBool())
+			// We're doing bone merging, so do special stuff here.
+			CBoneCache *pParentCache = pParent->GetBoneCache();
+			if ( pParentCache )
 			{
-				DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+
+				if ( !m_pBoneMergeCache )
+				{
+					m_pBoneMergeCache = new CBoneMergeCache;
+					m_pBoneMergeCache->Init( this );
+				}
+
+				m_pBoneMergeCache->BuildMatricesWithBoneMerge( 
+					pStudioHdr, 
+					GetAbsAngles(), 
+					adjOrigin, 
+					pos, 
+					q, 
+					pBoneToWorld, 
+					pParent, 
+					pParentCache,
+					boneMask );
+				
+				RemoveEFlags( EFL_SETTING_UP_BONES );
+				if (ai_setupbones_debug.GetBool())
+				{
+					DrawRawSkeleton( pBoneToWorld, boneMask, true, 0.11 );
+				}
+				return;
 			}
-			return;
 		}
+	}
+
+	if ( !IsEffectActive(EF_BONEMERGE) )
+	{
+		delete m_pBoneMergeCache;
+		m_pBoneMergeCache = NULL;
 	}
 
 	Studio_BuildMatrices( 
@@ -2138,6 +2225,10 @@ int CBaseAnimating::GetExitNode( int iSequence )
 
 void CBaseAnimating::SetBodygroup( int iGroup, int iValue )
 {
+	// PiMoN: this can happen if a bodygroup is not guaranteed to be existing which will result in a crash
+	if ( iGroup == -1 )
+		return;
+
 	// SetBodygroup is not supported on pending dynamic models. Wait for it to load!
 	// XXX TODO we could buffer up the group and value if we really needed to. -henryg
 	AssertMsg( GetModelPtr(), "GetModelPtr NULL. %s", STRING(GetEntityName()) ? STRING(GetEntityName()) : "" );
@@ -2699,7 +2790,7 @@ bool CBaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask,
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	pcache->ReadCachedBonePointers( hitboxbones, pStudioHdr->numbones() );
 
-	if ( TraceToStudio( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetAbsOrigin(), GetModelScale(), tr ) )
+	if ( TraceToStudioCsgoHitgroupsPriority( physprops, ray, pStudioHdr, set, hitboxbones, fContentsMask, GetAbsOrigin(), GetModelScale(), tr ) )
 	{
 		mstudiobbox_t *pbox = set->pHitbox( tr.hitbox );
 		mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
@@ -2807,6 +2898,34 @@ void CBaseAnimating::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity
 			QAngleToAngularImpulse( tmp, *vAngVelocity );
 		}
 	}
+}
+
+CBaseAnimating* CBaseAnimating::FindFollowedEntity()
+{
+	CBaseEntity *follow = GetFollowedEntity();
+
+	if ( !follow )
+		return NULL;
+
+	if ( follow->IsDormant() )
+		return NULL;
+
+	if ( !follow->GetModel() )
+	{
+		Warning( "mod_studio: MOVETYPE_FOLLOW with no model.\n" );
+		return NULL;
+	}
+
+	if ( modelinfo->GetModelType( follow->GetModel() ) != mod_studio )
+	{
+		Warning( "Attached %s (mod_studio) to %s (%d)\n", 
+			modelinfo->GetModelName( GetModel() ), 
+			modelinfo->GetModelName( follow->GetModel() ), 
+			modelinfo->GetModelType( follow->GetModel() ) );
+		return NULL;
+	}
+
+	return assert_cast< CBaseAnimating* >( follow );
 }
 
 
@@ -3038,7 +3157,22 @@ void CBaseAnimating::DrawServerHitboxes( float duration /*= 0.0f*/, bool monocol
 			b = ( int ) ( 255.0f * hullcolor[j][2] );
 		}
 
-		NDebugOverlay::BoxAngles( position, pbox->bbmin * GetModelScale(), pbox->bbmax * GetModelScale(), angles, r, g, b, 0 ,duration );
+		if ( pbox->flCapsuleRadius > 0 )
+		{
+			matrix3x4_t temp;
+			GetHitboxBoneTransform( pbox->bone, pbox->angOffsetOrientation, temp );
+
+			Vector vecCapsuleCenters[ 2 ];
+			VectorTransform( pbox->bbmin, temp, vecCapsuleCenters[0] );
+			VectorTransform( pbox->bbmax, temp, vecCapsuleCenters[1] );
+			
+			NDebugOverlay::Capsule( vecCapsuleCenters[0], vecCapsuleCenters[1], pbox->flCapsuleRadius, r, g, b, 255, duration );
+		}
+		else
+		{
+			GetHitboxBonePosition( pbox->bone, position, angles, pbox->angOffsetOrientation );
+			NDebugOverlay::BoxAngles( position, pbox->bbmin*GetModelScale(), pbox->bbmax*GetModelScale(), angles, r, g, b, 0 ,duration );
+		}
 	}
 }
 

@@ -124,8 +124,8 @@ CCSAgentInfo g_AgentInfosCT[MAX_AGENTS_CT + 1] =
 	{ "models/player/custom_player/legacy/ctm_st6_variantl.mdl",		"ST6",			CS_CLASS_SEAL_TEAM_6,	false	},
 	{ "models/player/custom_player/legacy/ctm_swat_variante.mdl",		"SWAT_Epic",	CS_CLASS_SWAT,			true	},
 	// what?
-	{ "models/player/ctm_sas_old.mdl",									"SAS",			CS_CLASS_SAS,			false	},
-	{ "models/player/ctm_fbi_old.mdl",									"FBI",			CS_CLASS_FBI,			false	},
+	{ "models/player/custom_player/legacy/ctm_sas_old.mdl",				"SAS",			CS_CLASS_SAS,			false	},
+	{ "models/player/custom_player/legacy/ctm_fbi_old.mdl",				"FBI",			CS_CLASS_FBI,			false	},
 	// kill me (let's pretend that they're all ST6 guys just because its the first class for CTs)
 	{ "models/player/custom_player/legacy/ctm_jumpsuit_varianta.mdl",	"Leet",			CS_CLASS_SEAL_TEAM_6,	false	},
 	{ "models/player/custom_player/legacy/ctm_jumpsuit_variantb.mdl",	"Leet",			CS_CLASS_SEAL_TEAM_6,	false	},
@@ -171,8 +171,8 @@ CCSAgentInfo g_AgentInfosT[MAX_AGENTS_T + 1] =
 	{ "models/player/custom_player/legacy/tm_professional_varf3.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	{ "models/player/custom_player/legacy/tm_professional_varf4.mdl",		"Professional_Epic",CS_CLASS_PROFESSIONAL,			false	},
 	// what?
-	{ "models/player/tm_phoenix_old.mdl",									"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
-	{ "models/player/tm_leet_old.mdl",										"Leet",				CS_CLASS_L337_KREW,				false	},
+	{ "models/player/custom_player/legacy/tm_phoenix_old.mdl",				"Phoenix",			CS_CLASS_PHOENIX_CONNNECTION,	false	},
+	{ "models/player/custom_player/legacy/tm_leet_old.mdl",					"Leet",				CS_CLASS_L337_KREW,				false	},
 	// kill me
 	{ "models/player/custom_player/legacy/tm_jumpsuit_varianta.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
 	{ "models/player/custom_player/legacy/tm_jumpsuit_variantb.mdl",		"Leet",				CS_CLASS_L337_KREW,				false	},
@@ -213,43 +213,43 @@ const char* TLeetPlayerModelStrings[] =
 };
 const char* TSeparatistPlayerModelStrings[] =
 {
-	"models/player/tm_separatist.mdl",
-	"models/player/tm_separatist_varianta.mdl",
-	"models/player/tm_separatist_variantb.mdl",
-	"models/player/tm_separatist_variantc.mdl",
-	"models/player/tm_separatist_variantd.mdl",
+	"models/player/custom_player/legacy/tm_separatist.mdl",
+	"models/player/custom_player/legacy/tm_separatist_varianta.mdl",
+	"models/player/custom_player/legacy/tm_separatist_variantb.mdl",
+	"models/player/custom_player/legacy/tm_separatist_variantc.mdl",
+	"models/player/custom_player/legacy/tm_separatist_variantd.mdl",
 };
 const char* TBalkanPlayerModelStrings[] =
 {
-	"models/player/tm_balkan_varianta.mdl",
-	"models/player/tm_balkan_variantb.mdl",
-	"models/player/tm_balkan_variantc.mdl",
-	"models/player/tm_balkan_variantd.mdl",
-	"models/player/tm_balkan_variante.mdl",
+	"models/player/custom_player/legacy/tm_balkan_varianta.mdl",
+	"models/player/custom_player/legacy/tm_balkan_variantb.mdl",
+	"models/player/custom_player/legacy/tm_balkan_variantc.mdl",
+	"models/player/custom_player/legacy/tm_balkan_variantd.mdl",
+	"models/player/custom_player/legacy/tm_balkan_variante.mdl",
 };
 const char* TProfessionalPlayerModelStrings[] =
 {
-	"models/player/tm_professional.mdl",
-	"models/player/tm_professional_var1.mdl",
-	"models/player/tm_professional_var2.mdl",
-	"models/player/tm_professional_var3.mdl",
-	"models/player/tm_professional_var4.mdl",
+	"models/player/custom_player/legacy/tm_professional.mdl",
+	"models/player/custom_player/legacy/tm_professional_var1.mdl",
+	"models/player/custom_player/legacy/tm_professional_var2.mdl",
+	"models/player/custom_player/legacy/tm_professional_var3.mdl",
+	"models/player/custom_player/legacy/tm_professional_var4.mdl",
 };
 const char* TAnarchistPlayerModelStrings[] =
 {
-	"models/player/tm_anarchist.mdl",
-	"models/player/tm_anarchist_varianta.mdl",
-	"models/player/tm_anarchist_variantb.mdl",
-	"models/player/tm_anarchist_variantc.mdl",
-	"models/player/tm_anarchist_variantd.mdl",
+	"models/player/custom_player/legacy/tm_anarchist.mdl",
+	"models/player/custom_player/legacy/tm_anarchist_varianta.mdl",
+	"models/player/custom_player/legacy/tm_anarchist_variantb.mdl",
+	"models/player/custom_player/legacy/tm_anarchist_variantc.mdl",
+	"models/player/custom_player/legacy/tm_anarchist_variantd.mdl",
 };
 const char* TPiratePlayerModelStrings[] =
 {
-	"models/player/tm_pirate.mdl",
-	"models/player/tm_pirate_varianta.mdl",
-	"models/player/tm_pirate_variantb.mdl",
-	"models/player/tm_pirate_variantc.mdl",
-	"models/player/tm_pirate_variantd.mdl",
+	"models/player/custom_player/legacy/tm_pirate.mdl",
+	"models/player/custom_player/legacy/tm_pirate_varianta.mdl",
+	"models/player/custom_player/legacy/tm_pirate_variantb.mdl",
+	"models/player/custom_player/legacy/tm_pirate_variantc.mdl",
+	"models/player/custom_player/legacy/tm_pirate_variantd.mdl",
 };
 CUtlVectorInitialized< const char * > TPhoenixPlayerModels( TPhoenixPlayerModelStrings, ARRAYSIZE( TPhoenixPlayerModelStrings ) );
 CUtlVectorInitialized< const char * > TLeetPlayerModels( TLeetPlayerModelStrings, ARRAYSIZE( TLeetPlayerModelStrings ) );
@@ -261,19 +261,19 @@ CUtlVectorInitialized< const char * > TPiratePlayerModels( TPiratePlayerModelStr
 
 const char* CTST6PlayerModelStrings[] =
 {
-	"models/player/ctm_st6.mdl",
-	"models/player/ctm_st6_varianta.mdl",
-	"models/player/ctm_st6_variantb.mdl",
-	"models/player/ctm_st6_variantc.mdl",
-	"models/player/ctm_st6_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_st6.mdl",
+	"models/player/custom_player/legacy/ctm_st6_varianta.mdl",
+	"models/player/custom_player/legacy/ctm_st6_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_st6_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_st6_variantd.mdl",
 };
 const char* CTGSG9PlayerModelStrings[] =
 {
-	"models/player/ctm_gsg9.mdl",
-	"models/player/ctm_gsg9_varianta.mdl",
-	"models/player/ctm_gsg9_variantb.mdl",
-	"models/player/ctm_gsg9_variantc.mdl",
-	"models/player/ctm_gsg9_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_gsg9.mdl",
+	"models/player/custom_player/legacy/ctm_gsg9_varianta.mdl",
+	"models/player/custom_player/legacy/ctm_gsg9_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_gsg9_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_gsg9_variantd.mdl",
 };
 const char* CTSASPlayerModelStrings[] =
 {
@@ -281,11 +281,11 @@ const char* CTSASPlayerModelStrings[] =
 };
 const char* CTGIGNPlayerModelStrings[] =
 {
-	"models/player/ctm_gign.mdl",
-	"models/player/ctm_gign_varianta.mdl",
-	"models/player/ctm_gign_variantb.mdl",
-	"models/player/ctm_gign_variantc.mdl",
-	"models/player/ctm_gign_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_gign.mdl",
+	"models/player/custom_player/legacy/ctm_gign_varianta.mdl",
+	"models/player/custom_player/legacy/ctm_gign_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_gign_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_gign_variantd.mdl",
 };
 const char* CTFBIPlayerModelStrings[] =
 {
@@ -297,20 +297,20 @@ const char* CTFBIPlayerModelStrings[] =
 };
 const char* CTIDFPlayerModelStrings[] =
 {
-	"models/player/ctm_idf.mdl",
-	"models/player/ctm_idf_variantb.mdl",
-	"models/player/ctm_idf_variantc.mdl",
-	"models/player/ctm_idf_variantd.mdl",
-	"models/player/ctm_idf_variante.mdl",
-	"models/player/ctm_idf_variantf.mdl",
+	"models/player/custom_player/legacy/ctm_idf.mdl",
+	"models/player/custom_player/legacy/ctm_idf_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_idf_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_idf_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_idf_variante.mdl",
+	"models/player/custom_player/legacy/ctm_idf_variantf.mdl",
 };
 const char* CTSWATPlayerModelStrings[] =
 {
-	"models/player/ctm_swat.mdl",
-	"models/player/ctm_swat_varianta.mdl",
-	"models/player/ctm_swat_variantb.mdl",
-	"models/player/ctm_swat_variantc.mdl",
-	"models/player/ctm_swat_variantd.mdl",
+	"models/player/custom_player/legacy/ctm_swat.mdl",
+	"models/player/custom_player/legacy/ctm_swat_varianta.mdl",
+	"models/player/custom_player/legacy/ctm_swat_variantb.mdl",
+	"models/player/custom_player/legacy/ctm_swat_variantc.mdl",
+	"models/player/custom_player/legacy/ctm_swat_variantd.mdl",
 };
 CUtlVectorInitialized< const char * > CTST6PlayerModels( CTST6PlayerModelStrings, ARRAYSIZE( CTST6PlayerModelStrings ) );
 CUtlVectorInitialized< const char * > CTGSG9PlayerModels( CTGSG9PlayerModelStrings, ARRAYSIZE( CTGSG9PlayerModelStrings ) );

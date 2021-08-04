@@ -49,6 +49,7 @@ public:
 	// Usually plays the shot sound. Guns with silencers can play different sounds.
 	virtual void DoFireEffects();
 	virtual void ItemPostFrame();
+	virtual void ItemBusyFrame( void );
 
 protected: 
 	float m_zoomFullyActiveTime;

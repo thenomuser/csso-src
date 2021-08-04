@@ -85,6 +85,7 @@ public:
 
 	char					szViewModel[MAX_WEAPON_STRING];			// View model of this weapon
 	char					szWorldModel[MAX_WEAPON_STRING];		// Model of this weapon seen carried by the player
+	char					szWorldDroppedModel[MAX_WEAPON_STRING];
 	char					szAnimationPrefix[MAX_WEAPON_PREFIX];	// Prefix of the animations that should be used by the player carrying this weapon
 	int						iSlot;									// inventory slot.
 	int						iPosition;								// position in the inventory slot.

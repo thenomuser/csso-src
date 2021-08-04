@@ -216,9 +216,11 @@ public:
 
 	char m_szAddonModel[MAX_WEAPON_STRING];		// If this is set, it is used as the addon model. Otherwise, szWorldModel is used.
 	char m_szMagModel[MAX_WEAPON_STRING];		// Magazine model for dropping magazines
-	char m_szDroppedModel[MAX_WEAPON_STRING];	// Alternate dropped model, if different from the szWorldModel the player holds
 	char m_szAddonLocation[MAX_WEAPON_STRING];	//If this is set, the weapon will look for an attachment location with this name. Otherwize the default is used based on weapon type.
 	char m_szStatTrakModel[MAX_WEAPON_STRING];
+
+	char m_szBuyMenuAnim[MAX_WEAPON_STRING];
+	char m_szBuyMenuAnimT[MAX_WEAPON_STRING];
 
 	float m_flAddonScale;
 

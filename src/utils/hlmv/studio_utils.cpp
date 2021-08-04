@@ -40,6 +40,7 @@ static StudioModel *g_pActiveModel;
 // Expose it to the rest of the app
 StudioModel *g_pStudioModel = &g_studioModel;
 StudioModel *g_pStudioExtraModel[HLMV_MAX_MERGED_MODELS];
+mergemodelbonepair_t g_MergeModelBonePairs[HLMV_MAX_MERGED_MODELS];
 
 StudioModel::StudioModel()
 {

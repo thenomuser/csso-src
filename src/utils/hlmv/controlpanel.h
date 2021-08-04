@@ -202,6 +202,13 @@
 #define IDC_IKRULE_USING			9016
 #define IDC_IKRULE_QC_STRING		9017
 
+#define IDC_SUBMODEL_LOADMERGEDMODEL			9018
+#define IDC_SUBMODEL_UNLOADMERGEDMODEL			9019
+#define IDC_SUBMODEL_UNLOADALLMERGEDMODELS		9020
+#define IDC_SUBMODEL_LOADMERGEDMODEL_STEAM		9021
+#define IDC_SUBMODEL_UPDATE_SELECTION			9022
+#define IDC_SUBMODEL_UPDATE_BONESELECTION		9023
+
 #define IDC_EVENT_SOUND_FRAME_NOW	6000
 #define IDC_EVENT_SOUND_FRAME		6001
 #define IDC_EVENT_SOUND_NAME		6002
@@ -384,6 +391,16 @@ class ControlPanel : public mxWindow
 	mxLabel *lblMatrixTranslateX;
 	mxLabel *lblMatrixTranslateY;
 
+	mxListBox *cSubmodelList;
+
+	mxButton *bSubmodelAdd;
+	mxButton *bSubmodelAddSteam;
+	mxButton *bSubmodelRemoveAll;
+	mxButton *bSubmodelRemoveSelected;
+
+	mxChoice *cSubmodelAttachTo;
+	mxChoice *cSubmodelLocalAttachOrigin;
+
 public:
 	// CREATORS
 	ControlPanel (mxWindow *parent);
@@ -495,6 +512,9 @@ public:
 
 	void UpdateMaterialVars( void );
 
+	void UpdateSubmodelWindow( void );
+	void UpdateSubmodelSelection( void );
+
 	void UnloadAllMergedModels();
 
 public:
@@ -509,6 +529,7 @@ public:
 	void SetupIKRuleWindow( mxTab *pTab );
 	void SetupEventWindow( mxTab *pTab );
 	void SetupMatVarWindow( mxTab *pTab );
+	void SetupSubmodelWindow( mxTab *pTab );
 	bool m_bVMTInfoLoaded;
 };
 

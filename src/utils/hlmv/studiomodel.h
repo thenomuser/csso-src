@@ -364,6 +364,7 @@ public:
 	void drawTransform( matrix3x4_t& m, float flLength = 4 );
 	void drawLine( Vector const &p1, Vector const &p2, int r = 0, int g = 0, int b = 255 );
 	void drawTransparentBox( Vector const &bbmin, Vector const &bbmax, const matrix3x4_t& m, float const *color, float const *wirecolor );
+	void drawCapsule( Vector const &bbmin, Vector const &bbmax, float flRadius, const matrix3x4_t& m, float const *interiorcolor, float const *wirecolor );
 
 private:
 	int						m_LodUsed;
@@ -478,6 +479,13 @@ inline const matrix3x4_t* StudioModel::BoneToWorld( int nBoneIndex ) const
 extern Vector g_vright;		// needs to be set to viewer's right in order for chrome to work
 extern StudioModel *g_pStudioModel;
 extern StudioModel *g_pStudioExtraModel[HLMV_MAX_MERGED_MODELS];
+
+struct mergemodelbonepair_t
+{
+	char szTargetBone[256];
+	char szLocalBone[256];
+};
+extern mergemodelbonepair_t g_MergeModelBonePairs[HLMV_MAX_MERGED_MODELS];
 
 
 #endif // INCLUDED_STUDIOMODEL

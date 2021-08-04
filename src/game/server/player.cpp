@@ -100,6 +100,8 @@ ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FC
 
 ConVar sv_bonus_challenge( "sv_bonus_challenge", "0", FCVAR_REPLICATED, "Set to values other than 0 to select a bonus map challenge type." );
 
+ConVar sv_force_transmit_players( "sv_force_transmit_players", "0", FCVAR_NONE, "Will transmit players to all clients regardless of PVS checks." );
+
 static ConVar sv_maxusrcmdprocessticks( "sv_maxusrcmdprocessticks", "24", FCVAR_NOTIFY, "Maximum number of client-issued usrcmd ticks that can be replayed in packet loss conditions, 0 to allow no restrictions" );
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -705,6 +707,9 @@ int	CBasePlayer::UpdateTransmitState()
 
 int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 {
+	if ( sv_force_transmit_players.GetBool() )
+		return FL_EDICT_ALWAYS;
+
 	// Allow me to introduce myself to, err, myself.
 	// I.e., always update the recipient player data even if it's nodraw (first person mode)
 	if ( pInfo->m_pClientEnt == edict() )
@@ -715,15 +720,24 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	// when HLTV/Replay is connected and spectators press +USE, they
 	// signal that they are recording a interesting scene
 	// so transmit these 'cameramans' to the HLTV or Replay client
+#if defined( REPLAY_ENABLED )
+	if ( HLTVDirector()->GetCameraMan() == entindex() ||
+		 ReplayDirector()->GetCameraMan() == entindex() )
+#else
 	if ( HLTVDirector()->GetCameraMan() == entindex() )
+#endif
 	{
 		CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
 		
 		Assert( pRecipientEntity->IsPlayer() );
 		
 		CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
+#if defined( REPLAY_ENABLED )
 		if ( pRecipientPlayer->IsHLTV() ||
 			 pRecipientPlayer->IsReplay() )
+#else
+		if ( pRecipientPlayer->IsHLTV() )
+#endif
 		{
 			// HACK force calling RecomputePVSInformation to update PVS data
 			NetworkProp()->AreaNum();
@@ -731,16 +745,21 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		}
 	}
 
-	// Transmit for a short time after death and our death anim finishes so ragdolls can access reliable player data.
-	// Note that if m_flDeathAnimTime is never set, as long as m_lifeState is set to LIFE_DEAD after dying, this
-	// test will act as if the death anim is finished.
-	if ( IsEffectActive( EF_NODRAW ) || ( IsObserver() && ( gpGlobals->curtime - m_flDeathTime > 0.5 ) && 
-		( m_lifeState == LIFE_DEAD ) && ( gpGlobals->curtime - m_flDeathAnimTime > 0.5 ) ) )
+	// In case player is dead: we transmit so ragdolls can access reliable player data, after replay, reconnect and full frame update, as well.
+	if ( m_lifeState == LIFE_DEAD )
+		return FL_EDICT_ALWAYS;
+
+	int iBaseResult = BaseClass::ShouldTransmit( pInfo );
+
+	if ( iBaseResult == FL_EDICT_PVSCHECK )
 	{
-		return FL_EDICT_DONTSEND;
+		if ( IsAlive() && IsEffectActive( EF_NODRAW ) )
+		{
+			return FL_EDICT_DONTSEND;
+		}
 	}
 
-	return BaseClass::ShouldTransmit( pInfo );
+	return iBaseResult;
 }
 
 
@@ -1711,10 +1730,7 @@ void CBasePlayer::Event_Killed( const CTakeDamageInfo &info )
 
 	SetAnimation( PLAYER_DIE );
 
-	if ( !IsObserver() )
-	{
-		SetViewOffset( VEC_DEAD_VIEWHEIGHT_SCALED( this ) );
-	}
+	SetViewOffset( VEC_DEAD_VIEWHEIGHT );
 	m_lifeState		= LIFE_DYING;
 
 	pl.deadflag = true;
@@ -4564,14 +4580,7 @@ void CBasePlayer::PostThink()
 		{
 			// set correct collision bounds (may have changed in player movement code)
 			VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-Bounds" );
-			if ( GetFlags() & FL_DUCKING )
-			{
-				SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
-			}
-			else
-			{
-				SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
-			}
+			UpdateCollisionBounds();
 			VPROF_SCOPE_END();
 
 			VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-Use" );
@@ -4617,12 +4626,14 @@ void CBasePlayer::PostThink()
 			// If he's in a vehicle, sit down
 			if ( IsInAVehicle() )
 				SetAnimation( PLAYER_IN_VEHICLE );
-			else if (!GetAbsVelocity().x && !GetAbsVelocity().y)
-				SetAnimation( PLAYER_IDLE );
-			else if ((GetAbsVelocity().x || GetAbsVelocity().y) && ( GetFlags() & FL_ONGROUND ))
-				SetAnimation( PLAYER_WALK );
-			else if (GetWaterLevel() > 1)
-				SetAnimation( PLAYER_WALK );
+
+			// why is player animation being overridden here in post think? This should be taken care of in player animstate update?
+			//else if (!GetAbsVelocity().x && !GetAbsVelocity().y)
+			//	SetAnimation( PLAYER_IDLE );
+			//else if ((GetAbsVelocity().x || GetAbsVelocity().y) && ( GetFlags() & FL_ONGROUND ))
+			//	SetAnimation( PLAYER_WALK );
+			//else if (GetWaterLevel() > 1)
+			//	SetAnimation( PLAYER_WALK );
 		}
 
 		// Don't allow bogus sequence on player
@@ -4631,9 +4642,10 @@ void CBasePlayer::PostThink()
 			SetSequence( 0 );
 		}
 
-		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-StudioFrameAdvance" );
-		StudioFrameAdvance();
-		VPROF_SCOPE_END();
+		// why is player animation being overridden here in post think? This should be taken care of in player animstate update?
+		//VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-StudioFrameAdvance" );
+		//StudioFrameAdvance();
+		//VPROF_SCOPE_END();
 
 		VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-DispatchAnimEvents" );
 		DispatchAnimEvents( this );
@@ -5029,7 +5041,7 @@ void CBasePlayer::Spawn( void )
 
 	m_Local.m_bDucked = false;// This will persist over round restart if you hold duck otherwise. 
 	m_Local.m_bDucking = false;
-    SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 	Precache();
 	
 	m_bitsDamageType = 0;
@@ -5546,7 +5558,7 @@ bool CBasePlayer::GetInVehicle( IServerVehicle *pVehicle, int nRole )
 	// We cannot be ducking -- do all this before SetPassenger because it
 	// saves our view offset for restoration when we exit the vehicle.
 	RemoveFlag( FL_DUCKING );
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 	m_flDuckAmount = 0.0f;
 	m_Local.m_bDucked = false;
 	m_Local.m_bDucking  = false;
@@ -8052,6 +8064,8 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 		SendPropUtlVector( SENDINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER, SendPropEHandle( NULL, 0 ) ),
 #endif // USES_ECON_ITEMS
 		
+		SendPropEHandle	(SENDINFO( m_hViewEntity)),
+		
 		SendPropFloat	(SENDINFO(m_flDuckAmount), 0, SPROP_CHANGES_OFTEN ),
 		SendPropFloat	(SENDINFO(m_flDuckSpeed), 0, SPROP_CHANGES_OFTEN ),
 
@@ -8359,7 +8373,7 @@ void CBasePlayer::RefreshCollisionBounds( void )
 	BaseClass::RefreshCollisionBounds();
 
 	InitVCollision( GetAbsOrigin(), GetAbsVelocity() );
-	SetViewOffset( VEC_VIEW_SCALED( this ) );
+	SetViewOffset( VEC_VIEW );
 }
 
 //-----------------------------------------------------------------------------
@@ -8373,9 +8387,9 @@ void CBasePlayer::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecA
 	// in turbo physics players dont have a physics shadow
 	if ( sv_turbophysics.GetBool() )
 		return;
-	
-	CPhysCollide *pModel = PhysCreateBbox( VEC_HULL_MIN_SCALED( this ), VEC_HULL_MAX_SCALED( this ) );
-	CPhysCollide *pCrouchModel = PhysCreateBbox( VEC_DUCK_HULL_MIN_SCALED( this ), VEC_DUCK_HULL_MAX_SCALED( this ) );
+
+	CPhysCollide *pModel = PhysCreateBbox( VEC_HULL_MIN, VEC_HULL_MAX );
+	CPhysCollide *pCrouchModel = PhysCreateBbox( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 
 	SetupVPhysicsShadow( vecAbsOrigin, vecAbsVelocity, pModel, "player_stand", pCrouchModel, "player_crouch" );
 }

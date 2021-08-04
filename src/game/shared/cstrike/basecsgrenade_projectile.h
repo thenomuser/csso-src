@@ -74,6 +74,8 @@ public:
 
 	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
 
+	void SetThrownBodygroup( void );
+
 protected:
 
 	//Set the time to detonate ( now + timer )

@@ -12,6 +12,7 @@
 #include "physics_saverestore.h"
 #include "datacache/imdlcache.h"
 #include "activitylist.h"
+#include "npcevent.h"
 
 // NVNT start extra includes
 #include "haptics/haptic_utils.h"
@@ -37,6 +38,8 @@
 	#include "hl2mp_gamerules.h"
 #endif
 
+#else
+#include "input.h"
 #endif
 
 #include "vprof.h"
@@ -53,6 +56,427 @@
 #define HIDEWEAPON_THINK_CONTEXT			"BaseCombatWeapon_HideThink"
 
 extern bool UTIL_ItemCanBeTouchedByPlayer( CBaseEntity *pItem, CBasePlayer *pPlayer );
+
+#if defined( CLIENT_DLL )
+	void RecvProxy_EffectFlagsWeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+	extern void RecvProxy_IntToMoveParent( const CRecvProxyData *pData, void *pStruct, void *pOut );
+	void RecvProxy_WeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut );
+#endif
+
+IMPLEMENT_NETWORKCLASS_ALIASED( BaseWeaponWorldModel, DT_BaseWeaponWorldModel )
+LINK_ENTITY_TO_CLASS( weaponworldmodel, CBaseWeaponWorldModel );
+
+BEGIN_NETWORK_TABLE_NOBASE(CBaseWeaponWorldModel, DT_BaseWeaponWorldModel)
+#if !defined( CLIENT_DLL )
+	SendPropModelIndex(SENDINFO(m_nModelIndex)),
+	SendPropInt		(SENDINFO(m_nBody), ANIMATION_BODY_BITS ), // increased to 32 bits to support number of bits equal to number of bodygroups
+	SendPropInt		(SENDINFO(m_fEffects),		EF_MAX_BITS, SPROP_UNSIGNED),
+	SendPropEHandle (SENDINFO_NAME(m_hMoveParent, moveparent)),
+	SendPropEHandle (SENDINFO(m_hCombatWeaponParent)),
+#else
+	RecvPropInt		(RECVINFO(m_nModelIndex), 0, RecvProxy_WeaponWorldmodel),
+	RecvPropInt		(RECVINFO(m_nBody)),
+	RecvPropInt		(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlagsWeaponWorldmodel),
+	RecvPropInt		(RECVINFO_NAME(m_hNetworkMoveParent, moveparent), 0, RecvProxy_IntToMoveParent),	
+	RecvPropEHandle (RECVINFO(m_hCombatWeaponParent)),
+#endif
+END_NETWORK_TABLE()
+
+#ifdef CLIENT_DLL
+
+BEGIN_PREDICTION_DATA( CBaseWeaponWorldModel )
+	DEFINE_PRED_FIELD( m_nModelIndex, FIELD_SHORT, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
+	DEFINE_PRED_FIELD( m_nBody, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_fEffects, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_OVERRIDE ),
+	DEFINE_FIELD( m_hCombatWeaponParent, FIELD_EHANDLE ),
+END_PREDICTION_DATA()
+
+void RecvProxy_EffectFlagsWeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	CBaseWeaponWorldModel *pWeaponWorldModel = (CBaseWeaponWorldModel *) pStruct;
+	if ( pWeaponWorldModel )
+	{
+		if ( pWeaponWorldModel->GetEffects() != pData->m_Value.m_Int )
+		{
+			pWeaponWorldModel->SetEffects( pData->m_Value.m_Int );
+		}
+	}
+}
+
+void RecvProxy_WeaponWorldmodel( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	CBaseWeaponWorldModel *model = (CBaseWeaponWorldModel *)pStruct;
+	if ( model )
+	{
+		int nOldModelIndex = model->GetModelIndex();
+
+		MDLCACHE_CRITICAL_SECTION();
+		model->SetModelByIndex( pData->m_Value.m_Int );
+
+		if ( nOldModelIndex != model->GetModelIndex() )
+			model->ResetCachedBoneIndices();
+	}
+}
+
+int CBaseWeaponWorldModel::DrawModel( int flags )
+{
+	if ( IsEffectActive(EF_NODRAW) || !ShouldDraw() )
+		return 0;
+
+	return BaseClass::DrawModel( flags );
+}
+
+void CBaseWeaponWorldModel::OnDataChanged( DataUpdateType_t type )
+{
+	if ( type == DATA_UPDATE_CREATED )
+	{
+		ResetCachedBoneIndices();
+	}
+
+	BaseClass::OnDataChanged( type );
+
+	ValidateParent();
+
+	UpdateVisibility();
+}
+
+float *CBaseWeaponWorldModel::GetRenderClipPlane( void )
+{
+	// world model weapons inherit their clip planes from their move parents when the parent is a player
+	if ( GetMoveParent() && GetMoveParent()->IsPlayer() )
+	{
+		return GetMoveParent()->GetRenderClipPlane();
+	}
+	else
+	{
+		return NULL;
+	}
+}
+
+bool CBaseWeaponWorldModel::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime )
+{
+	if ( GetMoveParent() && GetMoveParent()->IsPlayer() )
+	{
+
+		if ( boneMask == BONE_USED_BY_ATTACHMENT )
+		{
+			// fixme: weapons set up more bones than necessary when asking for attachments. Particles request attachment positions
+			// often and cause computation down more bone chains than they actually need. There's perf to be gained here.
+			// For now, requests for attachments only are allowed through.
+		}
+		else
+		{
+			// This is a hacky special case. A better way to do this would be to add more granularity in content bone flags.
+			// CBaseWeaponWorldModels have a bunch of bones that drive the player's bones when the player sets up,
+			// BUT they are not necessary to compute when rendering the weapon itself.
+
+			// So the gross assumption being made here is that if we don't want an attachment (like for particle system
+			// attaching or sticker projection, etc) then we actually only care about vertex-weighted bones. And this
+			// saves a bunch of bone setup we'll never use, like on the weapons 'legs' bones, which never drive the
+			// mechanical parts of the gun.
+
+			boneMask = BONE_USED_BY_VERTEX_LOD0;
+		}
+
+		return BaseClass::SetupBones( pBoneToWorldOut, nMaxBones, boneMask, currentTime );
+	}
+
+	//AssertMsgOnce( false, "Attempted to SetupBones on a dropped weapon world model with no player parent!\n" );
+	return false;
+}
+
+#else
+
+BEGIN_DATADESC( CBaseWeaponWorldModel )
+END_DATADESC()
+
+#endif
+
+void CBaseWeaponWorldModel::ValidateParent( void )
+{
+	CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
+	if ( pWeaponParent )
+	{
+		CBaseEntity *pIdealParent = pWeaponParent;
+		CBaseCombatCharacter *pWeaponParentOwner = pWeaponParent->GetOwner();
+		
+		if ( pWeaponParentOwner && pWeaponParentOwner->IsPlayer() )
+			pIdealParent = pWeaponParentOwner;
+
+		if ( GetMoveParent() != pIdealParent ) // reconnect ourselves if the parent is wrong
+			FollowEntity( pIdealParent, pIdealParent->IsPlayer() );
+
+		AddEffects( EF_BONEMERGE_FASTCULL );
+	}
+}
+
+CBaseWeaponWorldModel::CBaseWeaponWorldModel( void )
+{
+	m_nHoldsPlayerAnims = WEAPON_PLAYER_ANIMS_UNKNOWN;
+	m_nLeftHandAttachBoneIndex = -1;
+	m_nRightHandAttachBoneIndex = -1;
+	m_nMuzzleAttachIndex = -1;
+	m_nMuzzleBoneIndex = -1;
+#ifdef CLIENT_DLL
+	m_bMaintainSequenceTransitions = false; // disabled for perf - world model weapons do not transition their sequences
+#endif
+}
+
+CBaseWeaponWorldModel::~CBaseWeaponWorldModel( void )
+{
+}
+
+bool CBaseWeaponWorldModel::HasDormantOwner( void )
+{
+	CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
+	if ( pWeaponParent && pWeaponParent->GetOwner() && pWeaponParent->GetOwner()->IsDormant() )
+		return true;
+	return false;
+}
+
+void CBaseWeaponWorldModel::ResetCachedBoneIndices( void )
+{
+	m_nLeftHandAttachBoneIndex = -1;
+	m_nRightHandAttachBoneIndex = -1;
+}
+
+int CBaseWeaponWorldModel::GetLeftHandAttachBoneIndex( void )
+{
+	if ( m_nLeftHandAttachBoneIndex == -1 )
+		m_nLeftHandAttachBoneIndex = LookupBone( "left_hand_attach" );
+
+	return m_nLeftHandAttachBoneIndex;
+}
+
+int CBaseWeaponWorldModel::GetRightHandAttachBoneIndex( void )
+{
+	if ( m_nRightHandAttachBoneIndex == -1 )
+		m_nRightHandAttachBoneIndex = LookupBone( "weapon_hand_R" );
+
+	return m_nRightHandAttachBoneIndex;
+}
+
+int CBaseWeaponWorldModel::GetMuzzleAttachIndex( void )
+{
+	if ( m_nMuzzleAttachIndex == -1 )
+		m_nMuzzleAttachIndex = LookupAttachment( "muzzle_flash" );
+
+	return m_nMuzzleAttachIndex;
+}
+
+int CBaseWeaponWorldModel::GetMuzzleBoneIndex( void )
+{
+	if ( m_nMuzzleBoneIndex == -1 )
+		m_nMuzzleBoneIndex = LookupBone( "weapon_muzzle" );
+
+	return m_nMuzzleBoneIndex;
+}
+
+void CBaseWeaponWorldModel::SetOwningWeapon( CBaseCombatWeapon *pWeaponParent )
+{
+	if ( !pWeaponParent )
+		return;
+
+	if ( m_hCombatWeaponParent->Get() != pWeaponParent )
+	{
+		// assume the parent weapon world model
+		SetModel( pWeaponParent->GetWorldModel() );
+
+		ResetCachedBoneIndices();
+
+		// determine if this world model holds player animations		
+		HoldsPlayerAnimations();
+
+		//keep a handle to this weapon
+		m_hCombatWeaponParent.Set( pWeaponParent );
+
+		//follow our parent asap
+		FollowEntity( pWeaponParent, false );
+
+		//set initial visibility
+		CBaseCombatCharacter *pWeaponParentOwner = pWeaponParent->GetOwner();
+		bool bInitialVisible = ( pWeaponParentOwner && pWeaponParentOwner->GetActiveWeapon() == pWeaponParent );
+		ShowWorldModel( bInitialVisible );
+
+		#ifndef CLIENT_DLL
+		// whatever the mag state, we want it unhidden now
+		SetBodygroup( FindBodygroupByName( "magazine" ), 0 );
+		#endif
+	}
+
+	ValidateParent();
+}
+
+void CBaseWeaponWorldModel::ShowWorldModel( bool bVisible )
+{
+	ValidateParent();
+
+	if ( bVisible )
+	{
+		RemoveEffects( EF_NODRAW );
+	}
+	else
+	{
+		AddEffects( EF_NODRAW );
+	}
+}
+
+bool CBaseWeaponWorldModel::HoldsPlayerAnimations( void )
+{
+	// TODO: weapon world models need a better way to claim they hold player animations
+	if ( m_nHoldsPlayerAnims == WEAPON_PLAYER_ANIMS_UNKNOWN )
+	{
+		m_nHoldsPlayerAnims = ( GetModelPtr() && GetModelPtr()->GetNumSeq() > 2 ) ? WEAPON_PLAYER_ANIMS_AVAILABLE : WEAPON_PLAYER_ANIMS_NOT_AVAILABLE;
+	}
+	return ( m_nHoldsPlayerAnims == WEAPON_PLAYER_ANIMS_AVAILABLE );
+}
+
+#ifndef CLIENT_DLL
+void CBaseWeaponWorldModel::HandleAnimEvent( animevent_t *pEvent )
+{
+	int nEvent = pEvent->event;
+	
+	if ( nEvent == AE_CL_EJECT_MAG )
+	{
+		SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
+	}
+	else if ( nEvent == AE_CL_EJECT_MAG_UNHIDE )
+	{
+		SetBodygroup( FindBodygroupByName( "magazine" ), 0 );
+	}
+}
+#endif
+
+#ifdef CLIENT_DLL
+
+void CBaseWeaponWorldModel::FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options )
+{
+	if ( event == AE_CL_EJECT_MAG )
+	{
+		CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
+		if ( pWeaponParent )
+		{
+			C_BaseCombatCharacter *pPlayer = pWeaponParent->GetOwner();
+			if ( pPlayer )
+			{
+				pPlayer->DropPhysicsMag( options );
+			}
+		}
+	}
+}
+
+bool CBaseWeaponWorldModel::ShouldDraw( void )
+{
+	CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
+	if ( !pWeaponParent )
+		return false; // don't draw if we don't have a parent weapon
+
+	CBaseCombatCharacter *pWeaponParentOwner = pWeaponParent->GetOwner();
+	if ( !pWeaponParentOwner || !pWeaponParentOwner->IsPlayer() || !pWeaponParent->GetOwner()->ShouldDraw() || HasDormantOwner() )
+		return false; // don't draw if our parent weapon is unheld, or held by a dormant or invisible player
+
+	CBaseCombatWeapon *pParentWeaponPlayerPrimary = pWeaponParentOwner->GetActiveWeapon();
+
+	if ( !pParentWeaponPlayerPrimary || pParentWeaponPlayerPrimary != pWeaponParent )
+	{
+		return false; // don't draw if it's not the primary weapon
+	}
+
+	C_BasePlayer * player = C_BasePlayer::GetLocalPlayer();
+	if ( player && 
+		 player->IsObserver() &&
+		 player->GetObserverMode() == OBS_MODE_IN_EYE &&
+		 player->GetObserverTarget() == pWeaponParentOwner &&
+		 !input->CAM_IsThirdPerson() &&
+		 player->GetObserverInterpState() != 1 )
+	{
+		return false; // don't draw if we're spectating the parent player owner in first-person
+	}
+
+	if ( IsEffectActive(EF_NODRAW) && ( pWeaponParent->m_flNextPrimaryAttack > gpGlobals->curtime || pWeaponParent->m_flNextSecondaryAttack > gpGlobals->curtime ) )
+	{
+		return false; // only respect nodraw if we also can't fire (presumably deploying)
+	}
+	
+	return true;
+}
+
+#else
+
+int CBaseWeaponWorldModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+{
+	CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
+	if ( pWeaponParent )
+	{
+		CBaseEntity *pIdealParent = pWeaponParent;
+		CBaseCombatCharacter *pWeaponParentOwner = pWeaponParent->GetOwner();
+
+		if ( pWeaponParentOwner && pWeaponParentOwner->IsPlayer() )
+			pIdealParent = pWeaponParentOwner;
+
+		return pIdealParent->ShouldTransmit( pInfo );
+	}
+	else 
+	{
+		// invalid situation
+		Assert( !"Base Weapon World Model has no weapon parent" );
+		return FL_EDICT_ALWAYS;
+	}
+}
+
+int CBaseWeaponWorldModel::UpdateTransmitState( void )
+{
+	return SetTransmitState( FL_EDICT_FULLCHECK );
+}
+
+#endif
+
+#ifndef CLIENT_DLL
+void CBaseCombatWeapon::ShowWeaponWorldModel( bool bVisible )
+{
+	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+	if ( pWeaponWorldModel )
+	{
+		pWeaponWorldModel->SetOwningWeapon( this );
+		pWeaponWorldModel->ShowWorldModel( bVisible );
+	}
+}
+
+// create a new world model if it doesn't exist
+CBaseWeaponWorldModel* CBaseCombatWeapon::CreateWeaponWorldModel( void )
+{
+	MDLCACHE_CRITICAL_SECTION();
+
+	if ( !GetWeaponWorldModel() )
+	{
+		CBaseWeaponWorldModel *pWorldModel = dynamic_cast <CBaseWeaponWorldModel*> ( CreateEntityByName( "weaponworldmodel" ) );
+
+		Assert( pWorldModel );
+
+		pWorldModel->SetOwningWeapon( this );
+		m_hWeaponWorldModel.Set( pWorldModel );
+
+		return pWorldModel;
+	}
+	else
+	{
+		return GetWeaponWorldModel();
+	}
+}
+
+#else
+
+void CBaseCombatWeapon::UpdateVisibility( void )
+{
+	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+	if ( pWeaponWorldModel )
+	{
+		pWeaponWorldModel->UpdateVisibility();
+	}
+	BaseClass::UpdateVisibility();
+}
+
+#endif
 
 #if defined ( TF_CLIENT_DLL ) || defined ( TF_DLL )
 #ifdef _DEBUG
@@ -100,6 +524,8 @@ CBaseCombatWeapon::CBaseCombatWeapon()
 	UseClientSideAnimation();
 #endif
 
+	m_WeaponModelClassification = WEAPON_MODEL_IS_UNCLASSIFIED;
+
 #if defined ( TF_CLIENT_DLL ) || defined ( TF_DLL )
 	m_flCritTokenBucket = tf_weapon_criticals_bucket_default.GetFloat();
 	m_nCritChecks = 1;
@@ -121,6 +547,12 @@ CBaseCombatWeapon::~CBaseCombatWeapon( void )
 	}
 	OnBaseCombatWeaponDestroyed( this );
 #endif
+
+	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+	if ( pWeaponWorldModel )
+	{
+		UTIL_Remove( pWeaponWorldModel );
+	}
 }
 
 void CBaseCombatWeapon::Activate( void )
@@ -195,10 +627,7 @@ void CBaseCombatWeapon::Spawn( void )
 
 	GiveDefaultAmmo();
 
-	if ( GetWorldModel() )
-	{
-		SetModel( GetWorldModel() );
-	}
+	VerifyAndSetContextSensitiveWeaponModel();
 
 #if !defined( CLIENT_DLL )
 	if( IsX360() )
@@ -217,6 +646,8 @@ void CBaseCombatWeapon::Spawn( void )
 	// been hand-placed by level designers. We only want to remove
 	// weapons that have been dropped by NPC's.
 	SetRemoveable( false );
+
+	CreateWeaponWorldModel();
 #endif
 
 	// Bloat the box for player pickup
@@ -233,7 +664,24 @@ void CBaseCombatWeapon::Spawn( void )
 	m_iNumEmptyAttacks = 0;
 	m_iPrimaryReserveAmmoCount = 0;		// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
 	m_iSecondaryReserveAmmoCount = 0;	// amount of reserve ammo. This used to be on the player ( m_iAmmo ) but we're moving it to the weapon.
+
+#ifndef CLIENT_DLL
+	m_flLastTimeInAir = 0;
+#endif
 }
+
+#ifndef CLIENT_DLL
+void CBaseCombatWeapon::PhysicsSimulate( void )
+{
+	BaseClass::PhysicsSimulate();
+
+	// remember the last time we were flying through the air
+	if ( GetOwner() == NULL && !(GetFlags() & FL_ONGROUND) )
+	{
+		m_flLastTimeInAir = gpGlobals->curtime;
+	}
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: get this game's encryption key for decoding weapon kv files
@@ -306,6 +754,7 @@ void CBaseCombatWeapon::Precache( void )
 		// Precache models (preload to avoid hitch)
 		m_iViewModelIndex = 0;
 		m_iWorldModelIndex = 0;
+		m_iWorldDroppedModelIndex = 0;
 		if ( GetViewModel() && GetViewModel()[0] )
 		{
 			m_iViewModelIndex = CBaseEntity::PrecacheModel( GetViewModel() );
@@ -313,6 +762,10 @@ void CBaseCombatWeapon::Precache( void )
 		if ( GetWorldModel() && GetWorldModel()[0] )
 		{
 			m_iWorldModelIndex = CBaseEntity::PrecacheModel( GetWorldModel() );
+		}
+		if ( GetWorldDroppedModel() && GetWorldDroppedModel()[0] )
+		{
+			m_iWorldDroppedModelIndex = CBaseEntity::PrecacheModel( GetWorldDroppedModel() );
 		}
 
 		// Precache sounds, too
@@ -363,6 +816,22 @@ const char *CBaseCombatWeapon::GetViewModel( int /*viewmodelindex = 0 -- this is
 const char *CBaseCombatWeapon::GetWorldModel( void ) const
 {
 	return GetWpnData().szWorldModel;
+}
+
+
+const char *CBaseCombatWeapon::GetWorldDroppedModel( void ) const
+{
+	const char *szWorldDroppedModel = GetWpnData().szWorldDroppedModel;
+
+	// world dropped model path is optional, but always built. Make sure the model exists before returning it.
+	if ( szWorldDroppedModel )
+	{
+		MDLHandle_t modelHandle = mdlcache->FindMDL( szWorldDroppedModel );
+		if ( !mdlcache->IsErrorModel( modelHandle ) )
+			return szWorldDroppedModel;
+	}
+
+	return GetWorldModel();
 }
 
 //-----------------------------------------------------------------------------
@@ -698,7 +1167,6 @@ float CBaseCombatWeapon::GetWeaponIdleTime( void )
 void CBaseCombatWeapon::Drop( const Vector &vecVelocity )
 {
 #if !defined( CLIENT_DLL )
-
 	// Once somebody drops a gun, it's fair game for removal when/if
 	// a game_weapon_manager does a cleanup on surplus weapons in the
 	// world.
@@ -1036,36 +1504,115 @@ void CBaseCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 	VPhysicsDestroyObject();
 #endif
 
-	if ( pOwner->IsPlayer() )
+	VerifyAndSetContextSensitiveWeaponModel();
+}
+
+CStudioHdr* CBaseCombatWeapon::OnNewModel()
+{
+	ClassifyWeaponModel();
+	return BaseClass::OnNewModel();
+}
+
+void CBaseCombatWeapon::ClassifyWeaponModel( void )
+{
+	// I don't like this either, but the model's aren't tagged in content,
+	// nor are they tagged coming in from multiple years of legacy demos in
+	// their various forms. Game code pushes new models by raw path all over
+	// the place, and I just need a way to verify and set the model as the
+	// appropriate kind without doing an expensive string comparison or
+	// model loop up by string each time.
+
+	const char *pszModelName = NULL;
+	if ( GetModel() )
+		pszModelName = modelinfo->GetModelName(GetModel());
+
+	if ( !pszModelName || pszModelName[0] == 0 )
 	{
-		SetModel( GetViewModel() );
+		m_WeaponModelClassification = WEAPON_MODEL_IS_UNCLASSIFIED;
+	}
+	else if ( V_stristr( pszModelName, "models/weapons/v_" ) )
+	{
+		m_WeaponModelClassification = WEAPON_MODEL_IS_VIEWMODEL;
+	}
+	else if ( V_stristr( pszModelName, "models/weapons/w_" ) )
+	{
+		if ( V_stristr( pszModelName, "_dropped.mdl" ) )
+		{
+			m_WeaponModelClassification = WEAPON_MODEL_IS_DROPPEDMODEL;
+		}
+		else
+		{
+			m_WeaponModelClassification = WEAPON_MODEL_IS_WORLDMODEL;
+		}
 	}
 	else
 	{
-		// Make the weapon ready as soon as any NPC picks it up.
-		m_flNextPrimaryAttack = gpGlobals->curtime;
-		m_flNextSecondaryAttack = gpGlobals->curtime;
-		SetModel( GetWorldModel() );
+		// valid path, just didn't match anything we were looking for.
+		m_WeaponModelClassification = WEAPON_MODEL_IS_UNRECOGNIZED;
 	}
 }
 
-void CBaseCombatWeapon::SetActivity( Activity act, float duration ) 
-{ 
-	//Adrian: Oh man...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
-	SetModel( GetWorldModel() );
+void CBaseCombatWeapon::VerifyAndSetContextSensitiveWeaponModel( void )
+{
+	// Check that the weapon model is the right kind (viewmodel, worldmodel, etc )
+	// Using a fast, non-string comparison check. If it's the wrong type,
+	// set the model to the correct version, then update the record so
+	// future checks are fast and don't need to continuously re-set the
+	// model unnecessarily.
+
+	WeaponModelClassification_t tClassification = GetWeaponModelClassification();
+
+#ifdef CLIENT_DLL
+	if ( tClassification == WEAPON_MODEL_IS_UNCLASSIFIED )
+	{
+		if ( GetOwner() )
+		{
+			SetModel( GetWorldModel() );
+		}
+		else
+		{
+			SetModel( GetWorldDroppedModel() );
+		}
+	}
+	else if ( tClassification == WEAPON_MODEL_IS_VIEWMODEL )
+	{
+		if ( !GetOwner() )
+		{
+			SetModel( GetWorldDroppedModel() );
+		}
+		else if ( GetOwner()->ShouldDraw() )
+		{
+			SetModel( GetWorldModel() );
+		}
+	}
+#else
+	if ( tClassification != WEAPON_MODEL_IS_VIEWMODEL && GetOwner() )
+	{
+		SetModel( GetViewModel() );
+	}
+	else if ( tClassification == WEAPON_MODEL_IS_UNCLASSIFIED || (tClassification == WEAPON_MODEL_IS_VIEWMODEL && !GetOwner()) )
+	{
+		SetModel( GetWorldDroppedModel() );
+	}
 #endif
-	
+}
+
+WeaponModelClassification_t	CBaseCombatWeapon::GetWeaponModelClassification( void )
+{
+	if ( m_WeaponModelClassification == WEAPON_MODEL_IS_UNCLASSIFIED )
+	{
+		ClassifyWeaponModel();
+	}
+	return m_WeaponModelClassification;
+}
+
+void CBaseCombatWeapon::SetActivity( Activity act, float duration ) 
+{ 	
 	int sequence = SelectWeightedSequence( act ); 
 	
 	// FORCE IDLE on sequences we don't have (which should be many)
 	if ( sequence == ACTIVITY_NOT_AVAILABLE )
 		sequence = SelectWeightedSequence( ACT_VM_IDLE );
-
-	//Adrian: Oh man again...
-#if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
-	SetModel( GetViewModel() );
-#endif
 
 	if ( sequence != ACTIVITY_NOT_AVAILABLE )
 	{
@@ -1078,7 +1625,8 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 		{
 			// FIXME: does this even make sense in non-shoot animations?
 			m_flPlaybackRate = SequenceDuration( sequence ) / duration;
-			m_flPlaybackRate = MIN( m_flPlaybackRate, 12.0);  // FIXME; magic number!, network encoding range
+			m_flPlaybackRate = fpmin( m_flPlaybackRate, 12.0f);  // FIXME; magic number!, network encoding range
+			Assert( IsFinite( m_flPlaybackRate ) );
 		}
 		else
 		{
@@ -1096,14 +1644,7 @@ int CBaseCombatWeapon::UpdateClientData( CBasePlayer *pPlayer )
 
 	if ( pPlayer->GetActiveWeapon() == this )
 	{
-		if ( pPlayer->m_fOnTarget ) 
-		{
-			iNewState = WEAPON_IS_ONTARGET;
-		}
-		else
-		{
-			iNewState = WEAPON_IS_ACTIVE;
-		}
+		iNewState = WEAPON_IS_ACTIVE;
 	}
 	else
 	{
@@ -1323,36 +1864,39 @@ bool CBaseCombatWeapon::UsesSecondaryAmmo( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::SetWeaponVisible( bool visible )
 {
+	CBaseViewModel *vm = NULL;
+
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	if ( !pOwner )
-		return;
-
-	// PiMoN: had to re-write the whole code so it won't
-	// just hide the primary viewmodel but every viewmodel
-	// existing as we now have separate hands viewmodel
-	if ( visible )
+	if ( pOwner )
 	{
-		RemoveEffects( EF_NODRAW );
-		int i;
-		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
-		{
-			CBaseViewModel *vm = pOwner->GetViewModel( i );
-			if ( !vm )
-				continue;
+		vm = pOwner->GetViewModel( m_nViewModelIndex );
+	}
 
-			vm->RemoveEffects( EF_NODRAW );
-		}
+	if ( pOwner )
+	{
+		AddEffects( EF_NODRAW ); // The combatweapon hides when held by a player. The weaponworldmodel renders instead.
 	}
 	else
 	{
-		AddEffects( EF_NODRAW );
-		int i;
-		for ( i = MAX_VIEWMODELS - 1; i >= 0; i-- )
+		if ( visible )
 		{
-			CBaseViewModel *vm = pOwner->GetViewModel( i );
-			if ( !vm )
-				continue;
+			RemoveEffects( EF_NODRAW );
+		}
+		else
+		{
+			AddEffects( EF_NODRAW );
+		}
+	}
 
+	// viewmodel
+	if ( vm )
+	{
+		if ( visible )
+		{
+			vm->RemoveEffects( EF_NODRAW );
+		}
+		else
+		{
 			vm->AddEffects( EF_NODRAW );
 		}
 	}
@@ -1483,6 +2027,12 @@ selects and deploys each weapon as you pass it. (sjb)
 bool CBaseCombatWeapon::Deploy( )
 {
 	MDLCACHE_CRITICAL_SECTION();
+
+#if !defined( CLIENT_DLL )
+	CreateWeaponWorldModel();
+	ShowWeaponWorldModel( false ); // don't show right away, wait for the deploy anim to unhide it
+#endif
+
 	bool bResult = DefaultDeploy( (char*)GetViewModel(), (char*)GetWorldModel(), GetDrawActivity(), (char*)GetAnimPrefix() );
 
 	// override pose parameters
@@ -1510,6 +2060,10 @@ Activity CBaseCombatWeapon::GetDrawActivity( void )
 bool CBaseCombatWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 { 
 	MDLCACHE_CRITICAL_SECTION();
+
+#if !defined( CLIENT_DLL )
+	ShowWeaponWorldModel( false );
+#endif
 
 	// cancel any reload in progress.
 	m_bInReload = false; 
@@ -2621,6 +3175,7 @@ BEGIN_PREDICTION_DATA( CBaseCombatWeapon )
 	DEFINE_PRED_FIELD( m_iState, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),			 
 	DEFINE_PRED_FIELD( m_iViewModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
 	DEFINE_PRED_FIELD( m_iWorldModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
+	DEFINE_PRED_FIELD( m_iWorldDroppedModelIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE | FTYPEDESC_MODELINDEX ),
 	DEFINE_PRED_FIELD_TOL( m_flNextPrimaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),	
 	DEFINE_PRED_FIELD_TOL( m_flNextSecondaryAttack, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
 	DEFINE_PRED_FIELD_TOL( m_flTimeWeaponIdle, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, TD_MSECTOLERANCE ),
@@ -2900,21 +3455,25 @@ BEGIN_NETWORK_TABLE(CBaseCombatWeapon, DT_BaseCombatWeapon)
 	SendPropDataTable("LocalActiveWeaponData", 0, &REFERENCE_SEND_TABLE(DT_LocalActiveWeaponData), SendProxy_SendActiveLocalWeaponDataTable ),
 	SendPropModelIndex( SENDINFO(m_iViewModelIndex) ),
 	SendPropModelIndex( SENDINFO(m_iWorldModelIndex) ),
+	SendPropModelIndex( SENDINFO(m_iWorldDroppedModelIndex) ),
 	SendPropInt( SENDINFO(m_iState ), 8, SPROP_UNSIGNED ),
 	SendPropEHandle( SENDINFO(m_hOwner) ),
 
 	SendPropInt( SENDINFO( m_iPrimaryReserveAmmoCount ), 10),
 	SendPropInt( SENDINFO( m_iSecondaryReserveAmmoCount ), 10 ),
+	SendPropEHandle( SENDINFO(m_hWeaponWorldModel) ),
 	SendPropInt( SENDINFO( m_iNumEmptyAttacks ), 8 ),
 #else
 	RecvPropDataTable("LocalWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalWeaponData)),
 	RecvPropDataTable("LocalActiveWeaponData", 0, 0, &REFERENCE_RECV_TABLE(DT_LocalActiveWeaponData)),
 	RecvPropInt( RECVINFO(m_iViewModelIndex)),
 	RecvPropInt( RECVINFO(m_iWorldModelIndex)),
+	RecvPropInt( RECVINFO(m_iWorldDroppedModelIndex)),
 	RecvPropInt( RECVINFO(m_iState), 0, &CBaseCombatWeapon::RecvProxy_WeaponState ),
 	RecvPropEHandle( RECVINFO(m_hOwner ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryReserveAmmoCount)),
 	RecvPropInt( RECVINFO( m_iSecondaryReserveAmmoCount)),
+	RecvPropEHandle( RECVINFO(m_hWeaponWorldModel) ),
 	RecvPropInt( RECVINFO( m_iNumEmptyAttacks )),
 #endif
 END_NETWORK_TABLE()

@@ -187,8 +187,12 @@ public:
 	DECLARE_PREDICTABLE();
 
 									C_BaseEntity();
+
+protected:
+	// Use UTIL_Remove to delete!
 	virtual							~C_BaseEntity();
 
+public:
 	static C_BaseEntity				*CreatePredictedEntityByName( const char *classname, const char *module, int line, bool persist = false );
 	
 	// FireBullets uses shared code for prediction.
@@ -493,7 +497,6 @@ public:
 
 	int								GetModelIndex( void ) const;
 	void							SetModelIndex( int index );
-	virtual int						CalcOverrideModelIndex() { return -1; }
 
 	// These methods return a *world-aligned* box relative to the absorigin of the entity.
 	// This is used for collision purposes and is *not* guaranteed
@@ -1055,7 +1058,7 @@ public:
 	// Returns false if the model name is bogus or otherwise can't be loaded
 	bool				SetModel( const char *pModelName );
 
-	void				SetModelPointer( const model_t *pModel );
+	virtual void		SetModelPointer( const model_t *pModel );
 
 
 	// Access movetype and solid.
@@ -2209,6 +2212,16 @@ inline bool C_BaseEntity::IsEnabledInToolView() const
 	return false;
 #endif
 }
+
+
+//-----------------------------------------------------------------------------
+// Client version of UTIL_Remove
+//-----------------------------------------------------------------------------
+inline void UTIL_Remove( C_BaseEntity *pEntity )
+{
+	pEntity->Remove();
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 

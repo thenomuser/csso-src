@@ -166,6 +166,8 @@ void CSmokeGrenadeProjectile::Spawn()
 {
 	SetModel( GRENADE_MODEL );
 	BaseClass::Spawn();
+
+	SetThrownBodygroup();
 }
 
 

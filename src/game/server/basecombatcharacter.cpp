@@ -722,6 +722,7 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 
 	// Init weapon and Ammo data
 	m_hActiveWeapon			= NULL;
+	m_uiLastDamageTypeFlags = 0;
 
 	// reset all ammo values to 0
 	RemoveAllAmmo();
@@ -2392,6 +2393,8 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 		return 0;
 
 	m_iDamageCount++;
+
+	m_uiLastDamageTypeFlags = info.GetDamageType();
 
 	if ( info.GetDamageType() & DMG_SHOCK )
 	{

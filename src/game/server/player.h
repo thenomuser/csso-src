@@ -377,6 +377,7 @@ public:
 	virtual const Vector	GetPlayerMins( void ) const; // uses local player
 	virtual const Vector	GetPlayerMaxs( void ) const; // uses local player
 
+	virtual void			UpdateCollisionBounds( void );
 
 	void					VelocityPunch( const Vector &vecForce );
 	void					ViewPunch( const QAngle &angleOffset );
@@ -784,6 +785,7 @@ public:
 
 	surfacedata_t *GetSurfaceData( void ) { return m_pSurfaceData; }
 	void SetLadderNormal( Vector vecLadderNormal ) { m_vecLadderNormal = vecLadderNormal; }
+	const Vector &GetLadderNormal( void ) const { return m_vecLadderNormal; }
 
 	// Here so that derived classes can use the expresser
 	virtual CAI_Expresser *GetExpresser() { return NULL; };
@@ -1145,7 +1147,7 @@ private:
 
 	bool					m_bPlayerUnderwater;
 
-	EHANDLE					m_hViewEntity;
+	CNetworkHandle( CBaseEntity, m_hViewEntity );
 
 	// Movement constraints
 	CNetworkHandle( CBaseEntity, m_hConstraintEntity );

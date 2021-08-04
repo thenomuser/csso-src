@@ -74,7 +74,7 @@ void SlerpBones(
 	Vector pos1[MAXSTUDIOBONES], 
 	mstudioseqdesc_t &seqdesc, // source of q2 and pos2
 	int sequence, 
-	const Quaternion q2[MAXSTUDIOBONES], 
+	const QuaternionAligned q2[MAXSTUDIOBONES], 
 	const Vector pos2[MAXSTUDIOBONES], 
 	float s,
 	int boneMask
@@ -113,6 +113,16 @@ void BuildBoneChain(
 	int	iBone,
 	matrix3x4_t *pBoneToWorld,
 	CBoneBitList &boneComputed );
+
+void BuildBoneChainPartial(
+	const CStudioHdr *pStudioHdr,
+	const matrix3x4_t &rootxform,
+	const Vector pos[],
+	const Quaternion q[],
+	int	iBone,
+	matrix3x4_t *pBoneToWorld,
+	CBoneBitList &boneComputed,
+	int iRoot );
 
 
 //-----------------------------------------------------------------------------
@@ -290,12 +300,17 @@ public:
 
 	CUtlVectorFixed< CIKTarget, 12 >	m_target;
 
+	void CopyTo( CIKContext* pOther, const unsigned short * iRemapping );
+
+	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
+
+	const int GetBoneMask( void ) { return m_boneMask; }
+
 private:
 
 	CStudioHdr const *m_pStudioHdr;
 
 	bool Estimate( int iSequence, float flCycle, int iTarget, const float poseParameter[], float flWeight = 1.0f ); 
-	void BuildBoneChain( const Vector pos[], const Quaternion q[], int iBone, matrix3x4_t *pBoneToWorld, CBoneBitList &boneComputed );
 
 	// virtual IK rules, filtered and combined from each sequence
 	CUtlVector< CUtlVector< ikcontextikrule_t > > m_ikChainRule;
@@ -353,7 +368,7 @@ float Studio_GetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, flo
 float Studio_SetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, float flValue, float &ctlValue );
 
 // converts a global 0..1 pose parameter into the local sequences blending value
-void Studio_LocalPoseParameter( const CStudioHdr *pStudioHdr, const float poseParameter[], mstudioseqdesc_t &seqdesc, int iSequence, int iLocalIndex, float &flSetting, int &index );
+int Studio_LocalPoseParameter( const CStudioHdr *pStudioHdr, const float poseParameter[], mstudioseqdesc_t &seqdesc, int iSequence, int iLocalIndex, float &flSetting );
 
 void Studio_SeqAnims( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int iSequence, const float poseParameter[], mstudioanimdesc_t *panim[4], float *weight );
 int Studio_MaxFrame( const CStudioHdr *pStudioHdr, int iSequence, const float poseParameter[] );
@@ -438,6 +453,8 @@ void Studio_InvalidateBoneCache( memhandle_t cacheHandle );
 
 // Given a ray, trace for an intersection with this studiomodel.  Get the array of bones from StudioSetupHitboxBones
 bool TraceToStudio( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
+// Given a ray, trace for an intersection with this studiomodel, bullets will hit bodyparts that result in higher damage
+bool TraceToStudioCsgoHitgroupsPriority( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
 
 void QuaternionSM( float s, const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMA( const Quaternion &p, float s, const Quaternion &q, Quaternion &qt );

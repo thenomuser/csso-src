@@ -4384,12 +4384,13 @@ void C_BaseEntity::CalcAbsolutePosition( )
 
 	// Construct the entity-to-world matrix
 	// Start with making an entity-to-parent matrix
-	matrix3x4_t matEntityToParent;
+	ALIGN16 matrix3x4_t matEntityToParent ALIGN16_POST;
 	AngleMatrix( GetLocalAngles(), matEntityToParent );
 	MatrixSetColumn( GetLocalOrigin(), 3, matEntityToParent );
 
 	// concatenate with our parent's transform
-	matrix3x4_t scratchMatrix;
+	m_pMoveParent->CalcAbsolutePosition();
+	ALIGN16 matrix3x4_t scratchMatrix ALIGN16_POST;
 	ConcatTransforms( GetParentToWorldTransform( scratchMatrix ), matEntityToParent, m_rgflCoordinateFrame );
 
 	// pull our absolute position out of the matrix
@@ -4412,7 +4413,7 @@ void C_BaseEntity::CalcAbsolutePosition( )
 	//
 	// So here, we keep our absorigin invalidated. It means we're returning an origin that is a frame old to CalculateIKLocks,
 	// but we'll still render with the right origin.
-	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetEFlags() & EFL_SETTING_UP_BONES) )
+	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetFlags() & EFL_SETTING_UP_BONES) )
 	{
 		m_iEFlags |= EFL_DIRTY_ABSTRANSFORM;
 	}
@@ -5796,27 +5797,12 @@ int C_BaseEntity::RestoreData( const char *context, int slot, int type )
 	const int savedEFlagsMask = EFL_DIRTY_SHADOWUPDATE;
 	int savedEFlags = GetEFlags() & savedEFlagsMask;
 
-	// model index needs to be set manually for dynamic model refcounting purposes
-	int oldModelIndex = m_nModelIndex;
-
 	CPredictionCopy copyHelper( type, this, PC_DATA_NORMAL, src, PC_DATA_PACKED );
 	int error_count = copyHelper.TransferData( sz, entindex(), GetPredDescMap() );
 
 	// set non-predicting flags back to their prior state
 	RemoveEFlags( savedEFlagsMask );
 	AddEFlags( savedEFlags );
-
-	// restore original model index and change via SetModelIndex
-	int newModelIndex = m_nModelIndex;
-	m_nModelIndex = oldModelIndex;
-	int overrideModelIndex = CalcOverrideModelIndex();
-	if( overrideModelIndex != -1 )
-		newModelIndex = overrideModelIndex;
-	if ( oldModelIndex != newModelIndex )
-	{
-		MDLCACHE_CRITICAL_SECTION(); // ???
-		SetModelIndex( newModelIndex );
-	}
 
 	OnPostRestoreData();
 

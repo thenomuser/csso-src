@@ -80,8 +80,6 @@ extern ConVar	spec_freeze_target_fov_long;
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
-ConVar cl_left_hand_ik( "cl_left_hand_ik", "1", 0, "Attach player's left hand to rifle with IK." );
-
 ConVar cl_ragdoll_physics_enable( "cl_ragdoll_physics_enable", "1", 0, "Enable/disable ragdoll physics." );
 
 ConVar fov_cs_debug( "fov_cs_debug", "0", FCVAR_CHEAT, "Sets the view fov if cheats are on." );
@@ -223,6 +221,7 @@ BEGIN_PREDICTION_DATA( C_CSPlayer )
 	DEFINE_PRED_FIELD( m_flCycle, FIELD_FLOAT, FTYPEDESC_OVERRIDE | FTYPEDESC_PRIVATE | FTYPEDESC_NOERRORCHECK ),
 	DEFINE_PRED_FIELD( m_iShotsFired, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_iDirection, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_bIsScoped, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bIsWalking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bResumeZoom, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_iLastZoom, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
@@ -273,6 +272,7 @@ public:
 	int GetPlayerEntIndex() const;
 	IRagdoll* GetIRagdoll() const;
 	void GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt ) OVERRIDE;
+	void GetRagdollInitBoneArraysYawMode( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt );
 
 	void ApplyRandomTaserForce( void );
 	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
@@ -304,6 +304,8 @@ private:
 	CNetworkVector( m_vecRagdollOrigin );
 	CNetworkVar(int, m_iDeathPose );
 	CNetworkVar(int, m_iDeathFrame );
+	CNetworkVar(float, m_flDeathYaw );
+	CNetworkVar(float, m_flAbsYaw );
 	float m_flRagdollSinkStart;
 	bool m_bInitialized;
 	bool m_bCreatedWhilePlaybackSkipping;
@@ -323,6 +325,8 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE( C_CSRagdoll, DT_CSRagdoll, CCSRagdoll )
 	RecvPropInt( RECVINFO(m_iDeathFrame) ),
 	RecvPropInt(RECVINFO(m_iTeamNum)),
 	RecvPropInt( RECVINFO(m_bClientSideAnimation)),
+	RecvPropFloat( RECVINFO(m_flDeathYaw) ),
+	RecvPropFloat( RECVINFO(m_flAbsYaw) ),
 END_RECV_TABLE()
 
 
@@ -347,6 +351,14 @@ C_CSRagdoll::~C_CSRagdoll()
 
 void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
 {
+	// otherwise use the death pose to set up the ragdoll
+	ForceSetupBonesAtTime( pDeltaBones0, gpGlobals->curtime - boneDt );
+	GetRagdollCurSequenceWithDeathPose( this, pDeltaBones1, gpGlobals->curtime, m_iDeathPose, m_iDeathFrame );
+	SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+}
+
+void C_CSRagdoll::GetRagdollInitBoneArraysYawMode( matrix3x4_t *pDeltaBones0, matrix3x4_t *pDeltaBones1, matrix3x4_t *pCurrentBones, float boneDt )
+{
 	// turn off interp so we can setup bones in multiple positions
 	SetEffects( EF_NOINTERP );
 
@@ -367,6 +379,7 @@ void C_CSRagdoll::GetRagdollInitBoneArrays( matrix3x4_t *pDeltaBones0, matrix3x4
 			pLastRagdollLayer->SetWeight( 1 );
 		}
 	}
+	SetPoseParameter( LookupPoseParameter( "death_yaw" ), m_flDeathYaw );
 
 	SetAbsOrigin( GetAbsOrigin() );
 
@@ -422,8 +435,6 @@ void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 		}
 	}
 }
-
-
 
 ConVar cl_random_taser_bone_y( "cl_random_taser_bone_y", "-1.0", 0, "The Y position used for the random taser force." );
 ConVar cl_random_taser_force_y( "cl_random_taser_force_y", "-1.0", 0, "The Y position used for the random taser force." );
@@ -534,7 +545,7 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
 	if ( pPlayer )
 	{
-		if ( !pPlayer->IsDormant() )
+		if ( !pPlayer->IsDormant() && !pPlayer->m_bUseNewAnimstate )
 		{
 			// move my current model instance to the ragdoll's so decals are preserved.
 			pPlayer->SnatchModelInstance( this );
@@ -542,6 +553,39 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 
 		SetAbsAngles( pPlayer->GetRenderAngles() );
 		SetNetworkAngles( pPlayer->GetRenderAngles() );
+
+		// add a separate gloves model if needed
+		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
+		{
+			m_pGlovesModel = new C_BaseAnimating;
+			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
+			{
+				// hide the gloves first
+				SetBodygroup( FindBodygroupByName( "gloves" ), 1 );
+
+				m_pGlovesModel->FollowEntity( this ); // attach to player model
+				m_pGlovesModel->AddEffects( EF_BONEMERGE_FASTCULL ); // EF_BONEMERGE is already applied on FollowEntity()
+
+				int skin = 0;
+				if ( pPlayer->m_pViewmodelArmConfig )
+					skin = pPlayer->m_pViewmodelArmConfig->iSkintoneIndex;
+				else
+				{
+					CStudioHdr *pHdr = pPlayer->GetModelPtr();
+					if ( pHdr )
+						skin = GetPlayerViewmodelArmConfigForPlayerModel( pHdr->pszName() )->iSkintoneIndex;
+				}
+
+				m_pGlovesModel->m_nSkin = skin; // set the corrent skin tone
+			}
+			else
+			{
+				m_pGlovesModel->Release();
+				SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
+			}
+		}
+
+		pPlayer->MoveBoneAttachments( this );
 	}
 
 	int iDeathAnim = RandomInt( iMinDeathAnim, iMaxDeathAnim );
@@ -553,12 +597,28 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 	Interp_Reset( GetVarMapping() );
 }
 
+ConVar cl_ragdoll_workaround_threshold( "cl_ragdoll_workaround_threshold", "4", FCVAR_NONE, "Mainly cosmetic, client-only effect: when client doesn't know the last position of another player that spawns a ragdoll, the ragdoll creation is simplified and ragdoll is created in the right place. If you increase this significantly, ragdoll positions on your client may be dramatically wrong, but it won't affect other clients" );
+
+void C_CSPlayer::SetSequence( int nSequence )
+{
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		AssertMsg( nSequence == 0, "Warning: Player attempted to set non-zero default sequence.\n" );
+		BaseClass::SetSequence( 0 );
+	}
+	else
+	{
+		BaseClass::SetSequence( nSequence );
+	}
+}
 
 void C_CSRagdoll::CreateCSRagdoll()
 {
 	// First, initialize all our data. If we have the player's entity on our client,
 	// then we can make ourselves start out exactly where the player is.
 	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
+
+	//	DevMsg( "Ragdoll %d player %d (s:%d) %s\n", entindex(), m_hPlayer.GetEntryIndex(), m_hPlayer.GetSerialNumber(), pPlayer ? " ok" : " unresolved" ); // replay
 
 	// mark this to prevent model changes from overwriting the death sequence with the server sequence
 	SetReceivedSequence();
@@ -567,34 +627,33 @@ void C_CSRagdoll::CreateCSRagdoll()
 	{
 		// move my current model instance to the ragdoll's so decals are preserved.
 		pPlayer->SnatchModelInstance( this );
-
+	
 		VarMapping_t *varMap = GetVarMapping();
 
 		// Copy all the interpolated vars from the player entity.
 		// The entity uses the interpolated history to get bone velocity.
-		bool bRemotePlayer = (pPlayer != C_BasePlayer::GetLocalPlayer());
+		bool bRemotePlayer = ( pPlayer != C_BasePlayer::GetLocalPlayer() );			
 		if ( bRemotePlayer )
 		{
 			Interp_Copy( pPlayer );
 
-			SetAbsAngles( pPlayer->GetRenderAngles() );
+			SetAbsAngles( QAngle( 0, m_flAbsYaw, 0 ) );
 			GetRotationInterpolator().Reset();
 
 			m_flAnimTime = pPlayer->m_flAnimTime;
 			SetSequence( pPlayer->GetSequence() );
-			m_flPlaybackRate = pPlayer->GetPlaybackRate();
 		}
 		else
 		{
 			// This is the local player, so set them in a default
 			// pose and slam their velocity, angles and origin
 			SetAbsOrigin( m_vecRagdollOrigin );
-
-			SetAbsAngles( pPlayer->GetRenderAngles() );
-
+			
+			SetAbsAngles( QAngle( 0, m_flAbsYaw, 0 ) );
+			
 			SetAbsVelocity( m_vecRagdollVelocity );
 		}
-
+		
 		// in addition to base cycle, duplicate overlay layers and pose params onto the ragdoll, 
 		// so the starting pose is as accurate as possible.
 
@@ -628,18 +687,16 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 		m_flPlaybackRate = pPlayer->GetPlaybackRate();
 
-
 		if ( !bRemotePlayer )
 		{
 			Interp_Reset( varMap );
 		}
 
 		CopySequenceTransitions( pPlayer );
-
+		
 		// add a separate gloves model if needed
 		if ( !m_pGlovesModel && DoesModelSupportGloves() && CSLoadout()->HasGlovesSet( pPlayer, pPlayer->GetTeamNumber() ) )
 		{
-
 			m_pGlovesModel = new C_BaseAnimating;
 			if ( m_pGlovesModel->InitializeAsClientEntity( GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pPlayer, pPlayer->GetTeamNumber() ) )->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY ) )
 			{
@@ -682,38 +739,74 @@ void C_CSRagdoll::CreateCSRagdoll()
 		Interp_Reset( GetVarMapping() );
 	}
 
+	bool bDissolveEntity = true;
 	// Turn it into a ragdoll.
 	if ( cl_ragdoll_physics_enable.GetInt() )
 	{
-		// Make us a ragdoll..
-		m_nRenderFX = kRenderFxRagdoll;
-
-		matrix3x4_t boneDelta0[MAXSTUDIOBONES];
-		matrix3x4_t boneDelta1[MAXSTUDIOBONES];
-		matrix3x4_t currentBones[MAXSTUDIOBONES];
-		const float boneDt = 0.05f;
-
-		// We used to get these values from the local player object when he ragdolled, but he had some bad values when using prediction.
-		// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
-		ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
-		if ( cl_ragdoll_crumple.GetBool() )
+		if ( pPlayer )
 		{
-			BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
-		}
-		else
-		{
-			GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
-		}
+			bDissolveEntity = false;
+			// Make us a ragdoll..
+			m_nRenderFX = kRenderFxRagdoll;
+			Vector vRagdollOrigin = GetAbsOrigin(), vPlayerOrigin = pPlayer->GetAbsOrigin();
 
-		InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt );
-		m_flRagdollSinkStart = -1;
+			matrix3x4_t currentBones[ MAXSTUDIOBONES ];
+			const float boneDt = 0.05f;
+		
+			bool bleedOut = false;
+#if USE_VIOLENT_RAGDOLLS
+			bleedOut = ( pPlayer ? !pPlayer->m_bKilledByTaser : true );
+#endif
+
+			if ( ( vRagdollOrigin - vPlayerOrigin ).LengthSqr() > Sqr( cl_ragdoll_workaround_threshold.GetFloat() ) )  // ragdoll origin is set from the player's origin on server. If they aren't the same, it means we haven't seen the player in a while.
+			{
+				// The player isn't even visible right now, so we don't need to run the complicated and hacky logic to make ragdoll transition seamless. That logic would teleport the ragdoll to the last known position of the now-dormant player
+
+				SetupBones( currentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
+				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
+				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt, bleedOut );
+			}
+			else
+			{
+				matrix3x4_t boneDelta0[ MAXSTUDIOBONES ];
+				matrix3x4_t boneDelta1[ MAXSTUDIOBONES ];
+				// use death pose and death frame differently for new animstate player
+				if ( pPlayer->m_bUseNewAnimstate )
+				{
+					GetRagdollInitBoneArraysYawMode( boneDelta0, boneDelta1, currentBones, boneDt );
+				}
+				else
+				{
+					// We used to get these values from the local player object when he ragdolled, but he was some bad values when using prediction.
+					// It ends up that just getting the bone array values for this ragdoll works best for both the local and remote players.
+					ConVarRef cl_ragdoll_crumple( "cl_ragdoll_crumple" );
+					if ( cl_ragdoll_crumple.GetBool() )
+					{
+						BaseClass::GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+					}
+					else
+					{
+						GetRagdollInitBoneArrays( boneDelta0, boneDelta1, currentBones, boneDt );
+					}
+				}
+
+				//Vector vResultOrigin = GetAbsOrigin();
+
+				//Msg( "C_CSRagdoll::CreateCSRagdoll at {%.1f,%.1f,%.1f}, player at {%.1f,%.1f,%.1f}, spawning at {%.1f,%.1f,%.1f}\n", vRagdollOrigin.x, vRagdollOrigin.y, vRagdollOrigin.z, vPlayerOrigin.x, vPlayerOrigin.y, vPlayerOrigin.z, vResultOrigin.x, vResultOrigin.y, vResultOrigin.z );
+
+				InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt, bleedOut );
+			}
+		}
 	}
-	else
+	
+	if ( bDissolveEntity )
 	{
+		SetRenderMode( kRenderTransTexture );
 		m_flRagdollSinkStart = gpGlobals->curtime;
 		DestroyShadow();
 		ClientLeafSystem()->SetRenderGroup( GetRenderHandle(), RENDER_GROUP_TRANSLUCENT_ENTITY );
 	}
+
 	m_bInitialized = true;
 }
 
@@ -999,8 +1092,6 @@ BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
 	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
 	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
-	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
-	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
 
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 
@@ -1027,6 +1118,8 @@ END_RECV_TABLE()
 IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropDataTable( "cslocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSLocalPlayerExclusive) ),
 	RecvPropDataTable( "csnonlocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSNonLocalPlayerExclusive) ),
+	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
+	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
 	RecvPropInt( RECVINFO( m_iAddonBits ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryAddon ) ),
 	RecvPropInt( RECVINFO( m_iSecondaryAddon ) ),
@@ -1041,8 +1134,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iMoveState ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),
 	RecvPropInt( RECVINFO( m_ArmorValue ) ),
-	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
-	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
+	RecvPropQAngles( RECVINFO( m_angEyeAngles ) ),
 	RecvPropFloat( RECVINFO( m_flStamina ) ),
 	RecvPropInt( RECVINFO( m_bHasDefuser ), 0, RecvProxy_HasDefuser ),
 	RecvPropInt( RECVINFO( m_bNightVisionOn), 0, RecvProxy_NightVision ),
@@ -1050,6 +1142,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bIsGrabbingHostage ) ),
 	RecvPropEHandle( RECVINFO( m_hCarriedHostage ) ),
 	RecvPropEHandle( RECVINFO( m_hCarriedHostageProp ) ),
+	RecvPropBool( RECVINFO( m_bIsScoped ) ),
 	RecvPropBool( RECVINFO( m_bIsWalking ) ),
 	RecvPropFloat( RECVINFO( m_flGroundAccelLinearFracLastTime ) ),
 
@@ -1094,6 +1187,13 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
+	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
+	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
+
+	RecvPropFloat( RECVINFO( m_flLowerBodyYawTarget ) ),
+	RecvPropBool( RECVINFO( m_bStrafing ) ),
+
+	RecvPropFloat( RECVINFO( m_flThirdpersonRecoil ) ),
 
 	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),
@@ -1108,7 +1208,12 @@ END_RECV_TABLE()
 C_CSPlayer::C_CSPlayer() :
 	m_iv_angEyeAngles( "C_CSPlayer::m_iv_angEyeAngles" )
 {
+	m_bMaintainSequenceTransitions = false; // disabled for perf - animstate takes care of carefully blending only the layers that need it
+
 	m_PlayerAnimState = CreatePlayerAnimState( this, this, LEGANIM_9WAY, true );
+
+	//the new animstate needs to live side-by-side with the old animstate for a while so it can be hot swappable
+	m_PlayerAnimStateCSGO = CreateCSGOPlayerAnimstate( this );
 
 	m_flThirdpersonRecoil = 0;
 
@@ -1116,6 +1221,11 @@ C_CSPlayer::C_CSPlayer() :
 
 	AddVar( &m_angEyeAngles, &m_iv_angEyeAngles, LATCH_SIMULATION_VAR );
 
+	// Remove interpolation of variables we have excluded from send table
+	// HACK: m_angRotation is private in C_BaseEntity but it's accessible via GetLocalAngles()
+	RemoveVar( const_cast<QAngle*>(&GetLocalAngles()) );  	// == RemoveVar( &m_angRotation );
+
+	m_bAddonModelsAreOutOfDate = false;
 	m_iLastAddonBits = m_iAddonBits = 0;
 	m_iLastPrimaryAddon = m_iLastSecondaryAddon = WEAPON_NONE;
 	m_iProgressBarDuration = 0;
@@ -1143,6 +1253,8 @@ C_CSPlayer::C_CSPlayer() :
 	m_flFreezeFrameTilt = 0;
 	m_bFreezeFrameCloseOnKiller = false;
 	m_nFreezeFrameShiftSideDist = 0;
+
+	m_bOldIsScoped = false;
 
     m_bPlayingFreezeCamSound = false;
 
@@ -1180,6 +1292,15 @@ C_CSPlayer::C_CSPlayer() :
 	m_flNextMagDropTime = 0;
 	m_nLastMagDropAttachmentIndex = -1;
 
+	m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].Init( this );
+	m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].SetWeightListName( "snapshot_weights_upperbody" );
+
+	m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].Init( this );
+	m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].AddSubordinate( &m_boneSnapshots[BONESNAPSHOT_UPPER_BODY] );
+	m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetWeightListName( "snapshot_weights_all" );
+
+	m_flLastSpawnTimeIndex = 0;
+
 	m_vecLastAliveLocalVelocity.Init();
 
 	m_pViewmodelArmConfig = NULL;
@@ -1188,13 +1309,17 @@ C_CSPlayer::C_CSPlayer() :
 
 C_CSPlayer::~C_CSPlayer()
 {
+	MDLCACHE_CRITICAL_SECTION();
 	RemoveAddonModels();
 
 	ReleaseFlashlight();
 
 	RemoveGlovesModel();
 
-	m_PlayerAnimState->Release();
+	if ( m_PlayerAnimState )
+		m_PlayerAnimState->Release();
+	if ( m_PlayerAnimStateCSGO )
+		m_PlayerAnimStateCSGO->Release();
 }
 
 
@@ -1323,18 +1448,6 @@ int C_CSPlayer::GetCurrentAssaultSuitPrice()
 	}
 }
 
-const QAngle& C_CSPlayer::GetRenderAngles()
-{
-	if ( IsRagdoll() )
-	{
-		return vec3_angle;
-	}
-	else
-	{
-		return m_PlayerAnimState->GetRenderAngles();
-	}
-}
-
 
 float g_flFattenAmt = 4;
 void C_CSPlayer::GetShadowRenderBounds( Vector &mins, Vector &maxs, ShadowType_t shadowType )
@@ -1424,24 +1537,6 @@ int C_CSPlayer::GetTargetedWeapon( void ) const
 }
 
 
-void InitializeAddonModelFromWeapon( CWeaponCSBase *weapon, C_BreakableProp *addon )
-{
-	if ( !weapon )
-	{
-		return;
-	}
-
-	const CCSWeaponInfo& weaponInfo = weapon->GetCSWpnData();
-	if ( weaponInfo.m_szAddonModel[0] == 0 )
-	{
-		addon->InitializeAsClientEntity( weaponInfo.szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-	else
-	{
-		addon->InitializeAsClientEntity( weaponInfo.m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
-	}
-}
-
 class C_PlayerAddonModel : public C_BreakableProp
 {
 public:
@@ -1517,7 +1612,10 @@ void C_CSPlayer::CreateAddonModel( int i )
 		}
 		if ( weaponInfo->m_szAddonModel[0] == 0 )
 		{
-			pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			if ( weaponInfo->szWorldDroppedModel[0] != 0 )
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+			else
+				pEnt->InitializeAsClientEntity( weaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
 		}
 		else
 		{
@@ -1560,9 +1658,16 @@ void C_CSPlayer::CreateAddonModel( int i )
 		if ( pWeaponInfo )
 		{
 			if ( pWeaponInfo->m_szAddonModel[0] == 0 )
-				pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			{
+				if ( pWeaponInfo->szWorldDroppedModel[0] != 0 )
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldDroppedModel, RENDER_GROUP_OPAQUE_ENTITY );
+				else
+					pEnt->InitializeAsClientEntity( pWeaponInfo->szWorldModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 			else
+			{
 				pEnt->InitializeAsClientEntity( pWeaponInfo->m_szAddonModel, RENDER_GROUP_OPAQUE_ENTITY );
+			}
 		}
 		else
 		{
@@ -1590,8 +1695,22 @@ void C_CSPlayer::CreateAddonModel( int i )
 	pAddon->m_iAddon = i;
 	pAddon->m_iAttachmentPoint = iAttachment;
 	pEnt->SetParent( this, pAddon->m_iAttachmentPoint );
-	pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
-	pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+
+	int iHolsterBone = pEnt->LookupBone( "weapon_holster_center" );
+	if ( iHolsterBone != -1 )
+	{
+		Vector holsterBonePos;
+		QAngle holsterBoneAng;
+		pEnt->GetBonePosition( iHolsterBone, holsterBonePos, holsterBoneAng );
+		pEnt->SetLocalOrigin( -holsterBonePos );
+		pEnt->SetLocalAngles( holsterBoneAng );
+	}
+	else
+	{
+		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
+		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
+	}
+
 	pEnt->SetModelScale( iScale );
 	if ( IsLocalPlayer() )
 	{
@@ -1621,6 +1740,27 @@ void C_CSPlayer::ThirdPersonSwitch( bool bThirdperson )
 void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov )
 {
 	BaseClass::CalcView( eyeOrigin, eyeAngles, zNear, zFar, fov );
+
+	//only modify the eye position for first-person players or observers
+	// PiMoN: this shit is broken as well, it uses "head_0" bone to attach camera
+	// by origin to it but for some reason when it gets the bone's position its
+	// not... correct? or something like that, which results in camera going below
+	// the ground or a lot above the ground if you're stuck in something when crouching
+	/*if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		if ( IsLocalPlayer() && IsAlive() && ( !::input->CAM_IsThirdPerson() ) )
+		{
+			m_PlayerAnimStateCSGO->ModifyEyePosition( eyeOrigin );
+		}
+		else if ( GetObserverMode() == OBS_MODE_IN_EYE )
+		{
+			C_CSPlayer *pTargetPlayer = ToCSPlayer( GetLocalCSPlayer()->GetObserverTarget() );
+			if ( pTargetPlayer )
+			{
+				pTargetPlayer->m_PlayerAnimStateCSGO->ModifyEyePosition( eyeOrigin );
+			}
+		}
+	}*/
 
 #if IRONSIGHT
 	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
@@ -1658,7 +1798,7 @@ void C_CSPlayer::UpdateHostageCarryModels()
 
 }
 
-void C_CSPlayer::UpdateAddonModels()
+void C_CSPlayer::UpdateAddonModels( bool bForce )
 {
 	int iCurAddonBits = m_iAddonBits;
 
@@ -1671,8 +1811,12 @@ void C_CSPlayer::UpdateAddonModels()
 	if ( pPlayer && pPlayer->GetObserverMode() == OBS_MODE_IN_EYE && pPlayer->GetObserverTarget() == this )
 		iCurAddonBits = 0;
 
+	if ( bForce )
+		iCurAddonBits = 0;
+
 	// Any changes to the attachments we should have?
-	if ( m_iLastAddonBits == iCurAddonBits &&
+	if ( !bForce &&
+		m_iLastAddonBits == iCurAddonBits &&
 		m_iLastPrimaryAddon == m_iPrimaryAddon &&
 		m_iLastSecondaryAddon == m_iSecondaryAddon &&
 		m_iLastKnifeAddon == m_iKnifeAddon )
@@ -1680,11 +1824,14 @@ void C_CSPlayer::UpdateAddonModels()
 		return;
 	}
 
-	bool rebuildPistol2Addon = false;
+	bool rebuildPistol2Addon = bForce;
 	if ( m_iSecondaryAddon == WEAPON_ELITE && ((m_iLastAddonBits ^ iCurAddonBits) & ADDON_PISTOL) != 0 )
 	{
 		rebuildPistol2Addon = true;
 	}
+
+	bool rebuildPrimaryAddon = ((m_iLastPrimaryAddon != m_iPrimaryAddon) || bForce);
+
 	m_iLastAddonBits = iCurAddonBits;
 	m_iLastPrimaryAddon = m_iPrimaryAddon;
 	m_iLastSecondaryAddon = m_iSecondaryAddon;
@@ -1698,7 +1845,7 @@ void C_CSPlayer::UpdateAddonModels()
 		CAddonModel *pModel = &m_AddonModels[i];
 
 		int addonBit = 1<<pModel->m_iAddon;
-		if ( !( iCurAddonBits & addonBit ) || (rebuildPistol2Addon && addonBit == ADDON_PISTOL2) )
+		if ( !( iCurAddonBits & addonBit ) || (rebuildPistol2Addon && addonBit == ADDON_PISTOL2 ) || ( rebuildPrimaryAddon && addonBit == ADDON_PRIMARY ) )
 		{
 			if ( pModel->m_hEnt.Get() )
 				pModel->m_hEnt->Release();
@@ -1723,6 +1870,8 @@ void C_CSPlayer::UpdateAddonModels()
 			CreateAddonModel( i );
 		}
 	}
+
+	m_bAddonModelsAreOutOfDate = false;
 }
 
 
@@ -1755,7 +1904,24 @@ void C_CSPlayer::UpdateGlovesModel()
 void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
-	UpdateAddonModels();
+	
+	if ( !m_AddonModels.Count() )
+		return;
+
+	//Don't test anything about the addon models, just remove them.
+	int n, nNext;
+	for ( n=m_AddonModels.Head(); n != m_AddonModels.InvalidIndex(); n = nNext )
+	{
+		nNext = m_AddonModels.Next( n );
+		CAddonModel *pModel = &m_AddonModels[n];
+
+		if ( pModel->m_hEnt.Get() )
+		{
+			pModel->m_hEnt->Release();
+		}
+
+		m_AddonModels.Remove( n );
+	}
 }
 
 
@@ -1854,10 +2020,17 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_holdTargetIDTimer.Reset();
 			m_iTargetedWeaponEntIndex = 0;
 
-			RemoveAddonModels();
+			UpdateAddonModels( true );
+
+			m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 				m_bShouldAutobuyDMWeapons = true;
+
+			if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+			{
+				m_PlayerAnimStateCSGO->Reset();
+			}
 		}
 
 		C_CSPlayer* csPlayer = ToCSPlayer( UTIL_PlayerByUserId( EventUserID ) );
@@ -1909,6 +2082,19 @@ void C_CSPlayer::ToggleRandomWeapons( void )
 
 	CLocalPlayerFilter filter;
 	EmitSound( filter, GetSoundSourceIndex(), "BuyPreset.Updated" );
+}
+
+void C_CSPlayer::Spawn( void )
+{
+	m_flLastSpawnTimeIndex = gpGlobals->curtime;
+
+	BaseClass::Spawn();
+
+	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->Reset();
+		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
+	}
 }
 
 
@@ -1985,7 +2171,7 @@ void C_CSPlayer::ClientThink()
 
 	UpdateSoundEvents();
 
-	UpdateAddonModels();
+	UpdateAddonModels( m_bAddonModelsAreOutOfDate );
 
 	UpdateGlovesModel();
 
@@ -2094,6 +2280,18 @@ void C_CSPlayer::ClientThink()
 		}
 	}
 
+	if ( IsAlive() && ShouldDraw() )
+	{
+		// enable bone snapshots
+		m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].Enable();
+		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].Enable();
+	}
+	else
+	{
+		m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].Disable();
+		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].Disable();
+	}
+
 	// NVNT - check for spectating forces
 	if ( IsLocalPlayer() )
 	{
@@ -2184,6 +2382,12 @@ void C_CSPlayer::OnDataChanged( DataUpdateType_t type )
 		StopSound( "Hostage.Breath" );
 	}
 
+	if ( m_bOldIsScoped != m_bIsScoped )
+	{
+		m_bOldIsScoped = m_bIsScoped;
+		FogControllerChanged( true );
+	}
+
 	UpdateVisibility();
 }
 
@@ -2193,6 +2397,19 @@ void C_CSPlayer::ValidateModelIndex( void )
 	UpdateMinModels();
 }
 
+void C_CSPlayer::SetModelPointer( const model_t *pModel )
+{
+	bool bModelPointerIsChanged = ( pModel != GetModel() );
+	
+	BaseClass::SetModelPointer( pModel );
+
+	if ( bModelPointerIsChanged )
+	{
+		// lets just check if a unique bone is existing...
+		m_bUseNewAnimstate = (LookupBone( "spine_0" ) != -1);
+		m_bAddonModelsAreOutOfDate = true; // next time we update addon models, do a complete refresh
+	}
+}
 
 void C_CSPlayer::PostDataUpdate( DataUpdateType_t updateType )
 {
@@ -2201,6 +2418,15 @@ void C_CSPlayer::PostDataUpdate( DataUpdateType_t updateType )
 	SetNetworkAngles( GetLocalAngles() );
 
 	BaseClass::PostDataUpdate( updateType );
+
+	if ( updateType == DATA_UPDATE_CREATED )
+	{
+		if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+		{
+			m_PlayerAnimStateCSGO->Reset();
+			//m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -2604,21 +2830,28 @@ void C_CSPlayer::HandleTaserAnimation()
 
 void C_CSPlayer::UpdateClientSideAnimation()
 {
-	// We do this in a different order than the base class.
-	// We need our cycle to be valid for when we call the playeranimstate update code,
-	// or else it'll synchronize the upper body anims with the wrong cycle.
-	if ( GetSequence() != -1 )
+	if ( m_bUseNewAnimstate )
 	{
-		// move frame forward
-		FrameAdvance( 0.0f ); // 0 means to use the time we last advanced instead of a constant
+		m_PlayerAnimStateCSGO->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
 	}
-
-	// Update the animation data. It does the local check here so this works when using
-	// a third-person camera (and we don't have valid player angles).
-	if ( this == C_CSPlayer::GetLocalCSPlayer() )
-		m_PlayerAnimState->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
 	else
-		m_PlayerAnimState->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] );
+	{
+		// We do this in a different order than the base class.
+		// We need our cycle to be valid for when we call the playeranimstate update code,
+		// or else it'll synchronize the upper body anims with the wrong cycle.
+		if ( GetSequence() != -1 )
+		{
+			// move frame forward
+			FrameAdvance( 0.0f ); // 0 means to use the time we last advanced instead of a constant
+		}
+
+		// Update the animation data. It does the local check here so this works when using
+		// a third-person camera (and we don't have valid player angles).
+		if ( this == C_CSPlayer::GetLocalCSPlayer() )
+			m_PlayerAnimState->Update( EyeAngles()[YAW], EyeAngles()[PITCH] );
+		else
+			m_PlayerAnimState->Update( m_angEyeAngles[YAW], m_angEyeAngles[PITCH] );
+	}
 
 	if ( GetSequence() != -1 )
 	{
@@ -2637,7 +2870,7 @@ void C_CSPlayer::UpdateClientSideAnimation()
 		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 		if ( pWeapon )
 		{
-			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( pWeapon->m_nViewModelIndex ));
 			if ( pViewModel )
 			{
 				pViewModel->UpdateAllViewmodelAddons();
@@ -2646,9 +2879,9 @@ void C_CSPlayer::UpdateClientSideAnimation()
 		else
 		{
 			//We have a null weapon so remove the add ons for all the view models for this player.
-			for ( int i=0; i<MAX_VIEWMODELS; ++i )
+			for ( int i = 0; i < MAX_VIEWMODELS; ++i )
 			{
-				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>(GetViewModel( i ));
 				if ( pViewModel )
 				{
 					pViewModel->RemoveViewmodelArmModels();
@@ -2667,21 +2900,25 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 		return;
 
 	// Muzzle Flash Effect.
-	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeapon );
+	CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+	if ( !pWeaponWorldModel )
+		return;
+
+	int iAttachmentIndex = pWeapon->GetMuzzleAttachmentIndex( pWeaponWorldModel );
 	const char* pszEffect = pWeapon->GetMuzzleFlashEffectName( true );
 
-	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeapon->ShouldDraw() && pWeapon->IsVisible() && !pWeapon->GetOwner()->IsDormant() )
+	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
-		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
+		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false );
 	}
 
 #if 0
 	// Brass Eject Effect.
-	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeapon );
-	pszEffect = pWeapon->GetCSWpnData().m_szEjectBrassEffect;
-	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeapon->ShouldDraw() && pWeapon->IsVisible() && !pWeapon->GetOwner()->IsDormant() )
+	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex( pWeaponWorldModel );
+	pszEffect = pWeapon->GetEjectBrassEffectName( true );
+	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
-		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeapon, iAttachmentIndex, false );
+		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false );
 	}
 #endif
 }
@@ -2732,6 +2969,18 @@ bool C_CSPlayer::ShouldDraw( void )
 
 #define APPROX_CENTER_PLAYER Vector(0,0,50)
 
+bool C_CSPlayer::GetAttachment( int number, matrix3x4_t &matrix )
+{
+	if ( IsDormant() )
+	{
+		MatrixCopy( EntityToWorldTransform(), matrix );
+		matrix.SetOrigin( matrix.GetOrigin() + APPROX_CENTER_PLAYER );
+		return true;
+	}
+
+	return BaseClass::GetAttachment( number, matrix );
+}
+
 bool C_CSPlayer::GetAttachment( int number, Vector &origin )
 {
 	if ( IsDormant() )
@@ -2751,6 +3000,349 @@ bool C_CSPlayer::GetAttachment( int number, Vector &origin, QAngle &angles )
 		return true;
 	}
 	return BaseClass::GetAttachment( number, origin, angles );
+}
+
+void C_CSPlayer::AccumulateLayers( IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime )
+{
+	C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
+	CBaseWeaponWorldModel *pWeaponWorldModel = NULL;
+	if ( pWeapon )
+		pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
+
+	if ( pWeapon && pWeaponWorldModel && m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->OnClientWeaponChange( GetActiveCSWeapon() );
+
+		//pre-bone-setup snapshot capture to grab bones before a deleted weapon pops the pose
+
+		int oldReadableBones = m_BoneAccessor.GetReadableBones();
+		m_BoneAccessor.SetReadableBones( BONE_USED_BY_ANYTHING );
+
+		m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].UpdateReadOnly();
+		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].UpdateReadOnly();
+
+		m_BoneAccessor.SetReadableBones( oldReadableBones );
+		
+		AccumulateInterleavedDispatchedLayers( pWeaponWorldModel, boneSetup, pos, q, currentTime, GetLocalOrInEyeCSPlayer() == this );
+		return;
+	}
+
+	BaseClass::AccumulateLayers( boneSetup, pos, q, currentTime );
+}
+
+
+void C_CSPlayer::NotifyOnLayerChangeSequence( const CAnimationLayer* pLayer, const int nNewSequence )
+{
+	if ( pLayer && m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->NotifyOnLayerChangeSequence( pLayer, nNewSequence );
+	}
+}
+
+void C_CSPlayer::NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight )
+{
+	if ( pLayer && m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->NotifyOnLayerChangeWeight( pLayer, flNewWeight );
+	}
+}
+
+void C_CSPlayer::NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle )
+{
+	if ( pLayer && m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
+	{
+		m_PlayerAnimStateCSGO->NotifyOnLayerChangeCycle( pLayer, flNewCycle );
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+
+void CBoneSnapshot::Update( CBaseAnimating* pEnt, bool bReadOnly )
+{
+	if ( m_flWeight > 0 )
+		m_flWeight = clamp( smoothstep_bounds( m_flDecayEndTime, m_flDecayStartTime, gpGlobals->curtime ), 0, 1 );
+
+	// if the last known bonesetup occurred too long ago, it doesn't make sense to capture a snapshot of severely outdated or possibly uninitialized bones.
+	if ( !IsBoneSetupTimeIndexRecent() || !pEnt )
+		return;
+
+	if ( pEnt != m_pEnt )
+	{
+		Init( pEnt );
+		return;
+	}
+
+	if ( !m_bEnabled || m_pEnt->Teleported() || m_pEnt->IsEffectActive(EF_NOINTERP) )
+	{
+		AbandonAnyPending();
+		return;
+	}
+
+	C_CSPlayer* pPlayer = ToCSPlayer( m_pEnt );
+	if ( pPlayer && ( gpGlobals->curtime - pPlayer->m_flLastSpawnTimeIndex) <= 0.5f )
+	{
+		AbandonAnyPending();
+		return;
+	}
+
+	if ( !m_bWeightlistInitialized )
+		InitWeightList();
+
+	if ( !bReadOnly && m_flWeight > 0 )
+		PlaybackSnapshot();
+
+	if ( IsCapturePending() )
+		CaptureSnapshot();
+}
+
+void CBoneSnapshot::CaptureSnapshot( void )
+{
+	if ( !m_bCapturePending || !m_pEnt || !m_pEnt->IsVisible() )
+		return;
+
+	CStudioHdr *pHdr = m_pEnt->GetModelPtr();
+	if ( !pHdr )
+		return;
+
+	const studiohdr_t *pRenderHdr = pHdr->GetRenderHdr();
+	if ( pRenderHdr )
+	{
+		if ( m_nStudioRenderHdrId == -1 )
+		{
+			m_nStudioRenderHdrId = pRenderHdr->id;
+		}
+		else if ( m_nStudioRenderHdrId != pRenderHdr->id )
+		{
+			// render hdr id changed underneath us, likely a model swap
+			Init( m_pEnt );
+			return;
+		}
+	}
+
+	matrix3x4_t matPlayer;
+	AngleMatrix( m_pEnt->GetRenderAngles(), m_pEnt->GetRenderOrigin(), matPlayer );
+	matrix3x4_t matPlayerInv = matPlayer.InverseTR();
+
+	for (int i = 0; i < pHdr->numbones(); ++i)
+	{
+		if ( m_Weightlist[i] <= 0 )
+			continue;
+
+		ConcatTransforms( matPlayerInv, m_pEnt->GetBone(i), m_Cache[i] );
+	}
+
+	FOR_EACH_VEC( m_vecSubordinateSnapshots, i )
+	{
+		if ( m_vecSubordinateSnapshots[i] )
+			m_vecSubordinateSnapshots[i]->AbandonAnyPending();
+	}
+
+	m_vecWorldCapturePos = matPlayer.GetOrigin();
+
+	m_flWeight = 1;
+
+	m_bCapturePending = false;
+}
+
+void CBoneSnapshot::PlaybackSnapshot( void )
+{
+	if ( !m_pEnt )
+		return;
+
+	CStudioHdr *pHdr = m_pEnt->GetModelPtr();
+	if ( !pHdr || !m_pEnt->IsVisible() || m_flWeight <= 0 )
+		return;
+
+	matrix3x4_t matPlayer;
+	AngleMatrix( m_pEnt->GetRenderAngles(), m_pEnt->GetRenderOrigin(), matPlayer );
+
+	float flFailsafeDistance = matPlayer.GetOrigin().DistToSqr( m_vecWorldCapturePos );
+	m_flWeight = MIN( m_flWeight, RemapValClamped( flFailsafeDistance, 484.0f, 1296.0f, 1.0f, 0.0f ) );
+
+	if ( m_flWeight <= 0 )
+		return;
+
+	for (int i = 0; i < pHdr->numbones(); ++i) 
+	{
+		if ( m_Weightlist[i] <= 0 )
+			continue;
+
+		float flWeightedElement = m_flWeight * m_Weightlist[i];
+
+		matrix3x4_t matCurrent = m_pEnt->GetBone(i);
+		matrix3x4_t matCached = ConcatTransforms( matPlayer, m_Cache[i] );
+
+		Vector posCurrent = matCurrent.GetOrigin();
+		Vector posCached = matCached.GetOrigin();
+
+		if ( posCurrent.DistToSqr( posCached ) > 5000 )
+		{
+//#ifdef DEBUG
+//			AssertMsgOnce( false, "Warning: Bonesnapshot lerp distance is too large.\n" );
+//#endif
+			break;
+		}
+
+		Quaternion qCurrent;
+		MatrixQuaternion( matCurrent, qCurrent );
+
+		Quaternion qCached;
+		MatrixQuaternion( matCached, qCached );
+
+		Quaternion qLerpOutput;
+		QuaternionSlerp( qCurrent, qCached, flWeightedElement, qLerpOutput );
+		
+		Vector posLerpOutput = Lerp( flWeightedElement, posCurrent, posCached );
+
+		AngleMatrix( RadianEuler( qLerpOutput ), posLerpOutput, m_pEnt->GetBoneForWrite(i) );
+	}
+}
+
+void CBoneSnapshot::InitWeightList( void )
+{
+	if ( !m_pEnt )
+		return;
+
+	const model_t *pModel = m_pEnt->GetModel();
+	if ( !pModel )
+		return;
+
+	KeyValues *pModelKV = modelinfo->GetModelKeyValues( pModel );
+	if ( !pModelKV )
+		return;
+
+	pModelKV = pModelKV->FindKey( m_szWeightlistName );
+	if ( !pModelKV )
+		return;
+
+	for ( int i=0; i<MAXSTUDIOBONES; i++ )
+		m_Weightlist[i] = 1;
+
+	FOR_EACH_SUBKEY( pModelKV, pBoneWeightKV )
+	{
+		int nBoneIdx = m_pEnt->LookupBone( pBoneWeightKV->GetName() );
+		if ( nBoneIdx >= 0 && nBoneIdx < MAXSTUDIOBONES )
+		{
+			m_Weightlist[ nBoneIdx ] = pBoneWeightKV->GetFloat();
+			//DevMsg( "Populating weightlist bone: %s (index %i) -> [%f]\n", pBoneWeightKV->GetName(), nBoneIdx, m_Weightlist[ nBoneIdx ] );
+		}
+	}
+
+	m_bWeightlistInitialized = true;
+}
+
+bool C_CSPlayer::IsAnyBoneSnapshotPending( void )
+{
+	return ( m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].IsCapturePending() || m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].IsCapturePending() );
+}
+
+#define CS_ARM_HYPEREXTENSION_LIM 22.0f
+#define CS_ARM_HYPEREXTENSION_LIM_SQR 484.0f
+#define cl_player_toe_length 4.5
+void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext )
+{
+	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
+		return;
+	
+	if ( !IsVisible() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
+		return;
+
+	mstudioikchain_t *pLeftArmChain = NULL;
+
+	int nLeftHandBoneIndex = LookupBone( "hand_L" );
+
+	Assert( nLeftHandBoneIndex != -1 );
+
+	for( int i = 0; i < pStudioHdr->numikchains(); i++ )
+	{
+		mstudioikchain_t *pchain = pStudioHdr->pIKChain( i );
+		if ( nLeftHandBoneIndex == pchain->pLink( 2 )->bone )
+		{
+			pLeftArmChain = pchain;
+		}
+	}
+
+	int nLeftHandIkBoneDriver = LookupBone( "lh_ik_driver" );
+	if ( nLeftHandIkBoneDriver > 0 && pos[nLeftHandIkBoneDriver].x > 0 )
+	{
+		MDLCACHE_CRITICAL_SECTION();
+
+		int nRightHandWepBoneIndex = LookupBone( "weapon_hand_R" );
+		if ( nRightHandWepBoneIndex > 0 )
+		{
+			// early out if the bone isn't in the ikcontext mask
+			CStudioHdr *pPlayerHdr = GetModelPtr();
+			if ( !(pPlayerHdr->boneFlags( nRightHandWepBoneIndex ) & pIKContext->GetBoneMask()) )
+				return;
+
+			C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
+			if ( pWeapon )
+			{
+				CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
+				if ( pWeaponWorldModel && pWeaponWorldModel->IsVisible() && pWeaponWorldModel->GetLeftHandAttachBoneIndex() != -1 )
+				{
+					int nWepAttach = pWeaponWorldModel->GetLeftHandAttachBoneIndex();
+					if ( nWepAttach > -1 )
+					{
+						CStudioHdr *pHdr = pWeaponWorldModel->GetModelPtr();
+						if ( pHdr->boneParent( nWepAttach ) != -1 && pWeaponWorldModel->isBoneAvailableForRead(nWepAttach) )
+						{
+							pIKContext->BuildBoneChain( pos, q, nRightHandWepBoneIndex, boneToWorld, boneComputed );
+
+							// Turns out the weapon hand attachment bone is sometimes expected to independently animate.
+							// hack: derive the local position offset from cached bones, since otherwise the weapon (a child of the 
+							// player) will try and set up the player before itself, then place itself in the wrong spot relative to
+							// the player that's in the position we're setting up NOW
+							Vector vecRelTarget;
+							int nParent = pHdr->pBone(nWepAttach)->parent;
+							if ( nParent != -1 )
+							{
+								matrix3x4_t matAttach;
+								pWeaponWorldModel->GetCachedBoneMatrix( nWepAttach, matAttach );
+								
+								matrix3x4_t matAttachParent;
+								pWeaponWorldModel->GetCachedBoneMatrix( nParent, matAttachParent );
+
+								matrix3x4_t matRel = ConcatTransforms( matAttachParent.InverseTR(), matAttach );
+								vecRelTarget = matRel.GetOrigin();
+							}
+							else
+							{
+								vecRelTarget = pHdr->pBone(nWepAttach)->pos;
+							}
+
+							Vector vecLHandAttach = boneToWorld[nRightHandWepBoneIndex].TransformVector( vecRelTarget );
+							Vector vecTarget = Lerp( pos[nLeftHandIkBoneDriver].x, boneToWorld[nLeftHandBoneIndex].GetOrigin(), vecLHandAttach );
+
+							// let the ik fail gracefully with an elastic-y pull instead of hyper-extension
+							float flDist = vecTarget.DistToSqr( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin() );
+							if ( flDist > CS_ARM_HYPEREXTENSION_LIM_SQR )
+							{
+								// HACK: force a valid elbow dir (down z)
+								boneToWorld[pLeftArmChain->pLink( 1 )->bone][2][3] -= 0.5f;
+
+								Vector vecShoulderToHand = (vecTarget - boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin()).Normalized() * CS_ARM_HYPEREXTENSION_LIM;
+								vecTarget = vecShoulderToHand + boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin();							
+							}
+
+							//debugoverlay->AddBoxOverlay( vecTarget, Vector(-0.1,-0.1,-0.1), Vector(0.1,0.1,0.1), QAngle(0,0,0), 0,255,0,255, 0 );
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), 80,80,80,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 80,80,80,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 80,80,80,true,0);
+
+							Studio_SolveIK( pLeftArmChain->pLink( 0 )->bone, pLeftArmChain->pLink( 1 )->bone, pLeftArmChain->pLink( 2 )->bone, vecTarget, boneToWorld );
+
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), 255,0,0,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 1 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 255,0,0,true,0);
+							//debugoverlay->AddLineOverlay( boneToWorld[pLeftArmChain->pLink( 0 )->bone].GetOrigin(), boneToWorld[pLeftArmChain->pLink( 2 )->bone].GetOrigin(), 0,0,255,true,0);
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 bool FindWeaponAttachmentBone( C_BaseCombatWeapon *pWeapon, int &iWeaponBone )
@@ -2832,104 +3424,35 @@ void ApplyDifferenceTransformToChildren(
 }
 
 
-void GetCorrectionMatrices(
-	const matrix3x4_t &mShoulder,
-	const matrix3x4_t &mElbow,
-	const matrix3x4_t &mHand,
-	matrix3x4_t &mShoulderCorrection,
-	matrix3x4_t &mElbowCorrection
-	)
-{
-	extern void Studio_AlignIKMatrix( matrix3x4_t &mMat, const Vector &vAlignTo );
-
-	// Get the positions of each node so we can get the direction vectors.
-	Vector vShoulder, vElbow, vHand;
-	MatrixPosition( mShoulder, vShoulder );
-	MatrixPosition( mElbow, vElbow );
-	MatrixPosition( mHand, vHand );
-
-	// Get rid of the translation.
-	matrix3x4_t mOriginalShoulder = mShoulder;
-	matrix3x4_t mOriginalElbow = mElbow;
-	MatrixSetColumn( Vector( 0, 0, 0 ), 3, mOriginalShoulder );
-	MatrixSetColumn( Vector( 0, 0, 0 ), 3, mOriginalElbow );
-
-	// Let the IK code align them like it would if we did IK on the joint.
-	matrix3x4_t mAlignedShoulder = mOriginalShoulder;
-	matrix3x4_t mAlignedElbow = mOriginalElbow;
-	Studio_AlignIKMatrix( mAlignedShoulder, vElbow-vShoulder );
-	Studio_AlignIKMatrix( mAlignedElbow, vHand-vElbow );
-
-	// Figure out the transformation from the aligned bones to the original ones.
-	matrix3x4_t mInvAlignedShoulder, mInvAlignedElbow;
-	MatrixInvert( mAlignedShoulder, mInvAlignedShoulder );
-	MatrixInvert( mAlignedElbow, mInvAlignedElbow );
-
-	ConcatTransforms( mInvAlignedShoulder, mOriginalShoulder, mShoulderCorrection );
-	ConcatTransforms( mInvAlignedElbow, mOriginalElbow, mElbowCorrection );
-}
-
-
 void C_CSPlayer::BuildTransformations( CStudioHdr *pHdr, Vector *pos, Quaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed )
 {
 	// First, setup our model's transformations like normal.
 	BaseClass::BuildTransformations( pHdr, pos, q, cameraTransform, boneMask, boneComputed );
 
+	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
+		return;
+
 	if ( !IsVisible() || IsDormant() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
 
-	if ( !cl_left_hand_ik.GetInt() )
-		return;
+	if ( boneMask == BONE_USED_BY_ATTACHMENT )
+		return; // we're only building transformations to get attachment positions. No need to update bone snapshots now.
 
-	// If our current weapon has a bone named L_Hand_Attach, then we attach the player's
-	// left hand (Valvebiped.Bip01_L_Hand) to it.
-	C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
-
-	if ( !pWeapon )
-		return;
-
-	// Have the weapon setup its bones.
-	pWeapon->SetupBones( NULL, 0, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
-
-	int iWeaponBone = 0;
-	if ( FindWeaponAttachmentBone( pWeapon, iWeaponBone ) )
+	// process bone snapshots
 	{
-		int iMyBone = 0;
-		if ( FindMyAttachmentBone( this, iMyBone, pHdr ) )
-		{
-			int iHand = iMyBone;
-			int iElbow = pHdr->pBone( iHand )->parent;
-			int iShoulder = pHdr->pBone( iElbow )->parent;
-			matrix3x4_t *pBones = &GetBoneForWrite( 0 );
+		int oldWritableBones = m_BoneAccessor.GetReadableBones();
+		m_BoneAccessor.SetWritableBones( BONE_USED_BY_ANYTHING );
+		int oldReadableBones = m_BoneAccessor.GetReadableBones();
+		m_BoneAccessor.SetReadableBones( BONE_USED_BY_ANYTHING );
 
-			// Store off the original hand position.
-			matrix3x4_t mSource = pBones[iHand];
+		m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].Update( this );
+		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].Update( this );
 
+		m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetLastBoneSetupTimeIndex();
+		m_boneSnapshots[BONESNAPSHOT_UPPER_BODY].SetLastBoneSetupTimeIndex();
 
-			// Figure out the rotation offset from the current shoulder and elbow bone rotations
-			// and what the IK code's alignment code is going to produce, because we'll have to
-			// re-apply that offset after the IK runs.
-			matrix3x4_t mShoulderCorrection, mElbowCorrection;
-			GetCorrectionMatrices( pBones[iShoulder], pBones[iElbow], pBones[iHand], mShoulderCorrection, mElbowCorrection );
-
-
-			// Do the IK solution.
-			Vector vHandTarget;
-			MatrixPosition( pWeapon->GetBone( iWeaponBone ), vHandTarget );
-			Studio_SolveIK( iShoulder, iElbow, iHand, vHandTarget, pBones );
-
-
-			// Now reapply the rotation correction.
-			matrix3x4_t mTempShoulder = pBones[iShoulder];
-			matrix3x4_t mTempElbow = pBones[iElbow];
-			ConcatTransforms( mTempShoulder, mShoulderCorrection, pBones[iShoulder] );
-			ConcatTransforms( mTempElbow, mElbowCorrection, pBones[iElbow] );
-
-
-			// Now apply the transformation on the hand to the fingers.
-			matrix3x4_t &mDest = GetBoneForWrite( iHand );
-			ApplyDifferenceTransformToChildren( this, mSource, mDest, iHand );
-		}
+		m_BoneAccessor.SetWritableBones( oldWritableBones );
+		m_BoneAccessor.SetReadableBones( oldReadableBones );
 	}
 }
 
@@ -3010,6 +3533,11 @@ void C_CSPlayer::PlayReloadEffect()
 
 void C_CSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 {
+	if ( m_bUseNewAnimstate )
+	{
+		return;
+	}
+
 	if ( event == PLAYERANIMEVENT_THROW_GRENADE )
 	{
 		// Let the server handle this event. It will update m_iThrowGrenadeCounter and the client will
@@ -3038,13 +3566,30 @@ void C_CSPlayer::DropPhysicsMag( const char *options )
 	// find the best attachment position to drop the mag from
 
 	int iMagAttachIndex = -1;
+	CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
 
 	if ( options && options[0] != 0 )
 	{
 		// if a custom attachment is specified, look for it on the weapon, then the player.
-		iMagAttachIndex = pWeapon->LookupAttachment( options );
+		if ( pWeaponWorldModel )
+			iMagAttachIndex = pWeaponWorldModel->LookupAttachment( options );
 		if ( iMagAttachIndex <= 0 )
 			iMagAttachIndex = LookupAttachment( options );
+	}
+
+	if ( iMagAttachIndex <= 0 )
+	{
+		// we either didn't specify a custom attachment, or the one we did wasn't found. Find the default, 'mag_eject' on the weapon, then the player.
+		if ( pWeaponWorldModel )
+			iMagAttachIndex = pWeaponWorldModel->LookupAttachment( "mag_eject" );
+		if ( iMagAttachIndex <= 0 )
+			iMagAttachIndex = LookupAttachment( "mag_eject" );
+	}
+
+	if ( iMagAttachIndex <= 0 && pWeaponWorldModel )
+	{
+		// no luck looking for the custom attachment, or "mag_eject". How about "shell_eject"? Wrong, but better than nothing...
+		iMagAttachIndex = pWeaponWorldModel->LookupAttachment( "shell_eject" );
 	}
 
 	if ( iMagAttachIndex <= 0 )
@@ -3076,14 +3621,15 @@ void C_CSPlayer::DropPhysicsMag( const char *options )
 
 	if ( !IsDormant() )
 	{
-		if ( !pWeapon->GetAttachment( iMagAttachIndex, attachOrigin, attachAngles ) )
+		if ( pWeaponWorldModel )
+		{
+			pWeaponWorldModel->GetAttachment( iMagAttachIndex, attachOrigin, attachAngles );
+		}
+		else
 		{
 			GetAttachment( iMagAttachIndex, attachOrigin, attachAngles );
 		}
 	}
-
-	// hide the animation-driven w_model magazine
-	pWeapon->SetBodygroup( FindBodygroupByName( "magazine" ), 1 );
 
 	// The local first-person player can't drop mags in the correct world-space location, otherwise the mag would appear in mid-air.
 	// Instead, first try to drop the mag slightly above the origin of the player.
@@ -3131,7 +3677,11 @@ void C_CSPlayer::DropPhysicsMag( const char *options )
 		{
 			Vector vecMagVelocity; vecMagVelocity.Init();
 			Quaternion quatMagAngular; quatMagAngular.Init();
-			if ( !pWeapon->GetAttachmentVelocity( iMagAttachIndex, vecMagVelocity, quatMagAngular ) )
+			if ( pWeaponWorldModel )
+			{
+				pWeaponWorldModel->GetAttachmentVelocity( iMagAttachIndex, vecMagVelocity, quatMagAngular );
+			}
+			else
 			{
 				GetAttachmentVelocity( iMagAttachIndex, vecMagVelocity, quatMagAngular );
 			}
@@ -3227,17 +3777,26 @@ void C_CSPlayer::FireEvent( const Vector& origin, const QAngle& angles, int even
 	}
 	else if ( event == AE_CL_EJECT_MAG )
 	{
-		DropPhysicsMag( options );
-
-		// hack: in first-person, the player isn't playing their third-person gun animations, so the events on the third-person gun model don't fire.
-		// This means the event is fired from the player, and the player only fires ONE mag drop event. So while the elite model drops two data-driven mags
-		// in third person, we need to help it out a little bit in first-person. So here's some one-off code to drop another physics mag only for the elite,
-		// and only in first-person.
-
-		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
-		if ( pWeapon && pWeapon->IsA(WEAPON_ELITE) )
+		CAnimationLayer *pWeaponLayer = GetAnimOverlay( ANIMATION_LAYER_WEAPON_ACTION );
+		if ( pWeaponLayer && pWeaponLayer->m_nDispatchedDst != ACT_INVALID )
 		{
-			DropPhysicsMag( "mag_eject2" );
+			// let the weapon drop the mag
+		}
+		else
+		{
+			DropPhysicsMag( options );
+
+			// hack: in first-person, the player isn't playing their third-person gun animations, so the events on the third-person gun model don't fire.
+			// This means the event is fired from the player, and the player only fires ONE mag drop event. So while the elite model drops two data-driven mags
+			// in third person, we need to help it out a little bit in first-person. So here's some one-off code to drop another physics mag only for the elite,
+			// and only in first-person.
+
+			CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+			if ( pWeapon && pWeapon->IsA(WEAPON_ELITE) )
+			{
+				DropPhysicsMag( "mag_eject2" );
+			}
+
 		}
 		return;
 	}

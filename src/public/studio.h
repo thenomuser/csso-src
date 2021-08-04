@@ -27,6 +27,7 @@
 #include "generichash.h"
 #include "localflexcontroller.h"
 #include "utlsymbol.h"
+#include "utldict.h"
 
 #define STUDIO_ENABLE_PERF_COUNTERS
 
@@ -401,7 +402,8 @@ private:
 #define BONE_FIXED_ALIGNMENT		0x00100000	// bone can't spin 360 degrees, all interpolation is normalized around a fixed orientation
 
 #define BONE_HAS_SAVEFRAME_POS		0x00200000	// Vector48
-#define BONE_HAS_SAVEFRAME_ROT		0x00400000	// Quaternion64
+#define BONE_HAS_SAVEFRAME_ROT64	0x00400000	// Quaternion64
+#define BONE_HAS_SAVEFRAME_ROT32	0x00800000	// Quaternion32
 
 // bone controllers
 struct mstudiobonecontroller_t
@@ -422,10 +424,12 @@ struct mstudiobbox_t
 	DECLARE_BYTESWAP_DATADESC();
 	int					bone;
 	int					group;				// intersection group
-	Vector				bbmin;				// bounding box
+	Vector				bbmin;				// bounding box, or the ends of the capsule if flCapsuleRadius > 0 
 	Vector				bbmax;	
 	int					szhitboxnameindex;	// offset to the name of the hitbox.
-	int					unused[8];
+	QAngle				angOffsetOrientation;
+	float				flCapsuleRadius;
+	int					unused[4];
 
 	const char* pszHitboxName()
 	{
@@ -456,6 +460,17 @@ struct mstudiomodelgrouplookup_t
 {
 	int					modelgroup;
 	int					indexwithingroup;
+};
+
+// animtags
+struct mstudioanimtag_t
+{
+	DECLARE_BYTESWAP_DATADESC();
+	int					tag;
+	float				cycle;
+
+	int					sztagindex;
+	inline char * const pszTagName( void ) const { return ((char *)this) + sztagindex; }
 };
 
 // events
@@ -570,6 +585,17 @@ struct mstudioikrule_t
 private:
 	// No copy constructors allowed
 	mstudioikrule_t(const mstudioikrule_t& vOther);
+};
+
+
+struct mstudioikrulezeroframe_t
+{
+	short		chain;
+	short		slot;
+	float16		start;	// beginning of influence
+	float16		peak;	// start of full influence
+	float16		tail;	// end of full influence
+	float16		end;	// end of all influence
 };
 
 
@@ -706,7 +732,10 @@ struct mstudioanimdesc_t
 	int					movementindex;
 	inline mstudiomovement_t * const pMovement( int i ) const { return (mstudiomovement_t *)(((byte *)this) + movementindex) + i; };
 
-	int					unused1[6];			// remove as appropriate (and zero if loading older versions)	
+	int					ikrulezeroframeindex;
+	mstudioikrulezeroframe_t *pIKRuleZeroFrame( int i ) const { if (ikrulezeroframeindex) return (mstudioikrulezeroframe_t *)(((byte *)this) + ikrulezeroframeindex) + i; else return NULL; };
+
+	int					unused1[5];			// remove as appropriate (and zero if loading older versions)	
 
 	int					animblock;
 	int					animindex;	 // non-zero when anim data isn't in sections
@@ -863,7 +892,13 @@ struct mstudioseqdesc_t
 	int					numactivitymodifiers;
 	inline mstudioactivitymodifier_t *pActivityModifier( int i ) const { Assert( i >= 0 && i < numactivitymodifiers); return activitymodifierindex != 0 ? (mstudioactivitymodifier_t *)(((byte *)this) + activitymodifierindex) + i : NULL; };
 
-	int					unused[5];		// remove/add as appropriate (grow back to 8 ints on version change!)
+	int					animtagindex;
+	int					numanimtags;
+	inline mstudioanimtag_t *pAnimTag( int i ) const { Assert( i >= 0 && i < numanimtags); return (mstudioanimtag_t *)(((byte *)this) + animtagindex) + i; };
+
+	int					rootDriverIndex;
+
+	int					unused[2];		// remove/add as appropriate (grow back to 8 ints on version change!)
 
 	mstudioseqdesc_t(){}
 private:
@@ -2498,6 +2533,8 @@ public:
 
 public:
 	inline int boneFlags( int iBone ) const { return m_boneFlags[ iBone ]; }
+	void setBoneFlags( int iBone, int flags );
+	void clearBoneFlags( int iBone, int flags );
 	inline int boneParent( int iBone ) const { return m_boneParent[ iBone ]; }
 
 private:
@@ -2708,6 +2745,12 @@ public:
 	{
 		m_ActivityToSequence.Reinitialize(this);
 	}
+
+public:
+	int LookupSequence( const char *pszName );
+
+private:
+	CUtlDict<int,int> m_namedSequence;
 
 #ifdef STUDIO_ENABLE_PERF_COUNTERS
 public:
@@ -2984,6 +3027,8 @@ inline const mstudioflexcontroller_t *mstudioflexcontrollerui_t::pController( in
 #define STUDIO_ACTIVITY	0x1000		// Has been updated at runtime to activity index
 #define STUDIO_EVENT	0x2000		// Has been updated at runtime to event index
 #define STUDIO_WORLD	0x4000		// sequence blends in worldspace
+#define STUDIO_WORLD_AND_RELATIVE 0x20000 // do worldspace blend, then do normal blend on top
+#define STUDIO_ROOTXFORM 0x40000	// sequence wants to derive a root re-xform from a given bone
 // autolayer flags
 //							0x0001
 //							0x0002

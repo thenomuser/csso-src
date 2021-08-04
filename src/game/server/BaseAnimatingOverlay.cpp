@@ -12,6 +12,9 @@
 #include "bone_setup.h"
 #include "ai_basenpc.h"
 #include "npcevent.h"
+#ifdef CSTRIKE_DLL
+#include "cs_player.h"
+#endif
 
 #include "saverestore_utlvector.h"
 #include "dt_utlvector_send.h"
@@ -33,6 +36,7 @@ BEGIN_SIMPLE_DATADESC( CAnimationLayer )
 	DEFINE_FIELD( m_flPrevCycle, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flPlaybackRate, FIELD_FLOAT),
 	DEFINE_FIELD( m_flWeight, FIELD_FLOAT),
+	DEFINE_FIELD( m_flWeightDeltaRate, FIELD_FLOAT),
 	DEFINE_FIELD( m_flBlendIn, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flBlendOut, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flKillRate, FIELD_FLOAT ),
@@ -64,8 +68,10 @@ END_DATADESC()
 BEGIN_SEND_TABLE_NOBASE(CAnimationLayer, DT_Animationlayer)
 	SendPropInt		(SENDINFO(m_nSequence),		ANIMATION_SEQUENCE_BITS,SPROP_UNSIGNED),
 	SendPropFloat	(SENDINFO(m_flCycle),		ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
+	SendPropFloat	(SENDINFO(m_flPlaybackRate),WEIGHT_BITS,			SPROP_NOSCALE ),
 	SendPropFloat	(SENDINFO(m_flPrevCycle),	ANIMATION_CYCLE_BITS,	SPROP_ROUNDDOWN,	0.0f,   1.0f),
 	SendPropFloat	(SENDINFO(m_flWeight),		WEIGHT_BITS,			0,	0.0f,	1.0f),
+	SendPropFloat	(SENDINFO(m_flWeightDeltaRate),WEIGHT_BITS,			SPROP_NOSCALE ),
 	SendPropInt		(SENDINFO(m_nOrder),		ORDER_BITS,				SPROP_UNSIGNED),
 END_SEND_TABLE()
 
@@ -91,30 +97,37 @@ CAnimationLayer::CAnimationLayer( )
 	Init( NULL );
 }
 
+// 7LS - using '=' operator on a NetworkVar will call the Set(x) fn, which does a comparison of 'x' against the current value to determine if the network state
+// needs to change. If the var is a float, and the memory contains NaN's the comp will always fail, so the var will never be set to x 
+// Calling SetDirect will always assign the var and flag the network state as changed, since it avoids the compare.
+// This should probably be done everywhere float NetworkVar's are initialized if memory is not guaranteed to have been prepared appropriately.
 
 void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 {
 	m_pOwnerEntity = pOverlay;
 	m_fFlags = 0;
-	m_flWeight = 0;
-	m_flCycle = 0;
-	m_flPrevCycle = 0;
+	m_flWeight.SetDirect( 0.0f );
+	m_flWeightDeltaRate.SetDirect( 0.0f );
+	m_flCycle.SetDirect( 0.0f );
+	m_flPrevCycle.SetDirect( 0.0f );
 	m_bSequenceFinished = false;
 	m_nActivity = ACT_INVALID;
 	m_nSequence = 0;
 	m_nPriority = 0;
 	m_nOrder.Set( CBaseAnimatingOverlay::MAX_OVERLAYS );
-
-	m_flBlendIn = 0.0;
-	m_flBlendOut = 0.0;
-
 	m_flKillRate = 100.0;
 	m_flKillDelay = 0.0;
-	m_flPlaybackRate = 1.0;
-	m_flLastEventCheck = 0.0;
+	m_flPlaybackRate.SetDirect( 1.0f );
 	m_flLastAccess = gpGlobals->curtime;
 	m_flLayerAnimtime = 0;
 	m_flLayerFadeOuttime = 0;
+	m_bLooping	= false;
+	m_flBlendIn = 0.0f;
+	m_flBlendOut = 0.0f;
+	m_flLastEventCheck = 0.0f;
+	m_pDispatchedStudioHdr = NULL;
+	m_nDispatchedSrc = ACT_INVALID;
+	m_nDispatchedDst = ACT_INVALID;
 }
 
 
@@ -126,7 +139,7 @@ void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 
 void CAnimationLayer::StudioFrameAdvance( float flInterval, CBaseAnimating *pOwner )
 {
-	float flCycleRate = pOwner->GetSequenceCycleRate( m_nSequence );
+	float flCycleRate = pOwner->GetLayerSequenceCycleRate( this, m_nSequence );
 
 	m_flPrevCycle = m_flCycle;
 	m_flCycle += flInterval * flCycleRate * m_flPlaybackRate;
@@ -200,6 +213,70 @@ void CAnimationLayer::MarkActive( void )
 }
 
 //------------------------------------------------------------------------------
+ConVar debug_dispatch_server_dump( "debug_dispatch_server_dump", "0" );
+void CBaseAnimatingOverlay::AccumulateDispatchedLayers( CBaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, Vector pos[], Quaternion q[], float currentTime )
+{
+	if ( !pWeapon->m_pBoneMergeCache )
+		return;
+
+	// copy matching player pose params to weapon pose params
+	pWeapon->m_pBoneMergeCache->MergeMatchingPoseParams();
+	//float		poseparam[MAXSTUDIOPOSEPARAM];
+	//pWeapon->GetPoseParameters( pWeaponStudioHdr, poseparam );
+
+	// build a temporary setup for the weapon
+	CIKContext weaponIK;
+	weaponIK.Init( pWeaponStudioHdr, GetAbsAngles(), GetAbsOrigin(), gpGlobals->curtime, 0, BONE_USED_BY_BONE_MERGE );
+
+	IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, pWeapon->GetPoseParameterArray() );
+	Vector weaponPos[MAXSTUDIOBONES];
+	Quaternion weaponQ[MAXSTUDIOBONES];
+
+	// copy player bones to weapon setup bones
+	pWeapon->m_pBoneMergeCache->CopyFromFollow( pos, q, BONE_USED_BY_BONE_MERGE, weaponPos, weaponQ );
+
+	// do layer animations
+	// FIXME: some of the layers are player layers, not weapon layers
+	// FIXME: how to interleave?
+	for ( int i=0; i < GetNumAnimOverlays(); i++ )
+	{
+		CAnimationLayer *pLayer = GetAnimOverlay( i );
+		if ( pLayer->m_nOrder >= MAX_OVERLAYS || pLayer->GetSequence() <= 1 || pLayer->GetWeight() <= 0.0f )
+			continue;
+
+		UpdateDispatchLayer( pLayer, pWeaponStudioHdr, pLayer->GetSequence() );
+
+		if ( pLayer->m_nDispatchedDst > 0 && pLayer->m_nDispatchedDst < pWeaponStudioHdr->GetNumSeq() )
+		{
+			weaponSetup.AccumulatePose( weaponPos, weaponQ, pLayer->m_nDispatchedDst, pLayer->GetCycle(), pLayer->GetWeight(), currentTime, &weaponIK );
+
+			if ( debug_dispatch_server_dump.GetBool() )
+			{
+				Msg( "Dispatch layer sequence: %s\n", pWeapon->GetSequenceName( pLayer->m_nDispatchedDst ) );
+			}
+
+		}
+	}
+
+	if ( debug_dispatch_server_dump.GetBool() )
+	{
+		debug_dispatch_server_dump.SetValue( 0 );
+	}
+
+	// FIXME: merge weaponIK into m_pIK
+
+	//CBoneBitList boneComputed;
+	//
+	//pWeapon->CalculateIKLocks( currentTime );
+	////pWeapon->UpdateIKLocks( currentTime );
+	//weaponIK.UpdateTargets( weaponPos, weaponQ, pWeapon->m_BoneAccessor.GetBoneArrayForWrite(), boneComputed );
+	//
+	//pWeapon->CalculateIKLocks( currentTime );
+	//weaponIK.SolveDependencies( weaponPos, weaponQ, pWeapon->m_BoneAccessor.GetBoneArrayForWrite(), boneComputed );
+
+	// merge weapon bones back
+	pWeapon->m_pBoneMergeCache->CopyToFollow( weaponPos, weaponQ, BONE_USED_BY_BONE_MERGE, pos, q );
+}
 
 void CBaseAnimatingOverlay::VerifyOrder( void )
 {
@@ -251,6 +328,21 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 	}
 	*/
 #endif
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Sets the entity's model, clearing animation data
+// Input  : *szModelName - 
+//-----------------------------------------------------------------------------
+void CBaseAnimatingOverlay::SetModel( const char *szModelName )
+{
+	for ( int j=0; j<m_AnimOverlay.Count(); ++j )
+	{
+		m_AnimOverlay[j].Init( this );
+	}
+
+	BaseClass::SetModel( szModelName );
 }
 
 
@@ -378,7 +470,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		return;
 	}
 
-	if ( m_nSequence >= pstudiohdr->GetNumSeq() )
+	if ( m_nSequence < 0 || m_nSequence >= pstudiohdr->GetNumSeq() )
 		return;
 	
 	// don't fire if here are no events
@@ -399,7 +491,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		if (flEnd >= flLastVisibleCycle || flEnd < 0.0) 
 		{
 			m_bSequenceFinished = true;
-			flEnd = 1.0f;
+			flEnd = 1.01f;
 		}
 	}
 	m_flLastEventCheck = flEnd;
@@ -450,16 +542,21 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Q
 	IBoneSetup boneSetup( pStudioHdr, boneMask, GetPoseParameterArray() );
 	boneSetup.InitPose( pos, q );
 
+	if ( !m_pIk )
+	{
+		EnableServerIK();
+		m_pIk->Init( pStudioHdr, GetAbsAngles(), GetAbsOrigin(), gpGlobals->curtime, 0, BONE_USED_BY_BONE_MERGE );
+	}
+
 	boneSetup.AccumulatePose( pos, q, GetSequence(), GetCycle(), 1.0, gpGlobals->curtime, m_pIk );
 
 	// sort the layers
 	int layer[MAX_OVERLAYS] = {};
-	int i;
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < m_AnimOverlay.Count(); i++)
 	{
 		layer[i] = MAX_OVERLAYS;
 	}
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < m_AnimOverlay.Count(); i++)
 	{
 		CAnimationLayer &pLayer = m_AnimOverlay[i];
 		if( (pLayer.m_flWeight > 0) && pLayer.IsActive() && pLayer.m_nOrder >= 0 && pLayer.m_nOrder < m_AnimOverlay.Count())
@@ -467,13 +564,101 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, Vector pos[], Q
 			layer[pLayer.m_nOrder] = i;
 		}
 	}
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+
+#ifdef CSTRIKE_DLL
+	// check if this is a player with a valid weapon
+	// look for weapon, pull layer animations from it if/when they exist
+	CBaseCombatWeapon *pWeapon = NULL;
+	CBaseWeaponWorldModel *pWeaponWorldModel = NULL;
+
+	bool bDoWeaponSetup = false;
+
+	if ( this->IsPlayer() )
 	{
-		if (layer[i] >= 0 && layer[i] < m_AnimOverlay.Count())
+		CCSPlayer *pPlayer = ToCSPlayer(this);
+		if ( pPlayer && pPlayer->m_bUseNewAnimstate )
 		{
-			CAnimationLayer &pLayer = m_AnimOverlay[layer[i]];
-			// UNDONE: Is it correct to use overlay weight for IK too?
-			boneSetup.AccumulatePose( pos, q, pLayer.m_nSequence, pLayer.m_flCycle, pLayer.m_flWeight, gpGlobals->curtime, m_pIk );
+			pWeapon = pPlayer->GetActiveWeapon();
+			if ( pWeapon )
+			{
+				pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
+				if ( pWeaponWorldModel && 
+					 pWeaponWorldModel->GetModelPtr() && 
+					 pWeaponWorldModel->HoldsPlayerAnimations() )
+				{
+
+					if ( !pWeaponWorldModel->m_pBoneMergeCache )
+					{
+						pWeaponWorldModel->m_pBoneMergeCache = new CBoneMergeCache;
+						pWeaponWorldModel->m_pBoneMergeCache->Init( pWeaponWorldModel );
+					}
+
+					if ( pWeaponWorldModel->m_pBoneMergeCache )
+						bDoWeaponSetup = true;
+				}
+			}
+		}
+	}
+	
+	if ( bDoWeaponSetup )
+	{
+		CStudioHdr *pWeaponStudioHdr = pWeaponWorldModel->GetModelPtr();
+
+		// copy matching player pose params to weapon pose params
+		pWeaponWorldModel->m_pBoneMergeCache->MergeMatchingPoseParams();
+		
+		// build a temporary setup for the weapon
+		CIKContext weaponIK;
+		weaponIK.Init( pWeaponStudioHdr, GetAbsAngles(), GetAbsOrigin(), gpGlobals->curtime, 0, BONE_USED_BY_BONE_MERGE );
+
+		IBoneSetup weaponSetup( pWeaponStudioHdr, BONE_USED_BY_BONE_MERGE, pWeaponWorldModel->GetPoseParameterArray() );
+		Vector weaponPos[MAXSTUDIOBONES];
+		Quaternion weaponQ[MAXSTUDIOBONES];
+
+		weaponSetup.InitPose( weaponPos, weaponQ );
+
+		for ( int i=0; i < GetNumAnimOverlays(); i++ )
+		{
+			CAnimationLayer *pLayer = GetAnimOverlay( i );
+			if ( pLayer->GetSequence() <= 1 || pLayer->GetWeight() <= 0.0f )
+				continue;
+
+			UpdateDispatchLayer( pLayer, pWeaponStudioHdr, pLayer->GetSequence() );
+
+			if ( pLayer->m_nDispatchedDst > 0 && pLayer->m_nDispatchedDst < pWeaponStudioHdr->GetNumSeq() )
+			{
+				// copy player bones to weapon setup bones
+				pWeaponWorldModel->m_pBoneMergeCache->CopyFromFollow( pos, q, BONE_USED_BY_BONE_MERGE, weaponPos, weaponQ );
+
+				// respect ik rules on archetypal sequence, even if we're not playing it
+				if ( m_pIk )
+				{
+					mstudioseqdesc_t &seqdesc = pStudioHdr->pSeqdesc( pLayer->GetSequence() );
+					m_pIk->AddDependencies( seqdesc, pLayer->GetSequence(), pLayer->GetCycle(), GetPoseParameterArray(), pLayer->GetWeight() );
+				}
+
+				weaponSetup.AccumulatePose( weaponPos, weaponQ, pLayer->m_nDispatchedDst, pLayer->GetCycle(), pLayer->GetWeight(), gpGlobals->curtime, &weaponIK );
+				pWeaponWorldModel->m_pBoneMergeCache->CopyToFollow( weaponPos, weaponQ, BONE_USED_BY_BONE_MERGE, pos, q );
+
+				weaponIK.CopyTo( m_pIk, pWeaponWorldModel->m_pBoneMergeCache->GetRawIndexMapping() );
+			}
+			else
+			{
+				boneSetup.AccumulatePose( pos, q, pLayer->GetSequence(), pLayer->GetCycle(), pLayer->GetWeight(), gpGlobals->curtime, m_pIk );
+			}
+		}
+	}
+	else
+#endif
+	{
+		for (int i = 0; i < m_AnimOverlay.Count(); i++)
+		{
+			if (layer[i] >= 0 && layer[i] < m_AnimOverlay.Count())
+			{
+				CAnimationLayer &pLayer = m_AnimOverlay[layer[i]];
+				// UNDONE: Is it correct to use overlay weight for IK too?
+				boneSetup.AccumulatePose( pos, q, pLayer.m_nSequence, pLayer.m_flCycle, pLayer.m_flWeight, gpGlobals->curtime, m_pIk );
+			}
 		}
 	}
 
@@ -717,6 +902,7 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 
 		iOpenLayer = m_AnimOverlay.AddToTail();
 		m_AnimOverlay[iOpenLayer].Init( this );
+		m_AnimOverlay[iOpenLayer].NetworkStateChanged();
 	}
 
 	// make sure there's always an empty unused layer so that history slots will be available on the client when it is used
@@ -726,6 +912,7 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 		{
 			i = m_AnimOverlay.AddToTail();
 			m_AnimOverlay[i].Init( this );
+			m_AnimOverlay[i].NetworkStateChanged();
 		}
 	}
 
@@ -1132,9 +1319,21 @@ void CBaseAnimatingOverlay::FastRemoveLayer( int iLayer )
 	VerifyOrder();
 }
 
-CAnimationLayer *CBaseAnimatingOverlay::GetAnimOverlay( int iIndex )
+CAnimationLayer *CBaseAnimatingOverlay::GetAnimOverlay( int iIndex, bool bUseOrder )
 {
 	iIndex = clamp( iIndex, 0, m_AnimOverlay.Count()-1 );
+
+	if ( !m_AnimOverlay.Count() )
+		return NULL;
+
+	if ( bUseOrder )
+	{
+		FOR_EACH_VEC( m_AnimOverlay, j )
+		{
+			if ( m_AnimOverlay[j].m_nOrder == iIndex )
+				return &m_AnimOverlay[j];
+		}
+	}
 
 	return &m_AnimOverlay[iIndex];
 }
@@ -1145,10 +1344,12 @@ void CBaseAnimatingOverlay::SetNumAnimOverlays( int num )
 	if ( m_AnimOverlay.Count() < num )
 	{
 		m_AnimOverlay.AddMultipleToTail( num - m_AnimOverlay.Count() );
+		NetworkStateChanged();
 	}
 	else if ( m_AnimOverlay.Count() > num )
 	{
 		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		NetworkStateChanged();
 	}
 }
 
@@ -1161,6 +1362,32 @@ bool CBaseAnimatingOverlay::HasActiveLayer( void )
 	}
 
 	return false;
+}
+
+bool CBaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence )
+{
+	if ( !pWeaponStudioHdr || !pLayer )
+	{
+		if ( pLayer )
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		return false;
+	}	
+
+	if ( pLayer->m_pDispatchedStudioHdr != pWeaponStudioHdr || pLayer->m_nDispatchedSrc != iSequence || pLayer->m_nDispatchedDst >= pWeaponStudioHdr->GetNumSeq() )
+	{
+		pLayer->m_pDispatchedStudioHdr = pWeaponStudioHdr;
+		pLayer->m_nDispatchedSrc = iSequence;
+		if ( pWeaponStudioHdr )
+		{
+			const char *pszLayerName = GetSequenceName( iSequence );
+			pLayer->m_nDispatchedDst = pWeaponStudioHdr->LookupSequence( pszLayerName );
+		}
+		else
+		{
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		}
+	}
+	return (pLayer->m_nDispatchedDst != ACT_INVALID );
 }
 
 //-----------------------------------------------------------------------------

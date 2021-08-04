@@ -99,6 +99,7 @@ float g_flDefaultMotionRollback = 0.3f;
 int g_minSectionFrameLimit = 120;
 int g_sectionFrames = 30;
 bool g_bNoAnimblockStall = false;
+bool g_bZeroFramesHighres = false;
 
 char g_path[MAX_PATH];
 Vector g_vecMinWorldspace = Vector( MIN_COORD_INTEGER, MIN_COORD_INTEGER, MIN_COORD_INTEGER );
@@ -2295,11 +2296,55 @@ int Option_Activity( s_sequence_t *psequence )
 }
 
 
+int Option_ActivityModifier( s_sequence_t *psequence )
+{
+	GetToken(false);
+
+	if (token[0] == '{')
+	{
+		while ( TokenAvailable() )
+		{
+			GetToken( true );
+			if (stricmp("}", token ) == 0)
+				break;
+			
+			strlwr(token);
+			V_strcpy_safe( psequence->activitymodifier[ psequence->numactivitymodifiers++ ].name, token );
+		}
+	}
+	else
+	{
+		strlwr(token);
+		V_strcpy_safe( psequence->activitymodifier[ psequence->numactivitymodifiers++ ].name, token );
+	}
+
+	return 0;
+}
+
+
 /*
 ===============
 ===============
 */
 
+int Option_AnimTag ( s_sequence_t *psequence )
+{
+	if (psequence->numanimtags + 1 >= MAXSTUDIOTAGS)
+	{
+		TokenError("too many animtags\n");
+	}
+
+	GetToken (false);
+	
+	strcpy( psequence->animtags[psequence->numanimtags].tagname, token );
+
+	GetToken( false );
+	psequence->animtags[psequence->numanimtags].cycle = verify_atof( token );
+
+	psequence->numanimtags++;
+
+	return 0;
+}
 
 int Option_Event ( s_sequence_t *psequence )
 {
@@ -2619,6 +2664,10 @@ void Cmd_AnimBlockSize( void )
 		if (!Q_stricmp( token, "nostall" ))
 		{
 			g_bNoAnimblockStall = true;
+		}
+		else if (!Q_stricmp( token, "cachehighres" ))
+		{
+			g_bZeroFramesHighres = true;
 		}
 	}
 }
@@ -4141,7 +4190,10 @@ int ParseSequence( s_sequence_t *pseq, bool isAppend )
 			Option_Deform( pseq );
 		}
 		*/
-
+		else if (stricmp("animtag", token ) == 0)
+		{
+			depth -= Option_AnimTag( pseq );
+		}
 		else if (stricmp("event", token ) == 0)
 		{
 			depth -= Option_Event( pseq );
@@ -4154,6 +4206,10 @@ int ParseSequence( s_sequence_t *pseq, bool isAppend )
 		{
 			UnGetToken( );
 			Option_Activity( pseq );
+		}
+		else if ( (stricmp("activitymodifier", token ) == 0) || (stricmp("actmod", token ) == 0) )
+		{
+			Option_ActivityModifier( pseq );
 		}
 
 		else if (stricmp("snap", token ) == 0)
@@ -4272,6 +4328,20 @@ int ParseSequence( s_sequence_t *pseq, bool isAppend )
 		{
 			pseq->flags |= STUDIO_WORLD;
 			pseq->flags |= STUDIO_POST;
+		}
+		else if (stricmp("worldrelative", token) == 0)
+		{
+			pseq->flags |= STUDIO_WORLD_AND_RELATIVE;
+			pseq->flags |= STUDIO_POST;
+		}
+		else if (stricmp("rootdriver", token) == 0)
+		{
+			pseq->flags |= STUDIO_ROOTXFORM;
+			
+			// get bone name
+			GetToken( false );
+
+			V_strcpy_safe( pseq->rootDriverBoneName, token );
 		}
 		else if (stricmp("post", token) == 0) // remove
 		{
@@ -6414,6 +6484,30 @@ void Cmd_Hitbox( )
 	set->hitbox[set->numhitboxes].bmax[1] = verify_atof( token );
 	GetToken (false);
 	set->hitbox[set->numhitboxes].bmax[2] = verify_atof( token );
+
+	if ( TokenAvailable() )
+	{
+		GetToken(false);
+		set->hitbox[set->numhitboxes].angOffsetOrientation[0] = verify_atof(token);
+		GetToken(false);
+		set->hitbox[set->numhitboxes].angOffsetOrientation[1] = verify_atof(token);
+		GetToken(false);
+		set->hitbox[set->numhitboxes].angOffsetOrientation[2] = verify_atof(token);
+	}
+	else
+	{
+		set->hitbox[set->numhitboxes].angOffsetOrientation = QAngle( 0, 0, 0 );
+	}
+
+	if ( TokenAvailable() )
+	{
+		GetToken(false);
+		set->hitbox[set->numhitboxes].flCapsuleRadius = verify_atof(token);
+	}
+	else
+	{
+		set->hitbox[set->numhitboxes].flCapsuleRadius = -1;
+	}
 
 	//Scale hitboxes
 	scale_vertex( set->hitbox[set->numhitboxes].bmin );
@@ -8993,6 +9087,7 @@ void Cmd_BoneSaveFrame( )
 
 	tmp.bSavePos = false;
 	tmp.bSaveRot = false;
+	tmp.bSaveRot64 = false;
 	while (TokenAvailable(  ))
 	{
 		GetToken( false );
@@ -9003,6 +9098,10 @@ void Cmd_BoneSaveFrame( )
 		else if (stricmp( "rotation", token ) == 0)
 		{
 			tmp.bSaveRot = true;
+		}
+		else if (stricmp( "rotation64", token ) == 0)
+		{
+			tmp.bSaveRot64 = true;
 		}
 		else
 		{

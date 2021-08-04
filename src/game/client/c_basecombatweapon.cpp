@@ -62,13 +62,12 @@ void C_BaseCombatWeapon::NotifyShouldTransmit( ShouldTransmitState_t state )
 	}
 	else if( state == SHOULDTRANSMIT_START )
 	{
-		if( m_iState == WEAPON_IS_CARRIED_BY_PLAYER )
+		// We don't check the value of m_iState because if the weapon is active, we need the state to match reguardless
+		// of what it was.
+		if( GetOwner() && GetOwner()->GetActiveWeapon() == this )
 		{
-			if( GetOwner() && GetOwner()->GetActiveWeapon() == this )
-			{
-				// Restore the Activeness of the weapon if we client-twiddled it off in the first case above.
-				m_iState = WEAPON_IS_ACTIVE;
-			}
+			// Restore the Activeness of the weapon if we client-twiddled it off in the first case above.
+			m_iState = WEAPON_IS_ACTIVE;
 		}
 	}
 }
@@ -123,9 +122,14 @@ int C_BaseCombatWeapon::GetWorldModelIndex( void )
 //-----------------------------------------------------------------------------
 void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 {
-	BaseClass::OnDataChanged(updateType);
+	BaseClass::OnDataChanged( updateType );
 
-	CHandle< C_BaseCombatWeapon > handle = this;
+	// let the world model know we're updating, in case it wants to as well
+	CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+	if ( pWeaponWorldModel )
+	{
+		pWeaponWorldModel->OnDataChanged( updateType );
+	}
 
 	// If it's being carried by the *local* player, on the first update,
 	// find the registered weapon for this ID
@@ -151,19 +155,8 @@ void C_BaseCombatWeapon::OnDataChanged( DataUpdateType_t updateType )
 			}
 		}
 	}
-	else // weapon carried by other player or not at all
-	{
-		int overrideModelIndex = CalcOverrideModelIndex();
-		if( overrideModelIndex != -1 && overrideModelIndex != GetModelIndex() )
-		{
-			SetModelIndex( overrideModelIndex );
-		}
-	}
 
-	if ( updateType == DATA_UPDATE_CREATED )
-	{
-		UpdateVisibility();
-	}
+	UpdateVisibility();
 
 	m_iOldState = m_iState;
 
@@ -200,10 +193,10 @@ ShadowType_t C_BaseCombatWeapon::ShadowCastType()
 	if (!IsBeingCarried())
 		return SHADOWS_RENDER_TO_TEXTURE;
 
-	if (IsCarriedByLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer())
+	if (IsCarriedByLocalPlayer())
 		return SHADOWS_NONE;
 
-	return SHADOWS_RENDER_TO_TEXTURE;
+	return (m_iState != WEAPON_IS_CARRIED_BY_PLAYER) ? SHADOWS_RENDER_TO_TEXTURE : SHADOWS_NONE;
 }
 
 //-----------------------------------------------------------------------------
@@ -395,58 +388,29 @@ bool C_BaseCombatWeapon::GetShootPosition( Vector &vOrigin, QAngle &vAngles )
 //-----------------------------------------------------------------------------
 bool C_BaseCombatWeapon::ShouldDraw( void )
 {
-	if ( m_iWorldModelIndex == 0 )
-		return false;
-
-	// FIXME: All weapons with owners are set to transmit in CBaseCombatWeapon::UpdateTransmitState,
-	// even if they have EF_NODRAW set, so we have to check this here. Ideally they would never
-	// transmit except for the weapons owned by the local player.
 	if ( IsEffectActive( EF_NODRAW ) )
 		return false;
 
-	C_BaseCombatCharacter *pOwner = GetOwner();
-
 	// weapon has no owner, always draw it
-	if ( !pOwner )
+	if ( !GetOwner() && !IsViewModel() )
+	{
 		return true;
-
-	bool bIsActive = ( m_iState == WEAPON_IS_ACTIVE );
-
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-
-	 // carried by local player?
-	if ( pOwner == pLocalPlayer )
+	}
+	else
 	{
-		// Only ever show the active weapon
-		if ( !bIsActive )
-			return false;
-
-		if ( !pOwner->ShouldDraw() )
+		CBaseWeaponWorldModel *pWeaponWorldModel = GetWeaponWorldModel();
+		if ( pWeaponWorldModel )
 		{
-			// Our owner is invisible.
-			// This also tests whether the player is zoomed in, in which case you don't want to draw the weapon.
-			return false;
+			return false; // the weapon world model will render in our place if it exists
 		}
-
-		// 3rd person mode?
-		if ( !ShouldDrawLocalPlayerViewModel() )
-			return true;
-
-		// don't draw active weapon if not in some kind of 3rd person mode, the viewmodel will do that
-		return false;
+		else
+		{
+			// render only if equipped. The holstered model will render for weapons that aren't equipped
+			return ( GetOwner() && GetOwner()->GetActiveWeapon() == this );
+		}
 	}
-
-	// If it's a player, then only show active weapons
-	if ( pOwner->IsPlayer() )
-	{
-		// Show it if it's active...
-		return bIsActive;
-	}
-
-	// FIXME: We may want to only show active weapons on NPCs
-	// These are carried by AIs; always show them
-	return true;
 }
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Return true if a weapon-pickup icon should be displayed when this weapon is received
@@ -510,28 +474,6 @@ int C_BaseCombatWeapon::DrawModel( int flags )
 	}
 
 	return BaseClass::DrawModel( flags );
-}
-
-
-//-----------------------------------------------------------------------------
-// Allows the client-side entity to override what the network tells it to use for
-// a model. This is used for third person mode, specifically in HL2 where the
-// the weapon timings are on the view model and not the world model. That means the
-// server needs to use the view model, but the client wants to use the world model.
-//-----------------------------------------------------------------------------
-int C_BaseCombatWeapon::CalcOverrideModelIndex() 
-{ 
-	C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
-	if ( localplayer && 
-		localplayer == GetOwner() &&
-		ShouldDrawLocalPlayerViewModel() )
-	{
-		return BaseClass::CalcOverrideModelIndex();
-	}
-	else
-	{
-		return GetWorldModelIndex();
-	}
 }
 
 

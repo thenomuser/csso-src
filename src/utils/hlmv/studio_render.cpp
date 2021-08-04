@@ -574,6 +574,19 @@ void StudioModel::SetUpBones( bool mergeBones )
 		OverrideBones( override );
 	}
 
+	int nMergedModelIndex = -1;
+	for ( int n=0; n<HLMV_MAX_MERGED_MODELS; n++ )
+	{
+		if ( g_pStudioExtraModel[n] && g_pStudioExtraModel[n]->GetStudioHdr() == pStudioHdr )
+		{
+			if ( g_MergeModelBonePairs[n].szLocalBone[0] && g_MergeModelBonePairs[n].szTargetBone[0] )
+			{
+				nMergedModelIndex = n;	
+			}
+			break;
+		}
+	}
+
 	for (i = 0; i < pStudioHdr->numbones(); i++) 
 	{
 		if ( !(pStudioHdr->pBone( i )->flags & BoneMask()))
@@ -660,15 +673,126 @@ void StudioModel::SetUpBones( bool mergeBones )
 		}
 		else if (g_pCacheHdr)
 		{
-			for (j = 0; j < g_pCacheHdr->numbones(); j++)
+			// attempt to attach merge models with force bone-to-bone setting
+			if ( nMergedModelIndex != -1 )
 			{
-				if ( Q_stricmp( pStudioHdr->pBone( i )->pszName(), g_pCacheHdr->pBone( j )->pszName() ) == 0 )
-					break;
+				const char* szDesiredMergeModelLocalBoneName = g_MergeModelBonePairs[nMergedModelIndex].szLocalBone;
+				const char* szDesiredTargetBoneName = g_MergeModelBonePairs[nMergedModelIndex].szTargetBone;
+
+				const char* szCurrentMergeModelBoneName = pStudioHdr->pBone( i )->pszName();
+
+				int nMergeModelLocalBone = -1;
+				int nMergeModelAttachment = -1;
+
+				matrix3x4_t matMergeModelAttachmentLocal;
+				SetIdentityMatrix( matMergeModelAttachmentLocal );
+
+				int nTargetBone = -1;
+				int nTargetAttachment = -1;
+				
+				matrix3x4_t matTargetBoneToWorld;
+				SetIdentityMatrix( matTargetBoneToWorld );
+				matrix3x4_t matTargetAttachmentLocal;
+				SetIdentityMatrix( matTargetAttachmentLocal );
+					
+
+				//check the attachments
+				for ( int n=0; n<pStudioHdr->GetNumAttachments(); n++ )
+				{
+					mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)pStudioHdr->pAttachment( n );
+					if ( Q_stricmp( pModelAttachment.pszName(), szDesiredMergeModelLocalBoneName ) == 0	)
+					{
+						pStudioHdr->setBoneFlags( pModelAttachment.localbone, BONE_USED_BY_BONE_MERGE );
+						if ( pModelAttachment.localbone == i )
+						{
+							matrix3x4_t matAttachmentToWorld;
+							ConcatTransforms( m_pBoneToWorld[ pModelAttachment.localbone ], pModelAttachment.local, matAttachmentToWorld );
+
+							matrix3x4_t matAttachmentToWorldInv;
+							MatrixInvert( matAttachmentToWorld, matAttachmentToWorldInv );
+
+							ConcatTransforms( matAttachmentToWorldInv, m_pBoneToWorld[0], matMergeModelAttachmentLocal );
+							nMergeModelLocalBone = i;
+							nMergeModelAttachment = n;
+						}
+					}
+				}
+
+				// otherwise check if we're already on the merge model local bone
+				if ( nMergeModelLocalBone == -1 && Q_stricmp( szCurrentMergeModelBoneName, szDesiredMergeModelLocalBoneName ) == 0 )
+				{
+					nMergeModelLocalBone = i;
+				}
+
+				// if the local bone is valid, let's look for the target bone
+				if ( nMergeModelLocalBone != -1 )
+				{
+
+					//search master mdl for target bone name
+					for ( int n=0; n<g_pCacheHdr->numbones(); n++ )
+					{
+						const char* szCurrentTargetModelBoneName = g_pCacheHdr->pBone( n )->pszName();
+						if ( Q_stricmp( szCurrentTargetModelBoneName, szDesiredTargetBoneName ) == 0 )
+						{
+							nTargetBone = n;
+							MatrixCopy( *g_pStudioModel->BoneToWorld( nTargetBone ), matTargetBoneToWorld );
+							break;
+						}
+					}
+					//if we didn't find it, look at the attachments
+					if ( nTargetBone == -1 )
+					{
+						for ( int a = 0; a < g_pCacheHdr->GetNumAttachments(); a++)
+						{
+							mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)g_pCacheHdr->pAttachment( a );
+							const char* szCurrentTargetModelBoneName = pModelAttachment.pszName();
+							if ( Q_stricmp( szCurrentTargetModelBoneName, szDesiredTargetBoneName ) == 0 )
+							{
+								nTargetBone = pModelAttachment.localbone;
+								MatrixCopy( *g_pStudioModel->BoneToWorld( nTargetBone ), matTargetBoneToWorld );
+								nTargetAttachment = a;
+								MatrixCopy( pModelAttachment.local, matTargetAttachmentLocal );
+								break;
+							}
+
+						}
+					}
+
+
+					// both local and target are valid. Let's connect the two
+					if ( nTargetBone != -1 )
+					{
+
+						pStudioHdr->setBoneFlags( 0, BONE_USED_BY_BONE_MERGE );
+						pStudioHdr->setBoneFlags( nMergeModelLocalBone, BONE_USED_BY_BONE_MERGE );
+						g_pCacheHdr->setBoneFlags( nTargetBone, BONE_USED_BY_BONE_MERGE );
+
+						matrix3x4_t matTargetBoneToWorldFinal;
+						ConcatTransforms( matTargetBoneToWorld, matTargetAttachmentLocal, matTargetBoneToWorldFinal );
+
+						ConcatTransforms( matTargetBoneToWorldFinal, matMergeModelAttachmentLocal, matTargetBoneToWorldFinal );
+
+						MatrixCopy( matTargetBoneToWorldFinal, m_pBoneToWorld[ 0 ] );
+					}
+
+				}
+
 			}
-			if (j < g_pCacheHdr->numbones())
+			else
 			{
-				MatrixCopy( boneCache[j], m_pBoneToWorld[ i ] );
+				for (j = 0; j < g_pCacheHdr->numbones(); j++)
+				{
+					if ( Q_stricmp( pStudioHdr->pBone( i )->pszName(), g_pCacheHdr->pBone( j )->pszName() ) == 0 )
+						break;
+				}
+				if (j < g_pCacheHdr->numbones())
+				{
+					pStudioHdr->setBoneFlags( i, BONE_USED_BY_BONE_MERGE );
+					g_pCacheHdr->setBoneFlags( j, BONE_USED_BY_BONE_MERGE );
+					MatrixCopy( boneCache[j], m_pBoneToWorld[ i ] );
+				}
 			}
+			
 		}
 	}
 
@@ -1037,6 +1161,194 @@ void StudioModel::drawLine( Vector const &p1, Vector const &p2, int r, int g, in
 	meshBuilder.Color3ub( r, g, b );
 	meshBuilder.Position3f(  p2.x, p2.y, p2.z );
 	meshBuilder.AdvanceVertex();
+
+	meshBuilder.End();
+	pMesh->Draw();
+}
+
+// todo: draw a capsule procedurally instead of using these baked-in unit capsule verts
+#define CAPSULE_VERTS 290
+#define CAPSULE_TRIS 576
+#define CAPSULE_LINES 148
+
+static float g_capsuleVertPositions[CAPSULE_VERTS][3]={
+	{-0.02,1.0,0.0},{-0.27,0.96,0.0},{-0.52,0.86,0.0},{-0.72,0.7,0.0},{-0.88,0.5,0.0},{-0.98,0.25,0.0},{-1.02,0.0,0.0},{-0.98,-0.26,0.0},
+	{-0.88,-0.51,0.0},{-0.72,-0.71,0.0},{-0.52,-0.87,0.0},{-0.27,-0.97,0.0},{-0.02,-1.01,0.0},{0.24,-0.97,0.0},{0.48,-0.87,0.0},{0.69,-0.71,0.0},
+	{0.85,-0.51,0.0},{0.95,-0.26,0.0},{0.98,-0.01,0.0},{0.95,0.25,0.0},{0.85,0.5,0.0},{0.69,0.7,0.0},{0.48,0.86,0.0},{0.24,0.96,0.0},{-0.02,0.96,-0.26},
+	{-0.27,0.93,-0.26},{-0.5,0.83,-0.26},{-0.7,0.68,-0.26},{-0.85,0.48,-0.26},{-0.95,0.25,-0.26},{-0.98,0.0,-0.26},{-0.95,-0.26,-0.26},{-0.85,-0.49,-0.26},
+	{-0.7,-0.69,-0.26},{-0.5,-0.84,-0.26},{-0.27,-0.94,-0.26},{-0.02,-0.97,-0.26},{0.23,-0.94,-0.26},{0.47,-0.84,-0.26},{0.67,-0.69,-0.26},{0.82,-0.49,-0.26},
+	{0.92,-0.26,-0.26},{0.95,-0.01,-0.26},{0.92,0.25,-0.26},{0.82,0.48,-0.26},{0.67,0.68,-0.26},{0.47,0.83,-0.26},{0.23,0.93,-0.26},{-0.02,0.86,-0.51},
+	{-0.24,0.83,-0.51},{-0.45,0.75,-0.51},{-0.63,0.61,-0.51},{-0.77,0.43,-0.51},{-0.85,0.22,-0.51},{-0.88,0.0,-0.51},{-0.85,-0.23,-0.51},{-0.77,-0.44,-0.51},
+	{-0.63,-0.62,-0.51},{-0.45,-0.76,-0.51},{-0.24,-0.84,-0.51},{-0.02,-0.87,-0.51},{0.21,-0.84,-0.51},{0.42,-0.76,-0.51},{0.6,-0.62,-0.51},{0.73,-0.44,-0.51},
+	{0.82,-0.23,-0.51},{0.85,-0.01,-0.51},{0.82,0.22,-0.51},{0.73,0.43,-0.51},{0.6,0.61,-0.51},{0.42,0.75,-0.51},{0.21,0.83,-0.51},{-0.02,0.7,-0.71},
+	{-0.2,0.68,-0.71},{-0.37,0.61,-0.71},{-0.52,0.5,-0.71},{-0.63,0.35,-0.71},{-0.7,0.18,-0.71},{-0.72,0.0,-0.71},{-0.7,-0.19,-0.71},{-0.63,-0.36,-0.71},
+	{-0.52,-0.51,-0.71},{-0.37,-0.62,-0.71},{-0.2,-0.69,-0.71},{-0.02,-0.71,-0.71},{0.17,-0.69,-0.71},{0.34,-0.62,-0.71},{0.48,-0.51,-0.71},{0.6,-0.36,-0.71},
+	{0.67,-0.19,-0.71},{0.69,-0.01,-0.71},{0.67,0.18,-0.71},{0.6,0.35,-0.71},{0.48,0.5,-0.71},{0.34,0.61,-0.71},{0.17,0.68,-0.71},{-0.02,0.5,-0.87},
+	{-0.14,0.48,-0.87},{-0.27,0.43,-0.87},{-0.37,0.35,-0.87},{-0.45,0.25,-0.87},{-0.5,0.12,-0.87},{-0.52,0.0,-0.87},{-0.5,-0.13,-0.87},{-0.45,-0.26,-0.87},
+	{-0.37,-0.36,-0.87},{-0.27,-0.44,-0.87},{-0.14,-0.49,-0.87},{-0.02,-0.51,-0.87},{0.11,-0.49,-0.87},{0.23,-0.44,-0.87},{0.34,-0.36,-0.87},{0.42,-0.26,-0.87},
+	{0.47,-0.13,-0.87},{0.48,-0.01,-0.87},{0.47,0.12,-0.87},{0.42,0.25,-0.87},{0.34,0.35,-0.87},{0.23,0.43,-0.87},{0.11,0.48,-0.87},{-0.02,0.25,-0.97},
+	{-0.08,0.25,-0.97},{-0.14,0.22,-0.97},{-0.2,0.18,-0.97},{-0.24,0.12,-0.97},{-0.27,0.06,-0.97},{-0.27,0.0,-0.97},{-0.27,-0.07,-0.97},{-0.24,-0.13,-0.97},
+	{-0.2,-0.19,-0.97},{-0.14,-0.23,-0.97},{-0.08,-0.26,-0.97},{-0.02,-0.26,-0.97},{0.05,-0.26,-0.97},{0.11,-0.23,-0.97},{0.17,-0.19,-0.97},{0.21,-0.13,-0.97},
+	{0.23,-0.07,-0.97},{0.24,-0.01,-0.97},{0.23,0.06,-0.97},{0.21,0.12,-0.97},{0.17,0.18,-0.97},{0.11,0.22,-0.97},{0.05,0.25,-0.97},{-0.02,0.0,-1.01},
+	{-0.27,-0.97,0.0},{-0.02,-1.01,0.0},{0.24,-0.97,0.0},{0.48,-0.87,0.0},{0.69,-0.71,0.0},{0.85,-0.51,0.0},{0.95,-0.26,0.0},{0.98,-0.01,0.0},{0.95,0.25,0.0},
+	{0.85,0.5,0.0},{-0.02,1.0,0.0},{0.24,0.96,0.0},{0.48,0.86,0.0},{0.69,0.7,0.0},{-0.52,-0.87,0.0},{-0.72,-0.71,0.0},{-0.88,-0.51,0.0},{-0.98,-0.26,0.0},
+	{-1.02,-0.01,0.0},{-0.98,0.25,0.0},{-0.88,0.5,0.0},{-0.72,0.7,0.0},{-0.52,0.86,0.0},{-0.27,0.96,0.0},{-0.02,0.96,0.25},{0.23,0.93,0.25},{0.47,0.83,0.25},
+	{0.67,0.68,0.25},{0.82,0.48,0.25},{0.92,0.25,0.25},{0.95,-0.01,0.25},{0.92,-0.26,0.25},{0.82,-0.49,0.25},{0.67,-0.69,0.25},{0.47,-0.84,0.25},
+	{0.23,-0.94,0.25},{-0.02,-0.97,0.25},{-0.27,-0.94,0.25},{-0.5,-0.84,0.25},{-0.7,-0.69,0.25},{-0.85,-0.49,0.25},{-0.95,-0.26,0.25},{-0.98,-0.01,0.25},
+	{-0.95,0.25,0.25},{-0.85,0.48,0.25},{-0.7,0.68,0.25},{-0.5,0.83,0.25},{-0.27,0.93,0.25},{-0.02,0.86,0.5},{0.21,0.83,0.5},{0.42,0.75,0.5},{0.6,0.61,0.5},
+	{0.73,0.43,0.5},{0.82,0.22,0.5},{0.85,-0.01,0.5},{0.82,-0.23,0.5},{0.73,-0.44,0.5},{0.6,-0.62,0.5},{0.42,-0.76,0.5},{0.21,-0.84,0.5},{-0.02,-0.87,0.5},
+	{-0.24,-0.84,0.5},{-0.45,-0.76,0.5},{-0.63,-0.62,0.5},{-0.77,-0.44,0.5},{-0.85,-0.23,0.5},{-0.88,-0.01,0.5},{-0.85,0.22,0.5},{-0.77,0.43,0.5},
+	{-0.63,0.61,0.5},{-0.45,0.75,0.5},{-0.24,0.83,0.5},{-0.02,0.7,0.7},{0.17,0.68,0.7},{0.34,0.61,0.7},{0.48,0.5,0.7},{0.6,0.35,0.7},{0.67,0.18,0.7},
+	{0.69,-0.01,0.7},{0.67,-0.19,0.7},{0.6,-0.36,0.7},{0.48,-0.51,0.7},{0.34,-0.62,0.7},{0.17,-0.69,0.7},{-0.02,-0.71,0.7},{-0.2,-0.69,0.7},{-0.37,-0.62,0.7},
+	{-0.52,-0.51,0.7},{-0.63,-0.36,0.7},{-0.7,-0.19,0.7},{-0.72,-0.01,0.7},{-0.7,0.18,0.7},{-0.63,0.35,0.7},{-0.52,0.5,0.7},{-0.37,0.61,0.7},{-0.2,0.68,0.7},
+	{-0.02,0.5,0.86},{0.11,0.48,0.86},{0.23,0.43,0.86},{0.34,0.35,0.86},{0.42,0.25,0.86},{0.47,0.12,0.86},{0.48,-0.01,0.86},{0.47,-0.13,0.86},{0.42,-0.26,0.86},
+	{0.34,-0.36,0.86},{0.23,-0.44,0.86},{0.11,-0.49,0.86},{-0.02,-0.51,0.86},{-0.14,-0.49,0.86},{-0.27,-0.44,0.86},{-0.37,-0.36,0.86},{-0.45,-0.26,0.86},
+	{-0.5,-0.13,0.86},{-0.52,-0.01,0.86},{-0.5,0.12,0.86},{-0.45,0.25,0.86},{-0.37,0.35,0.86},{-0.27,0.43,0.86},{-0.14,0.48,0.86},{-0.02,0.25,0.96},
+	{0.05,0.25,0.96},{0.11,0.22,0.96},{0.17,0.18,0.96},{0.21,0.12,0.96},{0.23,0.06,0.96},{0.24,-0.01,0.96},{0.23,-0.07,0.96},{0.21,-0.13,0.96},
+	{0.17,-0.19,0.96},{0.11,-0.23,0.96},{0.05,-0.26,0.96},{-0.02,-0.26,0.96},{-0.08,-0.26,0.96},{-0.14,-0.23,0.96},{-0.2,-0.19,0.96},{-0.24,-0.13,0.96},
+	{-0.27,-0.07,0.96},{-0.27,-0.01,0.96},{-0.27,0.06,0.96},{-0.24,0.12,0.96},{-0.2,0.18,0.96},{-0.14,0.22,0.96},{-0.08,0.25,0.96},{-0.02,-0.01,1.0},
+};
+
+static int g_capsuleTriIndices[ CAPSULE_TRIS ][ 3 ] = {
+	{25,1,0},{0,24,25},{26,2,1},{1,25,26},{27,3,2},{2,26,27},{28,4,3},{3,27,28},{29,5,4},{4,28,29},{30,6,5},{5,29,30},{31,7,6},{6,30,31},{32,8,7},{7,31,32},
+	{33,9,8},{8,32,33},{34,10,9},{9,33,34},{35,11,10},{10,34,35},{36,12,11},{11,35,36},{37,13,12},{12,36,37},{38,14,13},{13,37,38},{39,15,14},{14,38,39},
+	{40,16,15},{15,39,40},{41,17,16},{16,40,41},{42,18,17},{17,41,42},{43,19,18},{18,42,43},{44,20,19},{19,43,44},{45,21,20},{20,44,45},{46,22,21},{21,45,46},
+	{47,23,22},{22,46,47},{24,0,23},{23,47,24},{49,25,24},{24,48,49},{50,26,25},{25,49,50},{51,27,26},{26,50,51},{52,28,27},{27,51,52},{53,29,28},{28,52,53},
+	{54,30,29},{29,53,54},{55,31,30},{30,54,55},{56,32,31},{31,55,56},{57,33,32},{32,56,57},{58,34,33},{33,57,58},{59,35,34},{34,58,59},{60,36,35},{35,59,60},
+	{61,37,36},{36,60,61},{62,38,37},{37,61,62},{63,39,38},{38,62,63},{64,40,39},{39,63,64},{65,41,40},{40,64,65},{66,42,41},{41,65,66},{67,43,42},{42,66,67},
+	{68,44,43},{43,67,68},{69,45,44},{44,68,69},{70,46,45},{45,69,70},{71,47,46},{46,70,71},{48,24,47},{47,71,48},{73,49,48},{48,72,73},{74,50,49},{49,73,74},
+	{75,51,50},{50,74,75},{76,52,51},{51,75,76},{77,53,52},{52,76,77},{78,54,53},{53,77,78},{79,55,54},{54,78,79},{80,56,55},{55,79,80},{81,57,56},{56,80,81},
+	{82,58,57},{57,81,82},{83,59,58},{58,82,83},{84,60,59},{59,83,84},{85,61,60},{60,84,85},{86,62,61},{61,85,86},{87,63,62},{62,86,87},{88,64,63},{63,87,88},
+	{89,65,64},{64,88,89},{90,66,65},{65,89,90},{91,67,66},{66,90,91},{92,68,67},{67,91,92},{93,69,68},{68,92,93},{94,70,69},{69,93,94},{95,71,70},{70,94,95},
+	{72,48,71},{71,95,72},{97,73,72},{72,96,97},{98,74,73},{73,97,98},{99,75,74},{74,98,99},{100,76,75},{75,99,100},{101,77,76},{76,100,101},{102,78,77},
+	{77,101,102},{103,79,78},{78,102,103},{104,80,79},{79,103,104},{105,81,80},{80,104,105},{106,82,81},{81,105,106},{107,83,82},{82,106,107},{108,84,83},
+	{83,107,108},{109,85,84},{84,108,109},{110,86,85},{85,109,110},{111,87,86},{86,110,111},{112,88,87},{87,111,112},{113,89,88},{88,112,113},{114,90,89},
+	{89,113,114},{115,91,90},{90,114,115},{116,92,91},{91,115,116},{117,93,92},{92,116,117},{118,94,93},{93,117,118},{119,95,94},{94,118,119},{96,72,95},
+	{95,119,96},{121,97,96},{96,120,121},{122,98,97},{97,121,122},{123,99,98},{98,122,123},{124,100,99},{99,123,124},{125,101,100},{100,124,125},{126,102,101},
+	{101,125,126},{127,103,102},{102,126,127},{128,104,103},{103,127,128},{129,105,104},{104,128,129},{130,106,105},{105,129,130},{131,107,106},{106,130,131},
+	{132,108,107},{107,131,132},{133,109,108},{108,132,133},{134,110,109},{109,133,134},{135,111,110},{110,134,135},{136,112,111},{111,135,136},{137,113,112},
+	{112,136,137},{138,114,113},{113,137,138},{139,115,114},{114,138,139},{140,116,115},{115,139,140},{141,117,116},{116,140,141},{142,118,117},{117,141,142},
+	{143,119,118},{118,142,143},{120,96,119},{119,143,120},{144,121,120},{144,122,121},{144,123,122},{144,124,123},{144,125,124},{144,126,125},{144,127,126},
+	{144,128,127},{144,129,128},{144,130,129},{144,131,130},{144,132,131},{144,133,132},{144,134,133},{144,135,134},{144,136,135},{144,137,136},{144,138,137},
+	{144,139,138},{144,140,139},{144,141,140},{144,142,141},{144,143,142},{144,120,143},{0,1,168},{168,155,0},{1,2,167},{167,168,1},{2,3,166},{166,167,2},
+	{3,4,165},{165,166,3},{4,5,164},{164,165,4},{5,6,163},{163,164,5},{6,7,162},{162,163,6},{7,8,161},{161,162,7},{8,9,160},{160,161,8},{9,10,159},{159,160,9},
+	{10,11,145},{145,159,10},{11,12,146},{146,145,11},{12,13,147},{147,146,12},{13,14,148},{148,147,13},{14,15,149},{149,148,14},{15,16,150},{150,149,15},
+	{16,17,151},{151,150,16},{17,18,152},{152,151,17},{18,19,153},{153,152,18},{19,20,154},{154,153,19},{20,21,158},{158,154,20},{21,22,157},{157,158,21},
+	{22,23,156},{156,157,22},{23,0,155},{155,156,23},{170,156,155},{155,169,170},{171,157,156},{156,170,171},{172,158,157},{157,171,172},{173,154,158},
+	{158,172,173},{174,153,154},{154,173,174},{175,152,153},{153,174,175},{176,151,152},{152,175,176},{177,150,151},{151,176,177},{178,149,150},{150,177,178},
+	{179,148,149},{149,178,179},{180,147,148},{148,179,180},{181,146,147},{147,180,181},{182,145,146},{146,181,182},{183,159,145},{145,182,183},{184,160,159},
+	{159,183,184},{185,161,160},{160,184,185},{186,162,161},{161,185,186},{187,163,162},{162,186,187},{188,164,163},{163,187,188},{189,165,164},{164,188,189},
+	{190,166,165},{165,189,190},{191,167,166},{166,190,191},{192,168,167},{167,191,192},{169,155,168},{168,192,169},{194,170,169},{169,193,194},{195,171,170},
+	{170,194,195},{196,172,171},{171,195,196},{197,173,172},{172,196,197},{198,174,173},{173,197,198},{199,175,174},{174,198,199},{200,176,175},{175,199,200},
+	{201,177,176},{176,200,201},{202,178,177},{177,201,202},{203,179,178},{178,202,203},{204,180,179},{179,203,204},{205,181,180},{180,204,205},{206,182,181},
+	{181,205,206},{207,183,182},{182,206,207},{208,184,183},{183,207,208},{209,185,184},{184,208,209},{210,186,185},{185,209,210},{211,187,186},{186,210,211},
+	{212,188,187},{187,211,212},{213,189,188},{188,212,213},{214,190,189},{189,213,214},{215,191,190},{190,214,215},{216,192,191},{191,215,216},{193,169,192},
+	{192,216,193},{218,194,193},{193,217,218},{219,195,194},{194,218,219},{220,196,195},{195,219,220},{221,197,196},{196,220,221},{222,198,197},{197,221,222},
+	{223,199,198},{198,222,223},{224,200,199},{199,223,224},{225,201,200},{200,224,225},{226,202,201},{201,225,226},{227,203,202},{202,226,227},{228,204,203},
+	{203,227,228},{229,205,204},{204,228,229},{230,206,205},{205,229,230},{231,207,206},{206,230,231},{232,208,207},{207,231,232},{233,209,208},{208,232,233},
+	{234,210,209},{209,233,234},{235,211,210},{210,234,235},{236,212,211},{211,235,236},{237,213,212},{212,236,237},{238,214,213},{213,237,238},{239,215,214},
+	{214,238,239},{240,216,215},{215,239,240},{217,193,216},{216,240,217},{242,218,217},{217,241,242},{243,219,218},{218,242,243},{244,220,219},{219,243,244},
+	{245,221,220},{220,244,245},{246,222,221},{221,245,246},{247,223,222},{222,246,247},{248,224,223},{223,247,248},{249,225,224},{224,248,249},{250,226,225},
+	{225,249,250},{251,227,226},{226,250,251},{252,228,227},{227,251,252},{253,229,228},{228,252,253},{254,230,229},{229,253,254},{255,231,230},{230,254,255},
+	{256,232,231},{231,255,256},{257,233,232},{232,256,257},{258,234,233},{233,257,258},{259,235,234},{234,258,259},{260,236,235},{235,259,260},{261,237,236},
+	{236,260,261},{262,238,237},{237,261,262},{263,239,238},{238,262,263},{264,240,239},{239,263,264},{241,217,240},{240,264,241},{266,242,241},{241,265,266},
+	{267,243,242},{242,266,267},{268,244,243},{243,267,268},{269,245,244},{244,268,269},{270,246,245},{245,269,270},{271,247,246},{246,270,271},{272,248,247},
+	{247,271,272},{273,249,248},{248,272,273},{274,250,249},{249,273,274},{275,251,250},{250,274,275},{276,252,251},{251,275,276},{277,253,252},{252,276,277},
+	{278,254,253},{253,277,278},{279,255,254},{254,278,279},{280,256,255},{255,279,280},{281,257,256},{256,280,281},{282,258,257},{257,281,282},{283,259,258},
+	{258,282,283},{284,260,259},{259,283,284},{285,261,260},{260,284,285},{286,262,261},{261,285,286},{287,263,262},{262,286,287},{288,264,263},{263,287,288},
+	{265,241,264},{264,288,265},{289,266,265},{289,267,266},{289,268,267},{289,269,268},{289,270,269},{289,271,270},{289,272,271},{289,273,272},{289,274,273},
+	{289,275,274},{289,276,275},{289,277,276},{289,278,277},{289,279,278},{289,280,279},{289,281,280},{289,282,281},{289,283,282},{289,284,283},{289,285,284},
+	{289,286,285},{289,287,286},{289,288,287},{289,265,288},
+};
+
+static int g_capsuleLineIndices[CAPSULE_LINES][2] = {
+	{ 0, 1 },		{ 0, 24 },		{ 1, 2 },		{ 2, 3 },		{ 3, 4 },		{ 4, 5 },		{ 6, 30 },		{ 5, 6 },		{ 6, 7 },		{ 7, 8 },		{ 8, 9 },		{ 9, 10 },		{ 10, 11 },		{ 12, 36 },
+	{ 11, 12 },		{ 12, 13 },		{ 13, 14 },		{ 14, 15 },		{ 15, 16 },		{ 16, 17 },		{ 18, 42 },		{ 17, 18 },		{ 18, 19 },		{ 19, 20 },		{ 20, 21 },		{ 21, 22 },		{ 22, 23 },		{ 0, 23 },
+	{ 24, 48 },		{ 48, 49 },		{ 49, 50 },		{ 50, 51 },		{ 51, 52 },		{ 52, 53 },		{ 30, 54 },		{ 53, 54 },		{ 54, 55 },		{ 55, 56 },		{ 56, 57 },		{ 57, 58 },		{ 58, 59 },		{ 36, 60 },
+	{ 59, 60 },		{ 60, 61 },		{ 61, 62 },		{ 62, 63 },		{ 63, 64 },		{ 64, 65 },		{ 42, 66 },		{ 65, 66 },		{ 66, 67 },		{ 67, 68 },		{ 68, 69 },		{ 69, 70 },		{ 70, 71 },		{ 48, 71 },
+	{ 48, 72 },		{ 54, 78 },		{ 60, 84 },		{ 66, 90 },		{ 72, 96 },		{ 78, 102 },	{ 84, 108 },	{ 90, 114 },	{ 96, 120 },	{ 102, 126 },	{ 108, 132 },	{ 114, 138 },	{ 120, 144 },	{ 126, 144 },	
+	{ 132, 144 },	{ 138, 144 },	{ 155, 168 },	{ 0, 155 },		{ 167, 168 },	{ 166, 167 },	{ 165, 166 },	{ 164, 165 },	{ 6, 163 },		{ 163, 164 },	{ 162, 163 },	{ 161, 162 },	{ 160, 161 },	{ 159, 160 },	
+	{ 145, 159 },	{ 12, 146 },	{ 145, 146 },	{ 146, 147 },	{ 147, 148 },	{ 148, 149 },	{ 149, 150 },	{ 150, 151 },	{ 18, 152 },	{ 151, 152 },	{ 152, 153 },	{ 153, 154 },	{ 154, 158 },	{ 157, 158 },	
+	{ 156, 157 },	{ 155, 156 },	{ 155, 169 },	{ 152, 175 },	{ 146, 181 },	{ 163, 187 },	{ 169, 193 },	{ 193, 194 },	{ 194, 195 },	{ 195, 196 },	{ 196, 197 },	{ 197, 198 },	{ 175, 199 },	{ 198, 199 },
+	{ 199, 200 },	{ 200, 201 },	{ 201, 202 },	{ 202, 203 },	{ 203, 204 },	{ 181, 205 },	{ 204, 205 },	{ 205, 206 },	{ 206, 207 },	{ 207, 208 },	{ 208, 209 },	{ 209, 210 },	{ 187, 211 },	{ 210, 211 },	
+	{ 211, 212 },	{ 212, 213 },	{ 213, 214 },	{ 214, 215 },	{ 215, 216 },	{ 193, 216 },	{ 193, 217 },	{ 199, 223 },	{ 205, 229 },	{ 211, 235 },	{ 217, 241 },	{ 223, 247 },	{ 229, 253 },	{ 235, 259 },	
+	{ 241, 265 },	{ 247, 271 },	{ 253, 277 },	{ 259, 283 },	{ 265, 289 },	{ 271, 289 },	{ 277, 289 },	{ 283, 289 },
+};
+
+
+void StudioModel::drawCapsule( Vector const &bbmin, Vector const &bbmax, float flRadius, const matrix3x4_t& m, float const *interiorcolor, float const *wirecolor )
+{
+	Vector vecCapsuleCoreNormal = ( bbmin - bbmax ).Normalized();
+	
+	matrix3x4_t matCapsuleRotationSpace;
+	VectorMatrix( Vector(0,0,1), matCapsuleRotationSpace );
+
+	matrix3x4_t matCapsuleSpace;
+	VectorMatrix( vecCapsuleCoreNormal, matCapsuleSpace );
+
+	Vector v[CAPSULE_VERTS];
+	for ( int i=0; i<CAPSULE_VERTS; i++ )
+	{
+		Vector vecCapsuleVert = Vector( g_capsuleVertPositions[i][0], g_capsuleVertPositions[i][1], g_capsuleVertPositions[i][2] );
+		
+		VectorRotate( vecCapsuleVert, matCapsuleRotationSpace, vecCapsuleVert );
+		VectorRotate( vecCapsuleVert, matCapsuleSpace, vecCapsuleVert );
+
+		vecCapsuleVert *= flRadius;
+
+		if ( i < CAPSULE_VERTS/2 )
+		{
+			vecCapsuleVert += bbmin;
+		}
+		else
+		{
+			vecCapsuleVert += bbmax;
+		}
+		
+		VectorTransform( vecCapsuleVert, m, v[i] );
+	}
+
+	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
+
+	pRenderContext->Bind( g_materialBones );
+
+	IMesh* pMesh = pRenderContext->GetDynamicMesh( );
+	CMeshBuilder meshBuilder;
+
+	for ( int i=0; i<CAPSULE_LINES; i++ )
+	{
+		meshBuilder.Begin( pMesh, MATERIAL_LINES, 2 );
+
+		meshBuilder.Position3fv (v[g_capsuleLineIndices[i][0]].Base());
+		meshBuilder.Color4fv( wirecolor );
+		meshBuilder.AdvanceVertex();
+		
+		meshBuilder.Position3fv (v[g_capsuleLineIndices[i][1]].Base());
+		meshBuilder.Color4fv( wirecolor );
+		meshBuilder.AdvanceVertex();
+
+		meshBuilder.End();
+	}
+	pMesh->Draw();
+
+	pRenderContext->Bind( g_pAlpha );
+
+	meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, CAPSULE_TRIS );
+
+	for ( int i=0; i<CAPSULE_TRIS; i++ )
+	{
+		meshBuilder.Position3fv (v[g_capsuleTriIndices[i][2]].Base());
+		meshBuilder.Color4fv( interiorcolor );
+		meshBuilder.AdvanceVertex();
+
+		meshBuilder.Position3fv (v[g_capsuleTriIndices[i][1]].Base());
+		meshBuilder.Color4fv( interiorcolor );
+		meshBuilder.AdvanceVertex();
+
+		meshBuilder.Position3fv (v[g_capsuleTriIndices[i][0]].Base());
+		meshBuilder.Color4fv( interiorcolor );
+		meshBuilder.AdvanceVertex();
+	}
 
 	meshBuilder.End();
 	pMesh->Draw();
@@ -1413,11 +1725,7 @@ void StudioModel::DrawHitboxes( )
 		HitboxList_t &list = g_pStudioModel->m_HitboxSets[ hitboxset ].m_Hitboxes;
 		for (unsigned short j = list.Head(); j != list.InvalidIndex(); j = list.Next(j) )
 		{
-			// Only draw one hitbox if we've selected it.
-			if ((g_viewerSettings.highlightHitbox >= 0) && 
-				(g_viewerSettings.highlightHitbox != j))
-				continue;
-
+			
 			mstudiobbox_t *pBBox = &list[j].m_BBox;
 
 			float interiorcolor[4];
@@ -1427,7 +1735,62 @@ void StudioModel::DrawHitboxes( )
 			interiorcolor[2] = hullcolor[c][2] * 0.7;
 			interiorcolor[3] = hullcolor[c][3] * 0.4;
 
-			drawTransparentBox( pBBox->bbmin, pBBox->bbmax, m_pBoneToWorld[ pBBox->bone ], interiorcolor, hullcolor[ c ] );
+			matrix3x4_t hitboxMatrix;
+			AngleMatrix( pBBox->angOffsetOrientation, hitboxMatrix);
+			MatrixMultiply( m_pBoneToWorld[ pBBox->bone ], hitboxMatrix, hitboxMatrix );
+
+			matrix3x4_t hitboxMatrixPlusWidgetRotation;
+			hitboxMatrixPlusWidgetRotation = hitboxMatrix;
+
+			Vector bbMinPreview = pBBox->bbmin;
+			Vector bbMaxPreview = pBBox->bbmax;
+
+			//show unselected hitboxes faintly
+			if ( (g_viewerSettings.highlightHitbox >= 0) && (g_viewerSettings.highlightHitbox != j) )
+			{
+				float interiorcolorDim[4];
+				float wirecolorDim[4];
+				
+				for ( int i=0; i<4; i++ )
+				{
+					interiorcolorDim[i] = interiorcolor[i] * 0.6;
+					wirecolorDim[i] = hullcolor[ c ][i] * 0.6;
+				}
+
+				if ( pBBox->flCapsuleRadius > 0 )
+				{
+					drawCapsule( pBBox->bbmin, pBBox->bbmax, pBBox->flCapsuleRadius, hitboxMatrix, interiorcolorDim, wirecolorDim );
+				}
+				else
+				{
+					drawTransparentBox( pBBox->bbmin, pBBox->bbmax, hitboxMatrix, interiorcolorDim, wirecolorDim );
+				}
+
+			}
+			else if ( (g_viewerSettings.highlightHitbox >= 0) && (g_viewerSettings.highlightHitbox == j) )
+			{
+				//selected hitbox
+				if ( pBBox->flCapsuleRadius > 0 )
+				{
+					drawCapsule( bbMinPreview, bbMaxPreview, pBBox->flCapsuleRadius, hitboxMatrixPlusWidgetRotation, interiorcolor, hullcolor[c] );
+				}
+				else
+				{
+					drawTransparentBox( bbMinPreview, bbMaxPreview, hitboxMatrixPlusWidgetRotation, interiorcolor, hullcolor[ c ] );
+				}
+
+			}
+			else
+			{
+				if ( pBBox->flCapsuleRadius > 0 )
+				{
+					drawCapsule( pBBox->bbmin, pBBox->bbmax, pBBox->flCapsuleRadius, hitboxMatrix, interiorcolor, hullcolor[ c ] );
+				}
+				else
+				{
+					drawTransparentBox( pBBox->bbmin, pBBox->bbmax, hitboxMatrix, interiorcolor, hullcolor[ c ] );
+				}
+			}
 		}
 	}
 

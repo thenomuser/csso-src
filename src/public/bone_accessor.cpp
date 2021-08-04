@@ -7,6 +7,20 @@
 #include "cbase.h"
 #include "bone_accessor.h"
 
+bool CBoneAccessor::isBoneAvailableForRead( int iBone ) const
+{
+	if ( m_pAnimating )
+	{
+		CStudioHdr *pHdr = m_pAnimating->GetModelPtr();
+		if ( pHdr )
+		{
+			return ( pHdr->boneFlags( iBone ) & m_ReadableBones ) != 0;
+		}
+	}
+
+	return false;
+}
+
 
 #if defined( CLIENT_DLL ) && defined( _DEBUG )
 

@@ -213,30 +213,6 @@ void CWeaponM4A1::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatChar
 				m_weaponMode = Primary_Mode;
 				break;
 			}
-			case AE_CL_SHOW_SILENCER:
-			{
-				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
-				{
-					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
-						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 0 );
-				}
-
-				//world model
-				SetBodygroup( FindBodygroupByName( "silencer" ), 0 );
-				break;
-			}
-			case AE_CL_HIDE_SILENCER:
-			{
-				if ( CBasePlayer *pOwner = ToBasePlayer( GetPlayerOwner() ) )
-				{
-					if ( CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex ) )
-						vm->SetBodygroup( vm->FindBodygroupByName( "silencer" ), 1 );
-				}
-
-				//world model
-				SetBodygroup( FindBodygroupByName( "silencer" ), 1 );
-				break;
-			}
 		}
 	}
 

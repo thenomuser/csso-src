@@ -372,42 +372,68 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 		return ACTIVITY_NOT_AVAILABLE;
 	}
 	const HashValueType * __restrict actData = &m_ActToSeqHash[handle];
-
-	// go through each sequence and give it a score
+	
+	// go through each sequence and give actmod matches preference. LACK of an actmod is a detriment
 	int top_score = -1;
 	CUtlVector<int> topScoring( actData->count, actData->count );	
 	for ( int i = 0; i < actData->count; i++ )
 	{
 		SequenceTuple * __restrict sequenceInfo = m_pSequenceTuples + actData->startingIdx + i;
 		int score = 0;
-		// count matching activity modifiers
-		for ( int m = 0; m < iModifierCount; m++ )
+
+		int num_seq_modifiers = sequenceInfo->iNumActivityModifiers;
+		for ( int k = 0; k < num_seq_modifiers; k++ )
 		{
-			int num_modifiers = sequenceInfo->iNumActivityModifiers;
-			for ( int k = 0; k < num_modifiers; k++ )
+			bool bFoundMod = false;
+
+			for ( int m = 0; m < iModifierCount; m++ )
 			{
 				if ( sequenceInfo->pActivityModifiers[ k ] == pActivityModifiers[ m ] )
 				{
-					score++;
-					break;
+					bFoundMod = true;
 				}
 			}
+
+			if ( bFoundMod )
+			{
+				score += 2;
+			}
+			else
+			{
+				score--;
+			}
+
 		}
-		if ( score > top_score )
+		
+		if ( score >= top_score )
 		{
-			topScoring.RemoveAll();
-			topScoring.AddToTail( sequenceInfo->seqnum );
+			if ( score > top_score )
+			{
+				topScoring.RemoveAll();
+			}
+		
+			for ( int n=0; n<sequenceInfo->weight; n++ )
+			{
+				topScoring.AddToTail( sequenceInfo->seqnum );
+			}
+		
 			top_score = score;
 		}
 	}
 
 	// randomly pick between the highest scoring sequences ( NOTE: this method of selecting a sequence ignores activity weights )
-	if ( IsInPrediction() )
+	//if ( IsInPrediction() )
+	//{
+	//	return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
+	//}
+	if ( topScoring.Count() )
 	{
-		return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
+		return topScoring[ RandomInt( 0, topScoring.Count() - 1 ) ];
 	}
-	
-	return topScoring[ RandomInt( 0, topScoring.Count() - 1 ) ];
+	else
+	{
+		return -1;
+	}
 }
 
 
@@ -620,6 +646,130 @@ bool HasAnimationEventOfType( CStudioHdr *pstudiohdr, int sequence, int type )
 	}
 
 	return false;
+}
+
+struct animtaglookup_t
+{
+	int nIndex;
+	const char* szName;
+};
+
+#define REGISTER_ANIMTAG( _n ) { _n, #_n },
+const animtaglookup_t g_AnimTagLookupTable[ANIMTAG_COUNT] = 
+{
+	REGISTER_ANIMTAG( ANIMTAG_UNINITIALIZED )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_N )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_NE )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_E )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_SE )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_S )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_SW )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_W )
+	REGISTER_ANIMTAG( ANIMTAG_STARTCYCLE_NW )
+
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMIN_IDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMAX_IDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMIN_WALK )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMAX_WALK )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMIN_RUN )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMAX_RUN )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMIN_CROUCHIDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMAX_CROUCHIDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMIN_CROUCHWALK )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_YAWMAX_CROUCHWALK )
+
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMIN_IDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMAX_IDLE )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMIN_WALKRUN )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMAX_WALKRUN )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMIN_CROUCH )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMAX_CROUCH )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMIN_CROUCHWALK )
+	REGISTER_ANIMTAG( ANIMTAG_AIMLIMIT_PITCHMAX_CROUCHWALK )
+	
+	REGISTER_ANIMTAG( ANIMTAG_FLASHBANG_PASSABLE )
+
+	REGISTER_ANIMTAG( ANIMTAG_WEAPON_POSTLAYER )
+};
+
+int IndexFromAnimTagName( const char* szName )
+{
+	int i;
+	for ( i=1; i<ANIMTAG_COUNT; i++ )
+	{
+		const animtaglookup_t *pAnimTag = &g_AnimTagLookupTable[i];
+		if ( !V_strcmp( szName, pAnimTag->szName ) )
+		{
+			return pAnimTag->nIndex;
+		}
+	}
+	return ANIMTAG_INVALID;
+}
+
+float GetFirstSequenceAnimTag( CStudioHdr *pstudiohdr, int sequence, int nDesiredTag, float flStart, float flEnd )
+{
+	if ( !pstudiohdr || sequence >= pstudiohdr->GetNumSeq() )
+		return flStart;
+
+	mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( sequence );
+	if (seqdesc.numanimtags == 0 )
+		return flStart;
+
+	mstudioanimtag_t *panimtag = NULL;
+
+	int index;
+	for ( index = 0; index < (int)seqdesc.numanimtags; index++ )
+	{
+		panimtag = seqdesc.pAnimTag(index);
+
+		if ( panimtag->tag == ANIMTAG_INVALID )
+			continue;
+
+		if ( panimtag->tag == ANIMTAG_UNINITIALIZED )
+		{
+			panimtag->tag = IndexFromAnimTagName( panimtag->pszTagName() );
+		}
+
+		if ( panimtag->tag == nDesiredTag && panimtag->cycle >= flStart && panimtag->cycle < flEnd )
+		{
+			return panimtag->cycle;
+		}
+	}
+
+	return flStart;
+}
+
+float GetAnySequenceAnimTag( CStudioHdr *pstudiohdr, int sequence, int nDesiredTag, float flDefault )
+{
+	if ( !pstudiohdr || sequence >= pstudiohdr->GetNumSeq() )
+		return flDefault;
+
+	mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( sequence );
+	if (seqdesc.numanimtags == 0 )
+		return flDefault;
+
+	mstudioanimtag_t *panimtag = NULL;
+
+	int index;
+	for ( index = 0; index < (int)seqdesc.numanimtags; index++ )
+	{
+		panimtag = seqdesc.pAnimTag(index);
+
+		if ( panimtag->tag == ANIMTAG_INVALID )
+			continue;
+
+		if ( panimtag->tag == ANIMTAG_UNINITIALIZED )
+		{
+			panimtag->tag = IndexFromAnimTagName( panimtag->pszTagName() );
+		}
+
+		if ( panimtag->tag == nDesiredTag )
+		{
+			return panimtag->cycle;
+		}
+	}
+
+	return flDefault;
 }
 
 int GetAnimationEvent( CStudioHdr *pstudiohdr, int sequence, animevent_t *pNPCEvent, float flStart, float flEnd, int index )

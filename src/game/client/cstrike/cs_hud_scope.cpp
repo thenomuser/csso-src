@@ -156,14 +156,14 @@ void CHudScope::Paint( void )
 
 	const float kScopeMinFOV = 25.0f; // Clamp scope FOV to this value to prevent blur from getting too big when double-scoped
 	float flTargetFOVForZoom = MAX( pPlayer->GetFOV(), kScopeMinFOV );
-	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() && (pPlayer->GetFOV() == pPlayer->GetDefaultFOV()) )
+	if ( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped == false )
 	{
 		m_fAnimInset = 2;
 		m_fLineSpreadDistance = 20;
 	}
 
 	// see if we're zoomed with a sniper rifle
-	if( flTargetFOVForZoom != pPlayer->GetDefaultFOV() && (pPlayer->GetFOV() < pPlayer->GetDefaultFOV()) )
+	if( flTargetFOVForZoom != pPlayer->GetDefaultFOV() && pPlayer->m_bIsScoped )
 	{
 		int screenWide, screenTall;
 		GetHudSize( screenWide, screenTall );

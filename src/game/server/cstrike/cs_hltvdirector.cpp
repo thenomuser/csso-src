@@ -127,7 +127,10 @@ const char** CCSHLTVDirector::GetModEvents()
 		"bomb_planted",	
 		"bomb_defused",
 		"hostage_killed",
-		"hostage_hurt",		
+		"hostage_hurt",
+		"round_time_warning",
+		"cs_round_start_beep",
+		"cs_round_final_beep",
 		NULL
 	};
 

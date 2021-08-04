@@ -13,6 +13,7 @@
 #include "baseentity.h"
 #include "entityoutput.h"
 #include "studio.h"
+#include "bone_merge_cache.h"
 #include "datacache/idatacache.h"
 #include "tier0/threadtools.h"
 
@@ -21,6 +22,7 @@ struct animevent_t;
 struct matrix3x4_t;
 class CIKContext;
 class KeyValues;
+class CAnimationLayer;
 FORWARD_DECLARE_HANDLE( memhandle_t );
 
 #define	BCF_NO_ANIMATION_SKIP	( 1 << 0 )	// Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
@@ -105,6 +107,7 @@ public:
 	float	GetLastVisibleCycle( CStudioHdr *pStudioHdr, int iSequence );
 	virtual float	GetSequenceGroundSpeed( CStudioHdr *pStudioHdr, int iSequence );
 	inline float GetSequenceGroundSpeed( int iSequence ) { return GetSequenceGroundSpeed(GetModelPtr(), iSequence); }
+	virtual float	GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence ) { return GetSequenceCycleRate(GetModelPtr(),iSequence); }
 	void	ResetActivityIndexes ( void );
 	void    ResetEventIndexes ( void );
 	int		SelectWeightedSequence ( Activity activity );
@@ -113,6 +116,8 @@ public:
 	int		SelectHeaviestSequence ( Activity activity );
 	int		LookupActivity( const char *label );
 	int		LookupSequence ( const char *label );
+	float	GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart = 0, float flEnd = 1 );
+	float	GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault );
 	KeyValues *GetSequenceKeyValues( int iSequence );
 
 	float GetSequenceMoveYaw( int iSequence );
@@ -164,13 +169,19 @@ protected:
 	// save off your pose parameters in member variables in your derivation of this function:
 	virtual void	PopulatePoseParameters( void );
 
+private:
+	CBoneMergeCache					*m_pBoneMergeCache;
 
 public:
+	CBaseAnimating*	FindFollowedEntity();
 
-	int  LookupBone( const char *szName );
+	virtual int  LookupBone( const char *szName );
 	void GetBonePosition( const char *szName, Vector &origin, QAngle &angles );
 	void GetBonePosition( int iBone, Vector &origin, QAngle &angles );
 	int	GetPhysicsBone( int boneIndex );
+
+	void GetHitboxBonePosition( int iBone, Vector &origin, QAngle &angles, QAngle hitboxOrientation );
+	void GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation, matrix3x4_t &pOut );
 
 	int GetNumBones ( void );
 
@@ -426,6 +437,7 @@ private:
 	CThreadFastMutex	m_BoneSetupMutex;
 
 // FIXME: necessary so that cyclers can hack m_bSequenceFinished
+friend class CBaseAnimatingOverlay;
 friend class CFlexCycler;
 friend class CCycler;
 friend class CBlendingCycler;

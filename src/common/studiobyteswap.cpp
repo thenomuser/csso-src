@@ -1615,13 +1615,37 @@ int ByteswapMDLFile( void *pDestBase, void *pSrcBase, const int fileSize )
 						WriteBuffer<short>( &pZeroFrameDest, &pZeroFrameSrc, 3 );
 					}
 				}
-				if ( pStudioBone->flags & BONE_HAS_SAVEFRAME_ROT )
+				if ( pStudioBone->flags & BONE_HAS_SAVEFRAME_ROT64 )
 				{
 					for ( int j = 0; j < pAnimDesc->zeroframecount; j++)
 					{
 						WriteBuffer<int64>( &pZeroFrameDest, &pZeroFrameSrc, 1 );
 					}
 				}
+				else if ( pStudioBone->flags & BONE_HAS_SAVEFRAME_ROT32 )
+				{
+					for ( int j = 0; j < pAnimDesc->zeroframecount; j++)
+					{
+						WriteBuffer<int32>( &pZeroFrameDest, &pZeroFrameSrc, 1 );
+					}
+				}
+			}
+		}
+
+		// write zero frame IK release rules
+		if ( pAnimDesc->pIKRuleZeroFrame( 0 ) )
+		{
+			int offset = (byte *)pAnimDesc->pIKRuleZeroFrame( 0 ) - (byte *)pAnimDesc;
+
+			// printf("%d : %d  (%x %x)\n", offset, pAnimDesc->numikrules, pAnimDescSrc->ikrulezeroframeindex, pAnimDescDest->ikrulezeroframeindex );
+
+			// Base address of the animation in the animblock
+			byte *pIKRuleZeroFrameSrc = (byte *)pAnimDescSrc + offset;
+			byte *pIKRuleZeroFrameDest = (byte *)pAnimDescDest + offset;
+
+			for ( int j = 0; j < pAnimDesc->numikrules; j++)
+			{
+				WriteBuffer<short>( &pIKRuleZeroFrameDest, &pIKRuleZeroFrameSrc, 6 );
 			}
 		}
 	}
@@ -2702,7 +2726,7 @@ BEGIN_BYTESWAP_DATADESC( mstudiobbox_t )
 	DEFINE_FIELD( bbmin, FIELD_VECTOR ),
 	DEFINE_FIELD( bbmax, FIELD_VECTOR ),
 	DEFINE_INDEX( szhitboxnameindex, FIELD_INTEGER ),
-	DEFINE_ARRAY( unused, FIELD_INTEGER, 8 ),
+	DEFINE_ARRAY( unused, FIELD_INTEGER, 4 ),
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( mstudioanim_valueptr_t )
@@ -2734,7 +2758,8 @@ BEGIN_BYTESWAP_DATADESC( mstudioanimdesc_t )
 	DEFINE_FIELD( numframes, FIELD_INTEGER ),
 	DEFINE_FIELD( nummovements, FIELD_INTEGER ),
 	DEFINE_INDEX( movementindex, FIELD_INTEGER ),
-	DEFINE_ARRAY( unused1, FIELD_INTEGER, 6 ),
+	DEFINE_INDEX( ikrulezeroframeindex, FIELD_INTEGER ),
+	DEFINE_ARRAY( unused1, FIELD_INTEGER, 5 ),
 	DEFINE_FIELD( animblock, FIELD_INTEGER ),
 	DEFINE_INDEX( animindex, FIELD_INTEGER ),
 	DEFINE_FIELD( numikrules, FIELD_INTEGER ),
@@ -2851,7 +2876,7 @@ BEGIN_BYTESWAP_DATADESC( mstudioseqdesc_t )
 	DEFINE_INDEX( cycleposeindex, FIELD_INTEGER ),
 	DEFINE_INDEX( activitymodifierindex, FIELD_INTEGER ),
 	DEFINE_FIELD( numactivitymodifiers, FIELD_INTEGER ),
-	DEFINE_ARRAY( unused, FIELD_INTEGER, 5 ),		// remove/add as appropriate (grow back to 8 ints on version change!)
+	DEFINE_ARRAY( unused, FIELD_INTEGER, 2 ),		// remove/add as appropriate (grow back to 8 ints on version change!)
 END_BYTESWAP_DATADESC()
 
 BEGIN_BYTESWAP_DATADESC( mstudioevent_t )

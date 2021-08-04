@@ -165,5 +165,9 @@ T* CHandle<T>::operator -> () const
 	return Get();
 }
 
+// specialization of EnsureValidValue for CHandle<T>
+template<typename T>
+FORCEINLINE void EnsureValidValue( CHandle<T> &x ) { x = NULL; }
+
 
 #endif // EHANDLE_H

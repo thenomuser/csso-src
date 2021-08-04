@@ -242,6 +242,8 @@ typedef struct color32_s
 	byte r, g, b, a;
 } color32;
 
+inline void EnsureValidValue( color32_s &x ) { x.r = x.g = x.b = x.a = 0; }
+
 inline bool color32::operator!=( const color32 &other ) const
 {
 	return r != other.r || g != other.g || b != other.b || a != other.a;

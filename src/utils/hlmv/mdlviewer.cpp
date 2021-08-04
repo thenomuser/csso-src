@@ -201,8 +201,6 @@ struct AccelTableEntry_t
 
 AccelTableEntry_t accelTable[] = {					{VK_F1,	IDC_FLUSH_SHADERS,				mx::ACCEL_VIRTKEY},
 													{VK_F5,	IDC_FILE_REFRESH,				mx::ACCEL_VIRTKEY},
-													{'u',	IDC_FILE_UNLOADALLMERGEDMODELS,	mx::ACCEL_CONTROL | mx::ACCEL_VIRTKEY},
-													{'U',	IDC_FILE_UNLOADALLMERGEDMODELS,	mx::ACCEL_CONTROL | mx::ACCEL_VIRTKEY},
 													{'w',	IDC_ACCEL_WIREFRAME,			mx::ACCEL_CONTROL | mx::ACCEL_VIRTKEY},
 													{'W',	IDC_ACCEL_WIREFRAME,			mx::ACCEL_CONTROL | mx::ACCEL_VIRTKEY},
 													{'a',	IDC_ACCEL_ATTACHMENTS,			mx::ACCEL_CONTROL | mx::ACCEL_VIRTKEY},
@@ -265,37 +263,6 @@ MDLViewer::MDLViewer ()
 	}
 
 	menuFile->add( "Refresh (F5)", IDC_FILE_REFRESH );
-	menuFile->addSeparator ();
-	
-	if ( g_bOldFileDialogs )
-	{
-		menuFile->add ("Load Weapon...", IDC_FILE_LOADMERGEDMODEL);
-		menuFile->add ("(VPK) Load Weapon...", IDC_FILE_LOADMERGEDMODEL_STEAM);
-	}
-	else
-	{
-		menuFile->add ("Load Weapon...", IDC_FILE_LOADMERGEDMODEL_STEAM);
-	}
-
-	mxMenu *menuUnloadWeapon = new mxMenu ();
-	menuUnloadWeapon->add ("Unload All Merged Models (Ctrl-U)", IDC_FILE_UNLOADALLMERGEDMODELS);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL1);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL2);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL3);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL4);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL5);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL6);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL7);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL8);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL9);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL10);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL11);
-	menuUnloadWeapon->add ("(empty)", IDC_FILE_UNLOADMERGEDMODEL12);
-	for ( int i = IDC_FILE_UNLOADMERGEDMODEL1; i <= IDC_FILE_UNLOADMERGEDMODEL12; i++ )
-	{
-		menuUnloadWeapon->setEnabled( i, false );
-	}
-	menuFile->addMenu ("Unload Weapon", menuUnloadWeapon);
 	
 	menuFile->addSeparator ();
 	menuFile->add ("Load Background Texture...", IDC_FILE_LOADBACKGROUNDTEX);
@@ -501,11 +468,8 @@ void MDLViewer::LoadModelFile( const char *pszFile, int slot )
 
 		setLabel( "%s", filename );
 	}
-	else
-	{	
-		mb->modify (IDC_FILE_UNLOADMERGEDMODEL1 + slot, IDC_FILE_UNLOADMERGEDMODEL1 + slot, pszFile);
-		mb->setEnabled (IDC_FILE_UNLOADMERGEDMODEL1 + slot, true);
-	}
+
+	d_cpl->UpdateSubmodelWindow();
 }
 
 
@@ -644,81 +608,6 @@ MDLViewer::handleEvent (mxEvent *event)
 			}
 		}
 		break;
-
-		case IDC_FILE_LOADMERGEDMODEL:
-		{
-			const char *ptr = mxGetOpenFileName (this, 0, "*.mdl");
-			if (ptr)
-			{
-				// find the first free slot
-				int iChosenSlot = 0;
-				for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; i++ )
-				{
-					if ( g_viewerSettings.mergeModelFile[i][0] == 0 )
-					{
-						iChosenSlot = i;
-						break;
-					}
-				}
-				strcpy( g_viewerSettings.mergeModelFile[iChosenSlot], ptr );
-				LoadModelFile( ptr, iChosenSlot );
-			}
-		}
-		break;
-
-		case IDC_FILE_LOADMERGEDMODEL_STEAM:
-		{
-			const char *pFilename = SteamGetOpenFilename();
-			if ( pFilename )
-			{
-				// find the first free slot
-				int iChosenSlot = 0;
-				for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; i++ )
-				{
-					if ( g_viewerSettings.mergeModelFile[i][0] == 0 )
-					{
-						iChosenSlot = i;
-						break;
-					}
-				}
-				strcpy( g_viewerSettings.mergeModelFile[iChosenSlot], pFilename );
-				LoadModelFile( pFilename, iChosenSlot );
-			}
-		}
-		break;
-
-
-		case IDC_FILE_UNLOADMERGEDMODEL1:
-		case IDC_FILE_UNLOADMERGEDMODEL2:
-		case IDC_FILE_UNLOADMERGEDMODEL3:
-		case IDC_FILE_UNLOADMERGEDMODEL4:
-		case IDC_FILE_UNLOADMERGEDMODEL5:
-		case IDC_FILE_UNLOADMERGEDMODEL6:
-		case IDC_FILE_UNLOADMERGEDMODEL7:
-		case IDC_FILE_UNLOADMERGEDMODEL8:
-		case IDC_FILE_UNLOADMERGEDMODEL9:
-		case IDC_FILE_UNLOADMERGEDMODEL10:
-		case IDC_FILE_UNLOADMERGEDMODEL11:
-		case IDC_FILE_UNLOADMERGEDMODEL12:
-		{
-			int i = event->action - IDC_FILE_UNLOADMERGEDMODEL1;
-			// FIXME: move to d_cpl
-			if (g_pStudioExtraModel[i])
-			{
-				V_strcpy_safe( g_viewerSettings.mergeModelFile[i], "" );
-				g_pStudioExtraModel[i]->FreeModel( false );
-				delete g_pStudioExtraModel[i];
-				g_pStudioExtraModel[i] = NULL;
-
-				mb->modify (IDC_FILE_UNLOADMERGEDMODEL1 + i, IDC_FILE_UNLOADMERGEDMODEL1 + i, "(empty)");
-				mb->setEnabled (IDC_FILE_UNLOADMERGEDMODEL1 + i, false);					
-			}
-		}
-		break;
-
-		case IDC_FILE_UNLOADALLMERGEDMODELS:
-			d_cpl->UnloadAllMergedModels();
-			break;
 
 		case IDC_FILE_REFRESH:
 		{

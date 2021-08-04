@@ -402,6 +402,8 @@ static void WriteBoneInfo( studiohdr_t *phdr )
 			pbbox[i].group				= set->hitbox[i].group;
 			VectorCopy( set->hitbox[i].bmin, pbbox[i].bbmin );
 			VectorCopy( set->hitbox[i].bmax, pbbox[i].bbmax );
+			VectorCopy( set->hitbox[i].angOffsetOrientation, pbbox[i].angOffsetOrientation );
+			pbbox[i].flCapsuleRadius = set->hitbox[i].flCapsuleRadius;
 			pbbox[i].szhitboxnameindex = 0;
 			AddToStringTable( &(pbbox[i]), &(pbbox[i].szhitboxnameindex), set->hitbox[i].hitboxname );	
 		}
@@ -460,6 +462,7 @@ static void WriteSequenceInfo( studiohdr_t *phdr )
 	mstudioseqdesc_t	*pbaseseqdesc;
 	mstudioevent_t		*pevent;
 	byte				*ptransition;
+	mstudioanimtag_t	*panimtag;
 
 	// write models to disk with this flag set false. This will force
 	// the sequences to be indexed by activity whenever the g_model is loaded
@@ -845,6 +848,49 @@ static void WriteSequenceInfo( studiohdr_t *phdr )
 		pseqdesc->cycleposeindex = g_sequence[i].cycleposeindex;
 
 		WriteSeqKeyValues( pseqdesc, &g_sequence[i].KeyValue );
+
+		// Write activity modifiers
+		mstudioactivitymodifier_t *pactivitymodifier	= (mstudioactivitymodifier_t *)pData;
+		pseqdesc->numactivitymodifiers		= g_sequence[i].numactivitymodifiers;
+		pseqdesc->activitymodifierindex		= (pData - pSequenceStart);
+		pData += pseqdesc->numactivitymodifiers * sizeof( mstudioactivitymodifier_t );
+		ALIGN4( pData );
+
+		for (j = 0; j < pseqdesc->numactivitymodifiers; j++)
+		{
+			AddToStringTable( &pactivitymodifier[j], &pactivitymodifier[j].sznameindex, g_sequence[i].activitymodifier[j].name );			
+		}
+
+
+		// save animtags
+		panimtag				= (mstudioanimtag_t *)pData;
+		pseqdesc->numanimtags	= g_sequence[i].numanimtags;
+		pseqdesc->animtagindex	= (pData - pSequenceStart);
+		pData += pseqdesc->numanimtags * sizeof( mstudioanimtag_t );
+		for (j = 0; j < g_sequence[i].numanimtags; j++)
+		{
+			panimtag[j].cycle = g_sequence[i].animtags[j].cycle;
+			AddToStringTable( &panimtag[j], &panimtag[j].sztagindex, g_sequence[i].animtags[j].tagname );
+		}
+
+		if ( g_sequence[i].flags & STUDIO_ROOTXFORM )
+		{
+			int bone = findGlobalBone( g_sequence[i].rootDriverBoneName );
+			if (bone != -1)
+			{
+				pseqdesc->rootDriverIndex = bone;
+			}
+			else
+			{
+				MdlError("unable to find bone %s\n", token );
+			}
+		}
+		else
+		{
+			pseqdesc->rootDriverIndex = 0;
+		}
+
+		ALIGN4( pData );
 	}
 
 	if (bErrors)
@@ -1528,14 +1574,23 @@ static byte *WriteAnimations( byte *pData, byte *pStart, studiohdr_t *phdr )
 			{
 				g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_POS;
 			}
-			g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT;
-
-			if ((!g_quiet) && (g_bonetable[j].flags & (BONE_HAS_SAVEFRAME_POS | BONE_HAS_SAVEFRAME_ROT)))
+			if (g_bZeroFramesHighres)
+			{
+				g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT64;
+			}
+			else
+			{
+				g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT32;
+			}
+			
+			if ((!g_quiet) && (g_bonetable[j].flags & (BONE_HAS_SAVEFRAME_POS | BONE_HAS_SAVEFRAME_ROT64 | BONE_HAS_SAVEFRAME_ROT32)))
 			{
 				printf("$BoneSaveFrame \"%s\"", g_bonetable[j].name );
 				if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_POS)
 					printf(" position" );
-				if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT)
+				if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT64)
+					printf(" rotation64" );
+				else if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT32)
 					printf(" rotation" );
 				printf("\n");
 			}
@@ -1555,7 +1610,18 @@ static byte *WriteAnimations( byte *pData, byte *pStart, studiohdr_t *phdr )
 				}
 				if (g_bonesaveframe[i].bSaveRot)
 				{
-					g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT;
+					if (g_bZeroFramesHighres)
+					{
+						g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT64;
+					}
+					else
+					{
+						g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT32;
+					}
+				}
+				else if (g_bonesaveframe[i].bSaveRot64)
+				{
+					g_bonetable[j].flags |= BONE_HAS_SAVEFRAME_ROT64;
 				}
 			}
 		}
@@ -1600,7 +1666,7 @@ static byte *WriteAnimations( byte *pData, byte *pStart, studiohdr_t *phdr )
 						pData += sizeof( Vector48 );
 					}
 				}
-				if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT)
+				if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT64)
 				{
 					for (int n = 0; n < panimdesc[i].zeroframecount; n++)
 					{
@@ -1610,7 +1676,50 @@ static byte *WriteAnimations( byte *pData, byte *pStart, studiohdr_t *phdr )
 						pData += sizeof( Quaternion64 );
 					}
 				}
+				else if (g_bonetable[j].flags & BONE_HAS_SAVEFRAME_ROT32)
+				{
+					for (int n = 0; n < panimdesc[i].zeroframecount; n++)
+					{
+						Quaternion q;
+						AngleQuaternion( anim->sanim[panimdesc[i].zeroframespan*n][j].rot, q );
+						*((Quaternion32 *)pData) = q;
+						pData += sizeof( Quaternion32 );
+					}
+				}
 			}
+			ALIGN4( pData );
+
+			// write zero frame IK data
+			if (panimdesc[i].numikrules)
+			{
+				mstudioikrulezeroframe_t *pdestikrule = (mstudioikrulezeroframe_t *)pData;
+				panimdesc[i].ikrulezeroframeindex = pData - (byte *)&panimdesc[i];
+				pData += sizeof( *pdestikrule ) * panimdesc[i].numikrules;
+
+				// printf("%s : %d : %d %x : %x %x\n", phdr->name, destanim->numikrules, destanim->animblock, destanim->ikruleindex, destanim->animblockikruleindex, destanim->ikrulezeroframeindex );
+
+				mstudioikrule_t *psrcikrule;
+
+				if (panimdesc[i].ikruleindex)
+				{
+					psrcikrule = (mstudioikrule_t *)((byte *)&panimdesc[i] + panimdesc[i].ikruleindex);
+				}
+				else
+				{
+					psrcikrule = (mstudioikrule_t *)(g_animblock[panimdesc[i].animblock].start + panimdesc[i].animblockikruleindex);
+				}
+
+				for (j = 0; j < panimdesc[i].numikrules; j++, psrcikrule++, pdestikrule++ )
+				{
+					pdestikrule->slot = psrcikrule->slot;
+					pdestikrule->chain = psrcikrule->chain;
+					pdestikrule->start.SetFloat( psrcikrule->start );
+					pdestikrule->peak.SetFloat( psrcikrule->peak );
+					pdestikrule->tail.SetFloat( psrcikrule->tail );
+					pdestikrule->end.SetFloat( psrcikrule->end );
+				}
+			}
+			ALIGN4( pData );
 		}
 	}
 
