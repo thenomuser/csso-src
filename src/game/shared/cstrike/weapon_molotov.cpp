@@ -75,43 +75,34 @@ void CMolotovGrenade::UpdateParticles( void )
 
 	if ( iWeaponId == WEAPON_MOLOTOV )
 	{
-		bool bIsFirstOrThirdpersonMolotovVisible = pCSWeapon->IsWeaponVisible();
-		
-		CBaseAnimating *pWeaponBaseAnimating = pCSWeapon->GetBaseAnimating();
-
+		bool bIsThirdPersonMolotovVisible = false;
 		CBaseWeaponWorldModel *pWeaponWorldModel = pCSWeapon->GetWeaponWorldModel();
-		if ( pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() )
+		if ( pWeaponWorldModel )
 		{
-			pWeaponBaseAnimating = pWeaponWorldModel->GetBaseAnimating();
-			bIsFirstOrThirdpersonMolotovVisible = true;
+			bIsThirdPersonMolotovVisible = pWeaponWorldModel->ShouldDraw();
 		}
 
 		if ( m_molotovParticleEffect.IsValid() ) 
 		{
-//			m_molotovParticleEffect->SetDormant( pPlayer->GetPlayerAnimState()->ShouldHideWeapon() ); // ShouldHideWeapon is a Terror Codebase function, not CStrike15
-			m_molotovParticleEffect->SetDormant( !bIsFirstOrThirdpersonMolotovVisible ); // Is the weapon Hidden?
+			m_molotovParticleEffect->SetDormant( !bIsThirdPersonMolotovVisible ); // Is the weapon Hidden?
 		}
 
-		if ( bIsFirstOrThirdpersonMolotovVisible )
-		{	
+		if ( bIsThirdPersonMolotovVisible )
+		{
 			if ( m_bPinPulled )
 			{
 				if ( !m_molotovParticleEffect() )
 				{
 					// TEST: [mlowrance] This is to test for attachment.
-					int iAttachment = -1;
-					if ( pWeaponBaseAnimating )
-						iAttachment = pWeaponBaseAnimating->LookupAttachment( "Wick" );
-
+					int iAttachment = pWeaponWorldModel->LookupAttachment( "Wick" );
 					if ( iAttachment >= 0 )
 					{
 						// FIXME: Precache 'Wick' attachment index
-						m_molotovParticleEffect = pCSWeapon->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
+						m_molotovParticleEffect = pWeaponWorldModel->ParticleProp()->Create( "weapon_molotov_held", PATTACH_POINT_FOLLOW, iAttachment );
 						EmitSound( "Molotov.IdleLoop" );
 						SetLoopingSoundPlaying( true );
 
 						//DevMsg( 1, "++++++++++>Playing Molotov.IdleLoop 1\n" );
-
 					}
 				}
 			}
