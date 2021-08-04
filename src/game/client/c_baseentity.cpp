@@ -4384,12 +4384,13 @@ void C_BaseEntity::CalcAbsolutePosition( )
 
 	// Construct the entity-to-world matrix
 	// Start with making an entity-to-parent matrix
-	matrix3x4_t matEntityToParent;
+	ALIGN16 matrix3x4_t matEntityToParent ALIGN16_POST;
 	AngleMatrix( GetLocalAngles(), matEntityToParent );
 	MatrixSetColumn( GetLocalOrigin(), 3, matEntityToParent );
 
 	// concatenate with our parent's transform
-	matrix3x4_t scratchMatrix;
+	m_pMoveParent->CalcAbsolutePosition();
+	ALIGN16 matrix3x4_t scratchMatrix ALIGN16_POST;
 	ConcatTransforms( GetParentToWorldTransform( scratchMatrix ), matEntityToParent, m_rgflCoordinateFrame );
 
 	// pull our absolute position out of the matrix
@@ -4412,7 +4413,7 @@ void C_BaseEntity::CalcAbsolutePosition( )
 	//
 	// So here, we keep our absorigin invalidated. It means we're returning an origin that is a frame old to CalculateIKLocks,
 	// but we'll still render with the right origin.
-	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetEFlags() & EFL_SETTING_UP_BONES) )
+	if ( m_iParentAttachment != 0 && (m_pMoveParent->GetFlags() & EFL_SETTING_UP_BONES) )
 	{
 		m_iEFlags |= EFL_DIRTY_ABSTRANSFORM;
 	}
