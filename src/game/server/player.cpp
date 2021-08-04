@@ -100,6 +100,8 @@ ConVar	spec_freeze_traveltime( "spec_freeze_traveltime", "0.4", FCVAR_CHEAT | FC
 
 ConVar sv_bonus_challenge( "sv_bonus_challenge", "0", FCVAR_REPLICATED, "Set to values other than 0 to select a bonus map challenge type." );
 
+ConVar sv_force_transmit_players( "sv_force_transmit_players", "0", FCVAR_NONE, "Will transmit players to all clients regardless of PVS checks." );
+
 static ConVar sv_maxusrcmdprocessticks( "sv_maxusrcmdprocessticks", "24", FCVAR_NOTIFY, "Maximum number of client-issued usrcmd ticks that can be replayed in packet loss conditions, 0 to allow no restrictions" );
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -705,6 +707,9 @@ int	CBasePlayer::UpdateTransmitState()
 
 int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 {
+	if ( sv_force_transmit_players.GetBool() )
+		return FL_EDICT_ALWAYS;
+
 	// Allow me to introduce myself to, err, myself.
 	// I.e., always update the recipient player data even if it's nodraw (first person mode)
 	if ( pInfo->m_pClientEnt == edict() )
@@ -715,15 +720,24 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	// when HLTV/Replay is connected and spectators press +USE, they
 	// signal that they are recording a interesting scene
 	// so transmit these 'cameramans' to the HLTV or Replay client
+#if defined( REPLAY_ENABLED )
+	if ( HLTVDirector()->GetCameraMan() == entindex() ||
+		 ReplayDirector()->GetCameraMan() == entindex() )
+#else
 	if ( HLTVDirector()->GetCameraMan() == entindex() )
+#endif
 	{
 		CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
 		
 		Assert( pRecipientEntity->IsPlayer() );
 		
 		CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
+#if defined( REPLAY_ENABLED )
 		if ( pRecipientPlayer->IsHLTV() ||
 			 pRecipientPlayer->IsReplay() )
+#else
+		if ( pRecipientPlayer->IsHLTV() )
+#endif
 		{
 			// HACK force calling RecomputePVSInformation to update PVS data
 			NetworkProp()->AreaNum();
@@ -731,16 +745,21 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		}
 	}
 
-	// Transmit for a short time after death and our death anim finishes so ragdolls can access reliable player data.
-	// Note that if m_flDeathAnimTime is never set, as long as m_lifeState is set to LIFE_DEAD after dying, this
-	// test will act as if the death anim is finished.
-	if ( IsEffectActive( EF_NODRAW ) || ( IsObserver() && ( gpGlobals->curtime - m_flDeathTime > 0.5 ) && 
-		( m_lifeState == LIFE_DEAD ) && ( gpGlobals->curtime - m_flDeathAnimTime > 0.5 ) ) )
+	// In case player is dead: we transmit so ragdolls can access reliable player data, after replay, reconnect and full frame update, as well.
+	if ( m_lifeState == LIFE_DEAD )
+		return FL_EDICT_ALWAYS;
+
+	int iBaseResult = BaseClass::ShouldTransmit( pInfo );
+
+	if ( iBaseResult == FL_EDICT_PVSCHECK )
 	{
-		return FL_EDICT_DONTSEND;
+		if ( IsAlive() && IsEffectActive( EF_NODRAW ) )
+		{
+			return FL_EDICT_DONTSEND;
+		}
 	}
 
-	return BaseClass::ShouldTransmit( pInfo );
+	return iBaseResult;
 }
 
 
