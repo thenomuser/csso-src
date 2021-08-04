@@ -373,14 +373,6 @@ BEGIN_SEND_TABLE_NOBASE( CCSPlayer, DT_CSLocalPlayerExclusive )
 	// HPE_END
 	//=============================================================================
 
-	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
-	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
-
-	SendPropFloat( SENDINFO( m_flLowerBodyYawTarget ), 8, SPROP_NOSCALE ),
-	SendPropBool( SENDINFO( m_bStrafing ) ),
-
-	SendPropFloat( SENDINFO( m_flThirdpersonRecoil ), 8, SPROP_NOSCALE ),
-
 END_SEND_TABLE()
 
 
@@ -411,6 +403,9 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropDataTable( "cslocaldata", 0, &REFERENCE_SEND_TABLE(DT_CSLocalPlayerExclusive), SendProxy_SendLocalDataTable ),
 	SendPropDataTable( "csnonlocaldata", 0, &REFERENCE_SEND_TABLE(DT_CSNonLocalPlayerExclusive), SendProxy_SendNonLocalDataTable ),
 
+	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 0 ), -1, SPROP_NOSCALE | SPROP_CHANGES_OFTEN ),
+	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 1 ), -1, SPROP_NOSCALE | SPROP_CHANGES_OFTEN ),
+
 	SendPropInt( SENDINFO( m_iThrowGrenadeCounter ), THROWGRENADE_COUNTER_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iAddonBits ), NUM_ADDON_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iPrimaryAddon ), 8, SPROP_UNSIGNED ),
@@ -425,8 +420,6 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropInt( SENDINFO( m_iMoveState ), 0, SPROP_CHANGES_OFTEN ),
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( CS_NUM_CLASSES )+1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_ArmorValue ), 8 ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angEyeAngles, 0), 11, SPROP_CHANGES_OFTEN ),
-	SendPropAngle( SENDINFO_VECTORELEM(m_angEyeAngles, 1), 11, SPROP_CHANGES_OFTEN ),
 	SendPropBool( SENDINFO( m_bHasDefuser ) ),
 	SendPropBool( SENDINFO( m_bNightVisionOn ) ),	//send as int so we can use a RecvProxy on the client
 	SendPropBool( SENDINFO( m_bHasNightVision ) ),
@@ -476,6 +469,14 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 	SendPropBool( SENDINFO( m_bCanControlObservedBot ) ),
 	SendPropInt( SENDINFO( m_iControlledBotEntIndex ) ),
 #endif
+
+	SendPropBool( SENDINFO( m_bIsLookingAtWeapon ) ),
+	SendPropBool( SENDINFO( m_bIsHoldingLookAtWeapon ) ),
+
+	SendPropFloat( SENDINFO( m_flLowerBodyYawTarget ), 8, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO( m_bStrafing ) ),
+
+	SendPropFloat( SENDINFO( m_flThirdpersonRecoil ), 8, SPROP_NOSCALE ),
 
 	SendPropBool( SENDINFO( m_bNeedToChangeGloves ) ),
 	SendPropInt( SENDINFO( m_iLoadoutSlotGlovesCT ) ),
@@ -2575,7 +2576,11 @@ void CCSPlayer::PostThink()
 	SetLocalAngles( angles );
 
 	// Store the eye angles pitch so the client can compute its animation state correctly.
-	m_angEyeAngles = EyeAngles();
+	QAngle eyeAngles = EyeAngles();
+	Vector &angEyeAngles = m_angEyeAngles.GetForModify();
+	angEyeAngles.x = eyeAngles.x;
+	angEyeAngles.y = eyeAngles.y;
+	angEyeAngles.z = eyeAngles.z;
 
 	m_flThirdpersonRecoil = GetAimPunchAngle()[PITCH];
 

@@ -1092,13 +1092,6 @@ BEGIN_RECV_TABLE_NOBASE( C_CSPlayer, DT_CSLocalPlayerExclusive )
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
 	RecvPropFloat( RECVINFO( m_flVelocityModifier ) ),
 	RecvPropBool( RECVINFO( m_bDuckOverride ) ),
-	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
-	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
-
-	RecvPropFloat( RECVINFO( m_flLowerBodyYawTarget ) ),
-	RecvPropBool( RECVINFO( m_bStrafing ) ),
-
-	RecvPropFloat( RECVINFO( m_flThirdpersonRecoil ) ),
 
 	RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 
@@ -1125,6 +1118,8 @@ END_RECV_TABLE()
 IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropDataTable( "cslocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSLocalPlayerExclusive) ),
 	RecvPropDataTable( "csnonlocaldata", 0, 0, &REFERENCE_RECV_TABLE(DT_CSNonLocalPlayerExclusive) ),
+	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
+	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
 	RecvPropInt( RECVINFO( m_iAddonBits ) ),
 	RecvPropInt( RECVINFO( m_iPrimaryAddon ) ),
 	RecvPropInt( RECVINFO( m_iSecondaryAddon ) ),
@@ -1139,8 +1134,7 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropInt( RECVINFO( m_iMoveState ) ),
 	RecvPropInt( RECVINFO( m_iClass ) ),
 	RecvPropInt( RECVINFO( m_ArmorValue ) ),
-	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
-	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),
+	RecvPropQAngles( RECVINFO( m_angEyeAngles ) ),
 	RecvPropFloat( RECVINFO( m_flStamina ) ),
 	RecvPropInt( RECVINFO( m_bHasDefuser ), 0, RecvProxy_HasDefuser ),
 	RecvPropInt( RECVINFO( m_bNightVisionOn), 0, RecvProxy_NightVision ),
@@ -1193,6 +1187,13 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropBool( RECVINFO( m_bCanControlObservedBot ) ),
 	RecvPropInt( RECVINFO( m_iControlledBotEntIndex ) ),
 #endif
+	RecvPropBool( RECVINFO( m_bIsHoldingLookAtWeapon ) ),
+	RecvPropBool( RECVINFO( m_bIsLookingAtWeapon ) ),
+
+	RecvPropFloat( RECVINFO( m_flLowerBodyYawTarget ) ),
+	RecvPropBool( RECVINFO( m_bStrafing ) ),
+
+	RecvPropFloat( RECVINFO( m_flThirdpersonRecoil ) ),
 
 	RecvPropBool( RECVINFO( m_bNeedToChangeGloves ) ),
 	RecvPropInt( RECVINFO( m_iLoadoutSlotGlovesCT ) ),

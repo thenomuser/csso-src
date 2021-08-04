@@ -256,16 +256,21 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *p
 	pOut->m_Vector[ 2 ] = anglemod( a->z );
 }
 
+#if PREDICTION_ERROR_CHECK_LEVEL > 1 
+const int SENDPROP_ANGROTATION_DEFAULT_BITS = -1;
+const int SENDPROP_VECORIGIN_FLAGS = SPROP_NOSCALE|SPROP_CHANGES_OFTEN;
+#else
+const int SENDPROP_ANGROTATION_DEFAULT_BITS = 13;
+const int SENDPROP_VECORIGIN_FLAGS = SPROP_COORD|SPROP_CHANGES_OFTEN;
+#endif
+
 // This table encodes the CBaseEntity data.
 IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropDataTable( "AnimTimeMustBeFirst", 0, &REFERENCE_SEND_TABLE(DT_AnimTimeMustBeFirst), SendProxy_ClientSideAnimation ),
 	SendPropInt			(SENDINFO(m_flSimulationTime),	SIMULATION_TIME_WINDOW_BITS, SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, SendProxy_SimulationTime),
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-#else
-	SendPropVector	(SENDINFO(m_vecOrigin), -1,  SPROP_COORD|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
-#endif
+
+	SendPropVector (SENDINFO(m_vecOrigin), 5, SENDPROP_VECORIGIN_FLAGS, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 
 	SendPropInt		(SENDINFO( m_ubInterpolationFrame ), NOINTERP_PARITY_MAX_BITS, SPROP_UNSIGNED ),
 	SendPropModelIndex(SENDINFO(m_nModelIndex)),
@@ -286,9 +291,9 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropInt		(SENDINFO_NAME( m_MoveType, movetype ), MOVETYPE_MAX_BITS, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO_NAME( m_MoveCollide, movecollide ), MOVECOLLIDE_MAX_BITS, SPROP_UNSIGNED ),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
-	SendPropVector	(SENDINFO(m_angRotation), -1, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0, HIGH_DEFAULT, SendProxy_Angles ),
+	SendPropVector	(SENDINFO(m_angRotation), SENDPROP_ANGROTATION_DEFAULT_BITS, SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0, HIGH_DEFAULT, SendProxy_Angles ),
 #else
-	SendPropQAngles	(SENDINFO(m_angRotation), 13, SPROP_CHANGES_OFTEN, SendProxy_Angles ),
+	SendPropQAngles	(SENDINFO(m_angRotation), SENDPROP_ANGROTATION_DEFAULT_BITS, SPROP_CHANGES_OFTEN, SendProxy_Angles ),
 #endif
 
 	SendPropInt		( SENDINFO( m_iTextureFrameIndex ),		8, SPROP_UNSIGNED ),
@@ -5735,53 +5740,44 @@ void CBaseEntity::CalcAbsolutePosition( void )
 	if (!IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ))
 		return;
 
+	RemoveEFlags( EFL_DIRTY_ABSTRANSFORM );
+
+	// Plop the entity->parent matrix into m_rgflCoordinateFrame
+	AngleMatrix( m_angRotation, m_vecOrigin, m_rgflCoordinateFrame );
+
+	CBaseEntity *pMoveParent = GetMoveParent();
+	if ( !pMoveParent )
 	{
-		AUTO_LOCK( m_CalcAbsolutePositionMutex );
-
-		// Test again under the lock, in case another thread did the work in the interim
-		if ( !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ) )
+		// no move parent, so just copy existing values
+		m_vecAbsOrigin = m_vecOrigin;
+		m_angAbsRotation = m_angRotation;
+		if ( HasDataObjectType( POSITIONWATCHER ) )
 		{
-			return;
+			ReportPositionChanged( this );
 		}
-
-		// Plop the entity->parent matrix into m_rgflCoordinateFrame
-		AngleMatrix( m_angRotation, m_vecOrigin, m_rgflCoordinateFrame );
-
-		CBaseEntity *pMoveParent = GetMoveParent();
-		if ( !pMoveParent )
-		{
-			// no move parent, so just copy existing values
-			m_vecAbsOrigin = m_vecOrigin;
-			m_angAbsRotation = m_angRotation;
-		}
-		else
-		{
-			// concatenate with our parent's transform
-			matrix3x4_t tmpMatrix, scratchSpace;
-			ConcatTransforms( GetParentToWorldTransform( scratchSpace ), m_rgflCoordinateFrame, tmpMatrix );
-			MatrixCopy( tmpMatrix, m_rgflCoordinateFrame );
-
-			// pull our absolute position out of the matrix
-			MatrixGetColumn( m_rgflCoordinateFrame, 3, m_vecAbsOrigin );
-
-			// if we have any angles, we have to extract our absolute angles from our matrix
-			if ( ( m_angRotation == vec3_angle ) && ( m_iParentAttachment == 0 ) )
-			{
-				// just copy our parent's absolute angles
-				VectorCopy( pMoveParent->GetAbsAngles(), m_angAbsRotation );
-			}
-			else
-			{
-				MatrixAngles( m_rgflCoordinateFrame, m_angAbsRotation );
-			}
-		}
-
-		ThreadMemoryBarrier();
-		RemoveEFlags( EFL_DIRTY_ABSTRANSFORM );
+		return;
 	}
 
-	// Do this callback *after* we have updated the position, and (importantly) after we clear the dirty flag, because this callback can potentially
-	// end up recursively calling back in here, so the dirty flag must be cleared to break the recursion in that case.
+	// concatenate with our parent's transform
+	matrix3x4_t tmpMatrix;
+	matrix3x4_t scratchSpace;
+
+	ConcatTransforms( GetParentToWorldTransform( scratchSpace ), m_rgflCoordinateFrame, tmpMatrix );
+	MatrixCopy( tmpMatrix, m_rgflCoordinateFrame );
+
+	// pull our absolute position out of the matrix
+	MatrixGetColumn( m_rgflCoordinateFrame, 3, m_vecAbsOrigin ); 
+
+	// if we have any angles, we have to extract our absolute angles from our matrix
+	if (( m_angRotation == vec3_angle ) && ( m_iParentAttachment == 0 ))
+	{
+		// just copy our parent's absolute angles
+		VectorCopy( pMoveParent->GetAbsAngles(), m_angAbsRotation );
+	}
+	else
+	{
+		MatrixAngles( m_rgflCoordinateFrame, m_angAbsRotation );
+	}
 	if ( HasDataObjectType( POSITIONWATCHER ) )
 	{
 		ReportPositionChanged( this );
@@ -6088,7 +6084,7 @@ void CBaseEntity::SetLocalOrigin( const Vector& origin )
 #endif
 		
 		InvalidatePhysicsRecursive( POSITION_CHANGED );
-		m_vecOrigin = origin;
+		m_vecOrigin.SetDirect( origin );
 		SetSimulationTime( gpGlobals->curtime );
 	}
 }
@@ -6117,7 +6113,7 @@ void CBaseEntity::SetLocalAngles( const QAngle& angles )
 	if (m_angRotation != angles)
 	{
 		InvalidatePhysicsRecursive( ANGLES_CHANGED );
-		m_angRotation = angles;
+		m_angRotation.SetDirect( angles );
 		SetSimulationTime( gpGlobals->curtime );
 	}
 }
@@ -6144,7 +6140,7 @@ void CBaseEntity::SetLocalVelocity( const Vector &inVecVelocity )
 	if (m_vecVelocity != vecVelocity)
 	{
 		InvalidatePhysicsRecursive( VELOCITY_CHANGED );
-		m_vecVelocity = vecVelocity;
+		m_vecVelocity.SetDirect( vecVelocity );
 	}
 }
 

@@ -1693,6 +1693,7 @@ private:
 	int				m_nPushEnumCount;
 
 	Vector			m_vecAbsOrigin;
+	QAngle			m_angAbsRotation;
 	CNetworkVectorForDerived( m_vecVelocity );
 	
 	//Adrian
@@ -1708,10 +1709,8 @@ private:
 	COutputEvent m_OnUser3;
 	COutputEvent m_OnUser4;
 
-	QAngle			m_angAbsRotation;
-
 	CNetworkVector( m_vecOrigin );
-	CNetworkQAngle( m_angRotation );
+	CNetworkQAngleXYZ( m_angRotation );
 	CBaseHandle m_RefEHandle;
 
 	// was pev->view_ofs ( FIXME:  Move somewhere up the hierarch, CBaseAnimating, etc. )
