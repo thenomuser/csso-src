@@ -1220,6 +1220,10 @@ C_CSPlayer::C_CSPlayer() :
 
 	AddVar( &m_angEyeAngles, &m_iv_angEyeAngles, LATCH_SIMULATION_VAR );
 
+	// Remove interpolation of variables we have excluded from send table
+	// HACK: m_angRotation is private in C_BaseEntity but it's accessible via GetLocalAngles()
+	RemoveVar( const_cast<QAngle*>(&GetLocalAngles()) );  	// == RemoveVar( &m_angRotation );
+
 	m_bAddonModelsAreOutOfDate = false;
 	m_iLastAddonBits = m_iAddonBits = 0;
 	m_iLastPrimaryAddon = m_iLastSecondaryAddon = WEAPON_NONE;
