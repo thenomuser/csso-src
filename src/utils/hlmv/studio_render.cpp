@@ -574,6 +574,19 @@ void StudioModel::SetUpBones( bool mergeBones )
 		OverrideBones( override );
 	}
 
+	int nMergedModelIndex = -1;
+	for ( int n=0; n<HLMV_MAX_MERGED_MODELS; n++ )
+	{
+		if ( g_pStudioExtraModel[n] && g_pStudioExtraModel[n]->GetStudioHdr() == pStudioHdr )
+		{
+			if ( g_MergeModelBonePairs[n].szLocalBone[0] && g_MergeModelBonePairs[n].szTargetBone[0] )
+			{
+				nMergedModelIndex = n;	
+			}
+			break;
+		}
+	}
+
 	for (i = 0; i < pStudioHdr->numbones(); i++) 
 	{
 		if ( !(pStudioHdr->pBone( i )->flags & BoneMask()))
@@ -660,15 +673,126 @@ void StudioModel::SetUpBones( bool mergeBones )
 		}
 		else if (g_pCacheHdr)
 		{
-			for (j = 0; j < g_pCacheHdr->numbones(); j++)
+			// attempt to attach merge models with force bone-to-bone setting
+			if ( nMergedModelIndex != -1 )
 			{
-				if ( Q_stricmp( pStudioHdr->pBone( i )->pszName(), g_pCacheHdr->pBone( j )->pszName() ) == 0 )
-					break;
+				const char* szDesiredMergeModelLocalBoneName = g_MergeModelBonePairs[nMergedModelIndex].szLocalBone;
+				const char* szDesiredTargetBoneName = g_MergeModelBonePairs[nMergedModelIndex].szTargetBone;
+
+				const char* szCurrentMergeModelBoneName = pStudioHdr->pBone( i )->pszName();
+
+				int nMergeModelLocalBone = -1;
+				int nMergeModelAttachment = -1;
+
+				matrix3x4_t matMergeModelAttachmentLocal;
+				SetIdentityMatrix( matMergeModelAttachmentLocal );
+
+				int nTargetBone = -1;
+				int nTargetAttachment = -1;
+				
+				matrix3x4_t matTargetBoneToWorld;
+				SetIdentityMatrix( matTargetBoneToWorld );
+				matrix3x4_t matTargetAttachmentLocal;
+				SetIdentityMatrix( matTargetAttachmentLocal );
+					
+
+				//check the attachments
+				for ( int n=0; n<pStudioHdr->GetNumAttachments(); n++ )
+				{
+					mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)pStudioHdr->pAttachment( n );
+					if ( Q_stricmp( pModelAttachment.pszName(), szDesiredMergeModelLocalBoneName ) == 0	)
+					{
+						pStudioHdr->setBoneFlags( pModelAttachment.localbone, BONE_USED_BY_BONE_MERGE );
+						if ( pModelAttachment.localbone == i )
+						{
+							matrix3x4_t matAttachmentToWorld;
+							ConcatTransforms( m_pBoneToWorld[ pModelAttachment.localbone ], pModelAttachment.local, matAttachmentToWorld );
+
+							matrix3x4_t matAttachmentToWorldInv;
+							MatrixInvert( matAttachmentToWorld, matAttachmentToWorldInv );
+
+							ConcatTransforms( matAttachmentToWorldInv, m_pBoneToWorld[0], matMergeModelAttachmentLocal );
+							nMergeModelLocalBone = i;
+							nMergeModelAttachment = n;
+						}
+					}
+				}
+
+				// otherwise check if we're already on the merge model local bone
+				if ( nMergeModelLocalBone == -1 && Q_stricmp( szCurrentMergeModelBoneName, szDesiredMergeModelLocalBoneName ) == 0 )
+				{
+					nMergeModelLocalBone = i;
+				}
+
+				// if the local bone is valid, let's look for the target bone
+				if ( nMergeModelLocalBone != -1 )
+				{
+
+					//search master mdl for target bone name
+					for ( int n=0; n<g_pCacheHdr->numbones(); n++ )
+					{
+						const char* szCurrentTargetModelBoneName = g_pCacheHdr->pBone( n )->pszName();
+						if ( Q_stricmp( szCurrentTargetModelBoneName, szDesiredTargetBoneName ) == 0 )
+						{
+							nTargetBone = n;
+							MatrixCopy( *g_pStudioModel->BoneToWorld( nTargetBone ), matTargetBoneToWorld );
+							break;
+						}
+					}
+					//if we didn't find it, look at the attachments
+					if ( nTargetBone == -1 )
+					{
+						for ( int a = 0; a < g_pCacheHdr->GetNumAttachments(); a++)
+						{
+							mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)g_pCacheHdr->pAttachment( a );
+							const char* szCurrentTargetModelBoneName = pModelAttachment.pszName();
+							if ( Q_stricmp( szCurrentTargetModelBoneName, szDesiredTargetBoneName ) == 0 )
+							{
+								nTargetBone = pModelAttachment.localbone;
+								MatrixCopy( *g_pStudioModel->BoneToWorld( nTargetBone ), matTargetBoneToWorld );
+								nTargetAttachment = a;
+								MatrixCopy( pModelAttachment.local, matTargetAttachmentLocal );
+								break;
+							}
+
+						}
+					}
+
+
+					// both local and target are valid. Let's connect the two
+					if ( nTargetBone != -1 )
+					{
+
+						pStudioHdr->setBoneFlags( 0, BONE_USED_BY_BONE_MERGE );
+						pStudioHdr->setBoneFlags( nMergeModelLocalBone, BONE_USED_BY_BONE_MERGE );
+						g_pCacheHdr->setBoneFlags( nTargetBone, BONE_USED_BY_BONE_MERGE );
+
+						matrix3x4_t matTargetBoneToWorldFinal;
+						ConcatTransforms( matTargetBoneToWorld, matTargetAttachmentLocal, matTargetBoneToWorldFinal );
+
+						ConcatTransforms( matTargetBoneToWorldFinal, matMergeModelAttachmentLocal, matTargetBoneToWorldFinal );
+
+						MatrixCopy( matTargetBoneToWorldFinal, m_pBoneToWorld[ 0 ] );
+					}
+
+				}
+
 			}
-			if (j < g_pCacheHdr->numbones())
+			else
 			{
-				MatrixCopy( boneCache[j], m_pBoneToWorld[ i ] );
+				for (j = 0; j < g_pCacheHdr->numbones(); j++)
+				{
+					if ( Q_stricmp( pStudioHdr->pBone( i )->pszName(), g_pCacheHdr->pBone( j )->pszName() ) == 0 )
+						break;
+				}
+				if (j < g_pCacheHdr->numbones())
+				{
+					pStudioHdr->setBoneFlags( i, BONE_USED_BY_BONE_MERGE );
+					g_pCacheHdr->setBoneFlags( j, BONE_USED_BY_BONE_MERGE );
+					MatrixCopy( boneCache[j], m_pBoneToWorld[ i ] );
+				}
 			}
+			
 		}
 	}
 

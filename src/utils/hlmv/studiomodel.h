@@ -480,5 +480,12 @@ extern Vector g_vright;		// needs to be set to viewer's right in order for chrom
 extern StudioModel *g_pStudioModel;
 extern StudioModel *g_pStudioExtraModel[HLMV_MAX_MERGED_MODELS];
 
+struct mergemodelbonepair_t
+{
+	char szTargetBone[256];
+	char szLocalBone[256];
+};
+extern mergemodelbonepair_t g_MergeModelBonePairs[HLMV_MAX_MERGED_MODELS];
+
 
 #endif // INCLUDED_STUDIOMODEL

@@ -1280,11 +1280,129 @@ ControlPanel::ControlPanel( mxWindow *parent )
 	SetupIKRuleWindow( tab );
 	SetupEventWindow( tab );
 	SetupMatVarWindow( tab );
+	SetupSubmodelWindow( tab );
 
 	g_ControlPanel = this;
 
 	iSelectionToSequence = NULL;
 	iSequenceToSelection = NULL;
+}
+
+void ControlPanel::UpdateSubmodelSelection( void )
+{
+	int iSelectedSubmodel = cSubmodelList->getSelectedIndex();
+
+	bool bSubmodelButtonsEnabled = (iSelectedSubmodel != -1);
+	bSubmodelRemoveSelected->setEnabled( bSubmodelButtonsEnabled );
+	cSubmodelAttachTo->setEnabled( bSubmodelButtonsEnabled );
+	cSubmodelLocalAttachOrigin->setEnabled( bSubmodelButtonsEnabled );
+
+	if ( bSubmodelButtonsEnabled )
+	{
+		cSubmodelAttachTo->removeAll();
+		cSubmodelAttachTo->add( "_none_" );
+		cSubmodelAttachTo->select(0);
+		CStudioHdr *pHdr = g_pStudioModel->GetStudioHdr();
+		if ( pHdr )
+		{
+			for ( int n = 0; n < pHdr->numbones(); n++ )
+			{
+				const mstudiobone_t *pBone = pHdr->pBone(n);
+				if ( pBone )
+				{
+					cSubmodelAttachTo->add( pBone->pszName() );
+					if ( Q_stricmp(g_MergeModelBonePairs[iSelectedSubmodel].szTargetBone, pBone->pszName()) == 0 )
+					{
+						cSubmodelAttachTo->select(n+1);
+					}
+				}
+			}
+			for ( int n = 0; n < pHdr->GetNumAttachments(); n++ )
+			{
+				mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)pHdr->pAttachment( n );
+				cSubmodelAttachTo->add( pModelAttachment.pszName() );
+				if ( Q_stricmp(g_MergeModelBonePairs[iSelectedSubmodel].szTargetBone, pModelAttachment.pszName()) == 0 )
+				{
+					cSubmodelAttachTo->select(pHdr->numbones()+n+1);
+				}
+			}
+		}
+
+		cSubmodelLocalAttachOrigin->removeAll();
+		cSubmodelLocalAttachOrigin->add( "_none_" );
+		cSubmodelLocalAttachOrigin->select(0);
+		CStudioHdr *pHdrSub = g_pStudioExtraModel[iSelectedSubmodel]->GetStudioHdr();
+		if ( pHdrSub )
+		{
+			for ( int n = 0; n < pHdrSub->numbones(); n++ )
+			{
+				const mstudiobone_t *pBone = pHdrSub->pBone(n);
+				if ( pBone )
+				{
+					cSubmodelLocalAttachOrigin->add( pBone->pszName() );
+					if ( Q_stricmp(g_MergeModelBonePairs[iSelectedSubmodel].szLocalBone, pBone->pszName()) == 0 )
+					{
+						cSubmodelLocalAttachOrigin->select(n+1);
+					}
+				}
+			}
+			for ( int n = 0; n < pHdrSub->GetNumAttachments(); n++ )
+			{
+				mstudioattachment_t &pModelAttachment = (mstudioattachment_t &)pHdrSub->pAttachment( n );
+				cSubmodelLocalAttachOrigin->add( pModelAttachment.pszName() );
+				if ( Q_stricmp(g_MergeModelBonePairs[iSelectedSubmodel].szLocalBone, pModelAttachment.pszName()) == 0 )
+				{
+					cSubmodelLocalAttachOrigin->select(pHdrSub->numbones()+n+1);
+				}
+			}
+		}
+
+	}
+	else
+	{
+		cSubmodelAttachTo->removeAll();
+		cSubmodelLocalAttachOrigin->removeAll();
+	}
+}
+
+void ControlPanel::UpdateSubmodelWindow( void )
+{
+	cSubmodelList->removeAll();
+	for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; i++ )
+	{
+		if ( g_viewerSettings.mergeModelFile[i][0] != 0 )
+		{
+			cSubmodelList->add( g_viewerSettings.mergeModelFile[i] );
+		}
+	}
+	UpdateSubmodelSelection();
+}
+
+void ControlPanel::SetupSubmodelWindow( mxTab* pTab )
+{
+
+	mxWindow *wSubmodels = new mxWindow (this, 0, 0, 0, 0);
+	tab->add (wSubmodels, "Submodels");
+
+	bSubmodelAdd = new mxButton( wSubmodels, 2, 10, 90, 70, "Add Submodel", IDC_SUBMODEL_LOADMERGEDMODEL );
+	bSubmodelAddSteam = new mxButton( wSubmodels, 2, 90, 90, 20, "Add [VPK]", IDC_SUBMODEL_LOADMERGEDMODEL_STEAM );
+	bSubmodelRemoveAll = new mxButton( wSubmodels, 2, 120, 90, 50, "Remove All", IDC_SUBMODEL_UNLOADALLMERGEDMODELS );
+
+	//new mxLabel( wSubmodels, 100, 2, 100, 18, "Loaded Submodels:" );
+	cSubmodelList = new mxListBox( wSubmodels, 100, 10, 450, 175, IDC_SUBMODEL_UPDATE_SELECTION );
+	mxToolTip::add (cSubmodelList, "Select submodels to add/remove/change");
+
+	bSubmodelRemoveSelected = new mxButton( wSubmodels, 555, 10, 120, 20, "Remove Selected", IDC_SUBMODEL_UNLOADMERGEDMODEL );
+	bSubmodelRemoveSelected->setEnabled(false);
+
+	new mxLabel( wSubmodels, 555, 45, 160, 18, "Force attach to:" );
+	cSubmodelAttachTo = new mxChoice( wSubmodels, 555, 60, 200, 20, IDC_SUBMODEL_UPDATE_BONESELECTION );
+	cSubmodelAttachTo->setEnabled(false);
+
+	new mxLabel( wSubmodels, 555, 80, 160, 18, "From local attach origin:" );
+	cSubmodelLocalAttachOrigin = new mxChoice( wSubmodels, 555, 95, 200, 20, IDC_SUBMODEL_UPDATE_BONESELECTION );
+	cSubmodelLocalAttachOrigin->setEnabled(false);
+	
 }
 
 void ControlPanel::SetupMatVarWindow( mxTab* pTab )
@@ -2972,6 +3090,118 @@ ControlPanel::handleEvent (mxEvent *event)
 			// ignore edits to the qc text box
 			break;
 
+		case IDC_SUBMODEL_UPDATE_BONESELECTION:
+			{
+				int iSelectedSubmodel = cSubmodelList->getSelectedIndex();
+				if ( iSelectedSubmodel != -1 )
+				{
+					strcpy( g_MergeModelBonePairs[iSelectedSubmodel].szTargetBone, cSubmodelAttachTo->getLabel() );
+					strcpy( g_MergeModelBonePairs[iSelectedSubmodel].szLocalBone, cSubmodelLocalAttachOrigin->getLabel() );
+				}
+			}
+			break;
+
+		case IDC_SUBMODEL_UPDATE_SELECTION:
+			{
+				UpdateSubmodelSelection();
+			}
+			break;
+
+		case IDC_SUBMODEL_LOADMERGEDMODEL:
+			{
+				const char *ptr = mxGetOpenFileName (this, 0, "*.mdl");
+				if (ptr)
+				{
+					// find the first free slot
+					int iChosenSlot = 0;
+					for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; i++ )
+					{
+						if ( g_viewerSettings.mergeModelFile[i][0] == 0 )
+						{
+							iChosenSlot = i;
+							break;
+						}
+					}
+					strcpy( g_viewerSettings.mergeModelFile[iChosenSlot], ptr );
+					g_MDLViewer->LoadModelFile( ptr, iChosenSlot );
+				}
+			}
+			break;
+
+		case IDC_SUBMODEL_LOADMERGEDMODEL_STEAM:
+			{
+				const char *pFilename = g_MDLViewer->SteamGetOpenFilename();
+				if ( pFilename )
+				{
+					// find the first free slot
+					int iChosenSlot = 0;
+					for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; i++ )
+					{
+						if ( g_viewerSettings.mergeModelFile[i][0] == 0 )
+						{
+							iChosenSlot = i;
+							break;
+						}
+					}
+					strcpy( g_viewerSettings.mergeModelFile[iChosenSlot], pFilename );
+					g_MDLViewer->LoadModelFile( pFilename, iChosenSlot );
+				}
+			}
+			break;
+
+
+		case IDC_SUBMODEL_UNLOADMERGEDMODEL:
+			{
+				int i = cSubmodelList->getSelectedIndex();
+				// FIXME: move to d_cpl
+				if ( i != -1 && g_pStudioExtraModel[i])
+				{
+					strcpy( g_viewerSettings.mergeModelFile[i], "" );
+					g_pStudioExtraModel[i]->FreeModel( false );
+					delete g_pStudioExtraModel[i];
+					g_pStudioExtraModel[i] = NULL;
+				}
+
+				//need to push the missing index out of the merged model list
+				for ( int i = 0; i < HLMV_MAX_MERGED_MODELS - 1; i++ )
+				{
+					if ( g_pStudioExtraModel[i] == NULL && g_pStudioExtraModel[i+1] != NULL )
+					{
+						strcpy( g_viewerSettings.mergeModelFile[i], g_viewerSettings.mergeModelFile[i+1] );
+						strcpy( g_viewerSettings.mergeModelFile[i+1], "" );
+						g_pStudioExtraModel[i] = g_pStudioExtraModel[i+1];
+						g_pStudioExtraModel[i+1] = NULL;
+
+						
+						strcpy( g_MergeModelBonePairs[i].szLocalBone, g_MergeModelBonePairs[i+1].szLocalBone );
+						strcpy( g_MergeModelBonePairs[i+1].szLocalBone, "" );
+						strcpy( g_MergeModelBonePairs[i].szTargetBone, g_MergeModelBonePairs[i+1].szTargetBone );
+						strcpy( g_MergeModelBonePairs[i+1].szTargetBone, "" );
+					}
+				}
+
+				UpdateSubmodelWindow();
+			}
+			break;
+
+
+		case IDC_SUBMODEL_UNLOADALLMERGEDMODELS:
+			{
+				for (int i=0; i<HLMV_MAX_MERGED_MODELS; i++)
+				{
+					// FIXME: move to d_cpl
+					if (g_pStudioExtraModel[i])
+					{
+						strcpy( g_viewerSettings.mergeModelFile[i], "" );
+						g_pStudioExtraModel[i]->FreeModel( false );
+						delete g_pStudioExtraModel[i];
+						g_pStudioExtraModel[i] = NULL;
+					}
+				}
+				UpdateSubmodelWindow();	
+			}
+			break;
+
 		default:
 		{
 			if ( event->action == IDC_FLEXDEFAULTS )
@@ -3250,8 +3480,6 @@ void ControlPanel::OnLoadModel( void )
 
 	setModelInfo();
 
-	UnloadAllMergedModels();
-
 	const bool bNoModelSettings = LoadViewerSettings( g_pStudioModel->GetFileName(), g_pStudioModel );
 	if ( !bNoModelSettings )
 	{
@@ -3342,11 +3570,8 @@ LoadModelResult_t ControlPanel::loadModel(const char *filename, int slot )
 		if (g_pStudioExtraModel[slot]->PostLoadModel( filename ))
 		{
 			connectFlexes( g_pStudioExtraModel[slot]->GetStudioHdr() );
-			if ( g_MDLViewer && g_MDLViewer->getMenuBar() )
-			{
-				g_MDLViewer->getMenuBar()->modify (IDC_FILE_UNLOADMERGEDMODEL1 + slot, IDC_FILE_UNLOADMERGEDMODEL1 + slot, filename);
-				g_MDLViewer->getMenuBar()->setEnabled (IDC_FILE_UNLOADMERGEDMODEL1 + slot, true);
-			}
+
+			UpdateSubmodelWindow();
 			return LoadModel_Success;
 		}
 		else
@@ -4714,25 +4939,4 @@ void ControlPanel::writePhysicsData( void )
 void ControlPanel::SetFrameSlider( float flFrame )
 {
 	slForceFrame->setValue( flFrame );
-}
-
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-void ControlPanel::UnloadAllMergedModels()
-{
-	for ( int i = 0; i < HLMV_MAX_MERGED_MODELS; ++i )
-	{
-		g_MDLViewer->getMenuBar()->modify( IDC_FILE_UNLOADMERGEDMODEL1 + i, IDC_FILE_UNLOADMERGEDMODEL1 + i, "(empty)" );
-		g_MDLViewer->getMenuBar()->setEnabled( IDC_FILE_UNLOADMERGEDMODEL1 + i, false );
-		V_strcpy_safe( g_viewerSettings.mergeModelFile[i], "" );
-
-		if ( g_pStudioExtraModel[i] )
-		{
-			g_pStudioExtraModel[i]->FreeModel( false );
-			delete g_pStudioExtraModel[i];
-			g_pStudioExtraModel[i] = NULL;
-		}
-	}
 }
