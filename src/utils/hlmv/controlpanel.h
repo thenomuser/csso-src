@@ -515,6 +515,8 @@ public:
 	void UpdateSubmodelWindow( void );
 	void UpdateSubmodelSelection( void );
 
+	void UnloadAllMergedModels();
+
 public:
 	// Sets up the main tabs
 	void SetupRenderWindow( mxTab* pTab );

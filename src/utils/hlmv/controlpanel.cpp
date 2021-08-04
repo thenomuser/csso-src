@@ -3187,18 +3187,7 @@ ControlPanel::handleEvent (mxEvent *event)
 
 		case IDC_SUBMODEL_UNLOADALLMERGEDMODELS:
 			{
-				for (int i=0; i<HLMV_MAX_MERGED_MODELS; i++)
-				{
-					// FIXME: move to d_cpl
-					if (g_pStudioExtraModel[i])
-					{
-						strcpy( g_viewerSettings.mergeModelFile[i], "" );
-						g_pStudioExtraModel[i]->FreeModel( false );
-						delete g_pStudioExtraModel[i];
-						g_pStudioExtraModel[i] = NULL;
-					}
-				}
-				UpdateSubmodelWindow();	
+				UnloadAllMergedModels();
 			}
 			break;
 
@@ -3479,6 +3468,8 @@ void ControlPanel::OnLoadModel( void )
 	initFlexes();
 
 	setModelInfo();
+
+	UnloadAllMergedModels();
 
 	const bool bNoModelSettings = LoadViewerSettings( g_pStudioModel->GetFileName(), g_pStudioModel );
 	if ( !bNoModelSettings )
@@ -4939,4 +4930,24 @@ void ControlPanel::writePhysicsData( void )
 void ControlPanel::SetFrameSlider( float flFrame )
 {
 	slForceFrame->setValue( flFrame );
+}
+
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+void ControlPanel::UnloadAllMergedModels()
+{
+	for ( int i = 0; i<HLMV_MAX_MERGED_MODELS; i++ )
+	{
+		// FIXME: move to d_cpl
+		if ( g_pStudioExtraModel[i] )
+		{
+			strcpy( g_viewerSettings.mergeModelFile[i], "" );
+			g_pStudioExtraModel[i]->FreeModel( false );
+			delete g_pStudioExtraModel[i];
+			g_pStudioExtraModel[i] = NULL;
+		}
+	}
+	UpdateSubmodelWindow();
 }
