@@ -75,6 +75,10 @@ void CBaseCSGloves::Equip( CCSPlayer *pOwner )
 
 	UpdateGlovesModel();
 
+#ifdef CLIENT_DLL
+	SetUseParentLightingOrigin( true );
+#endif
+
 	// assuming that before equipping them, a DoesModelSupportGloves() check was made
 	pOwner->SetBodygroup( pOwner->FindBodygroupByName( "gloves" ), 1 ); // hide default gloves
 }

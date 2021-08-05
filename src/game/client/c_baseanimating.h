@@ -274,6 +274,7 @@ public:
 	virtual bool					GetAttachment( int number, Vector &origin, QAngle &angles );
 	virtual bool					GetAttachment( int number, matrix3x4_t &matrix );
 	virtual bool					GetAttachmentVelocity( int number, Vector &originVel, Quaternion &angleVel );
+	virtual void					ComputeLightingOrigin( ClientModelRenderInfo_t *pInfo );
 	
 	// Returns the attachment in local space
 	bool							GetAttachmentLocal( int iAttachment, matrix3x4_t &attachmentToLocal );
@@ -283,6 +284,7 @@ public:
 	virtual C_BaseAnimating *		GetBoneSetupDependancy( void ) { return GetMoveParent() ? GetMoveParent()->GetBaseAnimating() : NULL; }
 
 	bool							GetRootBone( matrix3x4_t &rootBone );
+	inline void						SetUseParentLightingOrigin( bool value ) { m_bUseParentLightingOrigin = value; }
 
 	// Should this object cast render-to-texture shadows?
 	virtual ShadowType_t			ShadowCastType();
@@ -661,6 +663,8 @@ private:
 	mutable MDLHandle_t				m_hStudioHdr;
 	CThreadFastMutex				m_StudioHdrInitLock;
 	bool							m_bHasAttachedParticles;
+
+	bool							m_bUseParentLightingOrigin;
 
 	friend class C_BaseAnimatingOverlay;
 };

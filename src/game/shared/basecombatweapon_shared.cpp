@@ -219,6 +219,8 @@ CBaseWeaponWorldModel::CBaseWeaponWorldModel( void )
 	m_nMuzzleBoneIndex = -1;
 #ifdef CLIENT_DLL
 	m_bMaintainSequenceTransitions = false; // disabled for perf - world model weapons do not transition their sequences
+
+	SetUseParentLightingOrigin( true ); // don't set up bones when asked for lighting origin, just use parent's one (in this case player)
 #endif
 }
 

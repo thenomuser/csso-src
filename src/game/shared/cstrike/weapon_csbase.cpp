@@ -502,6 +502,8 @@ CWeaponCSBase::CWeaponCSBase()
 	AddSolidFlags( FSOLID_TRIGGER ); // Nothing collides with these but it gets touches.
 
 #ifdef CLIENT_DLL
+	// This will make it so the weapons get lit with the same ambient cube that the player gets lit with.
+	SetUseParentLightingOrigin( true );
 	m_iCrosshairTextureID = 0;
 	m_flGunAccuracyPosition = 0;
 #else

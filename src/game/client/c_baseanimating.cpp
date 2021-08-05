@@ -757,6 +757,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	Q_memset(&m_mouth, 0, sizeof(m_mouth));
 	m_flCycle = 0;
 	m_flOldCycle = 0;
+
+	m_bUseParentLightingOrigin = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -2154,6 +2156,27 @@ bool C_BaseAnimating::GetAttachmentVelocity( int number, Vector &originVel, Quat
 }
 
 
+void C_BaseAnimating::ComputeLightingOrigin( ClientModelRenderInfo_t *pInfo )
+{
+	if ( m_bUseParentLightingOrigin )
+	{
+		if ( GetMoveParent() != NULL )
+		{
+			C_BaseAnimating *attachmentParent = GetMoveParent()->GetBaseAnimating();
+			if ( NULL != attachmentParent )
+			{
+				attachmentParent->ComputeLightingOrigin( pInfo );
+				return;
+			}
+		}
+	}
+
+	Vector lightingOrigin;
+	VectorTransform( GetModelPtr()->illumposition(), RenderableToWorldTransform(), lightingOrigin );
+	pInfo->pLightingOrigin = &lightingOrigin;
+}
+
+
 //-----------------------------------------------------------------------------
 // Returns the attachment in local space
 //-----------------------------------------------------------------------------
@@ -3112,9 +3135,11 @@ bool C_BaseAnimating::OnPostInternalDrawModel( ClientModelRenderInfo_t *pInfo )
 //-----------------------------------------------------------------------------
 bool C_BaseAnimating::OnInternalDrawModel( ClientModelRenderInfo_t *pInfo )
 {
+	ComputeLightingOrigin( pInfo );
+
 	if ( m_hLightingOriginRelative.Get() )
 	{
-		C_InfoLightingRelative *pInfoLighting = assert_cast<C_InfoLightingRelative*>( m_hLightingOriginRelative.Get() );
+		C_InfoLightingRelative *pInfoLighting = assert_cast<C_InfoLightingRelative*>(m_hLightingOriginRelative.Get());
 		pInfoLighting->GetLightingOffset( pInfo->lightingOffset );
 		pInfo->pLightingOffset = &pInfo->lightingOffset;
 	}
