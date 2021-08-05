@@ -14,11 +14,6 @@ $Configuration
 		$OutputFile					"$(OBJ_DIR)/$OUTBINNAME$_DLL_EXT"
 		$GameOutputFile					"$OUTBINDIR/$OUTBINNAME$_DLL_EXT"
 	}
-
-	$Compiler
-	{
-		$PreprocessorDefinitions	"$BASE;RAD_TELEMETRY_DISABLED" [$SOURCESDK ]
-	}
 }
 
 // Skeleton Project - All derived projects get this as a starting base

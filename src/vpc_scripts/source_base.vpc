@@ -23,7 +23,11 @@ $Configuration "Debug"
 		$PreprocessorDefinitions		"VPC"
 		$PreprocessorDefinitions		"$BASE;STAGING_ONLY" [$STAGING_ONLY]
 		$PreprocessorDefinitions		"$BASE;TF_BETA" [$TF_BETA]
-		$PreprocessorDefinitions		"$BASE;RAD_TELEMETRY_ENABLED" [$SOURCESDK]
+		$PreprocessorDefinitions		"$BASE;RAD_TELEMETRY_DISABLED"
+		$PreprocessorDefinitions		"$BASE;WORKSHOP_IMPORT_DISABLE"
+		$PreprocessorDefinitions		"$BASE;SIXENSE_DISABLE"
+		$PreprocessorDefinitions		"$BASE;NO_X360_XDK"
+		$PreprocessorDefinitions		"$BASE;DISABLE_ETW"
 // Need to revisit the code to make things run with the _RETAIL preprocessor definition
 // This line was added in the previous check-in, but had previously not been defined in this branch
 //		$PreprocessorDefinitions		"$BASE;_RETAIL"		[$RETAIL]
@@ -38,7 +42,11 @@ $Configuration "Release"
 		$PreprocessorDefinitions		"VPC"
 		$PreprocessorDefinitions		"$BASE;STAGING_ONLY" [$STAGING_ONLY]
 		$PreprocessorDefinitions		"$BASE;TF_BETA" [$TF_BETA]
-		$PreprocessorDefinitions		"$BASE;RAD_TELEMETRY_DISABLED" [$SOURCESDK]
+		$PreprocessorDefinitions		"$BASE;RAD_TELEMETRY_DISABLED"
+		$PreprocessorDefinitions		"$BASE;WORKSHOP_IMPORT_DISABLE"
+		$PreprocessorDefinitions		"$BASE;SIXENSE_DISABLE"
+		$PreprocessorDefinitions		"$BASE;NO_X360_XDK"
+		$PreprocessorDefinitions		"$BASE;DISABLE_ETW"
 // Need to revisit the code to make things run with the _RETAIL preprocessor definition
 // This line was added in the previous check-in, but had previously not been defined in this branch
 //		$PreprocessorDefinitions		"$BASE;_RETAIL"		[$RETAIL]
