@@ -48,7 +48,10 @@ void InitViewerSettings ( const char *subkey )
 	{
 		g_viewerSettings.faceposerToolsDriveMouth = save.faceposerToolsDriveMouth;
 
+		g_viewerSettings.showHidden = save.showHidden;
+		g_viewerSettings.showActivities = save.showActivities;
 		g_viewerSettings.sortSequences = save.sortSequences;
+		g_viewerSettings.guessModelFOV = save.guessModelFOV;
 	}
 
 	g_viewerSettings.showOrbitCircle = false;
