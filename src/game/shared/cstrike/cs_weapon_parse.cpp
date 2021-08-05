@@ -542,6 +542,9 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	// Read the buy menu animation.
 	Q_strncpy( m_szBuyMenuAnim, pKeyValuesData->GetString( "BuyMenuAnim" ), sizeof( m_szBuyMenuAnim ) );
 	Q_strncpy( m_szBuyMenuAnimT, pKeyValuesData->GetString( "BuyMenuAnimT", m_szBuyMenuAnim ), sizeof( m_szBuyMenuAnimT ) );
+	// Read the class menu animation.
+	Q_strncpy( m_szClassMenuAnim, pKeyValuesData->GetString( "ClassMenuAnim" ), sizeof( m_szClassMenuAnim ) );
+	Q_strncpy( m_szClassMenuAnimT, pKeyValuesData->GetString( "ClassMenuAnimT", m_szClassMenuAnim ), sizeof( m_szClassMenuAnimT ) );
 
 #ifndef CLIENT_DLL
 	// Enforce consistency for the weapon here, since that way we don't need to save off the model bounds

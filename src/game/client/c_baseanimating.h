@@ -52,6 +52,11 @@ typedef unsigned short MDLHandle_t;
 
 extern ConVar vcollide_wireframe;
 
+struct OnEndGoto_t
+{
+	int nSequence;
+	int nSequenceWeight;
+};
 
 struct ClientModelRenderInfo_t : public ModelRenderInfo_t
 {
@@ -447,6 +452,7 @@ public:
 	float							SequenceDuration( CStudioHdr *pStudioHdr, int iSequence );
 	inline float					SequenceDuration( int iSequence ) { return SequenceDuration(GetModelPtr(), iSequence); }
 	int								FindTransitionSequence( int iCurrentSequence, int iGoalSequence, int *piDir );
+	void							SetSequenceOnEnd( void );
 
 	void							RagdollMoved( void );
 
@@ -546,6 +552,8 @@ protected:
 	Vector							m_bonePosition;
 	QAngle							m_boneAngles;
 	CHandle<C_BaseAnimating>		m_pAttachedTo;
+
+	CUtlVector<OnEndGoto_t>			m_onEndGoto;
 
 protected:
 

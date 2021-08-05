@@ -221,6 +221,8 @@ public:
 
 	char m_szBuyMenuAnim[MAX_WEAPON_STRING];
 	char m_szBuyMenuAnimT[MAX_WEAPON_STRING];
+	char m_szClassMenuAnim[MAX_WEAPON_STRING];
+	char m_szClassMenuAnimT[MAX_WEAPON_STRING];
 
 	float m_flAddonScale;
 

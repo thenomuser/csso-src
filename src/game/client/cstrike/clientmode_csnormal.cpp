@@ -1089,55 +1089,50 @@ void UpdateClassImageEntity(
 	if ( !pLocalPlayer )
 		return;
 
+	C_WeaponCSBase *pActiveCSWeapon = dynamic_cast<C_WeaponCSBase*>(pLocalPlayer->GetActiveWeapon());
+
 	MDLCACHE_CRITICAL_SECTION();
 
-	const char* pWeaponName = "models/weapons/w_rif_ak47.mdl";
-	const char* pWeaponSequence = "UI_Idle_AK";
-	int			iTeamNumber = TEAM_UNASSIGNED;
+	const char* pWeaponModelName = NULL;
+	const char* pWeaponSequence = NULL;
+	const char* pWeaponClassname = "weapon_ak47";
+	int			iTeamNumber = TEAM_TERRORIST;
 
 	if ( Q_strncmp( V_UnqualifiedFileName(pModelName), "ctm_", 4 ) == 0 )
 	{
 		// give CTs a m4
-		pWeaponName = "models/weapons/w_rif_m4a4.mdl";
-		pWeaponSequence = "UI_Idle_M4";
+		pWeaponClassname = "weapon_m4a4";
 		iTeamNumber = TEAM_CT;
 	}
-	else if ( Q_strncmp( V_UnqualifiedFileName( pModelName ), "tm_", 3 ) == 0 )
-		iTeamNumber = TEAM_TERRORIST;
 
-	bool m_bSilenced = false;
-	if ( pLocalPlayer->IsAlive() && pLocalPlayer->GetActiveWeapon() )
+	bool m_bSilenced = true;
+	if ( pLocalPlayer->IsAlive() && pActiveCSWeapon )
 	{
-		C_WeaponCSBase *pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+		pWeaponClassname = pActiveCSWeapon->GetClassname();
+		m_bSilenced = pActiveCSWeapon->IsSilenced();
+	}
 
-		// set player's primary weapon for ui model
-		if ( pWeapon )
+	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponClassname );
+	if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
+	{
+		Warning( "UpdateClassImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+		return;
+	}
+	else
+	{
+		CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
+		if ( pWeaponInfo )
 		{
-			m_bSilenced = pWeapon->IsSilenced() ? true : false;
-			pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-			pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
+			pWeaponModelName = pWeaponInfo->szWorldModel;
+			if ( iTeamNumber == TEAM_TERRORIST )
+				pWeaponSequence = pWeaponInfo->m_szClassMenuAnimT;
+			else
+				pWeaponSequence = pWeaponInfo->m_szClassMenuAnim;
 		}
 		else
 		{
-			// no primary weapon? ok, use the secondary weapon
-			pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
-			if ( pWeapon )
-			{
-				m_bSilenced = pWeapon->IsSilenced() ? true : false;
-				pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-				pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
-			}
-			else
-			{
-				// no pistol as well? ok, lets try active weapon then...
-				pWeapon = pLocalPlayer->GetActiveCSWeapon();
-				if ( pWeapon )
-				{
-					m_bSilenced = pWeapon->IsSilenced() ? true : false;
-					pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-					pWeaponSequence = VarArgs( "UI_Idle_%s", pWeapon->GetCSWpnData().m_szUIAnimExtension );
-				}
-			}
+			Warning( "UpdateClassImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+			return;
 		}
 	}
 
@@ -1154,6 +1149,11 @@ void UpdateClassImageEntity(
 		pPlayerModel->InitializeAsClientEntity( pModelName, RENDER_GROUP_OPAQUE_ENTITY );
 		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
+
+		// now set the sequence for this player model
+		// PiMoN: moved from below so the sequence won't reset all the time;
+		// for on_end_goto support
+		pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
 
 		g_ClassImagePlayer = pPlayerModel;
 	}
@@ -1172,13 +1172,13 @@ void UpdateClassImageEntity(
 	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
 
 	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponName ) )
+	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponModelName ) )
 	{
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
 
 		pWeaponModel = new C_BaseAnimating;
-		pWeaponModel->InitializeAsClientEntity( pWeaponName, RENDER_GROUP_OPAQUE_ENTITY );
+		pWeaponModel->InitializeAsClientEntity( pWeaponModelName, RENDER_GROUP_OPAQUE_ENTITY );
 		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
 		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
@@ -1243,23 +1243,9 @@ void UpdateClassImageEntity(
 		origin = tr.endpos;
 	}
 
-	// Make a light so the model is well lit.
-	dlight_t *dl = effects->CL_AllocDlight( LIGHT_INDEX_TE_DYNAMIC+1 );	// use a non-zero number so we cannibalize ourselves next frame
-
-	dl->flags = DLIGHT_NO_WORLD_ILLUMINATION | DLIGHT_NO_STATIC_PROP_ILLUMINATION;
-	dl->origin = lightOrigin;
-	dl->die = gpGlobals->curtime + 0.05f; // Go away immediately so it doesn't light the world too.
-
-	dl->color.r = dl->color.g = dl->color.b = 200;
-	dl->color.exponent = 4;
-	dl->radius = 512;
-
 	// move player model in front of our view
 	pPlayerModel->SetAbsOrigin( origin );
 	pPlayerModel->SetAbsAngles( QAngle( 5, 180, 0 ) );
-
-	// now set the sequence for this player model
-	pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
 
 	pPlayerModel->FrameAdvance( gpGlobals->frametime );
 
@@ -1281,6 +1267,26 @@ void UpdateClassImageEntity(
 
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
+
+	// [mhansen] We don't want to light the model in the world. We want it to 
+	// always be lit normal like even if you are standing in a dark (or green) area
+	// in the world.
+	CMatRenderContextPtr pRenderContext( materials );
+	pRenderContext->SetLightingOrigin( vec3_origin );
+	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
+
+	static Vector white[6] = 
+	{
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+		Vector( 0.6, 0.6, 0.6 ),
+	};
+
+	g_pStudioRender->SetAmbientLightColors( white );
+	g_pStudioRender->SetLocalLights( 0, NULL );
 
 	modelrender->SuppressEngineLighting( true );
 	float color[3] = { 1.0f, 1.0f, 1.0f };

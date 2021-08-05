@@ -1143,6 +1143,8 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 		SetSequence(0);
 	}
 
+	m_onEndGoto.RemoveAll();
+
 	return hdr;
 }
 
@@ -4990,6 +4992,24 @@ void C_BaseAnimating::SetSequence( int nSequence )
 		{
 			ClientSideAnimationChanged();
 		}
+
+		// cache whatever sequences we should switch to when this one ends
+		m_onEndGoto.RemoveAll();
+		KeyValues *seqKeyValues = GetSequenceKeyValues( GetSequence() );
+		if ( seqKeyValues )
+		{
+			KeyValues *pkvOnEndGoto = seqKeyValues->FindKey( "on_end_goto" );
+			if ( pkvOnEndGoto )
+			{
+				for ( KeyValues *pKV = pkvOnEndGoto->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
+				{
+					OnEndGoto_t sequence;
+					sequence.nSequence = LookupSequence( pKV->GetName() );
+					sequence.nSequenceWeight = pKV->GetInt();
+					m_onEndGoto.AddToTail( sequence );
+				}
+			}
+		}
 	}
 }
 
@@ -5066,6 +5086,11 @@ void C_BaseAnimating::StudioFrameAdvance()
 	if ( watch )
 	{
 		Msg("%s : %s : %5.1f\n", GetClassname(), GetSequenceName( GetSequence() ), GetCycle() );
+	}
+
+	if ( m_bSequenceFinished && !m_onEndGoto.IsEmpty() )
+	{
+		SetSequenceOnEnd();
 	}
 }
 
@@ -5226,6 +5251,11 @@ float C_BaseAnimating::FrameAdvance( float flInterval )
 
 	SetCycle( flNewCycle );
 
+	if ( m_bSequenceFinished && !m_onEndGoto.IsEmpty() )
+	{
+		SetSequenceOnEnd();
+	}
+
 	return flInterval;
 }
 
@@ -5312,6 +5342,22 @@ int C_BaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSequ
 
 	return ::FindTransitionSequence( hdr, iCurrentSequence, iGoalSequence, piDir );
 
+}
+
+void C_BaseAnimating::SetSequenceOnEnd( void )
+{
+	// PiMoN TODO: this is some cursed shit just to get weighting working
+	CUtlVector<int> sequences;
+	sequences.RemoveAll();
+	for ( int i = 0; i < m_onEndGoto.Count() - 1; i++ )
+	{
+		for ( int j = 0; j < m_onEndGoto[i].nSequenceWeight; j++ )
+			sequences.AddToTail( m_onEndGoto[i].nSequence );
+	}
+
+	SetSequence( sequences.Random() );
+	SetCycle( 0.0f );
+	ResetSequenceInfo();
 }
 
 void C_BaseAnimating::SetBodygroup( int iGroup, int iValue )
