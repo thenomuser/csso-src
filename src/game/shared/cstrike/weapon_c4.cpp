@@ -80,6 +80,7 @@ ConVar mp_plant_c4_anywhere( "mp_plant_c4_anywhere", "0", FCVAR_REPLICATED );
 		SendPropFloat( SENDINFO(m_flDefuseLength), 0, SPROP_NOSCALE ),
 		SendPropFloat( SENDINFO(m_flDefuseCountDown), 0, SPROP_NOSCALE ),
 		SendPropBool( SENDINFO(m_bBombDefused) ),
+		SendPropEHandle( SENDINFO(m_hBombDefuser) ),
 	END_SEND_TABLE()
 
 	
@@ -146,6 +147,7 @@ END_PREDICTION_DATA()
 		//g_sModelIndexC4Glow = PrecacheModel( "sprites/ledglow.vmt" );
 		PrecacheModel( PLANTED_C4_MODEL );
 		PrecacheVGuiScreen( "c4_panel" );
+		PrecacheModel( "models/weapons/w_eq_multimeter.mdl" );
 
 		engine->ForceModelBounds( PLANTED_C4_MODEL, Vector( -7, -13, -5 ), Vector( 9, 12, 11 ) );
 
@@ -336,6 +338,18 @@ END_PREDICTION_DATA()
 		{
 			UTIL_Remove( this );
 			return;
+		}
+
+		// network the defuser handle
+		if ( m_bStartDefuse )
+		{
+			m_hBombDefuser = m_pBombDefuser;
+			SetBodygroup( FindBodygroupByName( "defusing" ), 1 );
+		}
+		else
+		{
+			m_hBombDefuser = NULL;
+			SetBodygroup( FindBodygroupByName( "defusing" ), 0 );
 		}
 
 		//Bomb is dead, don't think anymore

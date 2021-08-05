@@ -25,6 +25,12 @@ struct RopeSegData_t;
 #define MAX_ROPE_SUBDIVS		8
 #define MAX_ROPE_SEGMENTS		(ROPE_MAX_SEGMENTS+(ROPE_MAX_SEGMENTS-1)*MAX_ROPE_SUBDIVS)
 
+enum rope_type
+{
+	ROPE_TYPE_DEFAULT = 0,
+	ROPE_TYPE_DEFUSECABLES,
+};
+
 //=============================================================================
 class C_RopeKeyframe : public C_BaseEntity
 {
@@ -64,7 +70,8 @@ public:
 														// use PrecacheModel for whatever material
 														// it specifies here.
 		int numSegments = 5,
-		int ropeFlags = ROPE_SIMULATE
+		int ropeFlags = ROPE_SIMULATE,
+		rope_type ropeType = ROPE_TYPE_DEFAULT
 		);
 
 	// Create a client-only rope and initialize it with the parameters from the KeyValues.
@@ -232,6 +239,8 @@ private:
 	bool			m_bNewDataThisFrame : 1;			// Set to true in OnDataChanged so that we simulate that frame
 	bool			m_bPhysicsInitted : 1;				// It waits until all required entities are 
 	// present to start simulating and rendering.
+
+	rope_type		m_ropeType;
 
 	friend class CRopeManager;
 };

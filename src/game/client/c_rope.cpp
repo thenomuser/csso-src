@@ -361,6 +361,9 @@ void CRopeManager::AddToRenderCache( C_RopeKeyframe *pRope )
 	{
 		return;
 	}
+
+	if ( pRope->m_ropeType != ROPE_TYPE_DEFAULT )
+		return;
 	
 	// Find the current rope list.
 	int iRenderCache = 0;
@@ -1054,6 +1057,8 @@ C_RopeKeyframe::C_RopeKeyframe()
 	m_TextureScale = 4;	// 4:1
 	m_flImpulse.Init();
 
+	m_ropeType = ROPE_TYPE_DEFAULT;
+
 	g_Ropes.AddToTail( this );
 }
 
@@ -1079,7 +1084,8 @@ C_RopeKeyframe* C_RopeKeyframe::Create(
 	float ropeWidth,
 	const char *pMaterialName,
 	int numSegments,
-	int ropeFlags
+	int ropeFlags,
+	rope_type ropeType
 	)
 {
 	C_RopeKeyframe *pRope = new C_RopeKeyframe;
@@ -1103,6 +1109,7 @@ C_RopeKeyframe* C_RopeKeyframe::Create(
 	pRope->m_Width = ropeWidth;
 	pRope->m_nSegments = clamp( numSegments, 2, ROPE_MAX_SEGMENTS );
 	pRope->m_RopeFlags = ropeFlags;
+	pRope->m_ropeType = ropeType;
 
 	pRope->FinishInit( pMaterialName );
 	return pRope;
@@ -1698,7 +1705,7 @@ void C_RopeKeyframe::BuildRope( RopeSegData_t *pSegmentData, const Vector &vCurr
 
 		CEffectData data;
 
-		if ( !bQueued && RopeManager()->IsHolidayLightMode() && r_rope_holiday_light_scale.GetFloat() > 0.0f )
+		if ( !bQueued && RopeManager()->IsHolidayLightMode() && m_ropeType == ROPE_TYPE_DEFAULT && r_rope_holiday_light_scale.GetFloat() > 0.0f )
 		{
 			data.m_nMaterial = reinterpret_cast< int >( this );
 			data.m_nHitBox = ( iNode << 8 );
@@ -1733,7 +1740,7 @@ void C_RopeKeyframe::BuildRope( RopeSegData_t *pSegmentData, const Vector &vCurr
 				// simple eval using precomputed basis
 				Catmull_Rom_Eval( spline, pSubdivVecList[iSubdiv], pSegmentData->m_Segments[nSegmentCount].m_vPos );
 
-				if ( !bQueued && RopeManager()->IsHolidayLightMode() && r_rope_holiday_light_scale.GetFloat() > 0.0f )
+				if ( !bQueued && RopeManager()->IsHolidayLightMode() && m_ropeType == ROPE_TYPE_DEFAULT && r_rope_holiday_light_scale.GetFloat() > 0.0f )
 				{
 					data.m_nHitBox++;
 					data.m_flScale = r_rope_holiday_light_scale.GetFloat();

@@ -374,7 +374,9 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 void ClientPrecache( void )
 {
 	// Precache cable textures.
-	CBaseEntity::PrecacheModel( "cable/cable.vmt" );	
+	CBaseEntity::PrecacheModel( "cable/phonecable.vmt" );
+	CBaseEntity::PrecacheModel( "cable/phonecable_red.vmt" );
+	CBaseEntity::PrecacheModel( "cable/cable.vmt" );
 	CBaseEntity::PrecacheModel( "cable/cable_lit.vmt" );	
 	CBaseEntity::PrecacheModel( "cable/chain.vmt" );	
 	CBaseEntity::PrecacheModel( "cable/rope.vmt" );	

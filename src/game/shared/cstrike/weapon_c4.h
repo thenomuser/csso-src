@@ -95,6 +95,7 @@
 		CNetworkVar( float, m_flDefuseLength );		//How long does the defuse take? Depends on if a defuser was used
 		CNetworkVar( float, m_flDefuseCountDown );	//What time does the defuse complete?
 		CNetworkVar( bool, m_bBombDefused );
+		CNetworkVar( CHandle<CCSPlayer>, m_hBombDefuser );
 
 		// Control panel
 		void GetControlPanelInfo( int nPanelIndex, const char *&pPanelName );
