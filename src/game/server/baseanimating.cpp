@@ -2267,10 +2267,12 @@ int CBaseAnimating::GetNumBodyGroups( void )
 	return IsDynamicModelLoading() ? 0 : ::GetNumBodyGroups( GetModelPtr( ) );
 }
 
-bool CBaseAnimating::DoesModelSupportGloves()
+bool CBaseAnimating::DoesModelSupportGloves( const char *pGlovesViewModelName, const char *pDefaultViewModelName )
 {
 #ifdef CSTRIKE_DLL
-	return (FindBodygroupByName( "gloves" ) > -1) ? true : false;
+	// don't use a custom glove model if selected glove is the same as default
+	if ( Q_strcmp( pGlovesViewModelName, pDefaultViewModelName ) != 0 )
+		return (FindBodygroupByName( "gloves" ) > -1) ? true : false;
 #endif
 	
 	return false;

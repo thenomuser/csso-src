@@ -668,6 +668,8 @@ CCSPlayer::CCSPlayer()
 
 	m_bNeedToChangeAgent = true;
 	m_bNeedToChangeGloves = true;
+
+	m_szPlayerDefaultGloves = NULL;
 }
 
 
@@ -1358,7 +1360,12 @@ void CCSPlayer::Spawn()
 
 	BaseClass::Spawn();
 
-	if ( CSLoadout()->HasGlovesSet(this, GetTeamNumber()) && DoesModelSupportGloves() )
+	const char *szViewGlovesModel = NULL;
+	if ( CSLoadout()->HasGlovesSet( this, GetTeamNumber() ) )
+	{
+		szViewGlovesModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( this, GetTeamNumber() ) )->szViewModel;
+	}
+	if ( szViewGlovesModel && m_szPlayerDefaultGloves && DoesModelSupportGloves( szViewGlovesModel, m_szPlayerDefaultGloves ) )
 		SetBodygroup( FindBodygroupByName( "gloves" ), 1 ); // has to be here because doesn't work on client
 	else
 		SetBodygroup( FindBodygroupByName( "gloves" ), 0 );
@@ -2657,9 +2664,15 @@ void CCSPlayer::SetModel( const char *szModelName )
 		}
 		else
 			m_bUseNewAnimstate = false;
+
+		m_szPlayerDefaultGloves = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pModel ) )->szAssociatedGloveModel;
 	}
 	else
+	{
+		Assert( false );
+		m_szPlayerDefaultGloves = NULL;
 		m_bUseNewAnimstate = false;
+	}
 
 	if (m_bUseNewAnimstate && m_PlayerAnimStateCSGO)
 		m_PlayerAnimStateCSGO->Reset();

@@ -212,7 +212,7 @@ public:
 	void SetBodygroup( int iGroup, int iValue );
 	int GetBodygroup( int iGroup );
 
-	bool DoesModelSupportGloves();
+	bool DoesModelSupportGloves( const char *pGlovesViewModelName, const char *pDefaultViewModelName );
 
 	const char *GetBodygroupName( int iGroup );
 	int FindBodygroupByName( const char *name );

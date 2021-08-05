@@ -454,6 +454,8 @@ public:
 
 	CNetworkVar( bool, m_bNeedToChangeGloves );
 
+	const char *m_szPlayerDefaultGloves;
+
 	virtual void ObserverUse( bool bIsPressed ); // observer pressed use
 
 	// Add money to this player's account.
