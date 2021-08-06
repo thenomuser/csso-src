@@ -294,7 +294,7 @@ public:
 	virtual C_BaseAnimating *		GetBoneSetupDependancy( void ) { return GetMoveParent() ? GetMoveParent()->GetBaseAnimating() : NULL; }
 
 	bool							GetRootBone( matrix3x4_t &rootBone );
-	inline void						SetUseParentLightingOrigin( bool value ) { m_bUseParentLightingOrigin = value; }
+	inline void						SetUseParentLightingOrigin( bool value ) { m_bUseParentLightingOrigin = value; MarkShadowDirty(true); }
 
 	// Should this object cast render-to-texture shadows?
 	virtual ShadowType_t			ShadowCastType();
