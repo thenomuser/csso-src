@@ -2216,9 +2216,7 @@ void C_BaseAnimating::ComputeLightingOrigin( ClientModelRenderInfo_t *pInfo )
 		}
 	}
 
-	Vector lightingOrigin;
-	VectorTransform( GetModelPtr()->illumposition(), RenderableToWorldTransform(), lightingOrigin );
-	pInfo->pLightingOrigin = &lightingOrigin;
+	pInfo->pLightingOrigin = &GetAbsOrigin();
 }
 
 
