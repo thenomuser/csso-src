@@ -5776,32 +5776,6 @@ bool CCSPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const 
 	return BaseClass::WantsLagCompensationOnEntity( pPlayer, pCmd, pEntityTransmitBits );
 }
 
-int CCSPlayer::LookupBone( const char *szName )
-{
-	if ( m_bUseNewAnimstate )
-	{
-		// Try to fix up some common old bone names to new bone names, until I can go through the code and fix all cases or write a data-driven solution.
-		if ( Q_stristr( szName, "weapon_bone" ) )
-		{
-			szName = "hand_R";
-		}
-		else if ( Q_stristr( szName, "Head" ) )
-		{
-			szName = "head_0";
-		}
-		else if ( Q_stristr( szName, "L_Hand" ) )
-		{
-			szName = "hand_L";
-		}
-		else if ( Q_stristr( szName, "R_Hand" ) )
-		{
-			szName = "hand_R";
-		}
-	}
-
-	return BaseClass::LookupBone(szName);
-}
-
 // Handles the special "radio" alias commands we're creating to accommodate the scripts players use
 // ** Returns true if we've handled the command **
 bool HandleRadioAliasCommands( CCSPlayer *pPlayer, const char *pszCommand )

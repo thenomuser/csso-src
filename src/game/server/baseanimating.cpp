@@ -1417,11 +1417,42 @@ float CBaseAnimating::EdgeLimitPoseParameter( int iParameter, float flValue, flo
 //-----------------------------------------------------------------------------
 int CBaseAnimating::LookupBone( const char *szName )
 {
-	const CStudioHdr *pStudioHdr = GetModelPtr();
-	Assert( pStudioHdr );
-	if ( !pStudioHdr )
+	Assert( GetModelPtr() );
+
+	if( !GetModelPtr() )
+	{
 		return -1;
-	return Studio_BoneIndexByName( pStudioHdr, szName );
+	}
+
+	//AssertMsg( !Q_stristr( szName, "ValveBiped" ), "ValveBiped bone names are deprecated!" );
+
+	int ret = Studio_BoneIndexByName( GetModelPtr(), szName );
+
+	if ( ret == -1 )
+	{
+		// Try to fix up some common old bone names to new bone names, until I can go through the code and fix all cases or write a data-driven solution.
+		if ( Q_stristr( szName, "weapon_bone" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
+		}
+		else if ( Q_stristr( szName, "Head" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "head_0" );
+		}
+		else if ( Q_stristr( szName, "L_Hand" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_L" );
+		}
+		else if ( Q_stristr( szName, "R_Hand" ) )
+		{
+			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
+		}
+
+		//AssertMsg( ret > 0, "Failed to find an alternate bone name!" );
+
+	}
+
+	return ret;
 }
 
 
