@@ -4071,6 +4071,25 @@ void TagUsedBones( )
 		{
 			UpdateBonerefRecursive( psource, k, psource->boneflags[k] );
 		}
+
+		// Tag all bones marked as being used by alwayssetup
+		// NOTE these are intentionally added without respect to parents, 
+		// because they are intended to be used on data-driving bones that are aren't 
+		// necessarily moving vertices or part of a hierarchy. They are NOT guaranteed 
+		// to be positioned correctly relative to their parents!!!
+		int nBoneAlwaysSetupCount = g_BoneAlwaysSetup.Count(); 
+		for ( k = 0; k < nBoneAlwaysSetupCount; ++k )
+		{
+			for ( j = 0; j < psource->numbones; j++ )
+			{
+				if ( stricmp( g_BoneAlwaysSetup[k].bonename, psource->localBone[j].name ) )
+					continue;
+
+				psource->boneflags[j] |= BONE_ALWAYS_SETUP;
+			}
+		}
+
+		// don't add more flags here! Add them up above the UpdateBonerefRecursive call, so they get propagated up their parents!
 	}
 
 	// tag all eyeball bones
@@ -4120,6 +4139,70 @@ const char *RenameBone( const char *pName )
 	return pName;
 }
 
+void InsertPredefinedBones( bool bUnlocked )
+{
+	int i, k;
+
+	for (i = 0; i < g_numimportbones; i++)
+	{
+		if ( g_importbone[i].bUnlocked != bUnlocked )
+			continue;
+
+		k = findGlobalBone( g_importbone[i].name );
+		if (k == -1)
+		{
+			k = g_numbones;
+			V_strcpy_safe( g_bonetable[k].name, g_importbone[i].name );
+			if ( strlen( g_importbone[i].parent ) == 0 )
+			{
+				g_bonetable[k].parent = -1;
+			}
+			else
+			{
+				// FIXME: This won't work if the imported bone refers to
+				// another imported bone which is further along in the list
+				g_bonetable[k].parent = findGlobalBone( g_importbone[i].parent );
+				if ( g_bonetable[k].parent == -1 )
+				{
+					Warning("Imported bone %s tried to access parent bone %s and failed!\n",
+						g_importbone[i].name, g_importbone[i].parent );
+				}
+			}
+			g_bonetable[k].bPreDefined = true;
+			g_bonetable[k].rawLocal = g_importbone[i].rawLocal;
+			g_bonetable[k].rawLocalOriginal = g_bonetable[k].rawLocal;
+			g_numbones++;
+		}
+		g_bonetable[k].bDontCollapse = true;
+		g_bonetable[k].srcRealign = g_importbone[i].srcRealign;
+		g_bonetable[k].bPreAligned = g_importbone[i].bPreAligned;
+	}
+
+	// ensure bonemerged bones are tagged
+	for ( i = 0; i < g_numbones; i++ )
+	{
+		for ( k = 0; k < g_BoneMerge.Count(); k++ )
+		{
+			if ( !(g_bonetable[i].flags & BONE_USED_BY_BONE_MERGE) && !stricmp( g_BoneMerge[k].bonename, g_bonetable[i].name ) )
+			{
+				g_bonetable[i].flags |= BONE_USED_BY_BONE_MERGE;
+			}
+		}
+	}
+
+	// ensure alwayssetup bones are tagged
+	for ( i = 0; i < g_numbones; i++ )
+	{
+		for ( k = 0; k < g_BoneAlwaysSetup.Count(); k++ )
+		{
+			if ( !(g_bonetable[i].flags & BONE_ALWAYS_SETUP) && !stricmp( g_BoneAlwaysSetup[k].bonename, g_bonetable[i].name ) )
+			{
+				g_bonetable[i].flags |= BONE_ALWAYS_SETUP;
+			}
+		}
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Tags bones in the global bone table
@@ -4160,40 +4243,7 @@ int BuildGlobalBonetable( )
 		SetIdentityMatrix( g_bonetable[i].srcRealign );
 	}
 
-	// insert predefined bones first
-	for (i = 0; i < g_numimportbones; i++)
-	{
-		k = findGlobalBone( g_importbone[i].name );
-		if (k == -1)
-		{
-			k = g_numbones;
-			V_strcpy_safe( g_bonetable[k].name, g_importbone[i].name );
-			if ( strlen( g_importbone[i].parent ) == 0 )
-			{
-				g_bonetable[k].parent = -1;
-			}
-			else
-			{
-				// FIXME: This won't work if the imported bone refers to
-				// another imported bone which is further along in the list
-				g_bonetable[k].parent = findGlobalBone( g_importbone[i].parent );
-				if ( g_bonetable[k].parent == -1 )
-				{
-					Warning("Imported bone %s tried to access parent bone %s and failed!\n",
-						g_importbone[i].name, g_importbone[i].parent );
-				}
-			}
-			g_bonetable[k].bPreDefined = true;
-			g_bonetable[k].rawLocal = g_importbone[i].rawLocal;
-			g_bonetable[k].rawLocalOriginal = g_bonetable[k].rawLocal;
-			g_numbones++;
-		}
-		g_bonetable[k].bDontCollapse = true;
-		g_bonetable[k].srcRealign = g_importbone[i].srcRealign;
-		g_bonetable[k].bPreAligned = true;
-	}
-
-	TagUsedImportedBones();
+	InsertPredefinedBones( false );
 
 	// union of all used bones
 	for ( i = 0; i < g_numsources; i++ )
@@ -4259,30 +4309,13 @@ int BuildGlobalBonetable( )
 				g_numbones++;
 				continue;
 			}
-				
-			if (g_bOverridePreDefinedBones && g_bonetable[k].bPreDefined)
-			{
-				g_bonetable[k].flags			|= psource->boneflags[j];
-
-				ConcatTransforms( srcBoneToWorld[j], g_bonetable[k].srcRealign, g_bonetable[k].boneToPose ); 
-
-				if (g_bonetable[k].parent == -1)
-				{
-					MatrixCopy( g_bonetable[k].boneToPose, g_bonetable[k].rawLocal );
-				}
-				else
-				{
-					matrix3x4_t tmp;
-					MatrixInvert( g_bonetable[g_bonetable[k].parent].boneToPose, tmp );
-					ConcatTransforms( tmp, g_bonetable[k].boneToPose, g_bonetable[k].rawLocal ); 
-				}
-				continue;
-			}
 
 			// accumlate flags
 			g_bonetable[k].flags |= psource->boneflags[j];
 		}
 	}
+
+	InsertPredefinedBones( true );
 
 	return iError;
 }

@@ -228,6 +228,8 @@ void CCSGOPlayerAnimState::Reset( void )
 	m_flCameraSmoothHeight				= 0;
 	m_bSmoothHeightValid				= false;
 	m_flLastTimeVelocityOverTen			= 0;
+
+	m_pPlayer->ClearAnimLODflags();
 #endif
 }
 
@@ -280,6 +282,13 @@ void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 	// purge layer dispatches on weapon change and init
 	if ( m_pWeapon != m_pWeaponLast || m_bFirstRunSinceInit )
 	{
+
+#ifdef CLIENT_DLL
+		// changing weapons will change the pose of leafy bones like fingers. The next time we
+		// set up this player's bones, treat it like a clean first setup.
+		m_pPlayer->m_nComputedLODframe = 0;
+#endif
+
 		for ( int i=0; i < ANIMATION_LAYER_COUNT; i++ )
 		{
 			CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( i, USE_ANIMLAYER_RAW_INDEX );

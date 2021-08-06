@@ -350,6 +350,8 @@ public:
 	virtual void					SetDormant( bool bDormant );
 	virtual bool					IsDormant( void );
 
+	virtual void					OnSetDormant( bool bDormant ) {}
+
 	// Tells the entity that it's about to be destroyed due to the client receiving
 	// an uncompressed update that's caused it to destroy all entities & recreate them.
 	virtual void					SetDestroyedOnRecreateEntities( void );

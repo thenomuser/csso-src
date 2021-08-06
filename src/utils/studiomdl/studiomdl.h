@@ -237,6 +237,7 @@ struct s_importbone_t
 	matrix3x4_t		rawLocal;
 	bool			bPreAligned;
 	matrix3x4_t		srcRealign;
+	bool			bUnlocked;
 };
 EXTERN s_importbone_t g_importbone[MAXSTUDIOSRCBONES];
 
@@ -331,6 +332,13 @@ struct s_bonemerge_t
 };
 
 EXTERN CUtlVector< s_bonemerge_t > g_BoneMerge;
+
+struct s_alwayssetup_t
+{
+	char	bonename[MAXSTUDIONAME];
+};
+
+EXTERN CUtlVector< s_alwayssetup_t > g_BoneAlwaysSetup;
 
 struct s_mouth_t
 {
@@ -1584,7 +1592,7 @@ extern bool g_bZBrush;
 extern bool g_bVerifyOnly;
 extern bool g_bUseBoneInBBox;
 extern bool g_bLockBoneLengths;
-extern bool g_bOverridePreDefinedBones;
+extern bool g_bDefineBonesLockedByDefault;
 extern bool g_bX360;
 extern int g_minLod;
 extern int g_numAllowedRootLODs;

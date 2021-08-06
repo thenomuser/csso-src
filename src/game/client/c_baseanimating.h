@@ -76,6 +76,16 @@ struct RagdollInfo_t
 	Quaternion	m_rgBoneQuaternion[MAXSTUDIOBONES];
 };
 
+enum
+{
+	ANIMLODFLAG_DISTANT					= 0x01,
+	ANIMLODFLAG_OUTSIDEVIEWFRUSTUM		= 0x02,
+	ANIMLODFLAG_INVISIBLELOCALPLAYER	= 0x04,
+	ANIMLODFLAG_DORMANT					= 0x08,
+	//ANIMLODFLAG_UNUSED				= 0x10,
+	//ANIMLODFLAG_UNUSED				= 0x20,
+};
+
 
 class CAttachmentData
 {
@@ -510,6 +520,19 @@ public:
 	// Object bodygroup
 	int								m_nBody;
 
+	int								m_nCustomBlendingRuleMask;
+
+	unsigned int					m_nAnimLODflags;
+	unsigned int					m_nAnimLODflagsOld;
+
+	inline void SetAnimLODflag( unsigned int nNewFlag )		{ m_nAnimLODflags |= (nNewFlag); }
+	inline void UnSetAnimLODflag( unsigned int nNewFlag )	{ m_nAnimLODflags &= (~nNewFlag); }
+	inline bool IsAnimLODflagSet( unsigned int nFlag )		{ return (m_nAnimLODflags & (nFlag)) != 0; }
+	inline void ClearAnimLODflags( void )					{ m_nAnimLODflags = 0; }
+
+	int								m_nComputedLODframe;
+	float							m_flDistanceFromCamera;
+
 	// Hitbox set to use (default 0)
 	int								m_nHitboxSet;
 
@@ -633,7 +656,7 @@ private:
 	// Calculated attachment points
 	CUtlVector<CAttachmentData>		m_Attachments;
 
-	bool							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
+	void							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
 
 	EHANDLE							m_hLightingOrigin;
 	EHANDLE							m_hLightingOriginRelative;
@@ -641,6 +664,12 @@ private:
 	// These are compared against each other to determine if the entity should muzzle flash.
 	CNetworkVar( unsigned char, m_nMuzzleFlashParity );
 	unsigned char m_nOldMuzzleFlashParity;
+
+	bool							ShouldSkipAnimationFrame( float currentTime );
+	int								m_nLastNonSkippedFrame;
+
+	Vector							m_pos_cached[MAXSTUDIOBONES];
+	Quaternion						m_q_cached[MAXSTUDIOBONES];
 
 	bool							m_bInitModelEffects;
 	bool							m_bDelayInitModelEffects;
