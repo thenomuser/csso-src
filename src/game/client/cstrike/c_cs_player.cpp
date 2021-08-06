@@ -3441,87 +3441,22 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 	if ( !IsVisible() || (IsLocalPlayer() && !C_BasePlayer::ShouldDrawLocalPlayer()) || !ShouldDraw() )
 		return;
 
-	mstudioikchain_t *pLeftFootChain = NULL;
-	mstudioikchain_t *pRightFootChain = NULL;
 	mstudioikchain_t *pLeftArmChain = NULL;
-
-	int nLeftFootBoneIndex = LookupBone( "ankle_L" );
-	int nRightFootBoneIndex = LookupBone( "ankle_R" );
 	int nLeftHandBoneIndex = LookupBone( "hand_L" );
 
-	Assert( nLeftFootBoneIndex != -1 && nRightFootBoneIndex != -1 && nLeftHandBoneIndex != -1 );
+	Assert( nLeftHandBoneIndex != -1 );
 
 	for( int i = 0; i < pStudioHdr->numikchains(); i++ )
 	{
 		mstudioikchain_t *pchain = pStudioHdr->pIKChain( i );
-		if ( nLeftFootBoneIndex == pchain->pLink( 2 )->bone )
-		{
-			pLeftFootChain = pchain;
-		}
-		else if ( nRightFootBoneIndex == pchain->pLink( 2 )->bone )
-		{
-			pRightFootChain = pchain;
-		}
-		else if ( nLeftHandBoneIndex == pchain->pLink( 2 )->bone )
+		if ( nLeftHandBoneIndex == pchain->pLink( 2 )->bone )
 		{
 			pLeftArmChain = pchain;
 		}
 
-		if ( pLeftFootChain && pRightFootChain && pLeftArmChain )
+		if ( pLeftArmChain )
 			break;
 	}
-	
-	Assert( pLeftFootChain && pRightFootChain );
-	
-	Vector vecAnimatedLeftFootPos = boneToWorld[nLeftFootBoneIndex].GetOrigin();
-	Vector vecAnimatedRightFootPos = boneToWorld[nRightFootBoneIndex].GetOrigin();
-
-	m_PlayerAnimStateCSGO->DoProceduralFootPlant( boneToWorld, pLeftFootChain, pRightFootChain, pos );
-	
-
-	// hack - keep the toes above the ground
-	if ( (GetFlags() & FL_ONGROUND) && (GetMoveType() == MOVETYPE_WALK) )
-	{
-		float flZMaxToe = GetAbsOrigin().z + 0.75f;
-
-		int nLeftToeBoneIndex = LookupBone( "ball_L" );
-		int nRightToeBoneIndex = LookupBone( "ball_R" );
-
-		if ( nLeftToeBoneIndex > 0 )
-		{
-			// need to build an extended toe position
-			Vector vecToeLeft = boneToWorld[nLeftFootBoneIndex].TransformVector( pos[nLeftToeBoneIndex] );
-			Vector vecForward;
-			MatrixGetColumn( boneToWorld[nLeftToeBoneIndex], 0, vecForward );
-			vecToeLeft += vecForward * cl_player_toe_length;
-			if ( vecToeLeft.z < flZMaxToe )
-			{
-				boneToWorld[nLeftFootBoneIndex][2][3] += (flZMaxToe - vecToeLeft.z);
-			}
-		}
-
-		if ( nRightToeBoneIndex > 0 )
-		{
-			Vector vecToeRight = boneToWorld[nRightFootBoneIndex].TransformVector( pos[nRightToeBoneIndex] );
-			Vector vecForward;
-			MatrixGetColumn( boneToWorld[nRightToeBoneIndex], 0, vecForward );
-			vecToeRight -= vecForward * cl_player_toe_length; // right toe bone is backwards...
-			if ( vecToeRight.z < flZMaxToe )
-			{
-				boneToWorld[nRightFootBoneIndex][2][3] += (flZMaxToe - vecToeRight.z);
-			}
-		}
-	}
-
-	Vector vecLeftFootPos = boneToWorld[nLeftFootBoneIndex].GetOrigin();
-	Vector vecRightFootPos = boneToWorld[nRightFootBoneIndex].GetOrigin();
-
-	boneToWorld[nLeftFootBoneIndex].SetOrigin( vecAnimatedLeftFootPos );
-	boneToWorld[nRightFootBoneIndex].SetOrigin( vecAnimatedRightFootPos );
-
-	Studio_SolveIK( pLeftFootChain->pLink( 0 )->bone, pLeftFootChain->pLink( 1 )->bone, nLeftFootBoneIndex, vecLeftFootPos, boneToWorld );
-	Studio_SolveIK( pRightFootChain->pLink( 0 )->bone, pRightFootChain->pLink( 1 )->bone, nRightFootBoneIndex, vecRightFootPos, boneToWorld );
-
 
 	int nLeftHandIkBoneDriver = LookupBone( "lh_ik_driver" );
 	if ( nLeftHandIkBoneDriver > 0 && pos[nLeftHandIkBoneDriver].x > 0 )
