@@ -153,6 +153,9 @@ abstract_class IShaderDynamicAPI
 {
 public:
 
+	virtual void SetVertexShaderViewProj() = 0;
+	virtual void SetVertexShaderCameraPos() = 0;
+
 	virtual void SetViewports( int nCount, const ShaderViewport_t* pViewports ) = 0;
 	virtual int GetViewports( ShaderViewport_t* pViewports, int nMax ) const = 0;
 
@@ -222,6 +225,9 @@ public:
 
 	// Get the dimensions of the back buffer.
 	virtual void GetBackBufferDimensions( int& width, int& height ) const = 0;
+
+	// Get the current viewport
+	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const = 0;
 
 	// FIXME: The following 6 methods used to live in IShaderAPI
 	// and were moved for stdshader_dx8. Let's try to move them back!

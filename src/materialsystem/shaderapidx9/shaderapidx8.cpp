@@ -631,6 +631,18 @@ public:
 		// Chain to the device
 		BaseClass::GetBackBufferDimensions( nWidth, nHeight );
 	}
+
+	// Get the current viewport
+	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
+	{
+		ShaderViewport_t viewport;
+		ShaderAPI()->GetViewports( &viewport, 1 );
+		nX = viewport.m_nTopLeftX;
+		nY = viewport.m_nTopLeftY;
+		nWidth = viewport.m_nWidth;
+		nHeight = viewport.m_nHeight;
+	}
+
 	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
 
 public:
@@ -1343,6 +1355,18 @@ private:
 	void SetPixelShaderFogParams( int reg );
 	void SetPixelShaderFogParams( int reg, ShaderFogMode_t fogMode );
 
+	void SetVertexShaderCameraPos()
+	{
+		float vertexShaderCameraPos[4];
+		vertexShaderCameraPos[0] = m_WorldSpaceCameraPositon[0];
+		vertexShaderCameraPos[1] = m_WorldSpaceCameraPositon[1];
+		vertexShaderCameraPos[2] = m_WorldSpaceCameraPositon[2];
+		vertexShaderCameraPos[3] = m_DynamicState.m_FogZ;  //waterheight in water fog mode
+
+		// eyepos.x eyepos.y eyepos.z cWaterZ
+		SetVertexShaderConstantInternal( VERTEX_SHADER_CAMERA_POS, vertexShaderCameraPos );
+	}
+
 	FORCEINLINE void UpdateVertexShaderFogParams( void )
 	{
 		if ( g_pHardwareConfig->Caps().m_SupportsPixelShaders )
@@ -1365,17 +1389,9 @@ private:
 
 			fogParams[3] = ooFogRange;
 
-			float vertexShaderCameraPos[4];
-			vertexShaderCameraPos[0] = m_WorldSpaceCameraPositon[0];
-			vertexShaderCameraPos[1] = m_WorldSpaceCameraPositon[1];
-			vertexShaderCameraPos[2] = m_WorldSpaceCameraPositon[2];
-			vertexShaderCameraPos[3] = m_DynamicState.m_FogZ;  // waterheight
-
 			// cFogEndOverFogRange, cFogOne, unused, cOOFogRange
 			SetVertexShaderConstant( VERTEX_SHADER_FOG_PARAMS, fogParams, 1 );
-
-			// eyepos.x eyepos.y eyepos.z cWaterZ
-			SetVertexShaderConstant( VERTEX_SHADER_CAMERA_POS, vertexShaderCameraPos );
+			SetVertexShaderCameraPos();
 		}
 	}
 

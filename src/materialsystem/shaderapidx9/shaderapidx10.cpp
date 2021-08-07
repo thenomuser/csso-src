@@ -407,7 +407,19 @@ void CShaderAPIDx10::CommitStateChanges( bool bForce )
 void CShaderAPIDx10::GetBackBufferDimensions( int& nWidth, int& nHeight ) const
 {
 	g_pShaderDeviceDx10->GetBackBufferDimensions( nWidth, nHeight );
-} 
+}
+
+
+// Get the current viewport
+void CShaderAPIDx10::GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
+{
+	ShaderViewport_t viewport;
+	GetViewports( &viewport, 1 );
+	nX = viewport.m_nTopLeftX;
+	nY = viewport.m_nTopLeftY;
+	nWidth = viewport.m_nWidth;
+	nHeight = viewport.m_nHeight;
+}
 
 	
 //-----------------------------------------------------------------------------

@@ -519,6 +519,23 @@ bool ApplyMorph( sampler2D morphSampler, const float3 vMorphTargetTextureDim, co
 
 #endif   // SHADER_MODEL_VS_3_0
 
+float CalcFixedFunctionFog( const float3 worldPos, const bool bWaterFog )
+{
+	if( !bWaterFog )
+	{
+		return CalcRangeFogFactorFixedFunction( worldPos, cEyePos, cFogMaxDensity, cFogEndOverFogRange, cOOFogRange );
+	}
+	else
+	{
+		return 0.0f; //all done in the pixel shader as of ps20 (current min-spec)
+	}
+}
+
+float CalcFixedFunctionFog( const float3 worldPos, const int fogType )
+{
+	return CalcFixedFunctionFog( worldPos, fogType != FOGTYPE_RANGE );
+}
+
 
 float RangeFog( const float3 projPos )
 {

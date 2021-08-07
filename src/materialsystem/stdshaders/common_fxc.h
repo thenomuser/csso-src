@@ -332,4 +332,11 @@ float3 Vec3TangentToWorldNormalized( float3 iTangentVector, float3 iWorldNormal,
 	return normalize( Vec3TangentToWorld( iTangentVector, iWorldNormal, iWorldTangent, iWorldBinormal ) );
 }
 
+// returns 1.0f for no fog, 0.0f for fully fogged
+float CalcRangeFogFactorFixedFunction( float3 worldPos, float3 eyePos, float flFogMaxDensity, float flFogEndOverRange, float flFogOORange )
+{
+	float dist = distance( eyePos.xyz, worldPos.xyz );
+	return max( flFogMaxDensity, ( -dist * flFogOORange ) + flFogEndOverRange );
+}
+
 #endif //#ifndef COMMON_FXC_H_

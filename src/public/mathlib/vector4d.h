@@ -22,6 +22,7 @@
 #include "basetypes.h"	// For vec_t, put this somewhere else?
 #include "tier0/dbg.h"
 #include "mathlib/math_pfns.h"
+#include "mathlib/vector.h"
 #include "vstdlib/random.h"
 
 // forward declarations
@@ -44,7 +45,8 @@ public:
 	Vector4D(const float *pFloat);
 
 	// Initialization
-	void Init(vec_t ix=0.0f, vec_t iy=0.0f, vec_t iz=0.0f, vec_t iw=0.0f);
+	void Init( vec_t ix = 0.0f, vec_t iy = 0.0f, vec_t iz = 0.0f, vec_t iw = 0.0f );
+	void Init( const Vector& src, vec_t iw = 0.0f );
 
 	// Got any nasty NAN's?
 	bool IsValid() const;
@@ -241,6 +243,12 @@ inline Vector4D::Vector4D(const Vector4D &vOther)
 inline void Vector4D::Init( vec_t ix, vec_t iy, vec_t iz, vec_t iw )
 { 
 	x = ix; y = iy; z = iz;	w = iw;
+	Assert( IsValid() );
+}
+
+inline void Vector4D::Init( const Vector& src, vec_t iw )
+{
+	x = src.x; y = src.y; z = src.z; w = iw;
 	Assert( IsValid() );
 }
 

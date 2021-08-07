@@ -138,6 +138,7 @@ public:
 	// Methods of IShaderDynamicAPI
 public:
 	virtual void GetBackBufferDimensions( int& nWidth, int& nHeight ) const;
+	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const;
 
 public:
 	// Methods of CShaderAPIBase

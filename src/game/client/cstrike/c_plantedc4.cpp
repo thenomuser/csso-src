@@ -175,6 +175,7 @@ bool C_PlantedC4::CreateDefuserRopes( void )
 	C_RopeKeyframe* pRopeA = C_RopeKeyframe::Create( this, m_hDefuserMultimeter, nBombClipAttachmentA, nDefuseToolAttachmentA, 0.9, "cable/phonecable", 8, ROPE_SIMULATE, ROPE_TYPE_DEFUSECABLES );
 	if ( pRopeA )
 	{
+		pRopeA->AddRopeFlags( ROPE_USE_WIND );
 		pRopeA->SetSlack( 142 );
 		pRopeA->AddToLeafSystem();
 		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeA;
@@ -189,6 +190,7 @@ bool C_PlantedC4::CreateDefuserRopes( void )
 	C_RopeKeyframe* pRopeB = C_RopeKeyframe::Create( this, m_hDefuserMultimeter, nBombClipAttachmentB, nDefuseToolAttachmentB, 0.9, "cable/phonecable_red", 8, ROPE_SIMULATE, ROPE_TYPE_DEFUSECABLES );
 	if ( pRopeB )
 	{
+		pRopeB->AddRopeFlags( ROPE_USE_WIND );
 		pRopeB->SetSlack( 142 );
 		pRopeB->AddToLeafSystem();
 		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeB;
