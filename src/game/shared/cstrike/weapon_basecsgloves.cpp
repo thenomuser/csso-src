@@ -72,6 +72,7 @@ void CBaseCSGloves::Equip( CCSPlayer *pOwner )
 
 	FollowEntity( pOwner, true );
 	SetOwnerEntity( pOwner );
+	AddEffects( EF_BONEMERGE_FASTCULL );
 
 	UpdateGlovesModel();
 
