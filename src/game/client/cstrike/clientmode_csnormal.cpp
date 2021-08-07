@@ -47,6 +47,7 @@
 #include "datacache/imdlcache.h"
 #include "cs_shareddefs.h"
 #include "cs_loadout.h"
+#include "materialsystem/itexture.h"
 //=============================================================================
 // HPE_BEGIN:
 // [tj] Needed to retrieve achievement text
@@ -76,14 +77,11 @@ ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
 IClientMode *g_pClientMode = NULL;
 
 // This is a temporary entity used to render the player's model while drawing the class selection menu.
-CHandle<C_BaseAnimating> g_ClassImagePlayer;	// player
-CHandle<C_BaseAnimating> g_ClassImageGloves;	// gloves
-CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
+CHandle<C_BaseAnimating> g_PlayerModel;	// player
+CHandle<C_BaseAnimating> g_GlovesModel;	// gloves
+CHandle<C_BaseAnimating> g_WeaponModel;	// weapon
 
-// This is a temporary entity used to render the player's model while drawing the buy menu.
-CHandle<C_BaseAnimating> g_BuyMenuImagePlayer;	// player
-CHandle<C_BaseAnimating> g_BuyMenuImageGloves;	// gloves
-CHandle<C_BaseAnimating> g_BuyMenuImageWeapon;	// weapon
+static ITexture *g_CubemapTexture;
 
 STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
 STUB_WEAPON_CLASS( weapon_cubemap,	WeaponCubemap,	C_BaseCombatWeapon );
@@ -284,11 +282,17 @@ void CCSModeManager::LevelInit( const char *newmap )
 		cl_detail_avoid_force.SetValue( "0.4" );
 		cl_detail_avoid_recover_speed.SetValue( "0.25" );
 	}
+
+	g_CubemapTexture = NULL;
+	g_CubemapTexture = g_pMaterialSystem->FindTexture( "editor/cube_vertigo", NULL, true );
+	g_CubemapTexture->IncrementReferenceCount();
 }
 
 void CCSModeManager::LevelShutdown( void )
 {
 	g_pClientMode->LevelShutdown();
+
+	g_CubemapTexture->DecrementReferenceCount();
 }
 
 //-----------------------------------------------------------------------------
@@ -1079,327 +1083,94 @@ bool ShouldRecreateImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName
 	return( Q_stricmp( pName, pNewModelName ) != 0 );
 }
 
-
-void UpdateClassImageEntity( 
-	const char *pModelName,
-	int x, int y, int width, int height )
+void UpdateImageEntity(
+	const char *szWeaponClassname,
+	const char *szPlayerModel,
+	int x, int y, int width, int height,
+	int viewX, int viewY, int viewZ,
+	bool bIsClassSelection )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 	
 	if ( !pLocalPlayer )
 		return;
 
-	C_WeaponCSBase *pActiveCSWeapon = dynamic_cast<C_WeaponCSBase*>(pLocalPlayer->GetActiveWeapon());
-
 	MDLCACHE_CRITICAL_SECTION();
 
-	const char* pWeaponModelName = NULL;
-	const char* pWeaponSequence = NULL;
-	const char* pWeaponClassname = "weapon_ak47";
-	int			iTeamNumber = TEAM_TERRORIST;
+	const char* szWeaponModel = NULL;
+	const char* szWeaponSequence = NULL;
+	int iTeamNumber = pLocalPlayer->GetTeamNumber();
 
-	if ( Q_strncmp( V_UnqualifiedFileName(pModelName), "ctm_", 4 ) == 0 )
-	{
-		// give CTs a m4
-		pWeaponClassname = "weapon_m4a4";
-		iTeamNumber = TEAM_CT;
-	}
+	if ( !szPlayerModel || !szPlayerModel[0] )
+		szPlayerModel = modelinfo->GetModelName( pLocalPlayer->GetModel() );
 
-	bool m_bSilenced = true;
-	if ( pLocalPlayer->IsAlive() && pActiveCSWeapon )
+	if ( !szWeaponClassname || !szWeaponClassname[0] )
 	{
-		pWeaponClassname = pActiveCSWeapon->GetClassname();
-		m_bSilenced = pActiveCSWeapon->IsSilenced();
-	}
+		C_BaseCombatWeapon *pPrimaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+		C_BaseCombatWeapon *pSecondaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+		C_BaseCombatWeapon *pKnifeWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_KNIFE );
+		C_BaseCombatWeapon *pActiveWeapon = pLocalPlayer->GetActiveWeapon();
 
-	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponClassname );
-	if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
-	{
-		Warning( "UpdateClassImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
-		return;
-	}
-	else
-	{
-		CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
-		if ( pWeaponInfo )
+		if ( pPrimaryWeapon )
+			szWeaponClassname = pPrimaryWeapon->GetClassname();
+		else if ( pSecondaryWeapon )
+			szWeaponClassname = pSecondaryWeapon->GetClassname();
+		else if ( pKnifeWeapon )
+			szWeaponClassname = pKnifeWeapon->GetClassname();
+		else if ( pActiveWeapon )
+			szWeaponClassname = pActiveWeapon->GetClassname();
+		else if ( bIsClassSelection )
 		{
-			pWeaponModelName = pWeaponInfo->szWorldModel;
-			if ( iTeamNumber == TEAM_TERRORIST )
-				pWeaponSequence = pWeaponInfo->m_szClassMenuAnimT;
-			else
-				pWeaponSequence = pWeaponInfo->m_szClassMenuAnim;
-		}
-		else
-		{
-			Warning( "UpdateClassImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
-			return;
-		}
-	}
-
-	C_BaseAnimating *pPlayerModel = g_ClassImagePlayer.Get();
-
-	// Does the entity even exist yet?
-	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, pModelName );
-	if ( recreatePlayer )
-	{
-		if ( pPlayerModel )
-			pPlayerModel->Remove();
-
-		pPlayerModel = new C_BaseAnimating;
-		pPlayerModel->InitializeAsClientEntity( pModelName, RENDER_GROUP_OPAQUE_ENTITY );
-		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
-
-		// now set the sequence for this player model
-		// PiMoN: moved from below so the sequence won't reset all the time;
-		// for on_end_goto support
-		pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
-
-		g_ClassImagePlayer = pPlayerModel;
-	}
-
-	bool bCreateGloves = false;
-	const char *szGlovesViewModel = NULL;
-	if ( CSLoadout()->HasGlovesSet( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )
-	{
-		szGlovesViewModel = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, pLocalPlayer->GetTeamNumber() ) )->szViewModel;
-	}
-	if ( pPlayerModel && szGlovesViewModel && pLocalPlayer->m_szPlayerDefaultGloves && pPlayerModel->DoesModelSupportGloves( szGlovesViewModel, pLocalPlayer->m_szPlayerDefaultGloves ) )
-	{
-		bCreateGloves = true;
-	}
-
-	C_BaseAnimating *pWeaponModel = g_ClassImageWeapon.Get();
-
-	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponModelName ) )
-	{
-		if ( pWeaponModel )
-			pWeaponModel->Remove();
-
-		pWeaponModel = new C_BaseAnimating;
-		pWeaponModel->InitializeAsClientEntity( pWeaponModelName, RENDER_GROUP_OPAQUE_ENTITY );
-		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
-		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
-
-		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );
-		if ( silencerBodygroup > -1 )
-			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
-		g_ClassImageWeapon = pWeaponModel;
-	}
-
-	C_BaseAnimating *pGlovesModel = g_ClassImageGloves.Get();
-
-	if ( bCreateGloves )
-	{
-		const char* pGlovesName = GetGlovesInfo( CSLoadout()->GetGlovesForPlayer( pLocalPlayer, iTeamNumber ) )->szWorldModel;
-
-		// Does the entity even exist yet?
-		if ( recreatePlayer || ShouldRecreateImageEntity( pGlovesModel, pGlovesName ) )
-		{
-			if ( pGlovesModel )
-				pGlovesModel->Remove();
-
-			pGlovesModel = new C_BaseAnimating;
-			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
-			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
-			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
-			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( pModelName )->iSkintoneIndex; // set the corrent skin tone
-			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
-
-			g_ClassImageGloves = pGlovesModel;
-		}
-
-		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
-	}
-	else
-	{
-		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 0 );
-		if ( pGlovesModel )
-		{
-			pGlovesModel->Remove();
-		}
-	}
-
-	Vector origin = pLocalPlayer->EyePosition();
-	Vector lightOrigin = origin;
-
-	// find a spot inside the world for the dlight's origin, or it won't illuminate the model
-	Vector testPos( origin.x - 100, origin.y, origin.z + 100 );
-	trace_t tr;
-	UTIL_TraceLine( origin, testPos, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
-	if ( tr.fraction == 1.0f )
-	{
-		lightOrigin = tr.endpos;
-	}
-	else
-	{
-		// Now move the model away so we get the correct illumination
-		lightOrigin = tr.endpos + Vector( 1, 0, -1 );	// pull out from the solid
-		Vector start = lightOrigin;
-		Vector end = lightOrigin + Vector( 100, 0, -100 );
-		UTIL_TraceLine( start, end, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
-		origin = tr.endpos;
-	}
-
-	// move player model in front of our view
-	pPlayerModel->SetAbsOrigin( origin );
-	pPlayerModel->SetAbsAngles( QAngle( 5, 180, 0 ) );
-
-	pPlayerModel->FrameAdvance( gpGlobals->frametime );
-
-	// Now draw it.
-	CViewSetup view;
-	view.x = x;
-	view.y = y;
-	view.width = width;
-	view.height = height;
-
-	view.m_bOrtho = false;
-	view.fov = 35;
-
-	view.origin = origin + Vector( -150, 0, 40 );
-
-	view.angles.Init();
-	view.zNear = VIEW_NEARZ;
-	view.zFar = 1000;
-
-	Frustum dummyFrustum;
-	render->Push3DView( view, 0, NULL, dummyFrustum );
-
-	// [mhansen] We don't want to light the model in the world. We want it to 
-	// always be lit normal like even if you are standing in a dark (or green) area
-	// in the world.
-	CMatRenderContextPtr pRenderContext( materials );
-	pRenderContext->SetLightingOrigin( vec3_origin );
-	pRenderContext->SetAmbientLight( 0.6, 0.6, 0.6 );
-
-	static Vector white[6] = 
-	{
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-		Vector( 0.6, 0.6, 0.6 ),
-	};
-
-	g_pStudioRender->SetAmbientLightColors( white );
-	g_pStudioRender->SetLocalLights( 0, NULL );
-
-	modelrender->SuppressEngineLighting( true );
-	float color[3] = { 1.0f, 1.0f, 1.0f };
-	render->SetColorModulation( color );
-	render->SetBlend( 1.0f );
-	pPlayerModel->DrawModel( STUDIO_RENDER );
-	if ( pWeaponModel )
-	{
-		pWeaponModel->DrawModel( STUDIO_RENDER );
-	}
-	if ( bCreateGloves && pGlovesModel )
-	{
-		pGlovesModel->DrawModel( STUDIO_RENDER );
-	}
-	modelrender->SuppressEngineLighting( false );
-
-	render->PopView( dummyFrustum );
-}
-
-// universal function for both CCSBuyMenuPlayerImagePanel
-// (player image with active weapon) and CCSBuyMenuImagePanel
-// (player image with selected weapon in buy menu)
-void UpdateBuyMenuImageEntity(
-	const char *pWeaponClassname,
-	int x, int y, int width, int height,
-	int viewX, int viewY, int viewZ )
-{
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-	
-	if ( !pLocalPlayer || !pLocalPlayer->IsAlive() )
-		return;
-
-	MDLCACHE_CRITICAL_SECTION();
-
-	const char* pWeaponName = NULL;
-	const char* pWeaponSequence = NULL;
-
-	bool m_bSilenced = true;
-
-	// check if its CCSBuyMenuPlayerImagePanel
-	if ( pWeaponClassname == NULL )
-	{
-		if ( pLocalPlayer->GetActiveWeapon() )
-		{
-			C_WeaponCSBase *pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
-
-			// set player's primary weapon for ui model
-			if ( pWeapon )
+			szWeaponClassname = "weapon_ak47";
+			if ( Q_strncmp( V_UnqualifiedFileName( szPlayerModel ), "ctm_", 4 ) == 0 )
 			{
-				m_bSilenced = pWeapon->IsSilenced() ? true : false;
-				pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-				if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
-					pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
-				else
-					pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
-			}
-			else
-			{
-				// no primary weapon? ok, use the secondary weapon
-				pWeapon = dynamic_cast< C_WeaponCSBase * >( pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
-				if ( pWeapon )
-				{
-					m_bSilenced = pWeapon->IsSilenced() ? true : false;
-					pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-					if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
-						pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
-					else
-						pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
-				}
-				else
-				{
-					// no pistol as well? ok, lets try active weapon then...
-					pWeapon = pLocalPlayer->GetActiveCSWeapon();
-					if ( pWeapon )
-					{
-						m_bSilenced = pWeapon->IsSilenced() ? true : false;
-						pWeaponName = pWeapon->GetCSWpnData().szWorldModel;
-						if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
-							pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnimT;
-						else
-							pWeaponSequence = pWeapon->GetCSWpnData().m_szBuyMenuAnim;
-					}
-				}
+				// give CTs an m4
+				szWeaponClassname = "weapon_m4a4";
 			}
 		}
+	}
+
+	if ( iTeamNumber < TEAM_TERRORIST ) // invalid team number
+	{
+		if ( Q_strncmp( V_UnqualifiedFileName( szPlayerModel ), "ctm_", 4 ) == 0 )
+			iTeamNumber = TEAM_CT;
 		else
-		{
-			pWeaponSequence = "t_buymenu_nowep";
-		}
+			iTeamNumber = TEAM_TERRORIST;
+	}
+
+	bool bSilenced = true;
+
+	if ( !szWeaponClassname || !szWeaponClassname[0] )
+	{
+		szWeaponSequence = "t_buymenu_nowep";
 	}
 	else
 	{
-		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( pWeaponClassname );
+		const char* szLoadoutWeapon = CSLoadout()->GetWeaponFromSlot( pLocalPlayer, CSLoadout()->GetSlotFromWeapon( iTeamNumber, szWeaponClassname + 7 ) ); // +7 to get rid of weapon_ prefix
+		if ( szLoadoutWeapon && szLoadoutWeapon[0] )
+			szWeaponClassname = UTIL_VarArgs( "weapon_%s", szLoadoutWeapon );
+
+		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
 		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 		{
-			if ( Q_strcmp( pWeaponClassname, "item_defuser" ) == 0 )
+			if ( Q_strcmp( szWeaponClassname, "item_defuser" ) == 0 )
 			{
-				pWeaponName = "models/weapons/w_defuser.mdl";
-				pWeaponSequence = "t_buymenu_defuser";
+				szWeaponModel = "models/weapons/w_defuser.mdl";
+				szWeaponSequence = "t_buymenu_defuser";
 			}
-			else if ( Q_strcmp( pWeaponClassname, "item_kevlar" ) == 0 )
+			else if ( Q_strcmp( szWeaponClassname, "item_kevlar" ) == 0 )
 			{
-				pWeaponName = "models/weapons/w_eq_armor.mdl";
-				pWeaponSequence = "t_buymenu_armor_helmet";
+				szWeaponModel = "models/weapons/w_eq_armor.mdl";
+				szWeaponSequence = "t_buymenu_armor_helmet";
 			}
-			else if ( Q_strcmp( pWeaponClassname, "item_assaultsuit" ) == 0 )
+			else if ( Q_strcmp( szWeaponClassname, "item_assaultsuit" ) == 0 )
 			{
-				pWeaponName = "models/weapons/w_eq_armor_helmet.mdl";
-				pWeaponSequence = "t_buymenu_armor_helmet";
+				szWeaponModel = "models/weapons/w_eq_armor_helmet.mdl";
+				szWeaponSequence = "t_buymenu_armor_helmet";
 			}
 			else
 			{
-				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
 				return;
 			}
 		}
@@ -1408,35 +1179,46 @@ void UpdateBuyMenuImageEntity(
 			CCSWeaponInfo *pWeaponInfo = dynamic_cast<CCSWeaponInfo*>(GetFileWeaponInfoFromHandle( hWpnInfo ));
 			if ( pWeaponInfo )
 			{
-				pWeaponName = pWeaponInfo->szWorldModel;
-				if ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST )
-					pWeaponSequence = pWeaponInfo->m_szBuyMenuAnimT;
+				szWeaponModel = pWeaponInfo->szWorldModel;
+				if ( bIsClassSelection )
+				{
+					if ( iTeamNumber == TEAM_TERRORIST )
+						szWeaponSequence = pWeaponInfo->m_szClassMenuAnimT;
+					else
+						szWeaponSequence = pWeaponInfo->m_szClassMenuAnim;
+				}
 				else
-					pWeaponSequence = pWeaponInfo->m_szBuyMenuAnim;
+				{
+					if ( iTeamNumber == TEAM_TERRORIST )
+						szWeaponSequence = pWeaponInfo->m_szBuyMenuAnimT;
+					else
+						szWeaponSequence = pWeaponInfo->m_szBuyMenuAnim;
+				}
 			}
 			else
 			{
-				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", pWeaponClassname );
+				Warning( "UpdateBuyMenuImageEntity: Unable to get weapon info for %s.\n", szWeaponClassname );
 				return;
 			}
 		}
 	}
 
-	C_BaseAnimating *pPlayerModel = g_BuyMenuImagePlayer.Get();
+	C_BaseAnimating *pPlayerModel = g_PlayerModel.Get();
 
 	// Does the entity even exist yet?
-	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, modelinfo->GetModelName( pLocalPlayer->GetModel() ) );
+	bool recreatePlayer = ShouldRecreateImageEntity( pPlayerModel, szPlayerModel );
 	if ( recreatePlayer )
 	{
 		if ( pPlayerModel )
 			pPlayerModel->Remove();
 
 		pPlayerModel = new C_BaseAnimating;
-		pPlayerModel->InitializeAsClientEntity( modelinfo->GetModelName( pLocalPlayer->GetModel() ), RENDER_GROUP_OPAQUE_ENTITY );
+		pPlayerModel->InitializeAsClientEntity( szPlayerModel, RENDER_GROUP_OPAQUE_ENTITY );
 		pPlayerModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pPlayerModel->m_flAnimTime = gpGlobals->curtime;
+		pPlayerModel->SetSequence( pPlayerModel->LookupSequence( szWeaponSequence ) );
 
-		g_BuyMenuImagePlayer = pPlayerModel;
+		g_PlayerModel = pPlayerModel;
 	}
 
 	bool bCreateGloves = false;
@@ -1450,33 +1232,33 @@ void UpdateBuyMenuImageEntity(
 		bCreateGloves = true;
 	}
 
-	C_BaseAnimating *pWeaponModel = g_BuyMenuImageWeapon.Get();
+	C_BaseAnimating *pWeaponModel = g_WeaponModel.Get();
 
 	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, pWeaponName ) )
+	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, szWeaponModel ) )
 	{
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
 
 		pWeaponModel = new C_BaseAnimating;
-		pWeaponModel->InitializeAsClientEntity( pWeaponName, RENDER_GROUP_OPAQUE_ENTITY );
+		pWeaponModel->InitializeAsClientEntity( szWeaponModel, RENDER_GROUP_OPAQUE_ENTITY );
 		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
 		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
 
 		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );
 		if ( silencerBodygroup > -1 )
-			pWeaponModel->SetBodygroup( silencerBodygroup, m_bSilenced ? 0 : 1 );
-		g_BuyMenuImageWeapon = pWeaponModel;
+			pWeaponModel->SetBodygroup( silencerBodygroup, bSilenced ? 0 : 1 );
+		g_WeaponModel = pWeaponModel;
 	}
-	else if ( !pWeaponName || !pWeaponName[0] )
+	else if ( !szWeaponModel || !szWeaponModel[0] )
 	{
 		// so the weapon model is gone when playing a nowep sequence
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
 	}
 
-	C_BaseAnimating *pGlovesModel = g_BuyMenuImageGloves.Get();
+	C_BaseAnimating *pGlovesModel = g_GlovesModel.Get();
 
 	if ( bCreateGloves )
 	{
@@ -1495,7 +1277,7 @@ void UpdateBuyMenuImageEntity(
 			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pLocalPlayer->GetModel() ) )->iSkintoneIndex; // set the corrent skin tone
 			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
 
-			g_BuyMenuImageGloves = pGlovesModel;
+			g_GlovesModel = pGlovesModel;
 		}
 
 		pPlayerModel->SetBodygroup( pPlayerModel->FindBodygroupByName( "gloves" ), 1 );
@@ -1509,45 +1291,17 @@ void UpdateBuyMenuImageEntity(
 		}
 	}
 
-	Vector origin = pLocalPlayer->EyePosition();
-	Vector lightOrigin = origin;
-
-	// find a spot inside the world for the dlight's origin, or it won't illuminate the model
-	Vector testPos( origin.x - 100, origin.y, origin.z + 100 );
-	trace_t tr;
-	UTIL_TraceLine( origin, testPos, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
-	if ( tr.fraction == 1.0f )
-	{
-		lightOrigin = tr.endpos;
-	}
-	else
-	{
-		// Now move the model away so we get the correct illumination
-		lightOrigin = tr.endpos + Vector( 1, 0, -1 );	// pull out from the solid
-		Vector start = lightOrigin;
-		Vector end = lightOrigin + Vector( 100, 0, -100 );
-		UTIL_TraceLine( start, end, MASK_OPAQUE, pLocalPlayer, COLLISION_GROUP_NONE, &tr );
-		origin = tr.endpos;
-	}
-
-	// Make a light so the model is well lit.
-	dlight_t *dl = effects->CL_AllocDlight( LIGHT_INDEX_TE_DYNAMIC+1 );	// use a non-zero number so we cannibalize ourselves next frame
-
-	dl->flags = DLIGHT_NO_WORLD_ILLUMINATION | DLIGHT_NO_STATIC_PROP_ILLUMINATION;
-	dl->origin = lightOrigin;
-	dl->die = gpGlobals->curtime + 0.05f; // Go away immediately so it doesn't light the world too.
-
-	dl->color.r = dl->color.g = dl->color.b = 200;
-	dl->color.exponent = 4;
-	dl->radius = 512;
-
-	// move player model in front of our view
-	pPlayerModel->SetAbsOrigin( origin );
+	Vector playerPos = vec3_origin;
+	pPlayerModel->SetAbsOrigin( playerPos );
 	pPlayerModel->SetAbsAngles( QAngle( 0, 180, 0 ) );
 
-	// now set the sequence for this player model
-	pPlayerModel->SetSequence( pPlayerModel->LookupSequence( pWeaponSequence ) );
-
+	// now set the sequence for this player model if needed
+	if ( !bIsClassSelection )
+	{
+		int sequence = pPlayerModel->LookupSequence( szWeaponSequence );
+		if ( pPlayerModel->GetSequence() != sequence )
+			pPlayerModel->SetSequence( sequence );
+	}
 	pPlayerModel->FrameAdvance( gpGlobals->frametime );
 
 	// Now draw it.
@@ -1558,14 +1312,26 @@ void UpdateBuyMenuImageEntity(
 	view.height = height;
 
 	view.m_bOrtho = false;
-	view.fov = 42; // previously was 32
+	view.fov = 42;
 
-	view.origin = origin + Vector( viewX, viewY, viewZ );
-	//view.origin = origin + Vector( -70, -0, 56 ); -- old values for old animations
+	Vector viewOrigin = playerPos + Vector( viewX, viewY, viewZ );
+	view.origin = viewOrigin;
 
 	view.angles.Init();
 	view.zNear = VIEW_NEARZ;
 	view.zFar = 1000;
+
+	CMatRenderContextPtr pRenderContext( materials );
+
+	// PiMoN: bind a cubemap for swag
+	pRenderContext->BindLocalCubemap( g_CubemapTexture );
+
+	pRenderContext->SetLightingOrigin( vec3_origin );
+	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
+
+	// PiMoN: let this model have a proper lighting for once!
+	LightDesc_t spotLight( playerPos + Vector( -128, 0, 128 ), Vector( 1, 1, 1 ), playerPos + Vector( 0, 0, 64 ), 0.5f, 1.0f );
+	g_pStudioRender->SetLocalLights( 1, &spotLight );
 
 	Frustum dummyFrustum;
 	render->Push3DView( view, 0, NULL, dummyFrustum );
@@ -1586,6 +1352,8 @@ void UpdateBuyMenuImageEntity(
 	modelrender->SuppressEngineLighting( false );
 
 	render->PopView( dummyFrustum );
+
+	pRenderContext->BindLocalCubemap( NULL );
 }
 
 bool WillPanelBeVisible( vgui::VPANEL hPanel )
@@ -1600,14 +1368,6 @@ bool WillPanelBeVisible( vgui::VPANEL hPanel )
 	return true;
 }
 
-extern ConVar loadout_slot_fiveseven_weapon;
-extern ConVar loadout_slot_hkp2000_weapon;
-extern ConVar loadout_slot_m4_weapon;
-extern ConVar loadout_slot_mp7_weapon_ct;
-extern ConVar loadout_slot_mp7_weapon_t;
-extern ConVar loadout_slot_tec9_weapon;
-extern ConVar loadout_slot_deagle_weapon_ct;
-extern ConVar loadout_slot_deagle_weapon_t;
 void ClientModeCSNormal::PostRenderVGui()
 {
 	// If the team menu is up, then we will render the model of the character that is currently selected.
@@ -1622,12 +1382,12 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->LocalToScreen( x, y );
 
 			// Allow for the border.
-			x += 3;
+			x += 2;
 			y += 5;
-			w -= 2;
+			w -= 4;
 			h -= 10;
 
-			UpdateClassImageEntity( pPanel->m_ModelName, x, y, w, h );
+			UpdateImageEntity( NULL, pPanel->m_ModelName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, true );
 			return;
 		}
 	}
@@ -1643,12 +1403,12 @@ void ClientModeCSNormal::PostRenderVGui()
 			pPanel->GetBounds( x, y, w, h );
 
 			// Allow for the border.
-			x += 3;
+			x += 2;
 			y += 5;
-			w -= 2;
+			w -= 4;
 			h -= 10;
 
-			UpdateBuyMenuImageEntity( NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
+			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
 			return;
 		}
 	}
@@ -1670,60 +1430,8 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 10;
 
-			const char *szWeaponName = NULL;
-			if ( V_strcmp( pPanel->m_WeaponName, "fiveseven_cz75" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_fiveseven_weapon.GetBool() ? "weapon_fiveseven" : "weapon_cz75";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "hkp2000_usp" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_hkp2000_weapon.GetBool() ? "weapon_hkp2000" : "weapon_usp_silencer";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "m4a4_m4a1" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_m4_weapon.GetBool() ? "weapon_m4a4" : "weapon_m4a1_silencer";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "mp7_mp5sd_ct" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_mp7_weapon_ct.GetBool() ? "weapon_mp7" : "weapon_mp5sd";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "mp7_mp5sd_t" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_mp7_weapon_t.GetBool() ? "weapon_mp7" : "weapon_mp5sd";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "tec9_cz75" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_tec9_weapon.GetBool() ? "weapon_tec9" : "weapon_cz75";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "deagle_revolver_ct" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_deagle_weapon_ct.GetBool() ? "weapon_deagle" : "weapon_revolver";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else if ( V_strcmp( pPanel->m_WeaponName, "deagle_revolver_t" ) == 0 )
-			{
-				szWeaponName = !loadout_slot_deagle_weapon_t.GetBool() ? "weapon_deagle" : "weapon_revolver";
-				UpdateBuyMenuImageEntity( szWeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
-			else
-			{
-				UpdateBuyMenuImageEntity( pPanel->m_WeaponName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos );
-				return;
-			}
+			UpdateImageEntity( pPanel->m_WeaponName, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
+			return;
 		}
 	}
 }

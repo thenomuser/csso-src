@@ -58,7 +58,7 @@ public:
 	// check if the given weapon is actually a knife
 	bool			IsKnife( CSWeaponID weaponid ) { return (weaponid >= WEAPON_KNIFE) && (weaponid <= WEAPON_KNIFE + MAX_KNIVES + 1); }
 	// get the loadout slot of the weapon
-	LoadoutSlot_t	GetSlotFromWeapon( CBasePlayer* pPlayer, const char* weaponName );
+	LoadoutSlot_t	GetSlotFromWeapon( int team, const char* weaponName );
 	// get the weapon from a client's slot
 	const char*		GetWeaponFromSlot( CBasePlayer* pPlayer, LoadoutSlot_t slot );
 	

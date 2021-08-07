@@ -55,7 +55,7 @@ CLoadout WeaponLoadout[]
 	{	SLOT_DEAGLE_T,	"loadout_slot_deagle_weapon_t",		"deagle",		"revolver"		},
 };
 
-LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( CBasePlayer* pPlayer, const char* weaponName )
+LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( int team, const char* weaponName )
 {
 	LoadoutSlot_t slot = SLOT_NONE;
 
@@ -68,13 +68,11 @@ LoadoutSlot_t CCSLoadout::GetSlotFromWeapon( CBasePlayer* pPlayer, const char* w
 
 		if ( slot == SLOT_MP7_CT || slot == SLOT_MP7_T )
 		{
-			if ( pPlayer )
-				slot = (pPlayer->GetTeamNumber() == TEAM_CT) ? SLOT_MP7_CT : SLOT_MP7_T;
+			slot = (team == TEAM_CT) ? SLOT_MP7_CT : SLOT_MP7_T;
 		}
 		if ( slot == SLOT_DEAGLE_CT || slot == SLOT_DEAGLE_T )
 		{
-			if ( pPlayer )
-				slot = (pPlayer->GetTeamNumber() == TEAM_CT) ? SLOT_DEAGLE_CT : SLOT_DEAGLE_T;
+			slot = (team == TEAM_CT) ? SLOT_DEAGLE_CT : SLOT_DEAGLE_T;
 		}
 
 		if ( slot != SLOT_NONE )

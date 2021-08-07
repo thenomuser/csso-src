@@ -25,15 +25,6 @@
 
 using namespace vgui;
 
-extern ConVar loadout_slot_m4_weapon;
-extern ConVar loadout_slot_hkp2000_weapon;
-extern ConVar loadout_slot_fiveseven_weapon;
-extern ConVar loadout_slot_tec9_weapon;
-extern ConVar loadout_slot_mp7_weapon_ct;
-extern ConVar loadout_slot_mp7_weapon_t;
-extern ConVar loadout_slot_deagle_weapon_ct;
-extern ConVar loadout_slot_deagle_weapon_t;
-
 //-----------------------------------------------------------------------------
 // Purpose: Triggers a new panel when the mouse goes over the button
 //-----------------------------------------------------------------------------
@@ -56,6 +47,7 @@ public:
 		m_iCost1 = 0;
 		m_label_0 = NULL;
 		m_label_1 = NULL;
+		m_loadout_command = NULL;
 
 		m_pBlackMarketPrice = NULL;//new EditablePanel( parent, "BlackMarket_Labels" );
 		if ( m_pBlackMarketPrice )
@@ -98,6 +90,10 @@ public:
 		if ( kv )
 			m_iCost1 = kv->GetInt();
 
+		kv = resourceData->FindKey( "loadout_command" );
+		if ( kv )
+			m_loadout_command = kv->GetString();
+
 		kv = resourceData->FindKey( "as_restrict", false );
 		if( kv ) // if this button has a map limitation for it
 			m_iASRestrict = kv->GetInt(); // save the as_restrict away
@@ -118,6 +114,11 @@ public:
 		kv = resourceData->FindKey( "command", false );
 		if ( kv )
 			m_command = CloneString( kv->GetString() );
+
+		if ( !m_iCost0 )
+			m_iCost0 = m_iPrice;
+		if ( !m_iCost1 )
+			m_iCost1 = m_iCost0;
 
 		SetPriceState();
 		SetMapTypeState();
@@ -201,7 +202,7 @@ public:
 		// check if we already own the weapon
 		if ( Q_strncmp( m_command, "buy ", 4 ) == 0 )
 		{
-			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer, m_command + 4 ) );
+			const char* weaponClassFromSlot = CSLoadout()->GetWeaponFromSlot( pPlayer, CSLoadout()->GetSlotFromWeapon( pPlayer->GetTeamNumber(), m_command + 4 ) );
 			char weaponClass[64];
 			Q_snprintf( weaponClass, sizeof( weaponClass ), "weapon_%s", weaponClassFromSlot ? weaponClassFromSlot : m_command + 4 );
 			C_WeaponCSBase* pWeapon = dynamic_cast<C_WeaponCSBase*>(pPlayer->Weapon_OwnsThisType( weaponClass ));
@@ -338,40 +339,14 @@ public:
 
 	virtual void SetLabels()
 	{
-		if ( Q_strcmp( GetName(), "m4a4_m4a1" ) == 0 )
+		if ( m_loadout_command && m_loadout_command[0] )
 		{
-			SetText( (loadout_slot_m4_weapon.GetInt() == 1) ? m_label_1 : m_label_0 );
-			m_iPrice = (loadout_slot_m4_weapon.GetInt() == 1) ? m_iCost1 : m_iCost0;
-		}
-		else if ( Q_strcmp( GetName(), "hkp2000_usp" ) == 0 )
-		{
-			SetText( (loadout_slot_hkp2000_weapon.GetInt() == 1) ? m_label_1 : m_label_0 );
-		}
-		else if ( Q_strcmp( GetName(), "fiveseven_cz75" ) == 0 )
-		{
-			SetText( (loadout_slot_fiveseven_weapon.GetInt() == 1) ? m_label_1 : m_label_0 );
-		}
-		else if ( Q_strcmp( GetName(), "tec9_cz75" ) == 0 )
-		{
-			SetText( (loadout_slot_tec9_weapon.GetInt() == 1) ? m_label_1 : m_label_0 );
-		}
-		else if ( Q_strcmp( GetName(), "mp7_mp5sd_ct" ) == 0 )
-		{
-			SetText( (loadout_slot_mp7_weapon_ct.GetInt() == 1) ? m_label_1 : m_label_0 );
-		}
-		else if ( Q_strcmp( GetName(), "mp7_mp5sd_t" ) == 0 )
-		{
-			SetText( (loadout_slot_mp7_weapon_t.GetInt() == 1) ? m_label_1 : m_label_0 );
-		}
-		else if ( Q_strcmp( GetName(), "deagle_revolver_ct" ) == 0 )
-		{
-			SetText( (loadout_slot_deagle_weapon_ct.GetInt() == 1) ? m_label_1 : m_label_0 );
-			m_iPrice = (loadout_slot_deagle_weapon_ct.GetInt() == 1) ? m_iCost1 : m_iCost0;
-		}
-		else if ( Q_strcmp( GetName(), "deagle_revolver_t" ) == 0 )
-		{
-			SetText( (loadout_slot_deagle_weapon_t.GetInt() == 1) ? m_label_1 : m_label_0 );
-			m_iPrice = (loadout_slot_deagle_weapon_t.GetInt() == 1) ? m_iCost1 : m_iCost0;
+			ConVarRef loadout_command( m_loadout_command );
+			if ( loadout_command.IsValid() )
+			{
+				SetText( loadout_command.GetInt() ? m_label_1 : m_label_0 );
+				m_iPrice = loadout_command.GetInt() ? m_iCost1 : m_iCost0;
+			}
 		}
 
 		if ( CSGameRules() )
@@ -496,8 +471,9 @@ private:
 	
 	int m_iCost0;
 	int m_iCost1;
-	char *m_label_0;
-	char *m_label_1;
+	const char *m_label_0;
+	const char *m_label_1;
+	const char *m_loadout_command;
 	
 public:
 		vgui::EditablePanel *m_pBlackMarketPrice;
