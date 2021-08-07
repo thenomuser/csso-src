@@ -709,9 +709,6 @@ public:
 
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_nNextThinkTick );
 
-#ifdef CLIENT_DLL
-	static void				RecvProxy_WeaponState( const CRecvProxyData *pData, void *pStruct, void *pOut );
-#endif
 	int						WeaponState() const { return m_iState; }
 
 	// Weapon data
