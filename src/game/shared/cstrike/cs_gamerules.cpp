@@ -540,6 +540,12 @@ ConVar mp_molotovusedelay(
 	true, 0.0,
 	true, 30.0 );
 
+ConVar mp_default_team_winner_no_objective(
+	"mp_default_team_winner_no_objective",
+	"-1",
+	FCVAR_REPLICATED,
+	"If the map doesn't define an objective (bomb, hostage, etc), the value of this convar will declare the winner when the time runs out in the round." );
+
 ConVar mp_respawn_on_death_t(
 	"mp_respawn_on_death_t",
 	"0",
@@ -4780,30 +4786,59 @@ ConVar snd_music_selection(
 				TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
 			}
 		}
+		else if ( mp_default_team_winner_no_objective.GetInt() != -1 )
+		{
+			int nTeam = mp_default_team_winner_no_objective.GetInt();
+
+			if ( nTeam == TEAM_CT )
+			{
+				m_iNumCTWins++;
+				m_iNumCTWinsThisPhase++;
+				UpdateTeamScores();
+
+				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound( TEAM_TERRORIST );
+				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
+				TerminateRound( mp_round_restart_delay.GetFloat(), CTs_Win );
+			}
+			else if ( nTeam == TEAM_TERRORIST )
+			{
+				m_iNumTerroristWins++;
+				m_iNumTerroristWinsThisPhase++;
+				UpdateTeamScores();
+
+				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound( TEAM_CT );
+				AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
+				TerminateRound( mp_round_restart_delay.GetFloat(), Terrorists_Win );
+			}
+			else
+			{
+				TerminateRound( mp_round_restart_delay.GetFloat(), Round_Draw );
+			}
+		}
 		else if ( m_bMapHasBombTarget )
 		{
 			//If the bomb is planted, don't let the round timer end the round.
 			//keep going until the bomb explodes or is defused
 			if( !m_bBombPlanted )
 			{
+				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_TERRORIST);
 				AddTeamAccount( TEAM_CT, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_BOMB );
 				
 				m_iNumCTWins++;
 				m_iNumCTWinsThisPhase++;
 				TerminateRound( mp_round_restart_delay.GetFloat(), Target_Saved );
 				UpdateTeamScores();
-				MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_TERRORIST);
 			}
 		}
 		else if ( m_bMapHasRescueZone )
 		{
+			MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_CT);
 			AddTeamAccount( TEAM_TERRORIST, TeamCashAward::WIN_BY_TIME_RUNNING_OUT_HOSTAGE );
 			
 			m_iNumTerroristWins++;
 			m_iNumTerroristWinsThisPhase++;
 			TerminateRound( mp_round_restart_delay.GetFloat(), Hostages_Not_Rescued );
 			UpdateTeamScores();
-			MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(TEAM_CT);
 		}
 		else if ( m_bMapHasEscapeZone )
 		{
@@ -5115,21 +5150,32 @@ ConVar snd_music_selection(
 	// next round.
 	void CCSGameRules::MarkLivingPlayersOnTeamAsNotReceivingMoneyNextRound(int team)
 	{
-		int playerNum;
-		for (playerNum = 1; playerNum <= gpGlobals->maxClients; ++playerNum)
-		{
-			CCSPlayer *player = (CCSPlayer *)UTIL_PlayerByIndex(playerNum);
-			if (player == NULL)
-			{
-				continue;
-			}
+        int playerNum;
+        for (playerNum = 1; playerNum <= gpGlobals->maxClients; ++playerNum)
+        {
+            CCSPlayer *player = (CCSPlayer *)UTIL_PlayerByIndex(playerNum);
+            if (player == NULL)
+            {
+                continue;
+            }
 
-			if ((player->GetTeamNumber() == team) && (player->IsAlive()))
-			{
-				player->MarkAsNotReceivingMoneyNextRound();
-			}
-		}
-	}
+            if ((player->GetTeamNumber() == team) && (player->IsAlive()))
+            {
+				// Exception here: only here and not inside "MarkAsNotReceivingMoneyNextRound"
+				// to not affect team-wide money management, round backups, etc.
+
+				// When a player is alive and controlling a bot then the monetary punishment should go
+				// to the bot being controlled
+				if ( player->IsControllingBot() )
+				{
+					if ( CCSPlayer* controlledBotPlayer = player->GetControlledBot() )
+						player = controlledBotPlayer;
+				}
+
+                player->MarkAsNotReceivingMoneyNextRound();
+            }
+        }
+    }
 
 
 	void CCSGameRules::CheckLevelInitialized( void )
