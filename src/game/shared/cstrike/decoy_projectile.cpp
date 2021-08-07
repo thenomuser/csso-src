@@ -10,6 +10,7 @@
 #include "keyvalues.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
+#include "cs_gamerules.h"
 
 #if defined( CLIENT_DLL )
 
@@ -120,6 +121,9 @@ CDecoyProjectile* CDecoyProjectile::Create(
 	const AngularImpulse &angVelocity, 
 	CBaseCombatCharacter *pOwner )
 {
+	if ( CSGameRules() )
+		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, pOwner, WEAPON_DECOY );
+
 	CDecoyProjectile *pGrenade = ( CDecoyProjectile* )CBaseEntity::Create( "decoy_projectile", position, angles, pOwner );
 	
 	// Set the timer for 1 second less than requested. We're going to issue a SOUND_DANGER

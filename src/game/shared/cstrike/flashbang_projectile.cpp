@@ -17,6 +17,7 @@
 #include "smoke_fog_overlay_shared.h"
 #include "cs_simple_hostage.h"
 #include "animation.h"
+#include "cs_gamerules.h"
 
 #define GRENADE_MODEL "models/Weapons/w_eq_flashbang_dropped.mdl"
 
@@ -292,6 +293,9 @@ CFlashbangProjectile* CFlashbangProjectile::Create(
 	const AngularImpulse &angVelocity, 
 	CBaseCombatCharacter *pOwner )
 {
+	if ( CSGameRules() )
+		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, pOwner, WEAPON_FLASHBANG );
+
 	CFlashbangProjectile *pGrenade = (CFlashbangProjectile*)CBaseEntity::Create( "flashbang_projectile", position, angles, pOwner );
 	
 	// Set the timer for 1 second less than requested. We're going to issue a SOUND_DANGER

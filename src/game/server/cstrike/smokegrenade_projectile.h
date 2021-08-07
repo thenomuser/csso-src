@@ -4,8 +4,8 @@
 //
 //=============================================================================//
 
-#ifndef HEGRENADE_PROJECTILE_H
-#define HEGRENADE_PROJECTILE_H
+#ifndef SMOKEGRENADE_PROJECTILE_H
+#define SMOKEGRENADE_PROJECTILE_H
 #ifdef _WIN32
 #pragma once
 #endif
@@ -53,4 +53,4 @@ public:
 };
 
 
-#endif // HEGRENADE_PROJECTILE_H
+#endif // SMOKEGRENADE_PROJECTILE_H

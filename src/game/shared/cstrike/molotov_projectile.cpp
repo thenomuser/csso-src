@@ -10,6 +10,7 @@
 #include "keyvalues.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
+#include "cs_gamerules.h"
 
 #if defined( CLIENT_DLL )
 	#include "particle_parse.h"
@@ -109,6 +110,9 @@ CMolotovProjectile *CMolotovProjectile::Create( const Vector &position, const QA
 												const Vector &velocity, const AngularImpulse &angVelocity, 
 												CBaseCombatCharacter *owner, bool isIncGrenade )
 {
+	if ( CSGameRules() )
+		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, owner, isIncGrenade ? WEAPON_INCGRENADE : WEAPON_MOLOTOV );
+
 	CMolotovProjectile *molotov = (CMolotovProjectile *)CBaseEntity::Create( "molotov_projectile", position, angles, owner );
 	UTIL_LogPrintf( "Molotov projectile spawned at %f %f %f, velocity %f %f %f\n", position.x, position.y, position.z, velocity.x, velocity.y, velocity.z );
 

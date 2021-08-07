@@ -309,12 +309,9 @@ public:
 
 	virtual void ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValues );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [menglish] Set up anything for all players that changes based on new players spawning mid-game
 	//				Find and return fun fact data
 	// [pfreese] Tracking of "pistol" round
-	//=============================================================================
 	virtual void SpawningLatePlayer(CCSPlayer* pLatePlayer);
 
 	bool IsPistolRound();
@@ -325,20 +322,8 @@ public:
 	bool WasHostageKilled() { return m_hostageWasKilled; }
 	bool WasHostageInjured() { return m_hostageWasInjured; }
 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
-
-    //=============================================================================
-    // HPE_BEGIN:
     // [tj] So game rules can react to damage taken
-    //=============================================================================
-
     void PlayerTookDamage(CCSPlayer* player, const CTakeDamageInfo &damageInfo);
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
 
 
 	virtual bool PlayTextureSounds( void ) { return true; }
@@ -388,14 +373,8 @@ public:
 
 	void TerminateRound( float tmDelay, int reason );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] A place to check achievements that occur at the end of the round
-	//=============================================================================
 	void ProcessEndOfRoundAchievements(int iWinnerTeam, int iReason);
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	void RestartRound( void );
 	void RoundWin( void );
@@ -483,6 +462,23 @@ public:
 	bool IsCareer( void ) const		{ return false; }		// returns true if this is a CZ "career" game
 
 	virtual bool FAllowNPCs( void );
+
+	struct GrenadeRecording_t
+	{
+		Vector vecSrc;
+		QAngle vecAngles;
+		Vector vecVel;
+		AngularImpulse angImpulse;
+		CBaseCombatCharacter *pPlayer;
+		CSWeaponID weaponID;
+		bool bIsValid;
+	};
+
+#ifndef CLIENT_DLL
+	void RecordGrenadeThrow( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBaseCombatCharacter *pPlayer, CSWeaponID weaponID );
+	void RethrowLastGrenade();
+	GrenadeRecording_t m_pLastGrenade;
+#endif
 
 protected:
 	virtual void GoToIntermission( void );

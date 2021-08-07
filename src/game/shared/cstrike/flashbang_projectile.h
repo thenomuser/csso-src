@@ -4,8 +4,8 @@
 //
 //=============================================================================//
 
-#ifndef HEGRENADE_PROJECTILE_H
-#define HEGRENADE_PROJECTILE_H
+#ifndef FLASHBANG_PROJECTILE_H
+#define FLASHBANG_PROJECTILE_H
 #ifdef _WIN32
 #pragma once
 #endif
@@ -36,4 +36,4 @@ public:
 };
 
 
-#endif // HEGRENADE_PROJECTILE_H
+#endif // FLASHBANG_PROJECTILE_H

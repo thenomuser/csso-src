@@ -13,6 +13,7 @@
 #include "bot_manager.h"
 #include "weapon_csbase.h"
 #include "effects/inferno.h"
+#include "cs_gamerules.h"
 
 #define GRENADE_MODEL "models/Weapons/w_eq_smokegrenade_thrown.mdl"
 
@@ -34,6 +35,9 @@ CSmokeGrenadeProjectile* CSmokeGrenadeProjectile::Create(
 	const AngularImpulse &angVelocity, 
 	CBaseCombatCharacter *pOwner )
 {
+	if ( CSGameRules() )
+		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, pOwner, WEAPON_SMOKEGRENADE );
+
 	CSmokeGrenadeProjectile *pGrenade = (CSmokeGrenadeProjectile*)CBaseEntity::Create( "smokegrenade_projectile", position, angles, pOwner );
 	
 	// Set the timer for 1 second less than requested. We're going to issue a SOUND_DANGER

@@ -10,6 +10,7 @@
 #include "cs_player.h"
 #include "KeyValues.h"
 #include "weapon_csbase.h"
+#include "cs_gamerules.h"
 
 #define GRENADE_MODEL "models/Weapons/w_eq_fraggrenade_dropped.mdl"
 
@@ -25,6 +26,9 @@ CHEGrenadeProjectile* CHEGrenadeProjectile::Create(
 	CBaseCombatCharacter *pOwner, 
 	float timer )
 {
+	if ( CSGameRules() )
+		CSGameRules()->RecordGrenadeThrow( position, angles, velocity, angVelocity, pOwner, WEAPON_HEGRENADE );
+
 	CHEGrenadeProjectile *pGrenade = (CHEGrenadeProjectile*)CBaseEntity::Create( "hegrenade_projectile", position, angles, pOwner );
 	
 	// Set the timer for 1 second less than requested. We're going to issue a SOUND_DANGER
