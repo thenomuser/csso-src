@@ -47,12 +47,10 @@ CCSBuyMenuPlayerImagePanel::~CCSBuyMenuPlayerImagePanel()
 
 void CCSBuyMenuPlayerImagePanel::ApplySettings( KeyValues *inResourceData )
 {
-	int pPos = inResourceData->GetInt( "view_xpos", 0 );
-	m_ViewXPos = pPos;
-	pPos = inResourceData->GetInt( "view_ypos", 0 );
-	m_ViewYPos = pPos;
-	pPos = inResourceData->GetInt( "view_zpos", 0 );
-	m_ViewZPos = pPos;
+	m_ViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
+	m_ViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
+	m_ViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
+	m_ViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
 
 	BaseClass::ApplySettings( inResourceData );
 }
@@ -70,9 +68,6 @@ CCSBuyMenuImagePanel::CCSBuyMenuImagePanel( vgui::Panel *pParent, const char *pN
 {
 	g_BuyMenuImagePanels.AddToTail( this );
 	m_WeaponName[0] = NULL;
-	m_ViewXPos = 0;
-	m_ViewYPos = 0;
-	m_ViewZPos = 0;
 }
 
 CCSBuyMenuImagePanel::~CCSBuyMenuImagePanel()
@@ -88,12 +83,10 @@ void CCSBuyMenuImagePanel::ApplySettings( KeyValues *inResourceData )
 		Q_strncpy( m_WeaponName, pString, sizeof( m_WeaponName ) );
 	}
 
-	int pPos = inResourceData->GetInt( "view_xpos", 0 );
-	m_ViewXPos = pPos;
-	pPos = inResourceData->GetInt( "view_ypos", 0 );
-	m_ViewYPos = pPos;
-	pPos = inResourceData->GetInt( "view_zpos", 0 );
-	m_ViewZPos = pPos;
+	m_ViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
+	m_ViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
+	m_ViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
+	m_ViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
 	
 	BaseClass::ApplySettings( inResourceData );
 }

@@ -1087,7 +1087,7 @@ void UpdateImageEntity(
 	const char *szWeaponClassname,
 	const char *szPlayerModel,
 	int x, int y, int width, int height,
-	int viewX, int viewY, int viewZ,
+	float viewX, float viewY, float viewZ, float viewFOV,
 	bool bIsClassSelection )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -1329,7 +1329,7 @@ void UpdateImageEntity(
 	view.height = height;
 
 	view.m_bOrtho = false;
-	view.fov = 42;
+	view.fov = viewFOV;
 
 	Vector viewOrigin = playerPos + Vector( viewX, viewY, viewZ );
 	view.origin = viewOrigin;
@@ -1404,7 +1404,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( NULL, pPanel->m_ModelName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, true );
+			UpdateImageEntity( NULL, pPanel->m_ModelName, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, true );
 			return;
 		}
 	}
@@ -1425,7 +1425,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
+			UpdateImageEntity( NULL, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, false );
 			return;
 		}
 	}
@@ -1447,7 +1447,7 @@ void ClientModeCSNormal::PostRenderVGui()
 			w -= 2;
 			h -= 2;
 
-			UpdateImageEntity( pPanel->m_WeaponName, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, false );
+			UpdateImageEntity( pPanel->m_WeaponName, NULL, x, y, w, h, pPanel->m_ViewXPos, pPanel->m_ViewYPos, pPanel->m_ViewZPos, pPanel->m_ViewFOV, false );
 			return;
 		}
 	}

@@ -32,9 +32,10 @@ public:
 
 
 public:
-	int m_ViewXPos;
-	int m_ViewYPos;
-	int m_ViewZPos;
+	float m_ViewXPos;
+	float m_ViewYPos;
+	float m_ViewZPos;
+	float m_ViewFOV;
 };
 
 extern CUtlVector<CCSBuyMenuPlayerImagePanel*> g_BuyMenuPlayerImagePanels;
@@ -68,9 +69,10 @@ public:
 
 public:
 	char m_WeaponName[128];
-	int m_ViewXPos;
-	int m_ViewYPos;
-	int m_ViewZPos;
+	float m_ViewXPos;
+	float m_ViewYPos;
+	float m_ViewZPos;
+	float m_ViewFOV;
 };
 
 extern CUtlVector<CCSBuyMenuImagePanel*> g_BuyMenuImagePanels;

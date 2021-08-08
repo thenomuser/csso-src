@@ -42,9 +42,10 @@ public:
 
 public:
 	char m_ModelName[128];
-	int m_ViewXPos;
-	int m_ViewYPos;
-	int m_ViewZPos;
+	float m_ViewXPos;
+	float m_ViewYPos;
+	float m_ViewZPos;
+	float m_ViewFOV;
 };
 
 extern CUtlVector<CCSClassImagePanel*> g_ClassImagePanels;

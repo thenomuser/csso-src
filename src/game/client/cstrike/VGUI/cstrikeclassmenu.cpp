@@ -31,10 +31,7 @@ CCSClassImagePanel::CCSClassImagePanel( vgui::Panel *pParent, const char *pName 
 	: vgui::ImagePanel( pParent, pName )
 {
 	g_ClassImagePanels.AddToTail( this );
-	m_ModelName[0] = 0;
-	m_ViewXPos = 0;
-	m_ViewYPos = 0;
-	m_ViewZPos = 0;
+	m_ModelName[0] = NULL;
 }
 
 CCSClassImagePanel::~CCSClassImagePanel()
@@ -50,12 +47,10 @@ void CCSClassImagePanel::ApplySettings( KeyValues *inResourceData )
 		Q_strncpy( m_ModelName, pName, sizeof( m_ModelName ) );
 	}
 
-	int pPos = inResourceData->GetInt( "view_xpos", 0 );
-	m_ViewXPos = pPos;
-	pPos = inResourceData->GetInt( "view_ypos", 0 );
-	m_ViewYPos = pPos;
-	pPos = inResourceData->GetInt( "view_zpos", 0 );
-	m_ViewZPos = pPos;
+	m_ViewXPos = inResourceData->GetFloat( "view_xpos", 0.0f );
+	m_ViewYPos = inResourceData->GetFloat( "view_ypos", 0.0f );
+	m_ViewZPos = inResourceData->GetFloat( "view_zpos", 0.0f );
+	m_ViewFOV = inResourceData->GetFloat( "view_fov", 0.0f );
 	
 	BaseClass::ApplySettings( inResourceData );
 }

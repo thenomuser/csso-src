@@ -221,7 +221,7 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	state.m_Color[2] = 1.0f;
 	state.m_Color[3] = r_flashlightambient.GetFloat();
 	state.m_NearZ = r_flashlightnear.GetFloat() + m_flCurrentPullBackDist;		// Push near plane out so that we don't clip the world when the flashlight pulls back 
-	state.m_FarZ = r_flashlightfar.GetFloat();	// Strictly speaking, these are different, but the game can treat them the same
+	state.m_FarZ = r_flashlightfar.GetFloat();
 	state.m_bEnableShadows = state.m_bEnableShadows && r_flashlightdepthtexture.GetBool();
 	state.m_flShadowMapResolution = r_flashlightdepthres.GetInt();
 
@@ -494,11 +494,11 @@ bool CFlashlightEffect::UpdateDefaultFlashlightState( FlashlightState_t& state, 
 	state.m_NearZ = r_flashlightnear.GetFloat() + r_flashlightnearoffsetscale.GetFloat() * m_flCurrentPullBackDist;		// Optionally push near plane out so that we don't clip the world when the flashlight pulls back 
 	if ( m_flFarZ > 0.0f )
 	{
-		state.m_FarZ = m_flFarZ;	// Strictly speaking, these are different, but the game can treat them the same
+		state.m_FarZ = m_flFarZ;
 	}
 	else
 	{
-		state.m_FarZ = r_flashlightfar.GetFloat();	// Strictly speaking, these are different, but the game can treat them the same
+		state.m_FarZ = r_flashlightfar.GetFloat();
 	}
 	state.m_bEnableShadows = castsShadows && r_flashlightdepthtexture.GetBool();
 	state.m_flShadowMapResolution = r_flashlightdepthres.GetInt();
