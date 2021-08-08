@@ -15,6 +15,8 @@
 #include "shaderdevicebase.h"
 #include "tier0/icommandline.h"
 
+extern ConVar mat_slopescaledepthbias_shadowmap;
+extern ConVar mat_depthbias_shadowmap;
 
 //-----------------------------------------------------------------------------
 //
@@ -776,6 +778,18 @@ bool CHardwareConfig::SupportsBorderColor() const
 bool CHardwareConfig::SupportsFetch4() const
 {
 	return m_Caps.m_bSupportsFetch4;
+}
+
+float CHardwareConfig::GetShadowDepthBias() const
+{
+	// FIXME: Should these not use convars?
+	return mat_depthbias_shadowmap.GetFloat();
+}
+
+float CHardwareConfig::GetShadowSlopeScaleDepthBias() const
+{
+	// FIXME: Should these not use convars?
+	return mat_slopescaledepthbias_shadowmap.GetFloat();
 }
 
 bool CHardwareConfig::CanStretchRectFromTextures() const

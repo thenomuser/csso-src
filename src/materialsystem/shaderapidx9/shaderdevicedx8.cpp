@@ -560,12 +560,17 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 }
 
 ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_ARCHIVE );
-ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", "16", FCVAR_CHEAT );
-#ifdef DX_TO_GL_ABSTRACTION
-ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", "20", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+
+#if defined( DX_TO_GL_ABSTRACTION )
+#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
+#define SHADOWMAP_DEPTHBIAS				"20"
 #else
-ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", "0.0005", FCVAR_CHEAT  );
+#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"3"
+#define SHADOWMAP_DEPTHBIAS				".000025"
 #endif
+
+ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", SHADOWMAP_SLOPESCALEDEPTHBIAS, FCVAR_NONE );
+ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", SHADOWMAP_DEPTHBIAS, FCVAR_NONE );
 
 // For testing Fast Clip
 ConVar mat_fastclip( "mat_fastclip", "0", FCVAR_CHEAT  );

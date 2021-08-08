@@ -35,6 +35,7 @@
 #include "fx_cs_blood.h"
 #include "c_cs_playerresource.h"
 #include "c_team.h"
+#include "flashlighteffect.h"
 #include "c_cs_hostage.h"
 #include "prediction.h"
 
@@ -77,6 +78,11 @@ extern ConVar	spec_freeze_distance_min;
 extern ConVar	spec_freeze_distance_max;
 extern ConVar	spec_freeze_target_fov;
 extern ConVar	spec_freeze_target_fov_long;
+
+ConVar spec_freeze_cinematiclight_r( "spec_freeze_cinematiclight_r", "1.5", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_g( "spec_freeze_cinematiclight_g", "1.2", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_b( "spec_freeze_cinematiclight_b", "1.0", FCVAR_CHEAT );
+ConVar spec_freeze_cinematiclight_scale( "spec_freeze_cinematiclight_scale", "2.0", FCVAR_CHEAT );
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
@@ -1231,6 +1237,8 @@ C_CSPlayer::C_CSPlayer() :
 	m_pFlashlightBeam = NULL;
 	m_fNextThinkPushAway = 0.0f;
 
+	m_bFreezeCamFlashlightActive = false;
+
 	m_serverIntendedCycle = -1.0f;
 
 	view->SetScreenOverlayMaterial( NULL );
@@ -1309,6 +1317,8 @@ C_CSPlayer::~C_CSPlayer()
 		m_PlayerAnimState->Release();
 	if ( m_PlayerAnimStateCSGO )
 		m_PlayerAnimStateCSGO->Release();
+
+	m_freezeCamSpotLightTexture.Shutdown();
 }
 
 
@@ -1336,6 +1346,13 @@ public:
 		return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
 	}
 };
+
+void C_CSPlayer::UpdateOnRemove( void )
+{
+	CancelFreezeCamFlashlightEffect();
+
+	BaseClass::UpdateOnRemove();
+}
 
 //--------------------------------------------------------------------------------------------------------
 void C_CSPlayer::OnSetDormant( bool bDormant )
@@ -2065,6 +2082,8 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 
 			m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
+			CancelFreezeCamFlashlightEffect();
+
 			if ( IsLocalPlayer() && CSGameRules() && CSGameRules()->GetGamemode() == GameModes::DEATHMATCH )
 				m_bShouldAutobuyDMWeapons = true;
 
@@ -2387,6 +2406,7 @@ void C_CSPlayer::ClientThink()
 		else
 		{
 			m_bPlayingFreezeCamSound = false;
+			CancelFreezeCamFlashlightEffect();
 		}
 	}
 }
@@ -2399,6 +2419,8 @@ void C_CSPlayer::OnDataChanged( DataUpdateType_t type )
 	if ( type == DATA_UPDATE_CREATED )
 	{
 		SetNextClientThink( CLIENT_THINK_ALWAYS );
+
+		m_freezeCamSpotLightTexture.Init( "effects/flashlight_freezecam", TEXTURE_GROUP_OTHER, true );
 
 		if ( IsLocalPlayer() )
 		{
@@ -4176,6 +4198,8 @@ float C_CSPlayer::GetFOV( void )
 //-----------------------------------------------------------------------------
 void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
 {
+	CancelFreezeCamFlashlightEffect();
+
 	/**
 	 * TODO: Fix this!
 	// CS:S standing eyeheight is above the collision volume, so we need to pull it
@@ -4703,6 +4727,16 @@ void C_CSPlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float&
 	float fCurTime = gpGlobals->curtime - m_flFreezeFrameStartTime;
 	float fTravelTime = !m_bFreezeFrameCloseOnKiller ? spec_freeze_traveltime.GetFloat() : spec_freeze_traveltime_long.GetFloat();
 
+	// cancel the light shortly after the freeze frame was taken
+	if ( m_bSentFreezeFrame && fCurTime >= (fTravelTime + 0.25f ) )
+	{
+		CancelFreezeCamFlashlightEffect();
+	}
+	else
+	{
+		UpdateFreezeCamFlashlightEffect( pTarget, fInterpolant );
+	}
+
 	// [jason] check that our target position does not fall within the render extents of the target we're looking at;
 	//	this can happen if our killer is in a tight spot and the camera is trying to avoid clipping geometry
 	const int kFreezeCamTolerance = cl_freeze_cam_penetration_tolerance.GetInt();
@@ -4771,6 +4805,110 @@ float C_CSPlayer::GetDeathCamInterpolationTime()
 	else
 		return CS_DEATH_ANIMATION_TIME;
 
+}
+
+void C_CSPlayer::UpdateFreezeCamFlashlightEffect( C_BaseEntity *pTarget, float flAmount )
+{
+	if ( !pTarget )
+	{
+		CancelFreezeCamFlashlightEffect();
+		return;
+	}
+
+	Vector brightness( spec_freeze_cinematiclight_r.GetFloat(), spec_freeze_cinematiclight_g.GetFloat(), spec_freeze_cinematiclight_b.GetFloat() );
+	Vector dimWhite( 0.3f, 0.3f, 0.3f );
+
+	if ( !m_bFreezeCamFlashlightActive )
+	{
+		//m_fFlashlightEffectStartTonemapScale = GetCurrentTonemapScale();
+		m_bFreezeCamFlashlightActive = true;
+		//m_fFlashlightEffectStartTime = gpGlobals->curtime;
+		//m_flashLightFadeTimer.Start( 3.0f );
+	}
+
+	Vector vecFlashlightOrigin;
+	Vector vecFlashlightForward( 0.0f, 0.0f, -1.0f );
+	Vector vecFlashlightRight( 1.0f, 0.0f, 0.0f );
+	Vector vecFlashlightUp( 0.0f, 1.0f, 0.0f );
+	float fFOV = 0.0f;
+
+	float invScale = 1.0f;
+	//if ( m_fFlashlightEffectStartTonemapScale != 0.0f )
+	//{
+	//	invScale = 1.0f / m_fFlashlightEffectStartTonemapScale;
+	//}
+	brightness = (brightness * invScale * spec_freeze_cinematiclight_scale.GetFloat() ) * flAmount;
+
+	//if ( isDying )
+	{
+		Vector targetOrig = pTarget->GetRenderOrigin();
+		targetOrig.z += 32;
+		Vector vToTarget = targetOrig - EyePosition();
+		VectorNormalize( vToTarget );
+		Vector forward, right, up;
+		QAngle angTemp;
+		VectorAngles( vToTarget, angTemp );
+		AngleVectors (angTemp, &forward, &right, &up );
+
+		if ( m_nFreezeFrameShiftSideDist > 0 )
+			vecFlashlightOrigin = targetOrig + ( right * 80 );
+		else
+			vecFlashlightOrigin = targetOrig - ( right * 80 );
+		vecFlashlightOrigin -= ( forward * 50 );
+		vecFlashlightOrigin.z += 100.f;
+
+		float flFOVExtra = 0;
+
+		trace_t trace;
+		UTIL_TraceLine( targetOrig, vecFlashlightOrigin, MASK_OPAQUE, pTarget, COLLISION_GROUP_DEBRIS, &trace );
+		if ( trace.fraction >= 0.8 )
+		{
+			vecFlashlightOrigin = trace.endpos;
+		}
+		else
+		{
+			// just go the other way
+			if ( m_nFreezeFrameShiftSideDist > 0 )
+				vecFlashlightOrigin = targetOrig - ( right * 60 );
+			else
+				vecFlashlightOrigin = targetOrig + ( right * 60 );
+			vecFlashlightOrigin -= ( forward * 40 );
+			vecFlashlightOrigin.z += 80.f;
+			UTIL_TraceLine( targetOrig, vecFlashlightOrigin, MASK_OPAQUE, pTarget, COLLISION_GROUP_DEBRIS, &trace );
+			vecFlashlightOrigin = trace.endpos;
+
+			flFOVExtra = (1 - trace.fraction ) * 20; 
+			targetOrig.z += flFOVExtra;
+		}
+
+		Vector vToTarget2 = targetOrig - vecFlashlightOrigin;
+		VectorNormalize( vToTarget2 );
+		QAngle angTemp2;
+		VectorAngles( vToTarget2, angTemp2 );
+		AngleVectors (angTemp2, &vecFlashlightForward, &vecFlashlightRight, &vecFlashlightUp );
+
+		fFOV = 50.f + flFOVExtra;
+	}
+
+	MDLCACHE_CRITICAL_SECTION();
+	FlashlightEffectManager().EnableFlashlightOverride( true );
+	FlashlightEffectManager().UpdateFlashlightOverride( true, vecFlashlightOrigin, vecFlashlightForward, vecFlashlightRight,
+		vecFlashlightUp, fFOV, true, m_freezeCamSpotLightTexture, brightness );
+
+	// force tonemapping down
+	//if ( m_bOverrideTonemapping )
+	//{
+	//	SetOverrideTonemapScale( true, fTonemapScale );
+	//}
+}
+
+void C_CSPlayer::CancelFreezeCamFlashlightEffect()
+{
+	if( m_bFreezeCamFlashlightActive )
+	{
+		FlashlightEffectManager().EnableFlashlightOverride( false );
+		m_bFreezeCamFlashlightActive = false;
+	}
 }
 
 void C_CSPlayer::CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )

@@ -146,6 +146,7 @@ public:
 
 	virtual void Simulate();
 	virtual	void Spawn( void );
+	virtual void UpdateOnRemove( void );
 	virtual void OnSetDormant( bool bDormant );
 
 	void GiveCarriedHostage( EHANDLE hHostage );
@@ -300,6 +301,11 @@ public:
 
 	virtual void CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );
 	virtual void CalcDeathCamView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov );
+
+	void UpdateFreezeCamFlashlightEffect( C_BaseEntity *pTarget, float flAmount );
+	void CancelFreezeCamFlashlightEffect();
+	bool m_bFreezeCamFlashlightActive;
+	CTextureReference m_freezeCamSpotLightTexture;
 
 	virtual float GetDeathCamInterpolationTime();
 	float GetFreezeFrameInterpolant( void );

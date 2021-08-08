@@ -1310,7 +1310,7 @@ void UpdateImageEntity(
 
 	Vector playerPos = vec3_origin;
 	pPlayerModel->SetAbsOrigin( playerPos );
-	pPlayerModel->SetAbsAngles( QAngle( 0, 180, 0 ) );
+	pPlayerModel->SetAbsAngles( vec3_angle );
 
 	// now set the sequence for this player model if needed
 	if ( !bIsClassSelection )
@@ -1334,7 +1334,7 @@ void UpdateImageEntity(
 	Vector viewOrigin = playerPos + Vector( viewX, viewY, viewZ );
 	view.origin = viewOrigin;
 
-	view.angles.Init();
+	view.angles.Init( 0.0f, 180.0f, 0.0f );
 	view.zNear = VIEW_NEARZ;
 	view.zFar = 1000;
 
@@ -1347,7 +1347,7 @@ void UpdateImageEntity(
 	pRenderContext->SetAmbientLight( 0.4, 0.4, 0.4 );
 
 	// PiMoN: let this model have a proper lighting for once!
-	LightDesc_t spotLight( playerPos + Vector( -128, 0, 128 ), Vector( 1, 1, 1 ), playerPos + Vector( 0, 0, 64 ), 0.5f, 1.0f );
+	LightDesc_t spotLight( playerPos + Vector( 128, 0, 128 ), Vector( 1, 1, 1 ), playerPos + Vector( 0, 0, 64 ), 0.5f, 1.0f );
 	g_pStudioRender->SetLocalLights( 1, &spotLight );
 
 	Frustum dummyFrustum;

@@ -251,6 +251,8 @@ public:
 	virtual bool UsesSRGBCorrectBlending() const;
 	virtual bool HasFastVertexTextures() const;
 	virtual int MaxHWMorphBatchCount() const;
+	virtual float GetShadowDepthBias() const;
+	virtual float GetShadowSlopeScaleDepthBias() const;
 
 	const char *GetHWSpecificShaderDLLName() const;
 	int GetActualSamplerCount() const;

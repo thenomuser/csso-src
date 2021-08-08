@@ -95,6 +95,8 @@ public:
 
 	Vector					m_vecLastFacing;
 
+	virtual bool			IsViewModel() const { return true; }
+
 	CNetworkVar( bool, m_bShouldIgnoreOffsetAndAccuracy );
 	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
 
@@ -175,7 +177,6 @@ public:
 
 	// (inherited from C_BaseAnimating)
 	virtual void			FormatViewModelAttachment( int nAttachment, matrix3x4_t &attachmentToWorld );
-	virtual bool			IsViewModel() const;
 
 	void					UpdateAllViewmodelAddons( void );
 
@@ -255,6 +256,20 @@ private:
 	typedef CHandle<CVGuiScreen>	ScreenHandle_t;
 	CUtlVector<ScreenHandle_t>	m_hScreens;
 };
+
+inline CBaseViewModel *ToBaseViewModel( CBaseAnimating *pAnim )
+{
+	if ( pAnim && pAnim->IsViewModel() )
+		return assert_cast<CBaseViewModel *>(pAnim);
+	return NULL;
+}
+
+inline CBaseViewModel *ToBaseViewModel( CBaseEntity *pEntity )
+{
+	if ( !pEntity )
+		return NULL;
+	return ToBaseViewModel(pEntity->GetBaseAnimating());
+}
 
 #ifdef CLIENT_DLL
 class C_ViewmodelAttachmentModel: public C_BaseAnimating

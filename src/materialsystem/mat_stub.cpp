@@ -511,6 +511,8 @@ public:
 	virtual bool SupportsBorderColor( void ) const { return true; }
 	virtual bool SupportsFetch4( void ) const { return false; }
 	virtual bool CanStretchRectFromTextures() const { return false; }
+	virtual float GetShadowDepthBias() const { return 0.0f; }
+	virtual float GetShadowSlopeScaleDepthBias() const { return 0.0f; }
 };
 CDummyHardwareConfig g_DummyHardwareConfig;
 

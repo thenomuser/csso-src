@@ -274,6 +274,7 @@ public:
 	void InvalidateBoneCache();
 	void InvalidateBoneCacheIfOlderThan( float deltaTime );
 	virtual int DrawDebugTextOverlays( void );
+	virtual bool IsViewModel() const { return false; }
 	
 	// See note in code re: bandwidth usage!!!
 	void				DrawServerHitboxes( float duration = 0.0f, bool monocolor = false );

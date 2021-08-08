@@ -185,6 +185,16 @@ public:
 	// Flashlight
 	void	Flashlight( void );
 	void	UpdateFlashlight( void );
+	virtual const char *GetFlashlightTextureName( void ) const { return NULL; } // TERROR
+	virtual float GetFlashlightFOV( void ) const { return 0.0f; } // TERROR
+	virtual float GetFlashlightFarZ( void ) const { return 0.0f; } // TERROR
+	virtual float GetFlashlightLinearAtten( void ) const { return 0.0f; } // TERROR
+	virtual bool CastsFlashlightShadows( void ) const { return true; } // TERROR
+	virtual void GetFlashlightOffset( const Vector &vecForward, const Vector &vecRight, const Vector &vecUp, Vector *pVecOffset ) const;
+	Vector	m_vecFlashlightOrigin;
+	Vector	m_vecFlashlightForward;
+	Vector	m_vecFlashlightUp;
+	Vector	m_vecFlashlightRight;
 
 	// Weapon selection code
 	virtual bool				IsAllowedToSwitchWeapons( void ) { return !IsObserver(); }
@@ -547,6 +557,9 @@ private:
 	EHANDLE			m_pCurrentVguiScreen;
 
 	bool			m_bFiredWeapon;
+
+	// Player flashlight dynamic light pointers
+	bool			m_bFlashlightEnabled;
 
 
 	// Player flashlight dynamic light pointers

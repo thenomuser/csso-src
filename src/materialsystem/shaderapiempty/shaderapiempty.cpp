@@ -906,6 +906,8 @@ public:
 	virtual bool SupportsFetch4() const { return false; }
 	virtual bool CanStretchRectFromTextures( void ) const { return false; }
 	virtual void EnableBuffer2FramesAhead( bool bEnable ) {}
+	virtual float GetShadowDepthBias() const { return 0.0f; }
+	virtual float GetShadowSlopeScaleDepthBias() const { return 0.0f; }
 
 	virtual void SetPSNearAndFarZ( int pshReg ) { }
 

@@ -82,6 +82,7 @@
 #include "bonetoworldarray.h"
 #include "cmodel.h"
 #include "imaterialproxydict.h"
+#include "flashlighteffect.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -1540,6 +1541,11 @@ void CClientShadowMgr::LevelInitPreEntity()
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::LevelShutdownPostEntity()
 {
+	// Paranoid code to make sure all flashlights are deactivated.
+	// This should happen in the C_BasePlayer destructor, but I'm turning everything off to release the
+	// flashlight shadows just in case.
+	FlashlightEffectManager().TurnOffFlashlight( true );
+
 	// All shadows *should* have been cleaned up when the entities went away
 	// but, just in case....
 	Assert( m_Shadows.Count() == 0 );
