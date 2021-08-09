@@ -704,11 +704,6 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 			matrix3x4_t currentBones[ MAXSTUDIOBONES ];
 			const float boneDt = 0.05f;
-		
-			bool bleedOut = false;
-#if USE_VIOLENT_RAGDOLLS
-			bleedOut = ( pPlayer ? !pPlayer->m_bKilledByTaser : true );
-#endif
 
 			if ( ( vRagdollOrigin - vPlayerOrigin ).LengthSqr() > Sqr( cl_ragdoll_workaround_threshold.GetFloat() ) )  // ragdoll origin is set from the player's origin on server. If they aren't the same, it means we haven't seen the player in a while.
 			{
@@ -716,7 +711,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 				SetupBones( currentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
-				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt, bleedOut );
+				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt );
 			}
 			else
 			{
@@ -746,7 +741,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 
 				//Msg( "C_CSRagdoll::CreateCSRagdoll at {%.1f,%.1f,%.1f}, player at {%.1f,%.1f,%.1f}, spawning at {%.1f,%.1f,%.1f}\n", vRagdollOrigin.x, vRagdollOrigin.y, vRagdollOrigin.z, vPlayerOrigin.x, vPlayerOrigin.y, vPlayerOrigin.z, vResultOrigin.x, vResultOrigin.y, vResultOrigin.z );
 
-				InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt, bleedOut );
+				InitAsClientRagdoll( boneDelta0, boneDelta1, currentBones, boneDt );
 			}
 		}
 	}
