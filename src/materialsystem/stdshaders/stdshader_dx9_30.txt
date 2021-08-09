@@ -8,12 +8,12 @@
 //
 
 
-//character_ps20b.fxc
-//character_vs20.fxc
-//weapondecal_ps20b.fxc
-//weapondecal_vs20.fxc
-//customweapon_vs20.fxc
-//customweapon_ps20b.fxc
+character_ps20b.fxc
+character_vs20.fxc
+weapondecal_ps20b.fxc
+weapondecal_vs20.fxc
+customweapon_vs20.fxc
+customweapon_ps20b.fxc
 
 //cloak_vs20.fxc
 //cloak_ps2x.fxc
