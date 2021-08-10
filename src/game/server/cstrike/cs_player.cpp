@@ -22,6 +22,7 @@
 #include "client.h"
 #include "cs_shareddefs.h"
 #include "effects/inferno.h"
+#include "mapinfo.h"
 #include "shake.h"
 #include "team.h"
 #include "weapon_c4.h"
@@ -6739,51 +6740,97 @@ int CCSPlayer::PlayerClass() const
 
 
 
-bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot )
+bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStartSpot )
 {
-	// Find the next spawn spot.
-	pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
+	CBaseEntity* pSpot = pStartSpot;
+	
+	const int kNumSpawnSpotsToScan = 32;	// Scanning spawn points loops around, so it's ok to scan same points multiple times
 
-	if ( pSpot == NULL ) // skip over the null point
-		pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-
-	CBaseEntity *pFirstSpot = pSpot;
-	do
+	if ( V_strcmp( pEntClassName, "info_player_counterterrorist" ) == 0 )
 	{
-		if ( pSpot )
+		for ( int i = kNumSpawnSpotsToScan; i > 0; i-- )
 		{
-			// check if pSpot is valid
-			if ( g_pGameRules->IsSpawnPointValid( pSpot, this ) )
+			pSpot = ( CSGameRules()->GetNextSpawnpoint( TEAM_CT ) );
+
+			if ( pSpot && g_pGameRules->IsSpawnPointValid( pSpot, this ) && pSpot->GetAbsOrigin() != Vector( 0, 0, 0 ) )
 			{
-				if ( pSpot->GetAbsOrigin() == Vector( 0, 0, 0 ) )
-				{
-					pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-					continue;
-				}
-
-				if ( mp_randomspawn.GetBool() && mp_randomspawn_los.GetBool() )
-				{
-					if ( CSGameRules() && CSGameRules()->IsSpawnPointHiddenFromOtherPlayers( pSpot, this, TEAM_CT )
-						 && UTIL_IsRandomSpawnFarEnoughAwayFromTeam( pSpot->GetAbsOrigin(), TEAM_CT ) )
-					{
-						return true;
-					}
-					else
-					{
-						pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-						continue;
-					}
-				}
-
-				// if so, go to pSpot
+				pStartSpot = pSpot;
 				return true;
 			}
 		}
-		// increment pSpot
-		pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-	} while ( pSpot != pFirstSpot ); // loop if we're not back to the start
+	}
+	else if ( V_strcmp( pEntClassName, "info_player_terrorist" ) == 0 )
+	{
+		for ( int i = kNumSpawnSpotsToScan; i > 0; i-- )
+		{
+			pSpot = ( CSGameRules()->GetNextSpawnpoint( TEAM_TERRORIST ) );
 
-	DevMsg("CCSPlayer::SelectSpawnSpot: couldn't find valid spawn point.\n");
+			if ( pSpot && g_pGameRules->IsSpawnPointValid( pSpot, this ) && pSpot->GetAbsOrigin() != Vector( 0, 0, 0 ) )
+			{
+				pStartSpot = pSpot;
+				return true;
+			}
+		}
+	}
+	else
+	{
+		pSpot = pStartSpot;
+
+		CBaseEntity* pSpotValidButVisible = NULL;
+
+		while ( true )
+		{
+			pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
+			SpawnPoint* pSpawnpoint = assert_cast< SpawnPoint* >( pSpot );
+
+			bool bSpawnValid = g_pGameRules->IsSpawnPointValid( pSpawnpoint, this );
+			// check if pSpot is valid
+			if ( pSpawnpoint && pSpawnpoint->IsEnabled() && bSpawnValid && pSpawnpoint->GetAbsOrigin() != Vector( 0, 0, 0 ) )
+			{
+				if ( mp_randomspawn_los.GetBool() )
+				{
+					if ( CSGameRules() && CSGameRules()->IsSpawnPointHiddenFromOtherPlayers( pSpawnpoint, this ) 
+						 && UTIL_IsRandomSpawnFarEnoughAwayFromTeam( pSpawnpoint->GetAbsOrigin(), TEAM_CT ) )
+					{
+						pStartSpot = pSpawnpoint;
+						return true;
+					}
+					else	// the spawn point is either hidden, or we don't care
+					{
+						pSpotValidButVisible = pSpawnpoint;
+					}
+				}
+				else	// the spawn point is either hidden, or we don't care
+				{
+					pSpotValidButVisible = pSpawnpoint;
+				}
+			}
+
+			// if we're back to the start of the list
+			if ( pSpawnpoint == pStartSpot )
+			{
+				// use the valid but unfortunately visible spot.
+				if ( pSpotValidButVisible != NULL )
+				{
+					pStartSpot = pSpotValidButVisible;
+					return true;
+				}
+				else
+				{
+					if ( GetTeamNumber() == TEAM_CT )
+						SelectSpawnSpot( "info_player_counterterrorist", pStartSpot );
+
+					else if ( GetTeamNumber() == TEAM_TERRORIST )
+						SelectSpawnSpot( "info_player_terrorist", pStartSpot );
+
+					return true;
+				}
+				break;
+			}
+		}
+
+		DevMsg( "CCSPlayer::SelectSpawnSpot: couldn't find valid spawn point.\n" );
+	}
 
 	return true;
 }
@@ -6804,26 +6851,7 @@ void CCSPlayer::PostSpawnPointSelection()
 CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 {
 	CBaseEntity *pSpot;
-
-	/* MIKETODO: VIP
-		// VIP spawn point *************
-		if ( ( g_pGameRules->IsDeathmatch() ) && ( ((CBasePlayer*)pPlayer)->m_bIsVIP == TRUE) )
-		{
-			//ALERT (at_console,"Looking for a VIP spawn point\n");
-			// Randomize the start spot
-			//for ( int i = RANDOM_LONG(1,5); i > 0; i-- )
-			pSpot = UTIL_FindEntityByClassname( NULL, "info_vip_start" );
-			if ( !FNullEnt( pSpot ) )  // skip over the null point
-				goto ReturnSpot;
-			else
-				goto CTSpawn;
-		}
-
-		//
-		// the counter-terrorist spawns at "info_player_start"
-		else
-	*/
-
+	
 	pSpot = NULL;
 	if ( CSGameRules()->IsLogoMap() )
 	{
@@ -6833,8 +6861,12 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		goto ReturnSpot;
 	}
 	else
-	{
-		if ( mp_randomspawn.GetInt() == GetTeamNumber() || mp_randomspawn.GetInt() == 1 )
+	{	
+		// The map maker can force use of map-placed spawns in deathmatch using an info_map_parameters entity.
+		bool bUseNormalSpawnsForDM = ( g_pMapInfo ? g_pMapInfo->m_bUseNormalSpawnsForDM : false );
+		if ( !bUseNormalSpawnsForDM &&
+			(	mp_randomspawn.GetInt() == GetTeamNumber() ||
+				mp_randomspawn.GetInt() == 1 ) )
 		{
 			pSpot = g_pLastCTSpawn; // reusing g_pLastCTSpawn.
 			// Randomize the start spot
@@ -6855,7 +6887,16 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		else if ( GetTeamNumber() == TEAM_CT )
 		{
 			pSpot = g_pLastCTSpawn;
-			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ))
+// 			if ( CSGameRules()->IsPlayingGunGameProgressive() )
+// 			{
+// 				if ( SelectSpawnSpot( "info_armsrace_counterterrorist", pSpot ) )
+// 				{
+// 					g_pLastCTSpawn = pSpot;
+// 					goto ReturnSpot;
+// 				}
+// 			}
+
+			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ) )
 			{
 				g_pLastCTSpawn = pSpot;
 				goto ReturnSpot;
@@ -6867,8 +6908,19 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		else if ( GetTeamNumber() == TEAM_TERRORIST )
 		{
 			pSpot = g_pLastTerroristSpawn;
+			
+// 			if ( CSGameRules()->IsPlayingGunGameProgressive() )
+// 			{
+// 				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
+// 				{
+// 					g_pLastCTSpawn = pSpot;
+// 					goto ReturnSpot;
+// 				}
+// 			}
 
-			if ( SelectSpawnSpot( "info_player_terrorist", pSpot ) )
+			const char* szTSpawnEntName = "info_player_terrorist";
+
+			if ( SelectSpawnSpot( szTSpawnEntName, pSpot ) )
 			{
 				g_pLastTerroristSpawn = pSpot;
 				goto ReturnSpot;
@@ -6877,14 +6929,9 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 	}
 
 
-	// If startspot is set, (re)spawn there.
-	if ( !gpGlobals->startspot || !strlen(STRING(gpGlobals->startspot)))
-	{
-		pSpot = gEntList.FindEntityByClassname(NULL, "info_player_terrorist");
-		if ( pSpot )
-			goto ReturnSpot;
-	}
-	else
+	// If forced startspot is set, (re )spawn there.
+	// never attempt to use any random spots because we don't want CTs spawning in Ts buyzone
+	if ( !!gpGlobals->startspot && V_strlen( STRING(gpGlobals->startspot ) ) )
 	{
 		pSpot = gEntList.FindEntityByTarget( NULL, STRING(gpGlobals->startspot) );
 		if ( pSpot )

@@ -120,10 +120,69 @@ static CViewVectors g_CSViewVectors(
 
 
 #ifndef CLIENT_DLL
-LINK_ENTITY_TO_CLASS(info_player_terrorist, CPointEntity);
-LINK_ENTITY_TO_CLASS(info_player_counterterrorist,CPointEntity);
-LINK_ENTITY_TO_CLASS(info_player_logo,CPointEntity);
-LINK_ENTITY_TO_CLASS(info_deathmatch_spawn,CPointEntity);
+BEGIN_DATADESC( SpawnPoint )
+    // Keyfields
+    DEFINE_KEYFIELD( m_iPriority,	FIELD_INTEGER,	"priority" ),
+	DEFINE_KEYFIELD( m_bEnabled,	FIELD_BOOLEAN,	"enabled" ),
+
+	DEFINE_INPUTFUNC( FIELD_VOID,	"SetEnabled",	InputSetEnabled ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"SetDisabled",	InputSetDisabled ),
+	DEFINE_INPUTFUNC( FIELD_VOID,	"ToggleEnabled",	InputToggleEnabled ),
+END_DATADESC()
+
+LINK_ENTITY_TO_CLASS( info_player_terrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS( info_player_counterterrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS( info_player_logo, CPointEntity );
+LINK_ENTITY_TO_CLASS( info_deathmatch_spawn, SpawnPoint );
+LINK_ENTITY_TO_CLASS( info_armsrace_counterterrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS( info_armsrace_terrorist, SpawnPoint );
+
+SpawnPoint::SpawnPoint() : m_bEnabled( true ), m_nType( 0 )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void SpawnPoint::Spawn( void )
+{
+	BaseClass::Spawn();
+
+	if ( CSGameRules() )
+		CSGameRules()->AddSpawnPointToMasterList( this );
+}
+
+void SpawnPoint::InputSetEnabled( inputdata_t &inputdata )
+{
+	SetSpawnEnabled( true );
+}
+
+void SpawnPoint::InputSetDisabled( inputdata_t &inputdata )
+{
+	SetSpawnEnabled( false );
+}
+
+void SpawnPoint::InputToggleEnabled( inputdata_t &inputdata )
+{
+	m_bEnabled = !m_bEnabled;
+
+	if ( CSGameRules() )
+	{
+		CSGameRules()->RefreshCurrentSpawnPointLists();
+	}
+}
+
+void SpawnPoint::SetSpawnEnabled( bool bEnabled )
+{
+	bool bChanged = (m_bEnabled != bEnabled);
+
+	m_bEnabled = bEnabled;
+
+	if ( CSGameRules() && bChanged )
+	{
+		CSGameRules()->RefreshCurrentSpawnPointLists();
+	}
+}
 #endif
 
 REGISTER_GAMERULES_CLASS( CCSGameRules );
@@ -1137,6 +1196,23 @@ ConVar snd_music_selection(
     };
 #endif
 
+    template < class T > void VectorShuffle( CUtlVector< T > &arrayToShuffle )
+    {
+        int numEntries = arrayToShuffle.Count();
+
+        // Shuffle entries
+        for ( int i = 0; i < numEntries - 1; ++i )
+        {
+            int randVal = RandomInt( i, numEntries - 1 );
+
+            if ( randVal != i )
+            {
+                // Swap values
+                V_swap( arrayToShuffle[ i ], arrayToShuffle[ randVal ] );
+            }
+        }
+    }
+
 	// --------------------------------------------------------------------------------------------------- //
 	// CCSGameRules implementation.
 	// --------------------------------------------------------------------------------------------------- //
@@ -1265,6 +1341,9 @@ ConVar snd_music_selection(
 		ReadMultiplayCvars();
 
 		m_bSwitchingTeamsAtRoundReset = false;
+
+		m_iNextCTSpawnPoint = 0;
+		m_iNextTerroristSpawnPoint = 0;
 
 		m_pPrices = NULL;
 		m_bBlackMarket = false;
@@ -3110,6 +3189,44 @@ ConVar snd_music_selection(
 		m_iCurrentGamemode = mp_gamemode_override.GetInt();
 	}
 
+	static int SpawnPointSortFunction( SpawnPoint* const *left, SpawnPoint* const *right )
+	{
+		// Sort 2 spawn points against each other using their priority values
+		return ( *left )->m_iPriority - ( *right )->m_iPriority;
+	}
+
+	static int ArmsRaceSpawnPointSortFunction( SpawnPoint* const *left, SpawnPoint* const *right )
+	{
+		if ( ( *left )->m_nType != SpawnPoint::ArmsRace && ( *right )->m_nType == SpawnPoint::ArmsRace )
+			return 1;
+
+		if ( ( *left )->m_nType == SpawnPoint::ArmsRace && ( *right )->m_nType != SpawnPoint::ArmsRace )
+			return -1;
+
+		return 0;
+	}
+
+	// Perform round-related processing at the point when there is less than 1 second of "free play" to go before the round officially ends
+    // At this point the round winner has been determined and displayed to the players
+    void CCSGameRules::PreRestartRound( void )
+    {
+        IGameEvent *restartEvent = gameeventmanager->CreateEvent( "cs_pre_restart" );
+        gameeventmanager->FireEvent( restartEvent );
+        m_bHasTriggeredRoundStartMusic = true;
+
+		// reshuffle spawns and then sort by priority for the next round.
+		ShuffleSpawnPointLists();
+		SortSpawnPointLists();
+
+		// TEMP
+//		for ( int i=0; i < WEAPON_LAST; i++ )
+//		{
+//			const CCSWeaponInfo *pCSWeaponInfo = GetWeaponInfo( (CSWeaponID)i );
+//			if ( pCSWeaponInfo )
+//				Msg( "%s is worth %d points.\n", pCSWeaponInfo->szPrintName, GetWeaponScoreForDeathmatch( (CSWeaponID)i ) );
+//		}
+    }
+
 	void CCSGameRules::RoundWin( void )
 	{
         // Update accounts based on number of hostages remaining.. 
@@ -3200,6 +3317,9 @@ ConVar snd_music_selection(
 			}
 		}
 #endif
+
+		m_iNextCTSpawnPoint = 0;
+		m_iNextTerroristSpawnPoint = 0;
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 		RevertBotsFunctor revertBots;
@@ -4453,11 +4573,11 @@ ConVar snd_music_selection(
             }
         }
 
-		if ( !m_bHasTriggeredRoundStartMusic )
+		if (m_flRestartRoundTime > 0.0f && ((m_flRestartRoundTime - 0.3) <= gpGlobals->curtime) && !m_bHasTriggeredRoundStartMusic)
 		{
-			IGameEvent* restartEvent = gameeventmanager->CreateEvent( "cs_pre_restart" );
-			gameeventmanager->FireEvent( restartEvent );
-			m_bHasTriggeredRoundStartMusic = true;
+			// Perform round-related processing at the point when there is less than 1 second of "free play" to go before the round officially ends
+			// At this point the round winner has been determined and displayed to the players
+			PreRestartRound();
 		}
 		
 		if ( m_flRestartRoundTime > 0.0f && m_flRestartRoundTime <= gpGlobals->curtime )
@@ -5184,37 +5304,12 @@ ConVar snd_music_selection(
 		{
 			// Count the number of spawn points for each team
 			// This determines the maximum number of players allowed on each
-
-			CBaseEntity* ent = NULL; 
 			
 			m_iSpawnPointCount_Terrorist	= 0;
 			m_iSpawnPointCount_CT			= 0;
 
-			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_player_terrorist" ) ) != NULL )
-			{
-				if ( IsSpawnPointValid( ent, NULL ) )
-				{
-					m_iSpawnPointCount_Terrorist++;
-				}
-				else
-				{
-					Warning("Invalid terrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
-						ent->GetAbsOrigin()[0],ent->GetAbsOrigin()[2],ent->GetAbsOrigin()[2] );
-				}
-			}
-
-			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_player_counterterrorist" ) ) != NULL )
-			{
-				if ( IsSpawnPointValid( ent, NULL ) ) 
-				{
-					m_iSpawnPointCount_CT++;
-				}
-				else
-				{
-					Warning("Invalid counterterrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
-						ent->GetAbsOrigin()[0],ent->GetAbsOrigin()[2],ent->GetAbsOrigin()[2] );
-				}
-			}
+			// create the spawn point lists here
+			GenerateSpawnPointListsFirstTime();
 
 			// Is this a logo map?
 			if ( gEntList.FindEntityByClassname( NULL, "info_player_logo" ) )
@@ -5223,20 +5318,74 @@ ConVar snd_music_selection(
 			m_bLevelInitialized = true;
 		}
 	}
-
-	void CCSGameRules::ShowSpawnPoints( void )
+	
+	void CCSGameRules::AddSpawnPointToMasterList( SpawnPoint* pSpawnPoint )
 	{
-		CBaseEntity* ent = NULL;
-		
-		while ( ( ent = gEntList.FindEntityByClassname( ent, "info_player_terrorist" ) ) != NULL )
+		//if classname == T
+		if ( FClassnameIs( pSpawnPoint, "info_player_terrorist" ) || 
+			 FClassnameIs( pSpawnPoint, "info_enemy_terrorist_spawn" ) ||
+			 FClassnameIs( pSpawnPoint, "info_armsrace_terrorist" )  )
+		{
+			// check to make sure it isn't already in the list
+			if ( m_TerroristSpawnPointsMasterList.Find( pSpawnPoint ) != m_TerroristSpawnPointsMasterList.InvalidIndex() )
+			{
+				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
+				return;
+			}
+
+			m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+		}
+		else if ( FClassnameIs( pSpawnPoint, "info_player_counterterrorist" ) ||
+				  FClassnameIs( pSpawnPoint, "info_armsrace_counterterrorist" ) )
+		{
+			if ( m_CTSpawnPointsMasterList.Find( pSpawnPoint ) != m_CTSpawnPointsMasterList.InvalidIndex() )
+			{
+				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
+				return;
+			}
+
+			m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+		}
+		else if ( FClassnameIs( pSpawnPoint, "info_deathmatch_spawn" ) )
+		{
+			// No team specific spawns in this mode
+		}
+		else
+		{
+			// doesn't match any classes we are aware of!
+			AssertMsg( false, "AddSpawnPointToMasterList is looking to adda  class to the master spawn list, but it doesn't recognize the class type!" );
+		}
+
+		RefreshCurrentSpawnPointLists();
+	}
+
+	void CCSGameRules::GenerateSpawnPointListsFirstTime( void )
+	{
+		//CUtlVector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
+		//CUtlVector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
+
+		// Clear out existing spawn point lists
+		m_TerroristSpawnPointsMasterList.RemoveAll();
+		m_CTSpawnPointsMasterList.RemoveAll();
+
+		const char* szTSpawnEntName = "info_player_terrorist";
+		CBaseEntity* ent = NULL; 
+
+		while ( ( ent = gEntList.FindEntityByClassname( ent, szTSpawnEntName ) ) != NULL )
 		{
 			if ( IsSpawnPointValid( ent, NULL ) )
 			{
-				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+				SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+				if ( pSpawnPoint )
+				{
+					// Store off the terrorist spawn point
+					m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+				}
 			}
 			else
 			{
-				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600);
+				Warning("Invalid terrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
+					ent->GetAbsOrigin()[0],ent->GetAbsOrigin()[1],ent->GetAbsOrigin()[2] );
 			}
 		}
 
@@ -5244,7 +5393,295 @@ ConVar snd_music_selection(
 		{
 			if ( IsSpawnPointValid( ent, NULL ) ) 
 			{
+				SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+				if ( pSpawnPoint )
+				{
+					// Store off the CT spawn point
+					m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+				}
+			}
+			else
+			{
+				Warning("Invalid counterterrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
+					ent->GetAbsOrigin()[0],ent->GetAbsOrigin()[1],ent->GetAbsOrigin()[2] );
+			}
+		}
+
+		ent = NULL; 
+		// if we're playing armsrace, add the armsrace spawns to the list as well
+		/*if ( CSGameRules()->IsPlayingGunGameProgressive() )
+		{
+			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_terrorist" ) ) != NULL )
+			{
+				if ( IsSpawnPointValid( ent, NULL ) )
+				{
+					SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+					if ( pSpawnPoint )
+					{
+						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
+						// Store off the terrorist spawn point
+						m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+					}
+				}
+				else
+				{
+					Warning( "Invalid terrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
+							 ent->GetAbsOrigin()[0], ent->GetAbsOrigin()[1], ent->GetAbsOrigin()[2] );
+				}
+			}
+
+			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_counterterrorist" ) ) != NULL )
+			{
+				if ( IsSpawnPointValid( ent, NULL ) )
+				{
+					SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+					if ( pSpawnPoint )
+					{
+						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
+						// Store off the CT spawn point
+						m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+					}
+				}
+				else
+				{
+					Warning( "Invalid counterterrorist spawnpoint at (%.1f,%.1f,%.1f)\n",
+							 ent->GetAbsOrigin()[0], ent->GetAbsOrigin()[1], ent->GetAbsOrigin()[2] );
+				}
+			}
+		}
+
+		// we want the arms race spawns to shuffle with the regular spawns
+		if ( CSGameRules()->IsPlayingGunGameProgressive() )
+			ShuffleMasterSpawnPointLists();*/
+
+		// sort them to ensure the priority ones are up front
+		SortMasterSpawnPointLists();
+
+		RefreshCurrentSpawnPointLists();
+	}
+
+	void CCSGameRules::RefreshCurrentSpawnPointLists( void )
+	{
+		// Clear out existing spawn point lists
+		m_TerroristSpawnPoints.RemoveAll();
+		m_CTSpawnPoints.RemoveAll();
+
+		m_iSpawnPointCount_Terrorist = 0;
+		m_iSpawnPointCount_CT = 0;
+
+		FOR_EACH_VEC( m_TerroristSpawnPointsMasterList, i )
+		{
+			SpawnPoint* pSpawnPoint = m_TerroristSpawnPointsMasterList[i];
+			if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
+			{
+				m_iSpawnPointCount_Terrorist++;
+
+				// Store off the terrorist spawn point
+				m_TerroristSpawnPoints.AddToTail( pSpawnPoint );
+			}
+		}
+
+		FOR_EACH_VEC( m_CTSpawnPointsMasterList, i )
+		{
+			SpawnPoint* pSpawnPoint = m_CTSpawnPointsMasterList[i];
+			if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
+			{
+				m_iSpawnPointCount_CT++;
+
+				// Store off the CT spawn point
+				m_CTSpawnPoints.AddToTail( pSpawnPoint );
+			}
+		}
+
+		// Shuffle the spawn points
+		ShuffleSpawnPointLists();
+
+		// Sort the list now that the spawn points have been shuffled
+		SortSpawnPointLists();
+	}
+
+    void CCSGameRules::SortSpawnPointLists( void )
+    {
+		/*if ( CSGameRules()->IsPlayingGunGameProgressive() )
+		{
+			// Sort the spawn point lists
+			m_TerroristSpawnPoints.Sort( ArmsRaceSpawnPointSortFunction );
+			m_CTSpawnPoints.Sort( ArmsRaceSpawnPointSortFunction );
+		}
+		else*/
+		{
+			// Sort the spawn point lists
+			m_TerroristSpawnPoints.Sort( SpawnPointSortFunction );
+			m_CTSpawnPoints.Sort( SpawnPointSortFunction );
+		}
+    }
+
+    void CCSGameRules::ShuffleSpawnPointLists( void )
+    {
+        // Shuffle terrorist spawn points
+        VectorShuffle( m_TerroristSpawnPoints );
+
+        // Shuffle CT spawn points
+        VectorShuffle( m_CTSpawnPoints );
+    }
+
+	void CCSGameRules::ShuffleMasterSpawnPointLists( void )
+	{
+		// Shuffle terrorist spawn points
+		VectorShuffle( m_TerroristSpawnPointsMasterList );
+
+		// Shuffle CT spawn points
+		VectorShuffle( m_CTSpawnPointsMasterList );
+	}
+
+	void CCSGameRules::SortMasterSpawnPointLists( void )
+	{
+		/*if ( CSGameRules()->IsPlayingGunGameProgressive() )
+		{
+			// Sort the spawn point lists
+			m_TerroristSpawnPointsMasterList.Sort( ArmsRaceSpawnPointSortFunction );
+			m_CTSpawnPointsMasterList.Sort( ArmsRaceSpawnPointSortFunction );
+
+			int nSpots = 0;
+			// disable all spawns over 10 because we already shoved teh arms race ones up front and
+			// if there are enough, disable the ones that aren't flagged as arms race
+			FOR_EACH_VEC( m_TerroristSpawnPointsMasterList, i )
+			{
+				SpawnPoint* pSpawnPoint = m_TerroristSpawnPointsMasterList[i];
+				if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
+				{
+					if ( IsSpawnPointValid( pSpawnPoint, NULL ) == false )
+					{
+						pSpawnPoint->m_bEnabled = false;
+						continue;
+					}
+
+					nSpots++;
+					if ( nSpots > 12 )
+						pSpawnPoint->m_bEnabled = false;
+				}
+			}
+
+			nSpots = 0;
+			// disable for the CTs as well
+			FOR_EACH_VEC( m_CTSpawnPointsMasterList, i )
+			{
+				SpawnPoint* pSpawnPoint = m_CTSpawnPointsMasterList[i];
+				if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
+				{
+					if ( IsSpawnPointValid( pSpawnPoint, NULL ) == false )
+					{
+						pSpawnPoint->m_bEnabled = false;
+						continue;
+					}
+
+					nSpots++;
+					if ( nSpots > 12 )
+						pSpawnPoint->m_bEnabled = false;
+				}
+			}
+		}
+		else*/
+		{
+
+			m_TerroristSpawnPointsMasterList.Sort( SpawnPointSortFunction );
+			m_CTSpawnPointsMasterList.Sort( SpawnPointSortFunction );
+		}
+	}
+
+    void CCSGameRules::ShufflePlayerList( CUtlVector< CCSPlayer* > &playersList )
+    {
+        // Shuffle players
+        VectorShuffle( playersList );
+    }
+
+
+    CBaseEntity*CCSGameRules::GetNextSpawnpoint( int teamNumber )
+    {
+        CBaseEntity* pRetVal = NULL;
+
+        if ( teamNumber == TEAM_CT )
+        {
+            if ( m_iNextCTSpawnPoint >= m_CTSpawnPoints.Count() )
+            {
+                m_iNextCTSpawnPoint = 0;
+            }
+
+            if ( m_iNextCTSpawnPoint < m_CTSpawnPoints.Count() )
+            {
+                pRetVal = m_CTSpawnPoints[ m_iNextCTSpawnPoint ];
+                m_iNextCTSpawnPoint++;
+            }
+        }
+        else if ( teamNumber == TEAM_TERRORIST )
+        {
+            if ( m_iNextTerroristSpawnPoint >= m_TerroristSpawnPoints.Count() )
+            {
+                m_iNextTerroristSpawnPoint = 0;
+            }
+
+            if ( m_iNextTerroristSpawnPoint < m_TerroristSpawnPoints.Count() )
+            {
+                pRetVal = m_TerroristSpawnPoints[ m_iNextTerroristSpawnPoint ];
+                m_iNextTerroristSpawnPoint++;
+            }
+        }
+
+        return pRetVal;
+    }
+
+	void CCSGameRules::ShowSpawnPoints( void )
+	{
+        CBaseEntity* ent = NULL;
+        
+        while ( ( ent = gEntList.FindEntityByClassname( ent, "info_player_terrorist" ) ) != NULL )
+        {
+            if ( IsSpawnPointValid( ent, NULL ) == false )
+            {
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+            }
+            else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+            {
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, 600 );
+            }
+			else
+			{
 				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+			}
+        }
+
+        while ( ( ent = gEntList.FindEntityByClassname( ent, "info_player_counterterrorist" ) ) != NULL )
+        {
+            if ( IsSpawnPointValid( ent, NULL ) == false ) 
+            {
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+			}
+			else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+			{
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, 600 );
+			}
+			else
+			{
+				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+			}
+        }
+
+		while ( ( ent = gEntList.FindEntityByClassname( ent, "info_deathmatch_spawn" ) ) != NULL )
+		{
+			if ( IsSpawnPointValid( ent, NULL ) )
+			{
+				if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, 600 );
+				}
+				else if ( IsSpawnPointHiddenFromOtherPlayers( ent, NULL ) )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+				}
+				else
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+				}
 			}
 			else
 			{
@@ -5252,18 +5689,41 @@ ConVar snd_music_selection(
 			}
 		}
 
-		while ( ( ent = gEntList.FindEntityByClassname( ent, "info_deathmatch_spawn" ) ) != NULL )
+		/*if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
-			if ( IsSpawnPointValid( ent, NULL ) )
+			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_terrorist" ) ) != NULL )
 			{
-				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+				if ( IsSpawnPointValid( ent, NULL ) == false )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+				}
+				else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, 600 );
+				}
+				else
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+				}
 			}
-			else
+
+			while ( ( ent = gEntList.FindEntityByClassname( ent, "info_armsrace_counterterrorist" ) ) != NULL )
 			{
-				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+				if ( IsSpawnPointValid( ent, NULL ) == false )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, 600 );
+				}
+				else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, 600 );
+				}
+				else
+				{
+					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 0, 255, 0, 200, 600 );
+				}
 			}
-		}
-	}
+		}*/
+    }
 
 	void CCSGameRules::CheckRestartRound( void )
 	{
@@ -6545,20 +7005,39 @@ ConVar snd_music_selection(
 	// checks if the spot is clear of players
 	bool CCSGameRules::IsSpawnPointValid( CBaseEntity *pSpot, CBasePlayer *pPlayer )
 	{
-		if ( !pSpot->IsTriggered( pPlayer ) )
-		{
+		if ( !pSpot )
 			return false;
+
+        if ( !pSpot->IsTriggered( pPlayer ) )
+            return false;
+
+        Vector mins = GetViewVectors()->m_vHullMin;
+        Vector maxs = GetViewVectors()->m_vHullMax;
+
+        Vector vTestMins = pSpot->GetAbsOrigin() + mins;
+        Vector vTestMaxs = pSpot->GetAbsOrigin() + maxs;
+        
+        // First test the starting origin.
+        CTraceFilterSimple traceFilter( pPlayer, COLLISION_GROUP_PLAYER  );
+        if ( !UTIL_IsSpaceEmpty( pPlayer, vTestMins, vTestMaxs, MASK_SOLID, &traceFilter ) )
+			return false;
+
+		// Test against other players potentially occupying this spot
+		for ( int k = 1; k <= gpGlobals->maxClients; ++ k )
+		{
+			CBasePlayer *pOther = UTIL_PlayerByIndex( k );
+			if ( !pOther ) continue;
+			if ( pOther == pPlayer ) continue;
+			if ( ( pOther->GetTeamNumber() != TEAM_TERRORIST )
+				&& ( pOther->GetTeamNumber() != TEAM_CT ) )
+				continue;
+
+			if ( ( pOther->GetAbsOrigin().AsVector2D() - pSpot->GetAbsOrigin().AsVector2D() ).IsZero() )
+				return false;
 		}
 
-		Vector mins = GetViewVectors()->m_vHullMin;
-		Vector maxs = GetViewVectors()->m_vHullMax;
-
-		Vector vTestMins = pSpot->GetAbsOrigin() + mins;
-		Vector vTestMaxs = pSpot->GetAbsOrigin() + maxs;
-		
-		// First test the starting origin.
-		return UTIL_IsSpaceEmpty( pPlayer, vTestMins, vTestMaxs );
-	}
+		return true;
+    }
 
 	bool CCSGameRules::IsSpawnPointHiddenFromOtherPlayers( CBaseEntity *pSpot, CBasePlayer *pPlayer, int nHideFromTeam )
 	{

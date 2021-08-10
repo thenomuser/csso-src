@@ -889,7 +889,7 @@ protected:
 
 	bool RunMimicCommand( CUserCmd& cmd );
 
-	bool SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pSpot );
+	bool SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStartSpot );
 
 	void SetModelFromClass( void );
 	void SetRandomClassSkin( void );

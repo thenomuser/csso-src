@@ -114,13 +114,37 @@ namespace PlayerCashAward
 #endif
 
 #ifndef CLIENT_DLL
-	struct playerscore_t
-	{
-		int iPlayerIndex;
-		int iScore;
-	};
-#endif
+struct playerscore_t
+{
+	int iPlayerIndex;
+	int iScore;
+};
 
+class SpawnPoint : public CServerOnlyPointEntity
+{
+	DECLARE_CLASS( SpawnPoint, CServerOnlyPointEntity );
+	DECLARE_DATADESC();
+public:
+	SpawnPoint();
+	void Spawn( void );
+	bool IsEnabled() { return m_bEnabled; }
+	void InputSetEnabled( inputdata_t &inputdata );
+	void InputSetDisabled( inputdata_t &inputdata );
+	void InputToggleEnabled( inputdata_t &inputdata );
+	void SetSpawnEnabled( bool bEnabled );
+
+	int		m_iPriority;
+	bool	m_bEnabled;
+	int		m_nType;
+
+	enum Type
+	{
+		Default = 0,
+		Deathmatch = 1,
+		ArmsRace = 2,
+	};
+};
+#endif
 
 class CCSGameRulesProxy : public CGameRulesProxy
 {
@@ -376,6 +400,19 @@ public:
 	// [tj] A place to check achievements that occur at the end of the round
 	void ProcessEndOfRoundAchievements(int iWinnerTeam, int iReason);
 
+	// The following round-related functions are called as follows:
+	//
+	// At Match Start:
+	//		PreRestartRound() -> RestartRound() -> PostRestartRound()
+	//
+	// During Subsequent Round Gameplay:
+	//		RoundWin() is called at the point when the winner of the round has been determined - prior to free-play commencing
+	//		PreRestartRound() is called with 1 second remaining prior to the round officially ending (This is after a round
+	//						  winner has been chosen and players are allowed to continue playing)
+	//		RoundEnd() is then called when the round has completely ended
+	//		RestartRound() is then called immediately after RoundEnd()
+	//		PostRestartRound() is called immediately after RestartRound() has completed
+	void PreRestartRound( void );
 	void RestartRound( void );
 	void RoundWin( void );
 	void BalanceTeams( void );
@@ -548,10 +585,6 @@ public:
 	int		m_iHostagesTouched;
 	float	m_flNextHostageAnnouncement;
 
-    //=============================================================================
-    // HPE_BEGIN
-    //=============================================================================
-
     // [tj] Accessor for weapons donation ability
     bool GetCanDonateWeapon() { return m_bCanDonateWeapons; }
 
@@ -599,10 +632,6 @@ public:
 
 	int m_nLastFreezeEndBeep;
 
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-
 
 	// PRISON ESCAPE VARIABLES
 	int		m_iHaveEscaped;
@@ -633,6 +662,29 @@ public:
 	int GetOvertimePlaying( void ) const { return m_nOvertimePlaying; }
 
 	int GetNumWinsToClinch( void ) const;
+
+public:
+	CBaseEntity* GetNextSpawnpoint( int teamNumber );
+
+	void DoCoopSpawnAndNavInit( void );
+	void AddSpawnPointToMasterList( SpawnPoint* pSpawnPoint );
+	void GenerateSpawnPointListsFirstTime( void );
+	void RefreshCurrentSpawnPointLists( void );
+
+	void ShuffleSpawnPointLists( void );
+	void ShuffleMasterSpawnPointLists( void );
+	void SortSpawnPointLists( void );
+	void SortMasterSpawnPointLists( void );
+	void ShufflePlayerList( CUtlVector< CCSPlayer* > &playersList );
+
+protected:
+	CUtlVector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
+	CUtlVector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
+
+	int m_iNextCTSpawnPoint;						// Used when picking the next CT spawn point to assign
+	int m_iNextTerroristSpawnPoint;					// Used when picking the next Terrorist spawn point to assign
+	CUtlVector< SpawnPoint* >	m_CTSpawnPoints;		// List of CT spawn points sorted by their priorities
+	CUtlVector< SpawnPoint* >	m_TerroristSpawnPoints;	// List of Terrorist spawn points sorted by their priorities
 
 private:
 

@@ -941,6 +941,18 @@ bool UTIL_IsSpaceEmpty( CBaseEntity *pMainEnt, const Vector &vMin, const Vector 
 	return bClear;
 }
 
+bool UTIL_IsSpaceEmpty( CBaseEntity *pMainEnt, const Vector &vMin, const Vector &vMax, unsigned int mask, ITraceFilter *pFilter )
+{
+	Vector vHalfDims = ( vMax - vMin ) * 0.5f;
+	Vector vCenter = vMin + vHalfDims;
+
+	trace_t trace;
+	UTIL_TraceHull( vCenter, vCenter, -vHalfDims, vHalfDims, mask, pFilter, &trace );
+
+	bool bClear = ( trace.fraction == 1 && trace.allsolid != 1 && (trace.startsolid != 1) );
+	return bClear;
+}
+
 void UTIL_StringToFloatArray( float *pVector, int count, const char *pString )
 {
 	char *pstr, *pfront, tempString[128];

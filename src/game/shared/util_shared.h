@@ -378,6 +378,7 @@ void		UTIL_BloodImpact( const Vector &pos, const Vector &dir, int color, int amo
 void		UTIL_BloodDecalTrace( trace_t *pTrace, int bloodColor );
 void		UTIL_DecalTrace( trace_t *pTrace, char const *decalName );
 bool		UTIL_IsSpaceEmpty( CBaseEntity *pMainEnt, const Vector &vMin, const Vector &vMax );
+bool		UTIL_IsSpaceEmpty( CBaseEntity *pMainEnt, const Vector &vMin, const Vector &vMax, unsigned int mask, ITraceFilter *pFilter );
 
 void		UTIL_StringToVector( float *pVector, const char *pString );
 void		UTIL_StringToIntArray( int *pVector, int count, const char *pString );
