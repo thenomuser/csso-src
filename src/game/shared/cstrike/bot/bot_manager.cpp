@@ -164,6 +164,8 @@ void CBotManager::RemoveGrenade( CBaseGrenade *grenade )
 		if (ag->IsEntity( grenade ))
 		{
 			ag->OnEntityGone();
+			m_activeGrenadeList.Remove( it );
+			delete ag;
 			return;
 		}
 	}
@@ -219,6 +221,17 @@ void CBotManager::ValidateActiveGrenades( void )
 //--------------------------------------------------------------------------------------------------------------
 void CBotManager::DestroyAllGrenades( void )
 {
+	int it = m_activeGrenadeList.Head();
+
+	while ( it != m_activeGrenadeList.InvalidIndex() )
+	{
+		ActiveGrenade *ag = m_activeGrenadeList[it];
+		int current = it;
+		it = m_activeGrenadeList.Next( it );
+		m_activeGrenadeList.Remove( current );
+		delete ag;
+	}
+
 	m_activeGrenadeList.PurgeAndDeleteElements();
 }
 
