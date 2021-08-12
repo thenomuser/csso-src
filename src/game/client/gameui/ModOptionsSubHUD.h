@@ -41,6 +41,7 @@ private:
 	CLabeledCommandComboBox*	m_pPlayerCountPos;
 	CLabeledCommandComboBox*	m_pHealthArmorStyle;
 	CLabeledCommandComboBox*	m_pAccountStyle;
+	CLabeledCommandComboBox*	m_pSimplePlayerModelLighting;
 };
 
 #endif // ModOptionsSubHUD_H
