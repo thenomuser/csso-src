@@ -44,6 +44,15 @@ void CWeaponCSBaseGun::Spawn()
 
 bool CWeaponCSBaseGun::Deploy()
 {
+	// don't allow weapon switching to shortcut cycle time (quickswitch exploit)
+	float fOldNextPrimaryAttack = m_flNextPrimaryAttack;
+	float fOldNextSecondaryAttack = m_flNextSecondaryAttack;
+
+	m_flDoneSwitchingSilencer = 0.0f;
+
+	if ( !BaseClass::Deploy() )
+		return false;
+
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( !pPlayer )
 		return false;
@@ -52,7 +61,14 @@ bool CWeaponCSBaseGun::Deploy()
 	m_bDelayFire = false;
 	m_zoomFullyActiveTime = -1.0f;
 
-	return BaseClass::Deploy();
+	if ( IsRevolver() )
+	{
+		m_weaponMode = Secondary_Mode;
+	}
+
+	m_flNextPrimaryAttack	= Max( m_flNextPrimaryAttack.Get(), fOldNextPrimaryAttack );
+	m_flNextSecondaryAttack	= Max( m_flNextSecondaryAttack.Get(), fOldNextSecondaryAttack );
+	return true;
 }
 
 void CWeaponCSBaseGun::ItemBusyFrame()
@@ -63,7 +79,7 @@ void CWeaponCSBaseGun::ItemBusyFrame()
 		return;
 
 	// if we're scoped during a reload, pull us out of the scope for the duration (and set resumezoom so we'll re-zoom when reloading is done)
-	if (pPlayer->m_bIsScoped && m_bInReload )
+	if ( IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) && pPlayer->m_bIsScoped && m_bInReload )
 	{
 		//m_zoomLevel = 0; //don't affect zoom level, so it'll restore when reloading is done
 		pPlayer->m_bIsScoped = false;
@@ -304,14 +320,14 @@ void CWeaponCSBaseGun::WeaponIdle()
 
 bool CWeaponCSBaseGun::Holster( CBaseCombatWeapon *pSwitchingTo )
 {
-	/* re-deploying the weapon is punishment enough for canceling a silencer attach/detach before completion
-	if ( (GetActivity() == ACT_VM_ATTACH_SILENCER && m_bSilencerOn == false) ||
-		 (GetActivity() == ACT_VM_DETACH_SILENCER && m_bSilencerOn == true) )
+	// re-deploying the weapon is punishment enough for canceling a silencer attach/detach before completion
+	if ( (GetActivity() == ACT_VM_ATTACH_SILENCER && IsSilenced() == false) ||
+		 (GetActivity() == ACT_VM_DETACH_SILENCER && IsSilenced() == true) )
 	{
 		m_flDoneSwitchingSilencer = gpGlobals->curtime;
 		m_flNextSecondaryAttack = gpGlobals->curtime;
 		m_flNextPrimaryAttack = gpGlobals->curtime;
-	}*/
+	}
 
 	// not sure we want to fully support animation cancelling
 	if ( m_bInReload && !m_bReloadVisuallyComplete )
