@@ -112,38 +112,15 @@ void CHudBaseAccount::Paint()
 		wchar_t unicode[32];
 		wchar_t param1[32];
 		wchar_t param2[32];
-		wchar_t *pReason = g_pVGuiLocalize->Find( "Cstrike_Game_GunGameWeaponStatus" );
-		if ( !pReason )
-		{
-			pReason = L"%s1 / %s2";
-		}
 
 		V_snwprintf( param1, ARRAYSIZE(param1), L"%d", weaponindex + 1 );
 		V_snwprintf( param2, ARRAYSIZE( param2 ), L"%d", CSGameRules()->GetNumProgressiveGunGameWeapons( pPlayer->GetTeamNumber() ) );
 
-		g_pVGuiLocalize->ConstructString( unicode, sizeof( unicode ), pReason, 2, param1, param2 );
+		g_pVGuiLocalize->ConstructString( unicode, sizeof( unicode ), L"%s1 / %s2", 2, param1, param2 );
 
-		static int width = 0;
-		for (wchar_t *ch = unicode; *ch != 0; ch++)
-		{
-			width += vgui::surface()->GetCharacterWidth( m_hTextFont, *ch );
-		}
-
-		static int xpos, ypos;
-		if ( m_iStyle == 1 )
-		{
-			xpos = MIN( 0, (legacy_digit_xpos - width) );
-			ypos = legacy_digit_ypos;
-		}
-		else
-		{
-			xpos = MIN( 0, (digit_xpos - width) );
-			ypos = digit_ypos;
-		}
-
-		vgui::surface()->DrawSetTextFont(m_hTextFont);
-		vgui::surface()->DrawSetTextColor(GetFgColor());
-		vgui::surface()->DrawSetTextPos(xpos, ypos);
+		vgui::surface()->DrawSetTextFont( m_hTextFont );
+		vgui::surface()->DrawSetTextColor( GetFgColor() );
+		vgui::surface()->DrawSetTextPos( gglevel_xpos, gglevel_ypos );
 		vgui::surface()->DrawUnicodeString( unicode );
 	}
 	else

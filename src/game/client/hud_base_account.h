@@ -58,6 +58,8 @@ private:
 	CPanelAnimationVarAliasType( float, digit_ypos, "digit_ypos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, digit2_xpos, "digit2_xpos", "0", "proportional_float" );
 	CPanelAnimationVarAliasType( float, digit2_ypos, "digit2_ypos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, gglevel_xpos, "gglevel_xpos", "0", "proportional_float" );
+	CPanelAnimationVarAliasType( float, gglevel_ypos, "gglevel_ypos", "0", "proportional_float" );
 	CPanelAnimationVar( Color, m_Ammo2Color, "Ammo2Color", "0 0 0 0" );
 
 	CPanelAnimationVar( Color, m_TextColor, "TextColor", "FgColor" );
