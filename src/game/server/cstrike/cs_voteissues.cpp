@@ -53,7 +53,7 @@ static bool VotableMap( const char *pszMapName )
 // Purpose: Restart Round Issue
 //-----------------------------------------------------------------------------
 ConVar sv_vote_issue_restart_game_allowed( "sv_vote_issue_restart_game_allowed", "1", 0, "Can people hold votes to restart the game?" );
-// ConVar sv_arms_race_vote_to_restart_disallowed_after( "sv_arms_race_vote_to_restart_disallowed_after", "0", FCVAR_REPLICATED, "Arms Race gun level after which vote to restart is disallowed" ); -- gungame!
+ConVar sv_arms_race_vote_to_restart_disallowed_after( "sv_arms_race_vote_to_restart_disallowed_after", "0", FCVAR_REPLICATED, "Arms Race gun level after which vote to restart is disallowed" );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -70,9 +70,8 @@ bool CRestartGameIssue::IsEnabled( void )
 {
 	if ( sv_vote_issue_restart_game_allowed.GetBool() )
 	{
-		/* -- gungame!
 		// Vote to restart is allowed
-		if ( sv_arms_race_vote_to_restart_disallowed_after.GetInt() > 0 )
+		if ( sv_arms_race_vote_to_restart_disallowed_after.GetInt() > 0 && CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
 		{
 			// Need to test if a player has surpassed the maximum weapon progression
 			if ( sv_arms_race_vote_to_restart_disallowed_after.GetInt() > CSGameRules()->GetMaxGunGameProgressiveWeaponIndex() )
@@ -85,7 +84,7 @@ bool CRestartGameIssue::IsEnabled( void )
 				// A player has surpassed the maximum weapon progression, so disable vote to restart
 				return false;
 			}
-		}*/
+		}
 
 		// No maximum weapon progression value is defined, so enable vote to restart
 		return true;

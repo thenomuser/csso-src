@@ -44,6 +44,8 @@ public:
 	// for shared code, use the same function name
 	virtual int		GetNumPlayers( void ) { return Get_Number_Players(); }
 
+	virtual int		GetGGLeader( int nTeam );
+
 	int		GetTeamNumber() const;
 
 	int		GetRoundsWon(void) { return m_iRoundsWon; }
@@ -64,6 +66,8 @@ public:
 	char	m_szTeamname[ MAX_TEAM_NAME_LENGTH ];
 	int		m_iScore;
 	int		m_iRoundsWon;
+	int		m_nGGLeaderEntIndex_CT;
+	int		m_nGGLeaderEntIndex_T;
 
 	// Data for the scoreboard
 	int		m_iDeaths;

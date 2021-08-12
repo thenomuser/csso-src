@@ -7,6 +7,10 @@
 #include "cbase.h"
 #include "c_team.h"
 
+#if defined ( CSTRIKE_DLL )
+#include "cs_shareddefs.h"
+#endif
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -34,6 +38,9 @@ IMPLEMENT_CLIENTCLASS_DT_NOBASE(C_Team, DT_Team, CTeam)
 	RecvPropInt( RECVINFO(m_iScore)),
 	RecvPropInt( RECVINFO(m_iRoundsWon) ),
 	RecvPropString( RECVINFO(m_szTeamname)),
+	
+	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_CT ) ),
+	RecvPropInt( RECVINFO( m_nGGLeaderEntIndex_T ) ),
 	
 	RecvPropArray2( 
 		RecvProxyArrayLength_PlayerArray,
@@ -171,6 +178,16 @@ bool C_Team::ContainsPlayer( int iPlayerIndex )
 
 void C_Team::ClientThink()
 {
+}
+
+int C_Team::GetGGLeader( int nTeam )
+{
+	if ( nTeam == TEAM_CT )
+		return m_nGGLeaderEntIndex_CT;
+	else if ( nTeam == TEAM_TERRORIST )
+		return m_nGGLeaderEntIndex_T;
+
+	return -1;
 }
 
 

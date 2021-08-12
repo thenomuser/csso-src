@@ -39,6 +39,7 @@
 #include "c_cs_hostage.h"
 #include "prediction.h"
 
+#include "vguicenterprint.h"
 #include <vgui_controls/Panel.h>
 #include "ragdoll_shared.h"
 #include "collisionutils.h"
@@ -1155,6 +1156,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_CSPlayer, DT_CSPlayer, CCSPlayer )
 	RecvPropFloat( RECVINFO( m_fImmuneToDamageTime ) ),
 	RecvPropBool( RECVINFO( m_bImmunity ) ),
 	RecvPropBool( RECVINFO( m_bHasMovedSinceSpawn ) ),
+	RecvPropBool( RECVINFO( m_bMadeFinalGunGameProgressiveKill ) ),
+	RecvPropInt( RECVINFO( m_iGunGameProgressiveWeaponIndex ) ),
 	RecvPropInt( RECVINFO( m_iLastZoom ) ),
 
 #ifdef CS_SHIELD_ENABLED
@@ -1261,6 +1264,10 @@ C_CSPlayer::C_CSPlayer() :
 	ListenForGameEvent( "player_death" );
 	ListenForGameEvent( "player_spawn" );
 	ListenForGameEvent( "player_update_viewmodel" );
+
+	ListenForGameEvent( "ggprogressive_player_levelup" );
+	ListenForGameEvent( "gg_killed_enemy" );
+	ListenForGameEvent( "gg_final_weapon_achieved" );
 
 	m_bPlayingHostageCarrySound = false;
 
@@ -2101,6 +2108,54 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		if ( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID )
 		{
 			m_pViewmodelArmConfig = NULL;
+		}
+	}
+	else if ( Q_strcmp( "ggprogressive_player_levelup", name ) == 0 )
+	{
+		// Let the local player know he leveled up
+		if ( GetUserID() == EventUserID )
+		{
+			// Play level-up gun game sound
+			C_RecipientFilter filter;
+			filter.AddRecipient( this );
+			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.LevelUp" );
+		}
+	}
+	else if ( Q_strcmp( "gg_killed_enemy", name ) == 0 )
+	{
+		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+		{
+			if ( pLocalPlayer && pLocalPlayer->GetUserID() == event->GetInt( "attackerid" ) )
+			{
+				// Play level-up gun game sound because it's a better kill sound than the default one.
+				C_RecipientFilter filter;
+				filter.AddRecipient( this );
+				C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
+			}
+		}
+	}
+	else if ( Q_strcmp( "gg_final_weapon_achieved", name ) == 0 )
+	{
+		int nGoldKnifeUserID = event->GetInt( "playerid", -1 );
+		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && nGoldKnifeUserID == pLocalPlayer->GetUserID() )
+		{
+			// Play an audio cue corresponding to getting the final weapon
+			//EmitSound( "GunGameWeapon.AchievedFinalWeapon" );
+			internalCenterPrint->Print( "#Cstrike_TitlesTXT_Knife_Level_You" );
+		}
+		else
+		{
+			C_BasePlayer *pGoldKnifeUser = static_cast<CBasePlayer *>( UTIL_PlayerByUserId( nGoldKnifeUserID ) );
+			if ( pGoldKnifeUser )
+			{
+				wchar_t wszLocalized[100];
+				wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
+				g_pVGuiLocalize->ConvertANSIToUnicode( pGoldKnifeUser->GetPlayerName(), wszPlayerName, sizeof(wszPlayerName) );
+				g_pVGuiLocalize->ConstructString( wszLocalized, sizeof( wszLocalized ), g_pVGuiLocalize->Find( "#Cstrike_TitlesTXT_Knife_Level" ), 1, wszPlayerName );
+
+				internalCenterPrint->Print( wszLocalized );
+				EmitSound("GunGame.PlayerReachedKnife");
+			}
 		}
 	}
 }

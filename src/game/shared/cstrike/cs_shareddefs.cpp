@@ -325,6 +325,7 @@ const char *KnivesEntitiesStrings[] =
 {
 	"weapon_knife",
 	"weapon_knife_t",
+	"weapon_knifegg",
 	"weapon_knife_css",
 	"weapon_knife_karambit",
 	"weapon_knife_flip",

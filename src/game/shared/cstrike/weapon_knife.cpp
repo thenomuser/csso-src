@@ -458,6 +458,22 @@ bool CKnife::CanDrop()
 
 
 // ----------------------------------------------------------------------------- //
+// CKnifeGG tables.
+// ----------------------------------------------------------------------------- //
+
+IMPLEMENT_NETWORKCLASS_ALIASED( KnifeGG, DT_WeaponKnifeGG )
+
+BEGIN_NETWORK_TABLE( CKnifeGG, DT_WeaponKnifeGG )
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA( CKnifeGG )
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS( weapon_knifegg, CKnifeGG );
+PRECACHE_REGISTER( weapon_knifegg );
+
+
+// ----------------------------------------------------------------------------- //
 // CKnifeT implementation.
 // ----------------------------------------------------------------------------- //
 IMPLEMENT_NETWORKCLASS_ALIASED( KnifeT, DT_WeaponKnifeT )

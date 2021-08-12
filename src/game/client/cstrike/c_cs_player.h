@@ -435,7 +435,9 @@ public:
 	CNetworkVar( bool, m_bIsGrabbingHostage );	// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( bool, m_bHasMovedSinceSpawn ); // Whether player has moved from spawn position
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
-	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
+	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
+	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
+	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex ); // index of current gun game weapon
 	CNetworkVar( bool, m_bInBombZone );
 	CNetworkVar( bool, m_bInBuyZone );
 	CNetworkVar( bool, m_bInNoDefuseArea );
@@ -547,6 +549,9 @@ public:
 
 // [tj] checks if this player has another given player on their Steam friends list.
 	bool HasPlayerAsFriend( C_CSPlayer* player );
+
+	bool MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
+	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
 
 	bool IsAbleToInstantRespawn( void );
 

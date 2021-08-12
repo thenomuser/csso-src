@@ -676,8 +676,11 @@ public:
 	void				ResetAssistsCount();
 
 	int GetNumConcurrentDominations( void );
+	void GiveWeaponFromID( int nWeaponID );
 	
 	void				SelectDeathPose( const CTakeDamageInfo &info );
+
+	bool				MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
 
 private:
 	int	m_iDeathPose;
@@ -692,6 +695,10 @@ private:
 protected:
 	void AttemptToExitFreezeCam( void );
 
+	void GiveCurrentProgressiveGunGameWeapon( void );
+	void GiveNextProgressiveGunGameWeapon( void );
+	void SubtractProgressiveWeaponIndex( void );
+
 public:
 
 	CNetworkVar( bool, m_bIsScoped );
@@ -702,8 +709,14 @@ public:
 	CNetworkVar( bool, m_bIsDefusing );			// tracks whether this player is currently defusing a bomb
 	CNetworkVar( bool, m_bIsGrabbingHostage );			// tracks whether this player is currently grabbing a hostage
 	CNetworkVar( float, m_fImmuneToDamageTime );	// When gun game spawn damage immunity will expire
-	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune in gun game
+	CNetworkVar( bool, m_bImmunity );	// tracks whether this player is currently immune
+	CNetworkVar( bool, m_bMadeFinalGunGameProgressiveKill );
+	CNetworkVar( int, m_iGunGameProgressiveWeaponIndex );	// index of current gun game weapon
+	CNetworkVar( int, m_iNumGunGameKillsWithCurrentWeapon );
 	CNetworkVar( bool, m_bHasMovedSinceSpawn );		// Whether player has moved from spawn position
+
+	bool m_isCurrentGunGameLeader;
+	bool m_isCurrentGunGameTeamLeader;
 
 	bool m_bIsFemale;
 
@@ -713,7 +726,14 @@ public:
 	Vector m_vLastHitLocationObjectSpace; //position where last hit occured in space of the bone associated with the hitbox
 	EHANDLE		m_hDroppedEquipment[DROPPED_COUNT];
 
+	int GetPlayerGunGameWeaponIndex( void ) { return m_iGunGameProgressiveWeaponIndex; }
+	int GetNumGunGameKillsWithCurrentWeapon( void ) { return m_iNumGunGameKillsWithCurrentWeapon; }
+
+	//--------------------------------------------------------------------------------------------------------
 	void OnHealthshotUsed( void ) { EmitSound( "Healthshot.Success" ); }
+	bool UpdateTeamLeaderPlaySound( int nTeam );
+
+	void IncrementGunGameProgressiveWeapon( int nNumLevelsToIncrease );
 
 	// [tj] overriding the base suicides to trash CS specific stuff
 	virtual void CommitSuicide( bool bExplode = false, bool bForce = false );
@@ -860,6 +880,7 @@ public:
 	bool CanGrabLadder( const Vector& pos, const Vector& normal );
 
 	void ClearImmunity( void );
+	void ClearGunGameProgressiveWeaponIndex( void ) { m_iGunGameProgressiveWeaponIndex = 0; }
 
 	void SwitchTeamsAtRoundReset( void ) { m_switchTeamsOnNextRoundReset = true; }
 	bool WillSwitchTeamsAtRoundReset( void ) { return m_switchTeamsOnNextRoundReset; }
@@ -908,6 +929,9 @@ public:
 
 	void DestroyWeapon( CBaseCombatWeapon *pWeapon );
 	void DestroyWeapons( bool bDropC4 = true );
+
+	bool IsPlayerSpawning( void ) { return m_bIsSpawning; }
+	void SetPlayerSpawning( bool bIsSpawning ) { m_bIsSpawning = bIsSpawning; }
 
 protected:
 	void TransferInventory( CCSPlayer* pTargetPlayer );
@@ -977,6 +1001,7 @@ private:
 
 	Vector m_storedSpawnPosition;
 	QAngle m_storedSpawnAngle;
+	bool m_bIsSpawning;
 
 public:
 	CNetworkVar( float, m_flThirdpersonRecoil );
@@ -1089,6 +1114,7 @@ public:
 	void OnRoundEnd(int winningTeam, int reason);
     void OnPreResetRound();
 
+	void DecrementProgressiveWeaponFromSuicide( void );
 	int GetNumEnemyDamagers();
 	int GetNumEnemiesDamaged();
 	CBaseEntity* GetNearestSurfaceBelow(float maxTrace);
@@ -1238,6 +1264,9 @@ private:
 	CUtlVector<int>		   m_BurnDamageDeltVec;
 
 	int m_iDeathFlags; // Flags holding revenge and domination info about a death
+
+	// Track last damage type
+	int	m_LastDamageType;
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 public:

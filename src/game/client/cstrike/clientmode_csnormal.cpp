@@ -757,7 +757,8 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		// [Forrest] Show all centerprint messages if the end-of-round panel is disabled.
 		static ConVarRef sv_nowinpanel( "sv_nowinpanel" );
 		static ConVarRef cl_nowinpanel( "cl_nowinpanel" );
-		if ( reason == Game_Commencing || sv_nowinpanel.GetBool() || cl_nowinpanel.GetBool() )
+		bool isFinishedGunGameRound = CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && (reason == CTs_Win || reason == Terrorists_Win);
+		if ( isFinishedGunGameRound || reason == Game_Commencing || sv_nowinpanel.GetBool() || cl_nowinpanel.GetBool() )
 		{
 			internalCenterPrint->Print( hudtextmessage->LookupString( event->GetString("message") ) );
 

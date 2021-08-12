@@ -158,6 +158,7 @@ WeaponAliasInfo s_weaponAliasInfo[] =
 
 	{ WEAPON_KNIFE,				"knife" },
 	{ WEAPON_KNIFE_T,			"knife_t" },
+	{ WEAPON_KNIFE_GG,			"knifegg" },
 	{ WEAPON_KNIFE_CSS,			"knife_css" },
 	{ WEAPON_KNIFE_KARAMBIT,	"knife_karambit" },
 	{ WEAPON_KNIFE_FLIP,		"knife_flip" },
@@ -1432,6 +1433,18 @@ bool CWeaponCSBase::DefaultDeploy( char *szViewModel, char *szWeaponModel, int i
 	m_iIronSightMode = IronSight_viewmodel_is_deploying;
 #endif //IRONSIGHT
 
+	// Note: only arms race (gun game) knives change their bodygroup to indicate their team.
+	if ( GetCSWeaponID() == WEAPON_KNIFE_GG )
+	{
+		int bodyPartID = (pOwner->GetTeamNumber() == TEAM_TERRORIST) ? 0 : 1;
+		//world model
+		CBaseWeaponWorldModel *pWorldModel = GetWeaponWorldModel();
+		if ( pWorldModel )
+			pWorldModel->SetBodygroup( 0, bodyPartID );
+		else
+			SetBodygroup( 0, bodyPartID );
+	}
+
 	return true;
 }
 
@@ -1661,7 +1674,22 @@ void CWeaponCSBase::Drop(const Vector &vecVelocity)
 
 	FallInit();
 
-	SetTouch(&CWeaponCSBase::DefaultTouch);
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	{
+		// Don't allow non-c4 weapon pickups in gun game progressive mode
+		if ( !IsA( WEAPON_C4 ) )
+		{
+			SetTouch( NULL );
+		}
+		else
+		{
+			SetTouch( &CWeaponCSBase::DefaultTouch );
+		}
+	}
+	else
+	{
+		SetTouch( &CWeaponCSBase::DefaultTouch );
+	}
 
 	IPhysicsObject *pObj = VPhysicsGetObject();
 	if ( pObj != NULL )

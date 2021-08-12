@@ -135,7 +135,7 @@ ConVar bot_freeze( "bot_freeze", "0", FCVAR_CHEAT );
 ConVar bot_crouch( "bot_crouch", "0", FCVAR_CHEAT );
 ConVar bot_mimic_yaw_offset( "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
 
-ConVar sv_legacy_grenade_damage( "sv_legacy_grenade_damage", "0", FCVAR_REPLICATED, "Enable to replicate grenade damage behavior of the original Counter-Strike Source game." );
+ConVar gg_knife_kill_demotes( "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
 
 extern ConVar mp_autokick;
 extern ConVar mp_holiday_nogifts;
@@ -448,6 +448,8 @@ IMPLEMENT_SERVERCLASS_ST( CCSPlayer, DT_CSPlayer )
 
 	SendPropBool( SENDINFO( m_bResumeZoom ) ),
 	SendPropBool( SENDINFO( m_bHasMovedSinceSpawn ) ),
+	SendPropBool( SENDINFO( m_bMadeFinalGunGameProgressiveKill ) ),
+	SendPropInt( SENDINFO( m_iGunGameProgressiveWeaponIndex ), 32, SPROP_UNSIGNED | SPROP_CHANGES_OFTEN ),
 	SendPropFloat( SENDINFO( m_fImmuneToDamageTime ) ),
 	SendPropBool( SENDINFO( m_bImmunity ) ),
 	SendPropInt( SENDINFO( m_iLastZoom ), 8, SPROP_UNSIGNED ),
@@ -534,6 +536,9 @@ CCSPlayer::CCSPlayer()
 	UseClientSideAnimation();
 	m_numRoundsSurvived = 0;
 
+	m_isCurrentGunGameLeader = false;
+	m_isCurrentGunGameTeamLeader = false;
+
 	m_iLastWeaponFireUsercmd = 0;
 	m_iAddonBits = 0;
 	m_bEscaped = false;
@@ -550,6 +555,8 @@ CCSPlayer::CCSPlayer()
 
 	m_pCurStateInfo = NULL;	// no state yet
 	m_iThrowGrenadeCounter = 0;
+
+	m_bIsSpawning = false;
 
 	m_lifeState = LIFE_DEAD; // Start "dead".
 	m_bInBombZone = false;
@@ -641,6 +648,10 @@ CCSPlayer::CCSPlayer()
 	m_vLastHitLocationObjectSpace = Vector(0,0,0);
 
 	m_wasNotKilledNaturally = false;
+
+	m_iGunGameProgressiveWeaponIndex = 0;
+	m_bMadeFinalGunGameProgressiveKill = false;
+	m_LastDamageType = 0;
 
 	m_fImmuneToDamageTime = 0.0f;
 	m_bImmunity = false;
@@ -884,6 +895,11 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "HealthShot.Success" );
 	PrecacheScriptSound( "Player.Respawn" );
 
+	PrecacheScriptSound( "UI.ArmsRace.BecomeMatchLeader" );
+	PrecacheScriptSound( "UI.ArmsRace.BecomeTeamLeader" );
+	PrecacheScriptSound( "UI.ArmsRace.Demoted" );
+	PrecacheScriptSound( "UI.ArmsRace.LevelUp" );
+
 	PrecacheScriptSound( "Deathmatch.Kill" );
 
 	// CS Bot sounds
@@ -1079,17 +1095,28 @@ void CCSPlayer::InitialSpawn( void )
 
 	State_Enter( STATE_WELCOME );
 
-	//=============================================================================
-	// HPE_BEGIN:
 	// [tj] We reset the stats at the beginning of the map (including domination tracking)
-	//=============================================================================
-	 
 	CCS_GameStats.ResetPlayerStats(this);
 	RemoveNemesisRelationships();
-	 
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
+
+	// for late joiners, we want to give them a fighting chance in gun game so, give them the lowest level reached by a player already
+	int nMinWep = 0;
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+		if ( pPlayer )
+		{
+			int nCurWep = pPlayer->GetPlayerGunGameWeaponIndex();
+			if ( nCurWep < nMinWep )
+				nMinWep = nCurWep;
+		}
+	}
+
+	if ( nMinWep > 0 )
+	{
+		// +1 because when they select a team, we reduce their level by 1
+		m_iGunGameProgressiveWeaponIndex = nMinWep + 1;
+	}
 	
 }
 
@@ -1651,7 +1678,26 @@ void CCSPlayer::GiveDefaultItems()
 
 		m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
 		return;
-	}	
+	}
+
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	{
+		// Single Player Progressive Gun Game, so give the current weapon
+		GiveCurrentProgressiveGunGameWeapon();
+
+		// Give each player the knife as well if they don't have it already
+		if ( !Weapon_GetSlot( WEAPON_SLOT_KNIFE ) )
+		{
+			int thisWeaponID = CSGameRules()->GetCurrentGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
+
+			if ( thisWeaponID != WEAPON_KNIFE_GG )
+			{
+				GiveNamedItem( pchTeamKnifeName );
+			}
+		}
+
+		return;
+	}
 	
 	CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
@@ -1957,7 +2003,7 @@ int CCSPlayer::GetPercentageOfEnemyTeamKilled()
 void CCSPlayer::HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCSBase* pAttackerWeapon )
 {
 	if ( pAttackerWeapon && 
-		pAttackerWeapon->IsA( WEAPON_KNIFE ) )
+		 CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
 	{
 		// if they were out of ammo in their primary and secondary AND had a primary or secondary, log as an out of ammo knife kill
 
@@ -2016,6 +2062,23 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	{
 		CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( info.GetWeapon() );	// this can be NULL if the kill is by HE/molly/impact/etc. (inflictor is non-NULL and points to grenade then)
 
+		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && gg_knife_kill_demotes.GetBool() )
+		{
+			if ( pAttackerWeapon && CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
+			{
+				if ( IsOtherEnemy( pAttackerPlayer->entindex() ) )	// Don't demote a team member
+				{
+					// Killed by a knife, so drop one weapon class
+					SubtractProgressiveWeaponIndex();
+
+					CRecipientFilter filter;
+					filter.AddRecipient( this );
+					filter.MakeReliable();
+					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Hint_lost_a_level", pAttackerPlayer->GetPlayerName() );
+				}
+			}
+		}
+
 		// killed by a taser?
 		if ( pAttackerWeapon && pAttackerWeapon->IsA( WEAPON_TASER ) )
 		{
@@ -2024,6 +2087,9 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 
 		HandleOutOfAmmoKnifeKills( pAttackerPlayer, pAttackerWeapon );
 	}
+
+	// if we died from killing ourself, check if we should lose a weapon in progressive
+	DecrementProgressiveWeaponFromSuicide();
 
 	//Only count the drop if it was not friendly fire
 	DropWeapons(true, !friendlyFire);
@@ -2039,11 +2105,11 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	m_bNightVisionOn = false;
 
 	// [dwenger] Added for fun-fact support
-
 	m_bPickedUpDefuser = false;
 	m_bDefusedWithPickedUpKit = false;
 	m_bPickedUpWeapon = false;
 	m_bAttemptedDefusal = false;
+	m_bIsSpawning = false;
 
 	m_nPreferredGrenadeDrop = 0;
 
@@ -2100,6 +2166,18 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	// TODO - move this code somewhere else more MVP related
 	bool roundWasAlreadyWon = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 	bool roundIsWonNow = CSGameRules()->CheckWinConditions();
+
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	{
+		if ( pAttacker != this || !IsAbleToInstantRespawn() )
+		{
+			// Re-evaluate end-of-gun-game when a player is killed
+			if ( roundIsWonNow )
+			{
+				m_bMadeFinalGunGameProgressiveKill = false;
+			}
+		}
+	}
 
 	if ( !roundWasAlreadyWon && roundIsWonNow )
 	{
@@ -2163,8 +2241,242 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 {
 	BaseClass::Event_KilledOther(pVictim, info);
+
+	if ( !CSGameRules() )
+		return;
+
+	CCSPlayer *pCSVictim = ToCSPlayer( pVictim );
+	CCSPlayer *pCSAttacker = ToCSPlayer( info.GetAttacker() );
+	if ( pCSVictim == pCSAttacker )
+	{
+		// Bail if this was a suicide
+		return;
+	}
+
+	if ( GetTeamNumber() == pVictim->GetTeamNumber() && !IsOtherEnemy( pCSVictim ) && pVictim != pCSAttacker )
+	{
+		UpdateTeamLeaderPlaySound( pCSAttacker->GetTeamNumber() );
+	}
+	else // on a different team from the attacker
+	{
+		// Killed an enemy
+		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE && pCSVictim && pCSAttacker )
+		{
+			if ( !IsControllingBot() )
+			{
+				m_iNumGunGameKillsWithCurrentWeapon++;
+			}
+
+			IGameEvent * event = gameeventmanager->CreateEvent( "gg_killed_enemy" );
+
+			if ( event )
+			{
+				event->SetInt("victimid", pCSVictim->GetPlayerInfo()->GetUserID() );
+				event->SetInt("attackerid", pCSAttacker->GetPlayerInfo()->GetUserID() );
+				if ( pCSVictim->GetDeathFlags() & CS_DEATH_DOMINATION )
+				{
+					event->SetInt( "dominated", 1 );
+				}
+				else if ( pCSVictim->GetDeathFlags() & CS_DEATH_REVENGE )
+				{
+					event->SetInt( "revenge", 1 );
+				}
+
+				gameeventmanager->FireEvent( event );
+
+			}
+
+			bool bKilledLeader = false;
+			//bool bUpgradedWeapon = false;
+
+			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+			{
+				if ( pCSVictim != pCSAttacker )
+				{
+					// Test for end of round
+					if ( CSGameRules()->IsFinalGunGameProgressiveWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+					{
+						// Determine if current # kills with this weapon == # kills necessary to level up the weapon
+						if ( m_iNumGunGameKillsWithCurrentWeapon == CSGameRules()->GetGunGameNumKillsRequiredForWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+						{
+							// Made the proper number of kills with the final weapon so record this fact
+							m_bMadeFinalGunGameProgressiveKill = true;
+						}
+					}
+					else
+					{
+						int nOtherTeam = pCSVictim->GetTeamNumber();
+						bool bIsCurrentLeader = entindex() == GetGlobalTeam( GetTeamNumber() )->GetGGLeader( GetTeamNumber() );
+						bKilledLeader = pCSVictim->entindex() == GetGlobalTeam( nOtherTeam )->GetGGLeader( nOtherTeam );
+						// send e message that you killed the enemy leader
+						if ( bKilledLeader && !bIsCurrentLeader )
+							ClientPrint( this, HUD_PRINTCENTER, "#Player_Killed_Enemy_Leader" );
+
+						bool bWithKnife = false;
+						if ( pCSAttacker == this )
+						{
+							CWeaponCSBase* pAttackerWeapon = dynamic_cast< CWeaponCSBase * >( GetActiveWeapon() );
+							if ( pAttackerWeapon && CSLoadout()->IsKnife( pAttackerWeapon->GetCSWeaponID() ) )
+								bWithKnife = true;
+						}
+						
+						// Determine if current # kills with this weapon == # kills necessary to level up the weapon
+						if ( bWithKnife || (!bIsCurrentLeader && bKilledLeader) || m_iNumGunGameKillsWithCurrentWeapon == CSGameRules()->GetGunGameNumKillsRequiredForWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+						{
+							// Reset kill count with respect to new weapon
+							m_iNumGunGameKillsWithCurrentWeapon = 0;
+
+							CSingleUserRecipientFilter filter( this );
+							//bUpgradedWeapon = true;
+
+							// emit the level up sound here because emily wants them
+							// to overlap with the leader acquisition sound
+							EmitSound( filter, entindex(), "UI.ArmsRace.LevelUp" );
+
+							// Single Player Progressive Gun Game, so give the next weapon
+							GiveNextProgressiveGunGameWeapon();
+
+							// Alert everyone that this player has the final ggp weapon
+							if ( CSGameRules()->IsFinalGunGameProgressiveWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() ) )
+							{
+								IGameEvent * eventGGFinalWeap = gameeventmanager->CreateEvent( "gg_final_weapon_achieved" );
+								
+								if ( eventGGFinalWeap )
+								{
+									//CCSPlayer *pCSAchiever = ( CCSPlayer* )( info.GetAttacker() );
+
+									eventGGFinalWeap->SetInt("playerid", pCSAttacker ? pCSAttacker->GetPlayerInfo()->GetUserID() : -1 );
+			
+									gameeventmanager->FireEvent( eventGGFinalWeap );
+
+									CRecipientFilter filterKnifeLevelNotification;
+									for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+									{
+										CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+
+										if ( pPlayer && ( pPlayer->GetTeamNumber() == TEAM_SPECTATOR || pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST ) )
+										{
+											filterKnifeLevelNotification.AddRecipient( pPlayer );
+										}
+									}
+									filterKnifeLevelNotification.MakeReliable();
+									UTIL_ClientPrintFilter( filterKnifeLevelNotification, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Knife_Level", pCSAttacker->GetPlayerName() );
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if ( this == pCSAttacker )
+			{
+				// force a sort right now
+				GetGlobalTeam( GetTeamNumber() )->DetermineGGLeaderAndSort();
+
+				UpdateTeamLeaderPlaySound( GetTeamNumber() );
+			}
+		}
+	}
 }
 
+void CCSPlayer::GiveCurrentProgressiveGunGameWeapon( void )
+{
+	int currentWeaponID = CSGameRules()->GetCurrentGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
+
+	if ( currentWeaponID != -1 )
+	{
+		// Drop the current pistol
+		CBaseCombatWeapon *pWeapon;
+
+		pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+		DestroyWeapon( pWeapon );
+
+		// Drop the current rifle
+		pWeapon = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+		DestroyWeapon( pWeapon );
+
+		// Assign the weapon
+		GiveWeaponFromID( currentWeaponID );
+	}
+
+	// Tell game rules to recalculate the current highest gun game index
+	CSGameRules()->CalculateMaxGunGameProgressiveWeaponIndex();
+}
+
+void CCSPlayer::GiveNextProgressiveGunGameWeapon( void )
+{
+	int nextWeaponID = CSGameRules()->GetNextGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
+
+	if ( nextWeaponID != -1 )
+	{
+		// Assign the next weapon to use
+		m_iGunGameProgressiveWeaponIndex++;
+
+		// Drop the current pistol
+		CBaseCombatWeapon *pWeapon;
+		
+		pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+		DestroyWeapon( pWeapon );
+
+		// Drop the current rifle
+		pWeapon = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+		DestroyWeapon( pWeapon );
+
+		if ( CSLoadout()->IsKnife( CSWeaponID(nextWeaponID) ) )
+		{
+			// Drop the knife so that when we re-give it it will be primary
+			pWeapon = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
+			DestroyWeapon( pWeapon );
+		}
+
+		// Assign the new weapon
+		GiveWeaponFromID( nextWeaponID );
+
+		if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+		{
+			IGameEvent *event = gameeventmanager->CreateEvent( "ggprogressive_player_levelup" );
+			if ( event )
+			{
+				event->SetInt( "userid", GetUserID() );
+
+				gameeventmanager->FireEvent( event );
+			}
+		}
+
+		// Tell game rules to recalculate the current highest gun game index
+		CSGameRules()->CalculateMaxGunGameProgressiveWeaponIndex();
+	}
+}
+
+void CCSPlayer::SubtractProgressiveWeaponIndex( void )
+{
+	int previousWeaponID = CSGameRules()->GetPreviousGunGameWeapon( m_iGunGameProgressiveWeaponIndex, GetTeamNumber() );
+
+	if ( previousWeaponID != -1 )
+	{
+		// Assign the previous weapon to use
+		m_iGunGameProgressiveWeaponIndex--;
+		// clear the number of kills with the current weapon
+		m_iNumGunGameKillsWithCurrentWeapon = 0;
+
+		// Destroy the gold knife if we are on that level so we get the regular knife when we spawn
+		CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
+		if ( pWeapon && pWeapon->GetWeaponID() == WEAPON_KNIFE_GG )
+		{
+			DestroyWeapon( pWeapon );
+		}
+	}
+}
+
+void CCSPlayer::GiveWeaponFromID( int nWeaponID )
+{
+	const char *pchClassName = WeaponIdAsString( (CSWeaponID) nWeaponID );
+
+	if ( !pchClassName )
+		return;
+
+	GiveNamedItem( pchClassName );
+}
 
 void CCSPlayer::DeathSound( const CTakeDamageInfo &info )
 {
@@ -2537,6 +2849,10 @@ void CCSPlayer::PostThink()
 {
 	BaseClass::PostThink();
 
+	// if we're spawning, clear it
+	if ( m_bIsSpawning )
+		m_bIsSpawning = false;
+
 	if ( IsLookingAtWeapon() )
 	{
 		if ( gpGlobals->curtime >= m_flLookWeaponEndTime )
@@ -2877,6 +3193,8 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	float flDamage = info.GetDamage();
 
 	bool bFriendlyFireEnabled = CSGameRules()->IsFriendlyFireOn();
+
+	m_LastDamageType = info.GetDamageType();
 
 	CSGameRules()->PlayerTookDamage(this, info );
 
@@ -3936,6 +4254,22 @@ void CCSPlayer::ObserverRoundRespawn()
 
 void CCSPlayer::RoundRespawn()
 {
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	{
+		Reset();
+
+		// Reinitialize some gun-game progressive variables
+
+		m_bMadeFinalGunGameProgressiveKill = false;
+		m_iNumGunGameKillsWithCurrentWeapon = 0;
+
+		// Clear out weapons in progressive mode
+		m_iGunGameProgressiveWeaponIndex = 0;
+
+		// Ensure player has the default items
+		GiveDefaultItems();
+	}
+
 	//MIKETODO: menus
 	//if ( m_iMenu != Menu_ChooseAppearance )
 	{
@@ -6887,14 +7221,14 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		else if ( GetTeamNumber() == TEAM_CT )
 		{
 			pSpot = g_pLastCTSpawn;
-// 			if ( CSGameRules()->IsPlayingGunGameProgressive() )
-// 			{
-// 				if ( SelectSpawnSpot( "info_armsrace_counterterrorist", pSpot ) )
-// 				{
-// 					g_pLastCTSpawn = pSpot;
-// 					goto ReturnSpot;
-// 				}
-// 			}
+			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+ 			{
+ 				if ( SelectSpawnSpot( "info_armsrace_counterterrorist", pSpot ) )
+ 				{
+ 					g_pLastCTSpawn = pSpot;
+ 					goto ReturnSpot;
+ 				}
+ 			}
 
 			if ( SelectSpawnSpot( "info_player_counterterrorist", pSpot ) )
 			{
@@ -6909,14 +7243,14 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		{
 			pSpot = g_pLastTerroristSpawn;
 			
-// 			if ( CSGameRules()->IsPlayingGunGameProgressive() )
-// 			{
-// 				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
-// 				{
-// 					g_pLastCTSpawn = pSpot;
-// 					goto ReturnSpot;
-// 				}
-// 			}
+ 			if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+ 			{
+ 				if ( SelectSpawnSpot( "info_armsrace_terrorist", pSpot ) )
+ 				{
+ 					g_pLastCTSpawn = pSpot;
+ 					goto ReturnSpot;
+ 				}
+ 			}
 
 			const char* szTSpawnEntName = "info_player_terrorist";
 
@@ -10377,7 +10711,7 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			if (pAttacker->m_killWeapons.Find(attackerWeaponId) == -1)
 			{
 				pAttacker->m_killWeapons.AddToTail(attackerWeaponId);
-				if (pAttacker->m_killWeapons.Count() >= AchievementConsts::KillsWithMultipleGuns_MinWeapons)
+				if (pAttacker->m_killWeapons.Count() >= AchievementConsts::KillsWithMultipleGuns_MinWeapons && CSGameRules()->GetGamemode() != GameModes::ARMS_RACE)
 				{
 					pAttacker->AwardAchievement(CSKillsWithMultipleGuns);					
 				}
@@ -10688,6 +11022,9 @@ void CCSPlayer::OnPreResetRound()
 		}
 	}
 
+	m_isCurrentGunGameLeader = false;
+	m_isCurrentGunGameTeamLeader = false;
+
 	if ( m_switchTeamsOnNextRoundReset )
 	{
 		m_switchTeamsOnNextRoundReset = false;
@@ -10789,25 +11126,113 @@ bool CCSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 	return m_bPlayerDominatingMe.Get( iPlayerIndex );
 }
 
-//=============================================================================
-// HPE_BEGIN:
+//--------------------------------------------------------------------------------------------------------
+bool CCSPlayer::UpdateTeamLeaderPlaySound( int nTeam )
+{
+	if ( CSGameRules()->GetGamemode() != GameModes::ARMS_RACE )
+		return false;
+
+	bool bPlayedSound = false;
+
+	//GetGGLeader( int nTeam )
+	int nOtherTeam = (nTeam == TEAM_CT) ? TEAM_TERRORIST : TEAM_CT;
+	int nLeaderUserID = -1;
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+		if ( !pPlayer || pPlayer->GetTeamNumber() != nTeam )
+			continue;
+
+		if ( pPlayer->entindex() == GetGlobalTeam( pPlayer->GetTeamNumber() )->GetGGLeader( pPlayer->GetTeamNumber() ) )
+		{
+			//if we made it this far, we are the current leader
+			nLeaderUserID = pPlayer->GetUserID();
+			break;
+		}
+	}
+
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
+		if ( !pPlayer || pPlayer->GetTeamNumber() != nTeam )
+			continue;
+
+		if ( nLeaderUserID == pPlayer->GetUserID() )
+		{
+			bool bIsMatchLeader = false;
+			CCSPlayer *pOtherLeader = ToCSPlayer( UTIL_PlayerByIndex( GetGlobalTeam( nOtherTeam )->GetGGLeader( nOtherTeam ) ) );
+			int nOtherIndex = pOtherLeader ? pOtherLeader->m_iGunGameProgressiveWeaponIndex : -1;
+			// if our GG index is higher than the other team's leader, we are the match leader
+			if ( pPlayer->m_iGunGameProgressiveWeaponIndex > nOtherIndex )
+			{
+				// check if we aren't already the match leader and if this is ane
+				if ( pPlayer->m_isCurrentGunGameLeader == false )
+				{
+					ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Gun_Game_Leader" );
+					CSingleUserRecipientFilter filter( pPlayer );
+					EmitSound( filter, pPlayer->entindex(), "UI.ArmsRace.BecomeMatchLeader" );
+					bPlayedSound = true;
+				}
+
+				// they are the leader
+				pPlayer->m_isCurrentGunGameLeader = true;
+			
+				// now kick everyone else off
+				int nLeaderIndex = pPlayer->entindex();
+				for ( int j = 1; j <= MAX_PLAYERS; j++ )
+				{
+					CCSPlayer *pNonLeader = ToCSPlayer( UTIL_PlayerByIndex( j ) );
+					if ( !pNonLeader )
+						continue;
+
+					if ( pNonLeader->entindex() != nLeaderIndex )
+						pNonLeader->m_isCurrentGunGameLeader = false;
+				}
+			}
+
+			// if we aren't the match leader and we just became the team lader, send them a message, hurrah!
+			if ( !bIsMatchLeader && pPlayer->m_isCurrentGunGameTeamLeader == false )
+			{
+				ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Gun_Game_Team_Leader" );
+				CSingleUserRecipientFilter filter( pPlayer );
+				EmitSound( filter, pPlayer->entindex(), "UI.ArmsRace.BecomeTeamLeader" );
+				bPlayedSound = true;
+			}
+
+			pPlayer->m_isCurrentGunGameTeamLeader = true;
+		}
+		else
+		{
+			if ( pPlayer->m_isCurrentGunGameTeamLeader == true && nLeaderUserID != pPlayer->GetUserID() )
+			{
+				if ( CCSPlayer *pNewLeader = ( ( nLeaderUserID != -1 )
+					? ToCSPlayer( UTIL_PlayerByUserId( nLeaderUserID ) )
+					: NULL ) )
+				{	// If we cannot resolve the name of the new leader then print no message, but still play the sound
+					ClientPrint( pPlayer, HUD_PRINTCENTER, "#Cstrike_TitlesTXT_Stolen_Leader", pNewLeader->GetPlayerName() );
+				}
+
+				CSingleUserRecipientFilter filter( pPlayer );
+				EmitSound( filter, pPlayer->entindex(), "UI.ArmsRace.Demoted" );
+				bPlayedSound = true;
+			}
+
+			pPlayer->m_isCurrentGunGameTeamLeader = false;
+		}
+	}
+
+	return bPlayedSound;
+}
+
 // [menglish] MVP functions
-//=============================================================================
- 
 void CCSPlayer::IncrementNumMVPs( CSMvpReason_t mvpReason )
 {
-	//=============================================================================
-	// HPE_BEGIN:
 	// [Forrest] Allow MVP to be turned off for a server
-	//=============================================================================
 	if ( sv_nomvp.GetBool() )
 	{
 		Msg( "Round MVP disabled: sv_nomvp is set.\n" );
 		return;
 	}
-	//=============================================================================
-	// HPE_END
-	//=============================================================================
 
 	m_iMVPs++;
 	CCS_GameStats.Event_MVPEarned( this );
@@ -10835,10 +11260,6 @@ int CCSPlayer::GetNumMVPs()
 {
 	return m_iMVPs;
 }
- 
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 //-----------------------------------------------------------------------------
 // Purpose: Removes all nemesis relationships between this player and others
@@ -10877,6 +11298,26 @@ void CCSPlayer::CommitSuicide( const Vector &vecForce, bool bExplode /*= false*/
 {
 	m_wasNotKilledNaturally = true;
 	BaseClass::CommitSuicide(vecForce, bExplode, bForce);
+}
+
+void CCSPlayer::DecrementProgressiveWeaponFromSuicide( void )
+{
+	if ( CSGameRules()->GetGamemode() == GameModes::ARMS_RACE )
+	{
+		if ( (m_LastDamageType & DMG_FALL) || m_wasNotKilledNaturally ) // Did we die from falling or changing teams?
+		{
+			// Reset kill count with respect to new weapon
+			m_iNumGunGameKillsWithCurrentWeapon = 0;
+
+			// Suicided, so drop one weapon class
+			SubtractProgressiveWeaponIndex();
+
+			CRecipientFilter filter;
+			filter.AddRecipient( this );
+			filter.MakeReliable();
+			UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#Cstrike_TitlesTXT_Hint_lost_a_level_generic" );
+		}
+	}
 }
 
 int CCSPlayer::GetNumEnemyDamagers()
@@ -10927,10 +11368,6 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 
 	return BaseClass::ShouldCollide( collisionGroup, contentsMask );
 }
-
-//=============================================================================
-// HPE_END
-//=============================================================================
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 void CCSPlayer::SavePreControlData()
