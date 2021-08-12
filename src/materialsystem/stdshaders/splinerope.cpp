@@ -43,6 +43,12 @@ BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
 
 	SHADER_FALLBACK
 	{
+		if ( !(g_pHardwareConfig->SupportsPixelShaders_2_0() && g_pHardwareConfig->SupportsVertexShaders_2_0()) ||
+				(g_pHardwareConfig->GetDXSupportLevel() < 90) )
+		{
+			return "Cable_DX8";
+		}
+
 		return 0;
 	}
 
