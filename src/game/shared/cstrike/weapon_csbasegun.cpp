@@ -100,7 +100,8 @@ void CWeaponCSBaseGun::ItemPostFrame()
 
 	//GOOSEMAN : Return zoom level back to previous zoom level before we fired a shot. This is used only for the AWP.
 	// And Scout.
-	if ( (m_flNextPrimaryAttack <= gpGlobals->curtime) && (pPlayer->m_bResumeZoom == TRUE) )
+	if ( (m_flNextPrimaryAttack <= gpGlobals->curtime) && (pPlayer->m_bResumeZoom == TRUE)
+		 && IsKindOf( WEAPONTYPE_SNIPER_RIFLE ) ) // only need to re-zoom the zoom when there's a zoom to re-zoom to. who knew?
 	{
 		pPlayer->m_bResumeZoom = false;
 		
