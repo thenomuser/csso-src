@@ -49,6 +49,7 @@ struct VertexLitGeneric_DX9_Vars_t
 	int m_nBumpTransform;
 	int m_nEnvmapContrast;
 	int m_nEnvmapSaturation;
+	int m_nEnvmapOptional;
 	int m_nAlphaTestReference;
 	int m_nVertexAlphaTest;
 	int m_nFlashlightNoLambert;

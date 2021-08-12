@@ -31,7 +31,7 @@ BEGIN_SHADER( UnlitGeneric_DX6,
 		SHADER_PARAM( ENVMAPMASKFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( ENVMAPMASKSCALE, SHADER_PARAM_TYPE_FLOAT, "1", "envmap mask scale" )
 		SHADER_PARAM( ENVMAPTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "envmap tint" )
-		SHADER_PARAM( ENVMAPOPTIONAL, SHADER_PARAM_TYPE_BOOL, "0", "Make the envmap only apply to dx9 and higher hardware" )
+		SHADER_PARAM( ENVMAPOPTIONAL, SHADER_PARAM_TYPE_INTEGER, "0", "Do specular pass only on dxlevel or higher (ie.80, 81, 90)" )
 		SHADER_PARAM( ALPHATESTREFERENCE, SHADER_PARAM_TYPE_FLOAT, "0.7", "" )	
 	END_SHADER_PARAMS
 
@@ -57,7 +57,7 @@ BEGIN_SHADER( UnlitGeneric_DX6,
 		}
 
 		// Get rid of the envmap if it's optional for this dx level.
-		if( params[ENVMAPOPTIONAL]->IsDefined() && params[ENVMAPOPTIONAL]->GetIntValue() )
+		if( params[ENVMAPOPTIONAL]->IsDefined() && params[ENVMAPOPTIONAL]->GetIntValue() && (params[ENVMAPOPTIONAL]->GetIntValue() > g_pHardwareConfig->GetDXSupportLevel()) )
 		{
 			params[ENVMAP]->SetUndefined();
 		}

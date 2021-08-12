@@ -2137,7 +2137,7 @@ void CBaseVSShader::InitParamsUnlitGeneric_DX8(
 	}
 
 	// Get rid of the envmap if it's optional for this dx level.
-	if( envmapOptionalVar >= 0 && params[envmapOptionalVar]->IsDefined() && params[envmapOptionalVar]->GetIntValue() )
+	if( envmapOptionalVar >= 0 && params[envmapOptionalVar]->IsDefined() && params[envmapOptionalVar]->GetIntValue() && (params[envmapOptionalVar]->GetIntValue() > g_pHardwareConfig->GetDXSupportLevel()) )
 	{
 		if (envmapVar >= 0)
 		{

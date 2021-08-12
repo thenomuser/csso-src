@@ -38,7 +38,7 @@ BEGIN_VS_SHADER( VertexLitGeneric_DX8,
 		SHADER_PARAM( BUMPTRANSFORM, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "$bumpmap texcoord transform" )
 		SHADER_PARAM( ENVMAPCONTRAST, SHADER_PARAM_TYPE_FLOAT, "0.0", "contrast 0 == normal 1 == color*color" )
 		SHADER_PARAM( ENVMAPSATURATION, SHADER_PARAM_TYPE_FLOAT, "1.0", "saturation 0 == greyscale 1 == normal" )
-		SHADER_PARAM( ENVMAPOPTIONAL, SHADER_PARAM_TYPE_BOOL, "0", "Make the envmap only apply to dx9 and higher hardware" )
+		SHADER_PARAM( ENVMAPOPTIONAL, SHADER_PARAM_TYPE_INTEGER, "0", "Do specular pass only on dxlevel or higher (ie.80, 81, 90)" )
 		SHADER_PARAM( FORCEBUMP, SHADER_PARAM_TYPE_BOOL, "0", "0 == Do bumpmapping if the card says it can handle it. 1 == Always do bumpmapping." )
 		SHADER_PARAM( ALPHATESTREFERENCE, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )	
 
@@ -242,7 +242,7 @@ BEGIN_VS_SHADER( VertexLitGeneric_DX8,
 		SET_FLAGS2( MATERIAL_VAR2_LIGHTING_VERTEX_LIT );
 
 		// Get rid of the envmap if it's optional for this dx level.
-		if( params[ENVMAPOPTIONAL]->IsDefined() && params[ENVMAPOPTIONAL]->GetIntValue() )
+		if( params[ENVMAPOPTIONAL]->IsDefined() && params[ENVMAPOPTIONAL]->GetIntValue() && (params[ENVMAPOPTIONAL]->GetIntValue() > g_pHardwareConfig->GetDXSupportLevel()) )
 		{
 			params[ENVMAP]->SetUndefined();
 		}
