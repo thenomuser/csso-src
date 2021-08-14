@@ -246,6 +246,7 @@ IMPLEMENT_SERVERCLASS_ST(CBaseAnimating, DT_BaseAnimating)
 
 	SendPropInt( SENDINFO( m_bClientSideAnimation ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bClientSideFrameReset ), 1, SPROP_UNSIGNED ),
+	SendPropBool( SENDINFO( m_bClientSideRagdoll ) ),
 
 	SendPropInt( SENDINFO( m_nNewSequenceParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_nResetEventsParity ), EF_PARITY_BITS, SPROP_UNSIGNED ),
@@ -846,7 +847,7 @@ bool CBaseAnimating::BecomeRagdollOnClient( const Vector &force )
 	{
 		VPhysicsDestroyObject();
 		AddSolidFlags( FSOLID_NOT_SOLID );
-		m_nRenderFX = kRenderFxRagdoll;
+		m_bClientSideRagdoll = true;
 		
 		// Have to do this dance because m_vecForce is a network vector
 		// and can't be sent to ClampRagdollForce as a Vector *
@@ -881,7 +882,7 @@ bool CBaseAnimating::BecomeRagdollOnClient( const Vector &force )
 
 bool CBaseAnimating::IsRagdoll()
 {
-	return ( m_nRenderFX == kRenderFxRagdoll ) ? true : false;
+	return m_bClientSideRagdoll;
 }
 
 bool CBaseAnimating::CanBecomeRagdoll( void ) 

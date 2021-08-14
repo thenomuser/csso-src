@@ -398,6 +398,8 @@ private:
 	bool				m_bResetSequenceInfoOnLoad; // true if a ResetSequenceInfo was queued up during dynamic load
 	float				m_flDissolveStartTime;
 
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_bClientSideRagdoll );
+
 	// was pev->frame
 	CNetworkVar( float, m_flCycle );
 	CNetworkVar( int, m_nSequence );	

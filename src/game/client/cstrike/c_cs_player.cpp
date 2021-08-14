@@ -704,7 +704,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 		{
 			bDissolveEntity = false;
 			// Make us a ragdoll..
-			m_nRenderFX = kRenderFxRagdoll;
+			m_bClientSideRagdoll = true;
 			Vector vRagdollOrigin = GetAbsOrigin(), vPlayerOrigin = pPlayer->GetAbsOrigin();
 
 			matrix3x4_t currentBones[ MAXSTUDIOBONES ];
@@ -870,7 +870,7 @@ void C_CSRagdoll::OnDataChanged( DataUpdateType_t type )
 		if ( !cl_ragdoll_physics_enable.GetInt() )
 		{
 			// Don't let it set us back to a ragdoll with data from the server.
-			m_nRenderFX = kRenderFxNone;
+			m_bClientSideRagdoll = false;
 		}
 	}
 }
@@ -2937,7 +2937,7 @@ ConVar clTaserShakeTimeTotal( "clTaserShakeTimeTotal", "7.0", 0, "time the taser
 
 void C_CSPlayer::HandleTaserAnimation()
 {
-	if ( m_bKilledByTaser )
+	if ( m_bClientSideRagdoll && m_bKilledByTaser )
 	{
 		if ( m_nextTaserShakeTime < gpGlobals->curtime )
 		{

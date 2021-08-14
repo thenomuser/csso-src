@@ -5005,6 +5005,8 @@ void CBasePlayer::Spawn( void )
 	int effects = GetEffects() & EF_NOSHADOW;
 	SetEffects( effects | EF_NOINTERP );
 
+	m_bClientSideRagdoll = false;
+
 	IncrementInterpolationFrame();
 
 	// Initialize the fog and postprocess controllers.

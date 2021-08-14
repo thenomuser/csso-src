@@ -6801,6 +6801,8 @@ void CAI_BaseNPC::NPCInit ( void )
 
 	m_flOriginalYaw = GetAbsAngles().y;
 
+	m_bClientSideRagdoll = false;
+
 	SetBlocksLOS( false );
 
 	SetGravity(1.0);	// Don't change

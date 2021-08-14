@@ -1334,6 +1334,7 @@ public:
 
 	// Interpolation says don't draw yet
 	bool							m_bReadyToDraw;
+	bool							m_bClientSideRagdoll;
 
 	// Should we be interpolating?
 	static bool						IsInterpolationEnabled();

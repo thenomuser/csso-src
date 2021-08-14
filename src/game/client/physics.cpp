@@ -673,6 +673,9 @@ void CCollisionEvent::Friction( IPhysicsObject *pObject, float energy, int surfa
 		
 	if ( pEntity  )
 	{
+		if ( pEntity->m_bClientSideRagdoll )
+			return;
+
 		friction_t *pFriction = g_Collisions.FindFriction( pEntity );
 
 		if ( (gpGlobals->maxClients > 1) && pFriction && pFriction->pObject) 

@@ -390,7 +390,6 @@ enum RenderFx_t
 	kRenderFxEnvRain,			// for environmental rendermode, make rain
 	kRenderFxEnvSnow,			//  "        "            "    , make snow
 	kRenderFxSpotlight,			// TEST CODE for experimental spotlight
-	kRenderFxRagdoll,			// HACKHACK: TEST CODE for signalling death of a ragdoll character
 	kRenderFxPulseFastWider,
 	kRenderFxMax
 };

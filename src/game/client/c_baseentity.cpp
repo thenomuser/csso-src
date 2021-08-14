@@ -939,6 +939,7 @@ C_BaseEntity::C_BaseEntity() :
 
 	// Assume drawing everything
 	m_bReadyToDraw = true;
+	m_bClientSideRagdoll = false;
 	m_flProxyRandomValue = 0.0f;
 
 	m_fBBoxVisFlags = 0;
@@ -2514,7 +2515,7 @@ void C_BaseEntity::PostDataUpdate( DataUpdateType_t updateType )
 	PREDICTION_TRACKVALUECHANGESCOPE_ENTITY( this, "postdataupdate" );
 
 	// NOTE: This *has* to happen first. Otherwise, Origin + angles may be wrong 
-	if ( m_nRenderFX == kRenderFxRagdoll && updateType == DATA_UPDATE_CREATED )
+	if ( m_bClientSideRagdoll && updateType == DATA_UPDATE_CREATED )
 	{
 		MoveToLastReceivedPosition( true );
 	}
@@ -2739,7 +2740,7 @@ void C_BaseEntity::OnStoreLastNetworkedValue()
 
 	// Kind of a hack, but we want to latch the actual networked value for origin/angles, not what's sitting in m_vecOrigin in the
 	//  ragdoll case where we don't copy it over in MoveToLastNetworkOrigin
-	if ( m_nRenderFX == kRenderFxRagdoll && GetPredictable() )
+	if ( m_bClientSideRagdoll && GetPredictable() )
 	{
 		bRestore = true;
 		savePos = GetLocalOrigin();
@@ -2996,7 +2997,7 @@ void C_BaseEntity::CreateLightEffects( void )
 
 void C_BaseEntity::MoveToLastReceivedPosition( bool force )
 {
-	if ( force || ( m_nRenderFX != kRenderFxRagdoll ) )
+	if ( force || ( !m_bClientSideRagdoll ) )
 	{
 		SetLocalOrigin( GetNetworkOrigin() );
 		SetLocalAngles( GetNetworkAngles() );

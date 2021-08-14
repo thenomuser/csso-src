@@ -195,6 +195,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_BaseAnimating, DT_BaseAnimating, CBaseAnimating)
 
 	RecvPropInt( RECVINFO( m_bClientSideAnimation )),
 	RecvPropInt( RECVINFO( m_bClientSideFrameReset )),
+	RecvPropBool( RECVINFO( m_bClientSideRagdoll )),
 
 	RecvPropInt( RECVINFO( m_nNewSequenceParity )),
 	RecvPropInt( RECVINFO( m_nResetEventsParity )),
@@ -4409,15 +4410,7 @@ bool C_BaseAnimating::Interpolate( float flCurrentTime )
 //-----------------------------------------------------------------------------
 bool C_BaseAnimating::IsRagdoll() const
 {
-	return m_pRagdoll && (m_nRenderFX == kRenderFxRagdoll);
-}
-
-//-----------------------------------------------------------------------------
-// returns true if we're currently being ragdolled
-//-----------------------------------------------------------------------------
-bool C_BaseAnimating::IsAboutToRagdoll() const
-{
-	return (m_nRenderFX == kRenderFxRagdoll);
+	return m_pRagdoll && m_bClientSideRagdoll;
 }
 
 
@@ -4755,7 +4748,7 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 		pRagdoll->AddEffects( EF_NOSHADOW );
 	}
 
-	pRagdoll->m_nRenderFX = kRenderFxRagdoll;
+	pRagdoll->m_bClientSideRagdoll = true;
 	pRagdoll->SetRenderMode( GetRenderMode() );
 	pRagdoll->SetRenderColor( GetRenderColor().r, GetRenderColor().g, GetRenderColor().b, GetRenderColor().a );
 
@@ -4929,19 +4922,19 @@ void C_BaseAnimating::OnDataChanged( DataUpdateType_t updateType )
 		}
 	}
 	// build a ragdoll if necessary
-	if ( m_nRenderFX == kRenderFxRagdoll && !m_builtRagdoll )
+	if ( m_bClientSideRagdoll && !m_builtRagdoll )
 	{
 		BecomeRagdollOnClient();
 	}
 
 	//HACKHACK!!!
-	if ( m_nRenderFX == kRenderFxRagdoll && m_builtRagdoll == true )
+	if ( m_bClientSideRagdoll && m_builtRagdoll == true )
 	{
 		if ( m_pRagdoll == NULL )
 			 AddEffects( EF_NODRAW );
 	}
-
-	if ( m_pRagdoll && m_nRenderFX != kRenderFxRagdoll )
+	
+	if ( m_pRagdoll && !m_bClientSideRagdoll || !m_bClientSideRagdoll && m_builtRagdoll )
 	{
 		ClearRagdoll();
 	}
@@ -5069,7 +5062,7 @@ void C_BaseAnimating::Simulate()
 	{
 		ResetLatched();
 	}
-	if ( GetSequence() != -1 && m_pRagdoll && ( m_nRenderFX != kRenderFxRagdoll ) )
+	if ( GetSequence() != -1 && m_pRagdoll && ( !m_bClientSideRagdoll ) )
 	{
 		ClearRagdoll();
 	}

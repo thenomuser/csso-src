@@ -307,7 +307,6 @@ public:
 
 	// returns true if we're currently being ragdolled
 	bool							IsRagdoll() const;
-	bool							IsAboutToRagdoll() const;
 	virtual C_BaseAnimating			*BecomeRagdollOnClient();
 	C_BaseAnimating					*CreateRagdollCopy();
 	bool							InitAsClientRagdoll( const matrix3x4_t *pDeltaBones0, const matrix3x4_t *pDeltaBones1, const matrix3x4_t *pCurrentBonePosition, float boneDt, bool bFixedConstraints=false );
