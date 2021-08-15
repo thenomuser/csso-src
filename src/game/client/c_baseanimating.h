@@ -216,7 +216,7 @@ public:
 	float	SetPoseParameter( CStudioHdr *pStudioHdr, int iParameter, float flValue );
 	inline float SetPoseParameter( int iParameter, float flValue ) { return SetPoseParameter( GetModelPtr(), iParameter, flValue ); }
 
-	float	GetPoseParameter( int iPoseParameter );
+	float	GetPoseParameter( int iParameter );
 
 	bool	GetPoseParameterRange( int iPoseParameter, float &minValue, float &maxValue );
 

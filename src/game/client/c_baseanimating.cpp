@@ -1391,20 +1391,22 @@ void C_BaseAnimating::GetBoneControllers(float controllers[MAXSTUDIOBONECTRLS])
 	}
 }
 
-float C_BaseAnimating::GetPoseParameter( int iPoseParameter )
+float C_BaseAnimating::GetPoseParameter( int iParameter )
 {
 	CStudioHdr *pStudioHdr = GetModelPtr();
 
-	if ( pStudioHdr == NULL )
+	if ( !pStudioHdr )
+	{
+		Assert(!"C_BaseAnimating::SetPoseParameter: model missing");
 		return 0.0f;
+	}
 
-	if ( pStudioHdr->GetNumPoseParameters() < iPoseParameter )
-		return 0.0f;
+	if ( iParameter >= 0 )
+	{
+		return Studio_GetPoseParameter( pStudioHdr, iParameter, m_flPoseParameter[ iParameter ] );
+	}
 
-	if ( iPoseParameter < 0 )
-		return 0.0f;
-
-	return m_flPoseParameter[iPoseParameter];
+	return 0.0f;
 }
 
 // FIXME: redundant?
