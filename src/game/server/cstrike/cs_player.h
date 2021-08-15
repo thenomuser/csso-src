@@ -789,18 +789,6 @@ public:
 	CNetworkVar( bool, m_bHasNightVision );		    // Does this player have night vision?
 	CNetworkVar( bool, m_bNightVisionOn );		    // Is the NightVision turned on ?
 
-    //=============================================================================
-    // HPE_BEGIN:
-    // [dwenger] Added for fun-fact support
-    //=============================================================================
-
-    //CNetworkVar( bool, m_bPickedUpDefuser );        // Did player pick up the defuser kit as opposed to buying it?
-    //CNetworkVar( bool, m_bDefusedWithPickedUpKit);  // Did player defuse the bomb with a picked-up defuse kit?
-
-    //=============================================================================
-    // HPE_END
-    //=============================================================================
-
 	float m_flLastRadarUpdateTime;
 
 	// last known navigation area of player - NULL if unknown

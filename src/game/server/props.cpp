@@ -2461,6 +2461,29 @@ BEGIN_DATADESC( CPhysicsProp )
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CPhysicsProp, DT_PhysicsProp )
+	//--------------------------------------------------------------------------------------------------------
+	// Datatable reduction
+	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
+	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),	
+	//SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+	//SendPropExclude( "DT_BaseAnimating", "m_nNewSequenceParity" ),
+	//SendPropExclude( "DT_BaseAnimating", "m_nResetEventsParity" ),
+	SendPropExclude( "DT_BaseAnimating", "m_nMuzzleFlashParity" ),
+	//SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
+	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
+	SendPropExclude( "DT_BaseFlex", "m_flexWeight" ),
+	SendPropExclude( "DT_BaseFlex", "m_blinktoggle" ),
+
+	// calc mins/maxs on the client, since we have all the info
+	//SendPropExclude( "DT_CollisionProperty", "m_vecMins" ),
+	//SendPropExclude( "DT_CollisionProperty", "m_vecMaxs" ),
+
+	//SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),
+#ifdef TERROR
+	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
+#endif
+	//--------------------------------------------------------------------------------------------------------
+
 	SendPropBool( SENDINFO( m_bAwake ) ),
 END_SEND_TABLE()
 

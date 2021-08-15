@@ -110,6 +110,7 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 		pProp->m_Type = (SendPropType)pSendTableProp->m_Type;
 		pProp->m_pVarName = COM_StringCopy( pSendTableProp->GetName() );
 		pProp->SetFlags( pSendTableProp->GetFlags() );
+		pProp->SetPriority( pSendTableProp->GetPriority() );
 
 		if ( CommandLine()->FindParm("-dti" ) && pSendTableProp->GetParentArrayPropName() )
 		{

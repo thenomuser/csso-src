@@ -487,10 +487,6 @@ public:
 	CNetworkVar( bool, m_bNightVisionOn );
 	CNetworkVar( bool, m_bHasNightVision );
 
-    // [dwenger] Added for fun-fact support
-    //CNetworkVar( bool, m_bPickedUpDefuser );
-    //CNetworkVar( bool, m_bDefusedWithPickedUpKit );
-
 	CNetworkVar( float, m_flVelocityModifier );
 	CNetworkVar( float, m_flGroundAccelLinearFracLastTime );
 
@@ -612,8 +608,6 @@ private:
 	bool	m_bHasShield;
 	bool	m_bShieldDrawn;
 #endif
-
-	Vector m_vecRagdollVelocity;
 
 	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
 
