@@ -1758,6 +1758,10 @@ void C_CSPlayer::CreateAddonModel( int i )
 		pEnt->SetSolid( SOLID_NONE );
 		pEnt->RemoveEFlags( EFL_USE_PARTITION_WHEN_NOT_SOLID );
 	}
+
+	int iHolsterstrapBodygroup = pEnt->FindBodygroupByName( "holsterstrap" );
+	if ( iHolsterstrapBodygroup != -1 )
+		pEnt->SetBodygroup( iHolsterstrapBodygroup, 1 );
 }
 
 //-----------------------------------------------------------------------------
