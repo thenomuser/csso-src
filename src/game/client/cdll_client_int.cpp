@@ -1717,6 +1717,7 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 		char buffer1[256];
 		sprintf( buffer1, "Map: %s", pMapName );
 		discordPresence.details = buffer1;
+		discordPresence.startTimestamp = startTimestamp;
 		//char buffer2[256];
 		//sprintf( buffer2, "Server: %s", engine->GetConnectedIP() ); -- test it later, for now its always "LAN"
 		//discordPresence.details = buffer2;
