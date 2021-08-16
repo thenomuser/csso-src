@@ -81,7 +81,7 @@ C_TEDynamicLight::~C_TEDynamicLight( void )
 }
 
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
-	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex )
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex, bool bNoStaticPropIllum )
 {
 	dlight_t *dl = effects->CL_AllocDlight( nLightIndex );
 	if ( !dl )
@@ -95,6 +95,8 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	dl->color.exponent	= exponent;
 	dl->die		= gpGlobals->curtime + time;
 	dl->decay	= decay;
+	if ( bNoStaticPropIllum )
+		dl->flags = DLIGHT_NO_STATIC_PROP_ILLUMINATION;
 
 	if ( ToolsEnabled() && clienttools->IsInRecordingMode() )
 	{
@@ -130,7 +132,7 @@ void C_TEDynamicLight::PostDataUpdate( DataUpdateType_t updateType )
 	VPROF( "C_TEDynamicLight::PostDataUpdate" );
 
 	CBroadcastRecipientFilter filter;
-	TE_DynamicLight( filter, 0.0f, &m_vecOrigin, r, g, b, exponent, m_fRadius, m_fTime, m_fDecay, LIGHT_INDEX_TE_DYNAMIC );
+	TE_DynamicLight( filter, 0.0f, &m_vecOrigin, r, g, b, exponent, m_fRadius, m_fTime, m_fDecay, LIGHT_INDEX_TE_DYNAMIC, false );
 }
 
 void TE_DynamicLight( IRecipientFilter& filter, float delay, KeyValues *pKeyValues )
@@ -147,6 +149,6 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay, KeyValues *pKeyValu
  	int nLightIndex = pKeyValues->GetInt( "lightindex", LIGHT_INDEX_TE_DYNAMIC );
 
 	TE_DynamicLight( filter, 0.0f, &vecOrigin, c.r(), c.g(), c.b(), nExponent, 
-		flRadius, flDuration, flDecay, nLightIndex );
+		flRadius, flDuration, flDecay, nLightIndex, false );
 }
 

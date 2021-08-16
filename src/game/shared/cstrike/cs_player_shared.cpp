@@ -1495,7 +1495,7 @@ void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCust
 #ifdef CLIENT_DLL
 
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
-	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 
 void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 {
@@ -1554,7 +1554,7 @@ void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
 
 		// muzzle flash dynamic light
 		CPVSFilter filter( vecStart );
-		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768 );
+		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768, LIGHT_INDEX_TE_DYNAMIC, true );
 
 		int	nBulletNumber = (pWeapon->GetMaxClip1() - pWeapon->Clip1()) + 1;
 		iTracerFreq = pWeapon->GetCSWpnData().m_iTracerFrequency[pWeapon->m_weaponMode];

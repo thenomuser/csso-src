@@ -17,7 +17,7 @@ CLIENTEFFECT_MATERIAL( "sprites/muzzleflash4" )	//.vmt
 CLIENTEFFECT_REGISTER_END()
 
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
-	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 
 void CS_MuzzleFlashCallback( const CEffectData &data )
 {

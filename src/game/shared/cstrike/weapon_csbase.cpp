@@ -70,7 +70,7 @@ ConVar weapon_recoil_decay_coefficient( "weapon_recoil_decay_coefficient", "2.0"
 
 #ifdef CLIENT_DLL
 void TE_DynamicLight( IRecipientFilter& filter, float delay,
-	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC, bool bNoStaticPropIllum = false );
 #endif
 
 struct WeaponAliasTranslationInfoStruct
@@ -2242,7 +2242,7 @@ ConVar cl_cam_driver_compensation_scale( "cl_cam_driver_compensation_scale", "0.
 					VectorMA( origin, 31, vforward, origin );
 					origin[2] += 3.0f;
 
-					TE_DynamicLight( filter, 0.0, &origin, 255, 186, 64, 5, 70, 0.05, 768 );
+					TE_DynamicLight( filter, 0.0, &origin, 255, 186, 64, 5, 70, 0.05, 768, LIGHT_INDEX_TE_DYNAMIC, true );
 				}
 
 				UpdateGunHeat( GetCSWpnData().m_flHeatPerShot, iAttachmentIndex );
