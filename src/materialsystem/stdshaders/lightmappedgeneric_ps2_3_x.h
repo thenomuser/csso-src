@@ -536,12 +536,15 @@ HALF4 main( PS_INPUT i ) : COLOR
 		float3 reflectVect = CalcReflectionVectorUnnormalized( worldSpaceNormal, worldVertToEyeVector );
 
 		// Calc Fresnel factor
-		half3 eyeVect = normalize(worldVertToEyeVector);
-		HALF fresnel = 1.0 - dot( worldSpaceNormal, eyeVect );
-		fresnel = pow( fresnel, 5.0 );
-		fresnel = fresnel * g_OneMinusFresnelReflection + g_FresnelReflection;
+		HALF3 eyeVect = normalize(worldVertToEyeVector);
+		HALF fresnel = 1.0h - dot( worldSpaceNormal, eyeVect );
 		
-		specularLighting = ENV_MAP_SCALE * texCUBE( EnvmapSampler, reflectVect );
+		fresnel = max( 0, fresnel ); // precision issues on RSX cause this value to occasionally go negative, which results in a NaN presumably because of the exp(log(n)) operation
+		fresnel = pow( fresnel, 4.0h ); //changing this to 4th power to save 2 cycles - visually it's very similar
+
+		fresnel = fresnel * (HALF)g_OneMinusFresnelReflection + (HALF)g_FresnelReflection;
+
+		specularLighting = (HALF)ENV_MAP_SCALE * texCUBE( EnvmapSampler, reflectVect ).rgb;
 
 		#if (CUBEMAP == 2) //cubemap darkened by lightmap mode
 			float3 cubemapLight = saturate( ( diffuseLighting - g_fvDiffuseCubemapMin ) * g_fvDiffuseCubemapMax );
@@ -549,14 +552,14 @@ HALF4 main( PS_INPUT i ) : COLOR
 		#endif
 
 		specularLighting *= specularFactor;
-								   
-		specularLighting *= g_EnvmapTint;
-#if FANCY_BLENDING == 0
-		HALF3 specularLightingSquared = specularLighting * specularLighting;
-		specularLighting = lerp( specularLighting, specularLightingSquared, g_EnvmapContrast );
-		HALF3 greyScale = dot( specularLighting, HALF3( 0.299f, 0.587f, 0.114f ) );
-		specularLighting = lerp( greyScale, specularLighting, g_EnvmapSaturation );
-#endif
+		specularLighting *= (HALF3)g_EnvmapTint.rgb;
+
+		#if FANCY_BLENDING == 0
+			HALF3 specularLightingSquared = specularLighting * specularLighting;
+			specularLighting = lerp( specularLighting, specularLightingSquared, (HALF)g_EnvmapContrast );
+			HALF3 greyScale = dot( specularLighting, HALF3( 0.299f, 0.587f, 0.114f ) );
+			specularLighting = lerp( greyScale, specularLighting, (HALF)g_EnvmapSaturation );
+		#endif
 		specularLighting *= fresnel;
 	}
 #endif
