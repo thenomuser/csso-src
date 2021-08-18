@@ -50,6 +50,7 @@ private:
 	CCvarToggleCheckButton *m_allowSnipers;
 
 	CCvarToggleCheckButton *m_deferToHuman;
+	CCvarToggleCheckButton *m_deferToHumanItems;
 
 	vgui::ComboBox *m_joinTeamCombo;
 	void SetJoinTeamCombo( const char *team );

@@ -143,6 +143,7 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	m_joinAfterPlayer = new CCvarToggleCheckButton( this, "BotJoinAfterPlayerCheck", "", "bot_join_after_player" );
 
 	m_deferToHuman = new CCvarToggleCheckButton( this, "BotDeferToHumanCheck", "", "bot_defer_to_human_goals" );
+	m_deferToHumanItems = new CCvarToggleCheckButton( this, "BotDeferToHumanItemsCheck", "", "bot_defer_to_human_items" );
 
 	// set up team join combo box
 	// NOTE: If order of AddItem is changed, update the associated enum
@@ -186,6 +187,7 @@ CCreateMultiplayerGameBotPage::CCreateMultiplayerGameBotPage( vgui::Panel *paren
 	m_allowShields->SetSelected( botKeys->GetInt( "bot_allow_shield", 1 ) );
 #endif // CS_SHIELD_ENABLED
 	m_deferToHuman->SetSelected( botKeys->GetInt( "bot_defer_to_human_goals", 1 ) );
+	m_deferToHumanItems->SetSelected( botKeys->GetInt( "bot_defer_to_human_items", 1 ) );
 
 	SetJoinTeamCombo( botKeys->GetString( "bot_join_team", "any" ) );
 	SetChatterCombo( botKeys->GetString( "bot_chatter", "normal" ) );
@@ -250,6 +252,7 @@ void CCreateMultiplayerGameBotPage::OnApplyChanges()
 	UpdateValue( m_pSavedData, "bot_allow_shield", m_allowShields->IsSelected() );
 #endif // CS_SHIELD_ENABLED
 	UpdateValue( m_pSavedData, "bot_defer_to_human_goals", m_deferToHuman->IsSelected() );
+	UpdateValue( m_pSavedData, "bot_defer_to_human_items", m_deferToHumanItems->IsSelected() );
 
 	// set bot_join_team
 	UpdateValue( m_pSavedData, "bot_join_team", joinTeamArg[ m_joinTeamCombo->GetActiveItem() ] );
