@@ -1692,18 +1692,23 @@ void C_BasePlayer::CalcChaseCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 
 void C_BasePlayer::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& fov)
 {
+#ifdef CSTRIKE_DLL
+	// in CS, we can have a spec target, but in roaming, we always want to roam FREE!!!  despite the target
+	C_BaseEntity *target = this;
+#else
 	C_BaseEntity *target = GetObserverTarget();
 	
 	if ( !target ) 
 	{
 		target = this;
 	}
+#endif
 
 	m_flObserverChaseDistance = 0.0;
 
 	eyeOrigin = target->EyePosition();
 	eyeAngles = target->EyeAngles();
-	
+
 	if ( spec_track.GetInt() > 0 )
 	{
 		C_BaseEntity *pTarget =  ClientEntityList().GetBaseEntity( spec_track.GetInt() );
@@ -1718,6 +1723,27 @@ void C_BasePlayer::CalcRoamingView(Vector& eyeOrigin, QAngle& eyeAngles, float& 
 			engine->SetViewAngles( a );
 		}
 	}
+
+#ifdef CSTRIKE_DLL
+	if ( GetObserverMode() == OBS_MODE_FIXED )
+	{
+		Vector viewpoint;
+		// if we are in a fixed position, do a very simple check to make sure we aren't fixed inside the world below us
+		trace_t trace;
+		CTraceFilterNoNPCsOrPlayer filter( target, COLLISION_GROUP_NONE );
+		C_BaseEntity::PushEnableAbsRecomputations( false ); // HACK don't recompute positions while doing RayTrace
+
+		Vector hullMin = Vector( -2, -2, -24 ), hullMax = Vector( 2, 2, 8 );
+		UTIL_TraceHull( eyeOrigin + Vector( 0, 0, 42 ), eyeOrigin + Vector( 0, 0, -16 ), hullMin, hullMax, MASK_SOLID, &filter, &trace );
+		C_BaseEntity::PopEnableAbsRecomputations();
+
+		if (trace.fraction < 1.0)
+		{
+			viewpoint = trace.endpos;
+			VectorCopy( viewpoint, eyeOrigin );
+		}
+	}
+#endif
 
 	// Apply a smoothing offset to smooth out prediction errors.
 	Vector vSmoothOffset;
