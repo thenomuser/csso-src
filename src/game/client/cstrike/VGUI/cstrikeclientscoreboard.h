@@ -107,7 +107,6 @@ protected:
 	bool ShouldShowAsSpectator( int iPlayerIndex );
 	void FireGameEvent( IGameEvent *event );
 
-	void UpdatePlayerColors( void );
 	void AdjustFontToFit( const char *pString, vgui::Label *pLabel );
 
 	static int PlayerSortFunction( PlayerScoreInfo* const* pPS1, PlayerScoreInfo* const* pPS2 );

@@ -40,34 +40,6 @@ const float kUpdateInterval = 1.0f;				// how often the scoreboard refreshes
 const float kTeamScoreMargin = 0.15f;			// margin as a ratio of avatar height
 const float kTeamScoreLineLeadingRatio = 0.25f;	// padding as a ratio of avatar height
 
-// CT player data colors
-ConVar cl_scoreboard_ct_color_red( "cl_scoreboard_ct_color_red", "150", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player data red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_ct_color_green( "cl_scoreboard_ct_color_green", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player data green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_ct_color_blue( "cl_scoreboard_ct_color_blue", "255", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player data blue channel", true, 0.0f, true, 255.0f );
-
-// T player data colors
-ConVar cl_scoreboard_t_color_red( "cl_scoreboard_t_color_red", "240", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player data red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_t_color_green( "cl_scoreboard_t_color_green", "90", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player data green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_t_color_blue( "cl_scoreboard_t_color_blue", "90", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player data blue channel", true, 0.0f, true, 255.0f );
-
-// Dead player data colors
-ConVar cl_scoreboard_dead_color_red( "cl_scoreboard_dead_color_red", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player data red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_dead_color_green( "cl_scoreboard_dead_color_green", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player data green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_dead_color_blue( "cl_scoreboard_dead_color_blue", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player data blue channel", true, 0.0f, true, 255.0f );
-
-// Clan colors
-ConVar cl_scoreboard_clan_ct_color_red( "cl_scoreboard_clan_ct_color_red", "150", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player clan tag red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_clan_ct_color_green( "cl_scoreboard_clan_ct_color_green", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player clan tag green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_clan_ct_color_blue( "cl_scoreboard_clan_ct_color_blue", "255", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard CT player clan tag blue channel", true, 0.0f, true, 255.0f );
-
-ConVar cl_scoreboard_clan_t_color_red( "cl_scoreboard_clan_t_color_red", "240", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player clan tag red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_clan_t_color_green( "cl_scoreboard_clan_t_color_green", "90", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player clan tag green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_clan_t_color_blue( "cl_scoreboard_clan_t_color_blue", "90", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard T player clan tag blue channel", true, 0.0f, true, 255.0f );
-
-ConVar cl_scoreboard_dead_clan_color_red( "cl_scoreboard_dead_clan_color_red", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player clan tag red channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_dead_clan_color_green( "cl_scoreboard_dead_clan_color_green", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player clan tag green channel", true, 0.0f, true, 255.0f );
-ConVar cl_scoreboard_dead_clan_color_blue( "cl_scoreboard_dead_clan_color_blue", "125", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Scoreboard dead player clan tag blue channel", true, 0.0f, true, 255.0f );
-
 
 // [tj] These ConVars are defined at various places in the global scope. Just declaring them here so we can use them
 extern ConVar mp_maxrounds;
@@ -244,8 +216,13 @@ void CCSClientScoreBoardDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
         m_pPlayerList->SetVisible( false );
     }
 
-	// Set the player colors from the convars.
-	UpdatePlayerColors();
+	// Set the player colors
+	m_teamDisplayT.playerDataColor = pScheme->GetColor( "ScoreboardT", Color( 240, 90, 90, 255 ) );
+	m_teamDisplayCT.playerDataColor = pScheme->GetColor( "ScoreboardCT", Color( 150, 200, 255, 255 ) );
+	m_DeadPlayerDataColor = pScheme->GetColor( "ScoreboardDead", Color( 125, 125, 125, 255 ) );
+	m_teamDisplayT.playerClanColor = pScheme->GetColor( "ScoreboardClanT", Color( 240, 90, 90, 255 ) );
+	m_teamDisplayCT.playerClanColor = pScheme->GetColor( "ScoreboardClanCT", Color( 150, 200, 255, 255 ) );
+	m_DeadPlayerClanColor = pScheme->GetColor( "ScoreboardClanDead", Color( 125, 125, 125, 255 ) );
 
 	m_MVPXOffset = scheme()->GetProportionalScaledValueEx( GetScheme(), 2 );
 
@@ -778,9 +755,6 @@ void CCSClientScoreBoardDialog::UpdatePlayerList()
     C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
     if ( !pLocalPlayer )
         return;
-
-	// Set the player colors from the convars.
-	UpdatePlayerColors();
 
     for( int playerIndex = 1 ; playerIndex <= MAX_PLAYERS; playerIndex++ )
     {
@@ -1617,19 +1591,6 @@ void CCSClientScoreBoardDialog::ShowPanel( bool state )
     }
 }
 
-
-//-----------------------------------------------------------------------------
-// Purpose: Grabs the player data colors from the convars.
-//-----------------------------------------------------------------------------
-void CCSClientScoreBoardDialog::UpdatePlayerColors( void )
-{
-	m_teamDisplayT.playerDataColor.SetColor( cl_scoreboard_t_color_red.GetInt(), cl_scoreboard_t_color_green.GetInt(), cl_scoreboard_t_color_blue.GetInt(), 255 );
-	m_teamDisplayCT.playerDataColor.SetColor( cl_scoreboard_ct_color_red.GetInt(), cl_scoreboard_ct_color_green.GetInt(), cl_scoreboard_ct_color_blue.GetInt(), 255 );
-	m_DeadPlayerDataColor.SetColor( cl_scoreboard_dead_color_red.GetInt(), cl_scoreboard_dead_color_green.GetInt(), cl_scoreboard_dead_color_blue.GetInt(), 255 );
-	m_teamDisplayT.playerClanColor.SetColor( cl_scoreboard_clan_t_color_red.GetInt(), cl_scoreboard_clan_t_color_green.GetInt(), cl_scoreboard_clan_t_color_blue.GetInt(), 255 );
-	m_teamDisplayCT.playerClanColor.SetColor( cl_scoreboard_clan_ct_color_red.GetInt(), cl_scoreboard_clan_ct_color_green.GetInt(), cl_scoreboard_clan_ct_color_blue.GetInt(), 255 );
-	m_DeadPlayerClanColor.SetColor( cl_scoreboard_dead_clan_color_red.GetInt(), cl_scoreboard_dead_clan_color_green.GetInt(), cl_scoreboard_dead_clan_color_blue.GetInt(), 255 );
-}
 
 // [tj] Disabling joystick input if you are dead.
 void CCSClientScoreBoardDialog::OnThink()
