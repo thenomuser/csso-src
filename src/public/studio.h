@@ -79,7 +79,7 @@ Studio models are position independent, so the cache manager can move them.
 #define MAXSTUDIOVERTS		10000
 #define	MAXSTUDIOFLEXVERTS	1000
 #endif
-#define MAXSTUDIOSKINS		32		// total textures
+#define MAXSTUDIOSKINS		48		// total textures
 #define MAXSTUDIOBONES		128		// total bones actually used
 #define MAXSTUDIOFLEXDESC	1024	// maximum number of low level flexes (actual morph targets)
 #define MAXSTUDIOFLEXCTRL	96		// maximum number of flexcontrollers (input sliders)

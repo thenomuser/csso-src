@@ -1377,8 +1377,8 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
 	{
 	default:
 	case PROTOCOL_AUTHCERTIFICATE:
-		RejectConnection( adr, clientChallenge, "#GameUI_ServerAuthDisabled");
-		return false;
+		//RejectConnection( adr, clientChallenge, "#GameUI_ServerAuthDisabled");
+		return true;
 
 	case PROTOCOL_STEAM:
 		return true; // the SteamAuthServer() state machine checks this
@@ -1390,14 +1390,14 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
 
 		if ( !Host_IsSinglePlayerGame() || sv.IsDedicated()) // PROTOCOL_HASHEDCDKEY isn't allowed for multiplayer servers
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerCDKeyAuthInvalid" );
-			return false;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerCDKeyAuthInvalid" );
+			return true;
 		}
 
 		if ( Q_strlen( szRawCertificate ) != 32 )
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerInvalidCDKey" );
-			return false;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerInvalidCDKey" );
+			return true;
 		}
 
 		int nHashCount = 0;
@@ -1418,8 +1418,8 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
 
 		if ( nHashCount >= MAX_IDENTICAL_CDKEYS )
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerCDKeyInUse" );
-			return false;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerCDKeyInUse" );
+			return true;
 		}
 		break;
 	}

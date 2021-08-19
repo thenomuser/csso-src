@@ -1093,6 +1093,8 @@ void UpdateImageEntity(
 	bool bIsClassSelection )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	//CCSPlayer* pPlayer = ToCSPlayer(C_CSPlayer::GetLocalCSPlayer());
+	int curskin = 0;
 	
 	if ( !pLocalPlayer )
 		return;
@@ -1170,6 +1172,7 @@ void UpdateImageEntity(
 		}
 
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
+		curskin = CSLoadout()->GetBuySkins(pLocalPlayer, hWpnInfo);
 		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 		{
 			if ( Q_strcmp( szWeaponClassname, "item_defuser" ) == 0 )
@@ -1263,6 +1266,7 @@ void UpdateImageEntity(
 		pWeaponModel->InitializeAsClientEntity( szWeaponModel, RENDER_GROUP_OPAQUE_ENTITY );
 		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
+		pWeaponModel->m_nSkin = curskin;
 		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
 
 		int silencerBodygroup = pWeaponModel->FindBodygroupByName( "silencer" );

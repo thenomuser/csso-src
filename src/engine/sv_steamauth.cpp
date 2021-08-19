@@ -637,28 +637,28 @@ void CSteam3Server::OnValidateAuthTicketResponseHelper( CBaseClient *cl, EAuthSe
 	switch ( eAuthSessionResponse )
 	{
 		case k_EAuthSessionResponseUserNotConnectedToSteam:
-			if ( !BLanOnly() ) 
-				cl->Disconnect( INVALID_STEAM_LOGON_NOT_CONNECTED );
+			//if ( !BLanOnly() ) 
+				//cl->Disconnect( INVALID_STEAM_LOGON_NOT_CONNECTED );
 			break;
 		case k_EAuthSessionResponseLoggedInElseWhere:
-			if ( !BLanOnly() ) 
-				cl->Disconnect( INVALID_STEAM_LOGGED_IN_ELSEWHERE );
+			//if ( !BLanOnly() ) 
+				//cl->Disconnect( INVALID_STEAM_LOGGED_IN_ELSEWHERE );
 			break;
 		case k_EAuthSessionResponseNoLicenseOrExpired:
-			cl->Disconnect( "This Steam account does not own this game. \nPlease login to the correct Steam account" );
+			//cl->Disconnect( "This Steam account does not own this game. \nPlease login to the correct Steam account" );
 			break;
 		case k_EAuthSessionResponseVACBanned:
 			if ( !BLanOnly() ) 
 				cl->Disconnect( INVALID_STEAM_VACBANSTATE );
 			break;
 		case k_EAuthSessionResponseAuthTicketCanceled:
-			if ( !BLanOnly() ) 
-				cl->Disconnect( INVALID_STEAM_LOGON_TICKET_CANCELED );
+			//if ( !BLanOnly() ) 
+				//cl->Disconnect( INVALID_STEAM_LOGON_TICKET_CANCELED );
 			break;
 		case k_EAuthSessionResponseAuthTicketInvalidAlreadyUsed:
 		case k_EAuthSessionResponseAuthTicketInvalid:
-			if ( !BLanOnly() ) 
-				cl->Disconnect( INVALID_STEAM_TICKET );
+			//if ( !BLanOnly() ) 
+				//cl->Disconnect( INVALID_STEAM_TICKET );
 			break;
 		case k_EAuthSessionResponseVACCheckTimedOut:
 			cl->Disconnect( "An issue with your computer is blocking the VAC system. You cannot play on secure servers.\n\nhttps://support.steampowered.com/kb_article.php?ref=2117-ILZV-2837" );
@@ -713,7 +713,6 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 	if ( ucbCookie <= sizeof(uint64) )
 	{
 		WarningAndLog("Client UserID %x connected with invalid ticket size %d\n", unUserID, ucbCookie );
-		return false;
 	}
 
 	// steamID is prepended to the ticket
@@ -725,12 +724,10 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 	{
 		WarningAndLog("Client %d %s connected to universe %d, but game server %s is running in universe %d\n", unUserID, steamID.Render(),
 			steamID.GetEUniverse(), SteamGameServer()->GetSteamID().Render(), SteamGameServer()->GetSteamID().GetEUniverse() );
-		return false;
 	}
 	if ( !steamID.IsValid() || !steamID.BIndividualAccount() )
 	{
 		WarningAndLog("Client %d connected from %s with invalid Steam ID %s\n", unUserID, adr.ToString(), steamID.Render() );
-		return false;
 	}
 
 	// skip the steamID
@@ -743,24 +740,24 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, n
 		//Msg("S3: BeginAuthSession request for %x was good.\n", steamID.ConvertToUint64( ) );
 		break;
 	case k_EBeginAuthSessionResultInvalidTicket:
-		WarningAndLog("S3: Client connected with invalid ticket: UserID: %x\n", unUserID );
-		return false;
+		//WarningAndLog("S3: Client connected with invalid ticket: UserID: %x\n", unUserID );
+		break;
 	case k_EBeginAuthSessionResultDuplicateRequest:
 		WarningAndLog("S3: Duplicate client connection: UserID: %x SteamID %x\n", unUserID, steamID.ConvertToUint64( ) );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultInvalidVersion:
 		WarningAndLog("S3: Client connected with invalid ticket ( old version ): UserID: %x\n", unUserID );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultGameMismatch:
 		// This error would be very useful to present to the client.
 		WarningAndLog("S3: Client connected with ticket for the wrong game: UserID: %x\n", unUserID );
-		return false;
+		break;
 	case k_EBeginAuthSessionResultExpiredTicket:
 		WarningAndLog("S3: Client connected with expired ticket: UserID: %x\n", unUserID );
-		return false;
+		break;
 	default:
 		WarningAndLog("S3: Client failed auth session for unknown reason. UserID: %x\n", unUserID );
-		return false;
+		break;
 	}
 
 	// first checks ok, we know now the SteamID

@@ -1642,15 +1642,39 @@ void C_CSPlayer::CreateAddonModel( int i )
 	C_PlayerAddonModel *pEnt = new C_PlayerAddonModel;
 
 	int addonType = (1 << i);
+	int tm_nSkin = 0;
 	if ( addonType == ADDON_PISTOL || addonType == ADDON_PRIMARY || addonType == ADDON_KNIFE )
 	{
+		C_WeaponCSBase *pWeapon;
+		// set player's primary weapon for ui model
 		CCSWeaponInfo *weaponInfo;
 		if ( addonType == ADDON_PRIMARY )
+		{
+			pWeapon = dynamic_cast< C_WeaponCSBase * >( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
 			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iPrimaryAddon.Get() );
+			if ( pWeapon )
+			{
+				tm_nSkin = pWeapon->m_nSkin;
+			}
+		}
 		else if ( addonType == ADDON_PISTOL )
+		{
+			pWeapon = dynamic_cast< C_WeaponCSBase * >( Weapon_GetSlot( WEAPON_SLOT_PISTOL ) );
 			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iSecondaryAddon.Get() );
+			if ( pWeapon )
+			{
+				tm_nSkin = pWeapon->m_nSkin;
+			}
+		}
 		else
+		{
+			pWeapon = dynamic_cast< C_WeaponCSBase * >( Weapon_GetSlot( WEAPON_SLOT_KNIFE ));
 			weaponInfo = GetWeaponInfo( (CSWeaponID) m_iKnifeAddon.Get() );
+			if ( pWeapon )
+			{
+				tm_nSkin = pWeapon->m_nSkin;
+			}
+		}
 
 		if ( !weaponInfo )
 		{
@@ -1758,6 +1782,7 @@ void C_CSPlayer::CreateAddonModel( int i )
 		pEnt->SetLocalOrigin( Vector( 0, 0, 0 ) );
 		pEnt->SetLocalAngles( QAngle( 0, 0, 0 ) );
 	}
+	pEnt->m_nSkin = tm_nSkin;
 
 	pEnt->SetModelScale( iScale );
 	if ( IsLocalPlayer() )
@@ -3544,6 +3569,7 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Qu
 			if ( pWeapon )
 			{
 				CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->m_hWeaponWorldModel.Get();
+				pWeaponWorldModel->m_nSkin = pWeapon->m_nSkin;
 				if ( pWeaponWorldModel && pWeaponWorldModel->IsVisible() && pWeaponWorldModel->GetLeftHandAttachBoneIndex() != -1 )
 				{
 					int nWepAttach = pWeaponWorldModel->GetLeftHandAttachBoneIndex();
@@ -3924,6 +3950,7 @@ void C_CSPlayer::DropPhysicsMag( const char *options )
 	pEntity->SetFadeMinMax( 500.0f, 550.0f );
 	pEntity->SetLocalOrigin( attachOrigin );
 	pEntity->SetLocalAngles( attachAngles );
+	pEntity->m_nSkin = pWeapon->m_nSkin;
 	pEntity->m_iHealth = 0;
 	pEntity->m_takedamage = DAMAGE_NO;
 

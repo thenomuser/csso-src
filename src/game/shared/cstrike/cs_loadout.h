@@ -67,6 +67,9 @@ public:
 
 	bool			HasKnifeSet( CCSPlayer* pPlayer, int team );
 	int				GetKnifeForPlayer( CCSPlayer* pPlayer, int team );
+
+	int				GetSkinsForPlayer( CCSPlayer* pPlayer);
+	int 			GetBuySkins( CBasePlayer* pPlayer, int iWeaponId);
 };
 
 

@@ -468,8 +468,8 @@ IClient *CBaseServer::ConnectClient ( netadr_t &adr, int protocol, int challenge
 		// LAN servers restrict to class b IP addresses
 		if ( !CheckIPRestrictions( adr, authProtocol ) )
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectLANRestrict");
-			return NULL;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectLANRestrict");
+			//return;
 		}
 #endif
 
@@ -1437,8 +1437,8 @@ bool CBaseServer::CheckChallengeType( CBaseClient * client, int nNewUserID, neta
 
 	if ( ( nAuthProtocol == PROTOCOL_HASHEDCDKEY ) && (Q_strlen( pchLogonCookie ) <= 0 ||  Q_strlen(pchLogonCookie) != 32 ) )
 	{
-		RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectInvalidCertLen" );
-		return false;
+		//RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectInvalidCertLen" );
+		//return false;
 	}
 
 	Assert( !IsReplay() );
@@ -1473,8 +1473,8 @@ bool CBaseServer::CheckChallengeType( CBaseClient * client, int nNewUserID, neta
 		// Convert raw certificate back into data
 		if ( cbCookie <= 0 || cbCookie >= STEAM_KEYSIZE )
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectInvalidSteamCertLen" );
-			return false;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectInvalidSteamCertLen" );
+			//return false;
 		}
 		netadr_t checkAdr = adr;
 		if ( adr.GetType() == NA_LOOPBACK || adr.IsLocalhost() )
@@ -1485,8 +1485,8 @@ bool CBaseServer::CheckChallengeType( CBaseClient * client, int nNewUserID, neta
 		if ( !Steam3Server().NotifyClientConnect( client, nNewUserID, checkAdr, pchLogonCookie, cbCookie ) 
 			&& !Steam3Server().BLanOnly() ) // the userID isn't alloc'd yet so we need to fill it in manually
 		{
-			RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectSteam" );
-			return false;
+			//RejectConnection( adr, clientChallenge, "#GameUI_ServerRejectSteam" );
+			//return false;
 		}
 
 		//
@@ -1542,7 +1542,7 @@ bool CBaseServer::CheckIPRestrictions( const netadr_t &adr, int nAuthProtocol )
 			return true;
 		
 		// reject connection
-		return false;
+		//return false;
 	}
 
 	return true;

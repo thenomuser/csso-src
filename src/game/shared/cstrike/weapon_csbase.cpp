@@ -14,6 +14,8 @@
 #include "basegrenade_shared.h"
 #include "npcevent.h"
 
+#include "cs_loadout.h"
+
 #define ALLOW_WEAPON_SPREAD_DISPLAY	0
 
 #if defined( CLIENT_DLL )
@@ -1549,7 +1551,21 @@ bool CWeaponCSBase::Deploy()
 		pPlayer->m_bResumeZoom = false;
 		pPlayer->m_iLastZoom = 0;
 		pPlayer->SetFOV( pPlayer, 0 );
+		int getSkinWeapon = 0;
+
+		CCSPlayer *pOwner = GetPreviousOwner();
+		getSkinWeapon = CSLoadout()->GetSkinsForPlayer(pPlayer);
+		CWeaponCSBase *pWeapon = pPlayer->GetActiveCSWeapon();
+	
+		//
+		if ( m_nSkin == 0 && pOwner == NULL)
+		{
+			m_nSkin = getSkinWeapon;
+		}
+		pWeapon->m_nSkin = m_nSkin;
+
 	}
+	
 #endif
 
 	m_fAccuracyPenalty = 0.0f;

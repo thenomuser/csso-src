@@ -573,9 +573,9 @@ bool CBaseClientState::PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGS
 #if !defined( NO_STEAM ) && !defined( SWDS  ) 
 	if ( !Steam3Client().SteamUser() )
 	{
-		COM_ExplainDisconnection( true, "#GameUI_ServerRequireSteam" );
-		Disconnect( "#GameUI_ServerRequireSteam", true );
-		return false;
+		//COM_ExplainDisconnection( true, "#GameUI_ServerRequireSteam" );
+		//Disconnect( "#GameUI_ServerRequireSteam", true );
+		//return false;
 	}
 #endif
 	
@@ -594,9 +594,9 @@ bool CBaseClientState::PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGS
 
 	if ( steam3CookieLen == 0 )
 	{
-		COM_ExplainDisconnection( true, "#GameUI_ServerRequireSteam" );
-		Disconnect( "#GameUI_ServerRequireSteam", true );
-		return false;
+		//COM_ExplainDisconnection( true, "#GameUI_ServerRequireSteam" );
+		//Disconnect( "#GameUI_ServerRequireSteam", true );
+		//return false;
 	}
 
 	msg.WriteShort( steam3CookieLen );
@@ -940,17 +940,17 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 								{
 									if ( msg.ReadShort() != 0 )
 									{
-										Msg( "Invalid Steam key size.\n" );
-										Disconnect( "Invalid Steam key size", true );
-										return false;
+										//Msg( "Invalid Steam key size.\n" );
+										//  ( "Invalid Steam key size", true );
+										//return false;
 									}
 									if ( msg.GetNumBytesLeft() > sizeof(unGSSteamID) ) 
 									{
 										if ( !msg.ReadBytes( &unGSSteamID, sizeof(unGSSteamID) ) )
 										{
-											Msg( "Invalid GS Steam ID.\n" );
-											Disconnect( "Invalid GS Steam ID", true );
-											return false;
+											//Msg( "Invalid GS Steam ID.\n" );
+											//Disconnect( "Invalid GS Steam ID", true );
+											//return false;
 										}
 
 										bGSSecure = ( msg.ReadByte() == 1 );
@@ -958,9 +958,9 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 									// The host can disable access to secure servers if you load unsigned code (mods, plugins, hacks)
 									if ( bGSSecure && !Host_IsSecureServerAllowed() )
 									{
-										COM_ExplainDisconnection( true, "#GameUI_ServerInsecure" );
-										Disconnect( "#GameUI_ServerInsecure", true );
-										return false;
+										//COM_ExplainDisconnection( true, "#GameUI_ServerInsecure" );
+										//Disconnect( "#GameUI_ServerInsecure", true );
+										//return false;
 									}
 								}
 								SendConnectPacket( challenge, authprotocol, unGSSteamID, bGSSecure );

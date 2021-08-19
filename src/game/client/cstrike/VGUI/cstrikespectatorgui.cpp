@@ -1173,7 +1173,7 @@ void CCSMapOverview::DrawMapTexture()
 	if( GetMode() == MAP_MODE_FULL )
 		SetBgColor( Color(0,0,0,0) );// no background in big mode
 	else
-		SetBgColor( Color(0,0,0,alpha * 0.5) );
+		SetBgColor( Color(0,0,0,0) );
 
 	int textureIDToUse = m_nMapTextureID;
 	bool foundRadarVersion = false;
@@ -1196,42 +1196,617 @@ void CCSMapOverview::DrawMapTexture()
 	if ( textureIDToUse > 0 )
 	{
 		// We are drawing to the whole panel with a little border
-		Vector2D panelTL = Vector2D( mapInset, mapInset );
-		Vector2D panelTR = Vector2D( pwidth - mapInset, mapInset );
-		Vector2D panelBR = Vector2D( pwidth - mapInset, pheight - mapInset );
-		Vector2D panelBL = Vector2D( mapInset, pheight - mapInset );
-
-		// So where are those four points on the great big map?
-		Vector2D textureTL = PanelToMap( panelTL );// The top left corner of the display is where on the master map?
-		textureTL /= OVERVIEW_MAP_SIZE;// Texture Vec2D is 0 to 1
-		Vector2D textureTR = PanelToMap( panelTR );
-		textureTR /= OVERVIEW_MAP_SIZE;
-		Vector2D textureBR = PanelToMap( panelBR );
-		textureBR /= OVERVIEW_MAP_SIZE;
-		Vector2D textureBL = PanelToMap( panelBL );
-		textureBL /= OVERVIEW_MAP_SIZE;
-
-		Vertex_t points[4] =
+		/*
+		* mapInset 	= 0
+		* pwidth 	= 110
+		*/
+		if (pwidth == pheight)
 		{
-			// To draw a textured polygon, the first column is where you want to draw (to), and the second is what you want to draw (from).
-			// We want to draw to the panel (pulled in for a border), and we want to draw the part of the map texture that should be seen.
-			// First column is in panel coords, second column is in 0-1 texture coords
-			Vertex_t( panelTL, textureTL ),
-			Vertex_t( panelTR, textureTR ),
-			Vertex_t( panelBR, textureBR ),
-			Vertex_t( panelBL, textureBL )
-		};
 
-		surface()->DrawSetColor( 255, 255, 255, alpha );
-		surface()->DrawSetTexture( textureIDToUse );
-		surface()->DrawTexturedPolygon( 4, points );
+			Vector2D panelPoint1  = Vector2D(pwidth*0.500f	,pheight*0.000f);
+			Vector2D panelPoint2  = Vector2D(pwidth*0.549f	,pheight*0.002f);
+			Vector2D panelPoint3  = Vector2D(pwidth*0.597f	,pheight*0.009f);
+			Vector2D panelPoint4  = Vector2D(pwidth*0.645f	,pheight*0.021f);
+			Vector2D panelPoint5  = Vector2D(pwidth*0.691f	,pheight*0.038f);
+			Vector2D panelPoint6  = Vector2D(pwidth*0.735f	,pheight*0.059f);
+			Vector2D panelPoint7  = Vector2D(pwidth*0.777f	,pheight*0.084f);
+			Vector2D panelPoint8  = Vector2D(pwidth*0.817f	,pheight*0.113f);
+			Vector2D panelPoint9  = Vector2D(pwidth*0.853f	,pheight*0.146f);
+			Vector2D panelPoint10 = Vector2D(pwidth*0.886f	,pheight*0.182f);
+			Vector2D panelPoint11 = Vector2D(pwidth*0.915f	,pheight*0.222f);
+			Vector2D panelPoint12 = Vector2D(pwidth*0.941f	,pheight*0.264f);
+			Vector2D panelPoint13 = Vector2D(pwidth*0.962f	,pheight*0.308f);
+			Vector2D panelPoint14 = Vector2D(pwidth*0.978f	,pheight*0.354f);
+			Vector2D panelPoint15 = Vector2D(pwidth*0.990f	,pheight*0.402f);
+			Vector2D panelPoint16 = Vector2D(pwidth*0.997f	,pheight*0.451f);
+			Vector2D panelPoint17 = Vector2D(pwidth*1.000f	,pheight*0.500f);
+			Vector2D panelPoint18 = Vector2D(pwidth*0.997f	,pheight*0.549f);
+			Vector2D panelPoint19 = Vector2D(pwidth*0.990f	,pheight*0.597f);
+			Vector2D panelPoint20 = Vector2D(pwidth*0.978f	,pheight*0.645f);
+			Vector2D panelPoint21 = Vector2D(pwidth*0.962f	,pheight*0.691f);
+			Vector2D panelPoint22 = Vector2D(pwidth*0.941f	,pheight*0.735f);
+			Vector2D panelPoint23 = Vector2D(pwidth*0.915f	,pheight*0.777f);
+			Vector2D panelPoint24 = Vector2D(pwidth*0.886f	,pheight*0.817f);
+			Vector2D panelPoint25 = Vector2D(pwidth*0.853f	,pheight*0.853f);
+			Vector2D panelPoint26 = Vector2D(pwidth*0.817f	,pheight*0.886f);
+			Vector2D panelPoint27 = Vector2D(pwidth*0.777f	,pheight*0.915f);
+			Vector2D panelPoint28 = Vector2D(pwidth*0.735f	,pheight*0.941f);
+			Vector2D panelPoint29 = Vector2D(pwidth*0.691f	,pheight*0.962f);
+			Vector2D panelPoint30 = Vector2D(pwidth*0.645f	,pheight*0.978f);
+			Vector2D panelPoint31 = Vector2D(pwidth*0.597f	,pheight*0.990f);
+			Vector2D panelPoint32 = Vector2D(pwidth*0.549f	,pheight*0.997f);
+			Vector2D panelPoint33 = Vector2D(pwidth*0.500f	,pheight*1.000f);
+			Vector2D panelPoint34 = Vector2D(pwidth*0.451f	,pheight*0.997f);
+			Vector2D panelPoint35 = Vector2D(pwidth*0.402f	,pheight*0.990f);
+			Vector2D panelPoint36 = Vector2D(pwidth*0.354f	,pheight*0.978f);
+			Vector2D panelPoint37 = Vector2D(pwidth*0.308f	,pheight*0.962f);
+			Vector2D panelPoint38 = Vector2D(pwidth*0.264f	,pheight*0.941f);
+			Vector2D panelPoint39 = Vector2D(pwidth*0.222f	,pheight*0.915f);
+			Vector2D panelPoint40 = Vector2D(pwidth*0.182f	,pheight*0.886f);
+			Vector2D panelPoint41 = Vector2D(pwidth*0.146f	,pheight*0.853f);
+			Vector2D panelPoint42 = Vector2D(pwidth*0.113f	,pheight*0.817f);
+			Vector2D panelPoint43 = Vector2D(pwidth*0.084f	,pheight*0.777f);
+			Vector2D panelPoint44 = Vector2D(pwidth*0.059f	,pheight*0.735f);
+			Vector2D panelPoint45 = Vector2D(pwidth*0.038f	,pheight*0.691f);
+			Vector2D panelPoint46 = Vector2D(pwidth*0.021f	,pheight*0.645f);
+			Vector2D panelPoint47 = Vector2D(pwidth*0.009f	,pheight*0.597f);
+			Vector2D panelPoint48 = Vector2D(pwidth*0.002f	,pheight*0.549f);
+			Vector2D panelPoint49 = Vector2D(pwidth*0.000f	,pheight*0.500f);
+			Vector2D panelPoint50 = Vector2D(pwidth*0.002f	,pheight*0.451f);
+			Vector2D panelPoint51 = Vector2D(pwidth*0.009f	,pheight*0.402f);
+			Vector2D panelPoint52 = Vector2D(pwidth*0.021f	,pheight*0.354f);
+			Vector2D panelPoint53 = Vector2D(pwidth*0.038f	,pheight*0.308f);
+			Vector2D panelPoint54 = Vector2D(pwidth*0.059f	,pheight*0.264f);
+			Vector2D panelPoint55 = Vector2D(pwidth*0.084f	,pheight*0.222f);
+			Vector2D panelPoint56 = Vector2D(pwidth*0.113f	,pheight*0.182f);
+			Vector2D panelPoint57 = Vector2D(pwidth*0.146f	,pheight*0.146f);
+			Vector2D panelPoint58 = Vector2D(pwidth*0.182f	,pheight*0.113f);
+			Vector2D panelPoint59 = Vector2D(pwidth*0.222f	,pheight*0.084f);
+			Vector2D panelPoint60 = Vector2D(pwidth*0.264f	,pheight*0.059f);
+			Vector2D panelPoint61 = Vector2D(pwidth*0.308f	,pheight*0.038f);
+			Vector2D panelPoint62 = Vector2D(pwidth*0.354f	,pheight*0.021f);
+			Vector2D panelPoint63 = Vector2D(pwidth*0.402f	,pheight*0.009f);
+			Vector2D panelPoint64 = Vector2D(pwidth*0.451f	,pheight*0.002f);
+
+			// So where are those four points on the great big map?
+
+			Vector2D texture1 = PanelToMap( panelPoint1 );
+			texture1 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture2 = PanelToMap( panelPoint2 );
+			texture2 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture3 = PanelToMap( panelPoint3 );
+			texture3 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture4 = PanelToMap( panelPoint4 );
+			texture4 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture5 = PanelToMap( panelPoint5 );
+			texture5 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture6 = PanelToMap( panelPoint6 );
+			texture6 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture7 = PanelToMap( panelPoint7 );
+			texture7 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture8 = PanelToMap( panelPoint8 );
+			texture8 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture9 = PanelToMap( panelPoint9 );
+			texture9 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture10 = PanelToMap( panelPoint10 );
+			texture10 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture11 = PanelToMap( panelPoint11 );
+			texture11 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture12 = PanelToMap( panelPoint12 );
+			texture12 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture13 = PanelToMap( panelPoint13 );
+			texture13 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture14 = PanelToMap( panelPoint14 );
+			texture14 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture15 = PanelToMap( panelPoint15 );
+			texture15 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture16 = PanelToMap( panelPoint16 );
+			texture16 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture17 = PanelToMap( panelPoint17 );
+			texture17 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture18 = PanelToMap( panelPoint18 );
+			texture18 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture19 = PanelToMap( panelPoint19 );
+			texture19 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture20 = PanelToMap( panelPoint20 );
+			texture20 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture21 = PanelToMap( panelPoint21 );
+			texture21 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture22 = PanelToMap( panelPoint22 );
+			texture22 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture23 = PanelToMap( panelPoint23 );
+			texture23 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture24 = PanelToMap( panelPoint24 );
+			texture24 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture25 = PanelToMap( panelPoint25 );
+			texture25 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture26 = PanelToMap( panelPoint26 );
+			texture26 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture27 = PanelToMap( panelPoint27 );
+			texture27 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture28 = PanelToMap( panelPoint28 );
+			texture28 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture29 = PanelToMap( panelPoint29 );
+			texture29 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture30 = PanelToMap( panelPoint30 );
+			texture30 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture31 = PanelToMap( panelPoint31 );
+			texture31 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture32 = PanelToMap( panelPoint32 );
+			texture32 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture33 = PanelToMap( panelPoint33 );
+			texture33 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture34 = PanelToMap( panelPoint34 );
+			texture34 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture35 = PanelToMap( panelPoint35 );
+			texture35 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture36 = PanelToMap( panelPoint36 );
+			texture36 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture37 = PanelToMap( panelPoint37 );
+			texture37 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture38 = PanelToMap( panelPoint38 );
+			texture38 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture39 = PanelToMap( panelPoint39 );
+			texture39 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture40 = PanelToMap( panelPoint40 );
+			texture40 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture41 = PanelToMap( panelPoint41 );
+			texture41 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture42 = PanelToMap( panelPoint42 );
+			texture42 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture43 = PanelToMap( panelPoint43 );
+			texture43 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture44 = PanelToMap( panelPoint44 );
+			texture44 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture45 = PanelToMap( panelPoint45 );
+			texture45 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture46 = PanelToMap( panelPoint46 );
+			texture46 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture47 = PanelToMap( panelPoint47 );
+			texture47 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture48 = PanelToMap( panelPoint48 );
+			texture48 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture49 = PanelToMap( panelPoint49 );
+			texture49 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture50 = PanelToMap( panelPoint50 );
+			texture50 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture51 = PanelToMap( panelPoint51 );
+			texture51 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture52 = PanelToMap( panelPoint52 );
+			texture52 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture53 = PanelToMap( panelPoint53 );
+			texture53 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture54 = PanelToMap( panelPoint54 );
+			texture54 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture55 = PanelToMap( panelPoint55 );
+			texture55 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture56 = PanelToMap( panelPoint56 );
+			texture56 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture57 = PanelToMap( panelPoint57 );
+			texture57 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture58 = PanelToMap( panelPoint58 );
+			texture58 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture59 = PanelToMap( panelPoint59 );
+			texture59 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture60 = PanelToMap( panelPoint60 );
+			texture60 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture61 = PanelToMap( panelPoint61 );
+			texture61 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture62 = PanelToMap( panelPoint62 );
+			texture62 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture63 = PanelToMap( panelPoint63 );
+			texture63 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture64 = PanelToMap( panelPoint64 );
+			texture64 /= OVERVIEW_MAP_SIZE;
+
+			Vertex_t points[64] =
+			{
+				Vertex_t( panelPoint1, texture1 ),
+				Vertex_t( panelPoint2, texture2 ),
+				Vertex_t( panelPoint3, texture3 ),
+				Vertex_t( panelPoint4, texture4 ),
+				Vertex_t( panelPoint5, texture5 ),
+				Vertex_t( panelPoint6, texture6 ),
+				Vertex_t( panelPoint7, texture7 ),
+				Vertex_t( panelPoint8, texture8 ),
+				Vertex_t( panelPoint9, texture9 ),
+				Vertex_t( panelPoint10, texture10 ),
+				Vertex_t( panelPoint11, texture11 ),
+				Vertex_t( panelPoint12, texture12 ),
+				Vertex_t( panelPoint13, texture13 ),
+				Vertex_t( panelPoint14, texture14 ),
+				Vertex_t( panelPoint15, texture15 ),
+				Vertex_t( panelPoint16, texture16 ),
+				Vertex_t( panelPoint17, texture17 ),
+				Vertex_t( panelPoint18, texture18 ),
+				Vertex_t( panelPoint19, texture19 ),
+				Vertex_t( panelPoint20, texture20 ),
+				Vertex_t( panelPoint21, texture21 ),
+				Vertex_t( panelPoint22, texture22 ),
+				Vertex_t( panelPoint23, texture23 ),
+				Vertex_t( panelPoint24, texture24 ),
+				Vertex_t( panelPoint25, texture25 ),
+				Vertex_t( panelPoint26, texture26 ),
+				Vertex_t( panelPoint27, texture27 ),
+				Vertex_t( panelPoint28, texture28 ),
+				Vertex_t( panelPoint29, texture29 ),
+				Vertex_t( panelPoint30, texture30 ),
+				Vertex_t( panelPoint31, texture31 ),
+				Vertex_t( panelPoint32, texture32 ),
+				Vertex_t( panelPoint33, texture33 ),
+				Vertex_t( panelPoint34, texture34 ),
+				Vertex_t( panelPoint35, texture35 ),
+				Vertex_t( panelPoint36, texture36 ),
+				Vertex_t( panelPoint37, texture37 ),
+				Vertex_t( panelPoint38, texture38 ),
+				Vertex_t( panelPoint39, texture39 ),
+				Vertex_t( panelPoint40, texture40 ),
+				Vertex_t( panelPoint41, texture41 ),
+				Vertex_t( panelPoint42, texture42 ),
+				Vertex_t( panelPoint43, texture43 ),
+				Vertex_t( panelPoint44, texture44 ),
+				Vertex_t( panelPoint45, texture45 ),
+				Vertex_t( panelPoint46, texture46 ),
+				Vertex_t( panelPoint47, texture47 ),
+				Vertex_t( panelPoint48, texture48 ),
+				Vertex_t( panelPoint49, texture49 ),
+				Vertex_t( panelPoint50, texture50 ),
+				Vertex_t( panelPoint51, texture51 ),
+				Vertex_t( panelPoint52, texture52 ),
+				Vertex_t( panelPoint53, texture53 ),
+				Vertex_t( panelPoint54, texture54 ),
+				Vertex_t( panelPoint55, texture55 ),
+				Vertex_t( panelPoint56, texture56 ),
+				Vertex_t( panelPoint57, texture57 ),
+				Vertex_t( panelPoint58, texture58 ),
+				Vertex_t( panelPoint59, texture59 ),
+				Vertex_t( panelPoint60, texture60 ),
+				Vertex_t( panelPoint61, texture61 ),
+				Vertex_t( panelPoint62, texture62 ),
+				Vertex_t( panelPoint63, texture63 ),
+				Vertex_t( panelPoint64, texture64 )
+			};
+
+			surface()->DrawSetColor( 0, 0, 0, 255 );
+			surface()->DrawTexturedPolygon( 64, points );
+
+			surface()->DrawSetColor( 255, 255, 255, alpha );
+			surface()->DrawSetTexture( textureIDToUse );
+			surface()->DrawTexturedPolygon( 64, points );
+		}
+		else if (pwidth != pheight)
+		{
+			Vector2D panelTL = Vector2D( mapInset, mapInset );
+			Vector2D panelTR = Vector2D( pwidth - mapInset, mapInset );
+			Vector2D panelBR = Vector2D( pwidth - mapInset, pheight - mapInset );
+			Vector2D panelBL = Vector2D( mapInset, pheight - mapInset );
+
+			// So where are those four points on the great big map?
+			Vector2D textureTL = PanelToMap( panelTL );// The top left corner of the display is where on the master map?
+			textureTL /= OVERVIEW_MAP_SIZE;// Texture Vec2D is 0 to 1
+			Vector2D textureTR = PanelToMap( panelTR );
+			textureTR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBR = PanelToMap( panelBR );
+			textureBR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBL = PanelToMap( panelBL );
+			textureBL /= OVERVIEW_MAP_SIZE;
+
+			Vertex_t points[4] =
+			{
+				Vertex_t( panelTL, textureTL ),
+				Vertex_t( panelTR, textureTR ),
+				Vertex_t( panelBR, textureBR ),
+				Vertex_t( panelBL, textureBL )
+			};
+			surface()->DrawSetColor( 0, 0, 0, 255 );
+			surface()->DrawTexturedPolygon( 4, points );
+
+			surface()->DrawSetColor( 255, 255, 255, alpha );
+			surface()->DrawSetTexture( textureIDToUse );
+			surface()->DrawTexturedPolygon( 4, points );
+		}
 	}
 
 	// If we didn't find the greenscale version of the map, then at least do a tint.
 	if( !foundRadarVersion && GetMode() == MAP_MODE_RADAR )
 	{
-		surface()->DrawSetColor( 0,255,0, alpha / 4 );
-		surface()->DrawFilledRect( mapInset, mapInset, m_vSize.x - 1 - mapInset, m_vSize.y - 1 - mapInset );
+		if (pwidth == pheight)
+		{
+
+			Vector2D panelPoint1  = Vector2D(pwidth*0.500f	,pheight*0.000f);
+			Vector2D panelPoint2  = Vector2D(pwidth*0.549f	,pheight*0.002f);
+			Vector2D panelPoint3  = Vector2D(pwidth*0.597f	,pheight*0.009f);
+			Vector2D panelPoint4  = Vector2D(pwidth*0.645f	,pheight*0.021f);
+			Vector2D panelPoint5  = Vector2D(pwidth*0.691f	,pheight*0.038f);
+			Vector2D panelPoint6  = Vector2D(pwidth*0.735f	,pheight*0.059f);
+			Vector2D panelPoint7  = Vector2D(pwidth*0.777f	,pheight*0.084f);
+			Vector2D panelPoint8  = Vector2D(pwidth*0.817f	,pheight*0.113f);
+			Vector2D panelPoint9  = Vector2D(pwidth*0.853f	,pheight*0.146f);
+			Vector2D panelPoint10 = Vector2D(pwidth*0.886f	,pheight*0.182f);
+			Vector2D panelPoint11 = Vector2D(pwidth*0.915f	,pheight*0.222f);
+			Vector2D panelPoint12 = Vector2D(pwidth*0.941f	,pheight*0.264f);
+			Vector2D panelPoint13 = Vector2D(pwidth*0.962f	,pheight*0.308f);
+			Vector2D panelPoint14 = Vector2D(pwidth*0.978f	,pheight*0.354f);
+			Vector2D panelPoint15 = Vector2D(pwidth*0.990f	,pheight*0.402f);
+			Vector2D panelPoint16 = Vector2D(pwidth*0.997f	,pheight*0.451f);
+			Vector2D panelPoint17 = Vector2D(pwidth*1.000f	,pheight*0.500f);
+			Vector2D panelPoint18 = Vector2D(pwidth*0.997f	,pheight*0.549f);
+			Vector2D panelPoint19 = Vector2D(pwidth*0.990f	,pheight*0.597f);
+			Vector2D panelPoint20 = Vector2D(pwidth*0.978f	,pheight*0.645f);
+			Vector2D panelPoint21 = Vector2D(pwidth*0.962f	,pheight*0.691f);
+			Vector2D panelPoint22 = Vector2D(pwidth*0.941f	,pheight*0.735f);
+			Vector2D panelPoint23 = Vector2D(pwidth*0.915f	,pheight*0.777f);
+			Vector2D panelPoint24 = Vector2D(pwidth*0.886f	,pheight*0.817f);
+			Vector2D panelPoint25 = Vector2D(pwidth*0.853f	,pheight*0.853f);
+			Vector2D panelPoint26 = Vector2D(pwidth*0.817f	,pheight*0.886f);
+			Vector2D panelPoint27 = Vector2D(pwidth*0.777f	,pheight*0.915f);
+			Vector2D panelPoint28 = Vector2D(pwidth*0.735f	,pheight*0.941f);
+			Vector2D panelPoint29 = Vector2D(pwidth*0.691f	,pheight*0.962f);
+			Vector2D panelPoint30 = Vector2D(pwidth*0.645f	,pheight*0.978f);
+			Vector2D panelPoint31 = Vector2D(pwidth*0.597f	,pheight*0.990f);
+			Vector2D panelPoint32 = Vector2D(pwidth*0.549f	,pheight*0.997f);
+			Vector2D panelPoint33 = Vector2D(pwidth*0.500f	,pheight*1.000f);
+			Vector2D panelPoint34 = Vector2D(pwidth*0.451f	,pheight*0.997f);
+			Vector2D panelPoint35 = Vector2D(pwidth*0.402f	,pheight*0.990f);
+			Vector2D panelPoint36 = Vector2D(pwidth*0.354f	,pheight*0.978f);
+			Vector2D panelPoint37 = Vector2D(pwidth*0.308f	,pheight*0.962f);
+			Vector2D panelPoint38 = Vector2D(pwidth*0.264f	,pheight*0.941f);
+			Vector2D panelPoint39 = Vector2D(pwidth*0.222f	,pheight*0.915f);
+			Vector2D panelPoint40 = Vector2D(pwidth*0.182f	,pheight*0.886f);
+			Vector2D panelPoint41 = Vector2D(pwidth*0.146f	,pheight*0.853f);
+			Vector2D panelPoint42 = Vector2D(pwidth*0.113f	,pheight*0.817f);
+			Vector2D panelPoint43 = Vector2D(pwidth*0.084f	,pheight*0.777f);
+			Vector2D panelPoint44 = Vector2D(pwidth*0.059f	,pheight*0.735f);
+			Vector2D panelPoint45 = Vector2D(pwidth*0.038f	,pheight*0.691f);
+			Vector2D panelPoint46 = Vector2D(pwidth*0.021f	,pheight*0.645f);
+			Vector2D panelPoint47 = Vector2D(pwidth*0.009f	,pheight*0.597f);
+			Vector2D panelPoint48 = Vector2D(pwidth*0.002f	,pheight*0.549f);
+			Vector2D panelPoint49 = Vector2D(pwidth*0.000f	,pheight*0.500f);
+			Vector2D panelPoint50 = Vector2D(pwidth*0.002f	,pheight*0.451f);
+			Vector2D panelPoint51 = Vector2D(pwidth*0.009f	,pheight*0.402f);
+			Vector2D panelPoint52 = Vector2D(pwidth*0.021f	,pheight*0.354f);
+			Vector2D panelPoint53 = Vector2D(pwidth*0.038f	,pheight*0.308f);
+			Vector2D panelPoint54 = Vector2D(pwidth*0.059f	,pheight*0.264f);
+			Vector2D panelPoint55 = Vector2D(pwidth*0.084f	,pheight*0.222f);
+			Vector2D panelPoint56 = Vector2D(pwidth*0.113f	,pheight*0.182f);
+			Vector2D panelPoint57 = Vector2D(pwidth*0.146f	,pheight*0.146f);
+			Vector2D panelPoint58 = Vector2D(pwidth*0.182f	,pheight*0.113f);
+			Vector2D panelPoint59 = Vector2D(pwidth*0.222f	,pheight*0.084f);
+			Vector2D panelPoint60 = Vector2D(pwidth*0.264f	,pheight*0.059f);
+			Vector2D panelPoint61 = Vector2D(pwidth*0.308f	,pheight*0.038f);
+			Vector2D panelPoint62 = Vector2D(pwidth*0.354f	,pheight*0.021f);
+			Vector2D panelPoint63 = Vector2D(pwidth*0.402f	,pheight*0.009f);
+			Vector2D panelPoint64 = Vector2D(pwidth*0.451f	,pheight*0.002f);
+
+			// So where are those four points on the great big map?
+
+			Vector2D texture1 = PanelToMap( panelPoint1 );
+			texture1 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture2 = PanelToMap( panelPoint2 );
+			texture2 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture3 = PanelToMap( panelPoint3 );
+			texture3 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture4 = PanelToMap( panelPoint4 );
+			texture4 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture5 = PanelToMap( panelPoint5 );
+			texture5 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture6 = PanelToMap( panelPoint6 );
+			texture6 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture7 = PanelToMap( panelPoint7 );
+			texture7 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture8 = PanelToMap( panelPoint8 );
+			texture8 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture9 = PanelToMap( panelPoint9 );
+			texture9 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture10 = PanelToMap( panelPoint10 );
+			texture10 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture11 = PanelToMap( panelPoint11 );
+			texture11 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture12 = PanelToMap( panelPoint12 );
+			texture12 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture13 = PanelToMap( panelPoint13 );
+			texture13 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture14 = PanelToMap( panelPoint14 );
+			texture14 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture15 = PanelToMap( panelPoint15 );
+			texture15 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture16 = PanelToMap( panelPoint16 );
+			texture16 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture17 = PanelToMap( panelPoint17 );
+			texture17 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture18 = PanelToMap( panelPoint18 );
+			texture18 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture19 = PanelToMap( panelPoint19 );
+			texture19 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture20 = PanelToMap( panelPoint20 );
+			texture20 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture21 = PanelToMap( panelPoint21 );
+			texture21 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture22 = PanelToMap( panelPoint22 );
+			texture22 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture23 = PanelToMap( panelPoint23 );
+			texture23 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture24 = PanelToMap( panelPoint24 );
+			texture24 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture25 = PanelToMap( panelPoint25 );
+			texture25 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture26 = PanelToMap( panelPoint26 );
+			texture26 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture27 = PanelToMap( panelPoint27 );
+			texture27 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture28 = PanelToMap( panelPoint28 );
+			texture28 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture29 = PanelToMap( panelPoint29 );
+			texture29 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture30 = PanelToMap( panelPoint30 );
+			texture30 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture31 = PanelToMap( panelPoint31 );
+			texture31 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture32 = PanelToMap( panelPoint32 );
+			texture32 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture33 = PanelToMap( panelPoint33 );
+			texture33 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture34 = PanelToMap( panelPoint34 );
+			texture34 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture35 = PanelToMap( panelPoint35 );
+			texture35 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture36 = PanelToMap( panelPoint36 );
+			texture36 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture37 = PanelToMap( panelPoint37 );
+			texture37 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture38 = PanelToMap( panelPoint38 );
+			texture38 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture39 = PanelToMap( panelPoint39 );
+			texture39 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture40 = PanelToMap( panelPoint40 );
+			texture40 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture41 = PanelToMap( panelPoint41 );
+			texture41 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture42 = PanelToMap( panelPoint42 );
+			texture42 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture43 = PanelToMap( panelPoint43 );
+			texture43 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture44 = PanelToMap( panelPoint44 );
+			texture44 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture45 = PanelToMap( panelPoint45 );
+			texture45 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture46 = PanelToMap( panelPoint46 );
+			texture46 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture47 = PanelToMap( panelPoint47 );
+			texture47 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture48 = PanelToMap( panelPoint48 );
+			texture48 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture49 = PanelToMap( panelPoint49 );
+			texture49 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture50 = PanelToMap( panelPoint50 );
+			texture50 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture51 = PanelToMap( panelPoint51 );
+			texture51 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture52 = PanelToMap( panelPoint52 );
+			texture52 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture53 = PanelToMap( panelPoint53 );
+			texture53 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture54 = PanelToMap( panelPoint54 );
+			texture54 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture55 = PanelToMap( panelPoint55 );
+			texture55 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture56 = PanelToMap( panelPoint56 );
+			texture56 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture57 = PanelToMap( panelPoint57 );
+			texture57 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture58 = PanelToMap( panelPoint58 );
+			texture58 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture59 = PanelToMap( panelPoint59 );
+			texture59 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture60 = PanelToMap( panelPoint60 );
+			texture60 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture61 = PanelToMap( panelPoint61 );
+			texture61 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture62 = PanelToMap( panelPoint62 );
+			texture62 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture63 = PanelToMap( panelPoint63 );
+			texture63 /= OVERVIEW_MAP_SIZE;
+			Vector2D texture64 = PanelToMap( panelPoint64 );
+			texture64 /= OVERVIEW_MAP_SIZE;
+
+			Vertex_t points[64] =
+			{
+				Vertex_t( panelPoint1, texture1 ),
+				Vertex_t( panelPoint2, texture2 ),
+				Vertex_t( panelPoint3, texture3 ),
+				Vertex_t( panelPoint4, texture4 ),
+				Vertex_t( panelPoint5, texture5 ),
+				Vertex_t( panelPoint6, texture6 ),
+				Vertex_t( panelPoint7, texture7 ),
+				Vertex_t( panelPoint8, texture8 ),
+				Vertex_t( panelPoint9, texture9 ),
+				Vertex_t( panelPoint10, texture10 ),
+				Vertex_t( panelPoint11, texture11 ),
+				Vertex_t( panelPoint12, texture12 ),
+				Vertex_t( panelPoint13, texture13 ),
+				Vertex_t( panelPoint14, texture14 ),
+				Vertex_t( panelPoint15, texture15 ),
+				Vertex_t( panelPoint16, texture16 ),
+				Vertex_t( panelPoint17, texture17 ),
+				Vertex_t( panelPoint18, texture18 ),
+				Vertex_t( panelPoint19, texture19 ),
+				Vertex_t( panelPoint20, texture20 ),
+				Vertex_t( panelPoint21, texture21 ),
+				Vertex_t( panelPoint22, texture22 ),
+				Vertex_t( panelPoint23, texture23 ),
+				Vertex_t( panelPoint24, texture24 ),
+				Vertex_t( panelPoint25, texture25 ),
+				Vertex_t( panelPoint26, texture26 ),
+				Vertex_t( panelPoint27, texture27 ),
+				Vertex_t( panelPoint28, texture28 ),
+				Vertex_t( panelPoint29, texture29 ),
+				Vertex_t( panelPoint30, texture30 ),
+				Vertex_t( panelPoint31, texture31 ),
+				Vertex_t( panelPoint32, texture32 ),
+				Vertex_t( panelPoint33, texture33 ),
+				Vertex_t( panelPoint34, texture34 ),
+				Vertex_t( panelPoint35, texture35 ),
+				Vertex_t( panelPoint36, texture36 ),
+				Vertex_t( panelPoint37, texture37 ),
+				Vertex_t( panelPoint38, texture38 ),
+				Vertex_t( panelPoint39, texture39 ),
+				Vertex_t( panelPoint40, texture40 ),
+				Vertex_t( panelPoint41, texture41 ),
+				Vertex_t( panelPoint42, texture42 ),
+				Vertex_t( panelPoint43, texture43 ),
+				Vertex_t( panelPoint44, texture44 ),
+				Vertex_t( panelPoint45, texture45 ),
+				Vertex_t( panelPoint46, texture46 ),
+				Vertex_t( panelPoint47, texture47 ),
+				Vertex_t( panelPoint48, texture48 ),
+				Vertex_t( panelPoint49, texture49 ),
+				Vertex_t( panelPoint50, texture50 ),
+				Vertex_t( panelPoint51, texture51 ),
+				Vertex_t( panelPoint52, texture52 ),
+				Vertex_t( panelPoint53, texture53 ),
+				Vertex_t( panelPoint54, texture54 ),
+				Vertex_t( panelPoint55, texture55 ),
+				Vertex_t( panelPoint56, texture56 ),
+				Vertex_t( panelPoint57, texture57 ),
+				Vertex_t( panelPoint58, texture58 ),
+				Vertex_t( panelPoint59, texture59 ),
+				Vertex_t( panelPoint60, texture60 ),
+				Vertex_t( panelPoint61, texture61 ),
+				Vertex_t( panelPoint62, texture62 ),
+				Vertex_t( panelPoint63, texture63 ),
+				Vertex_t( panelPoint64, texture64 )
+			};
+
+			surface()->DrawSetColor( 0, 0, 0, 255 );
+			surface()->DrawTexturedPolygon( 64, points );
+		}
+		else if (pwidth != pheight)
+		{
+			Vector2D panelTL = Vector2D( mapInset, mapInset );
+			Vector2D panelTR = Vector2D( pwidth - mapInset, mapInset );
+			Vector2D panelBR = Vector2D( pwidth - mapInset, pheight - mapInset );
+			Vector2D panelBL = Vector2D( mapInset, pheight - mapInset );
+
+			// So where are those four points on the great big map?
+			Vector2D textureTL = PanelToMap( panelTL );// The top left corner of the display is where on the master map?
+			textureTL /= OVERVIEW_MAP_SIZE;// Texture Vec2D is 0 to 1
+			Vector2D textureTR = PanelToMap( panelTR );
+			textureTR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBR = PanelToMap( panelBR );
+			textureBR /= OVERVIEW_MAP_SIZE;
+			Vector2D textureBL = PanelToMap( panelBL );
+			textureBL /= OVERVIEW_MAP_SIZE;
+
+			Vertex_t points[4] =
+			{
+				Vertex_t( panelTL, textureTL ),
+				Vertex_t( panelTR, textureTR ),
+				Vertex_t( panelBR, textureBR ),
+				Vertex_t( panelBL, textureBL )
+			};
+			surface()->DrawSetColor( 0, 0, 0, 255 );
+			surface()->DrawTexturedPolygon( 4, points );
+		}
 	}
 }
 
@@ -1399,7 +1974,7 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 
 	Vertex_t points[4] =
 	{
-		Vertex_t( pos1Panel, Vector2D(0,0) ),
+			Vertex_t( pos1Panel, Vector2D(0,0) ),
 			Vertex_t( pos2Panel, Vector2D(1,0) ),
 			Vertex_t( pos3Panel, Vector2D(1,1) ),
 			Vertex_t( pos4Panel, Vector2D(0,1) )
@@ -2061,12 +2636,12 @@ void CCSMapOverview::SetMode(int mode)
 		if( CBasePlayer::GetLocalPlayer() )
 			SetFollowEntity( CBasePlayer::GetLocalPlayer()->entindex() );
 
-		SetPaintBackgroundType( 2 );// rounded corners
+		//SetPaintBackgroundType( 2 );// rounded corners
 		ShowPanel( true );
 	}
 	else if ( mode == MAP_MODE_INSET )
 	{
-		SetPaintBackgroundType( 2 );// rounded corners
+		//SetPaintBackgroundType( 2 );// rounded corners
 
 		float desiredZoom = (overview_preferred_view_size.GetFloat() * m_fMapScale) / (OVERVIEW_MAP_SIZE * m_fFullZoom);
 
@@ -2074,7 +2649,7 @@ void CCSMapOverview::SetMode(int mode)
 	}
 	else 
 	{
-		SetPaintBackgroundType( 0 );// square corners
+		//SetPaintBackgroundType( 0 );// square corners
 
 		float desiredZoom = 1.0f;
 

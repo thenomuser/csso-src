@@ -54,6 +54,8 @@ struct DeathNoticeItem
 	bool		bDomination;
 	bool		bRevenge;
 	bool		bAssisted;
+	bool		bisplayer;
+	bool		bisvictim;
 };
 
 //-----------------------------------------------------------------------------
@@ -275,7 +277,7 @@ void CHudDeathNotice::Paint()
 		// Get the local position for this notice
 		int victimNameLen = UTIL_ComputeStringWidth( m_hTextFont, victim );
 		int victimClanLen = UTIL_ComputeStringWidth( m_hTextFont, victimclan );
-		int y = yStart + (m_flLineHeight * i);
+		int y = yStart + (m_flLineHeight * i) + 10;
 
 		int iconWide;
 		int iconTall;
@@ -289,13 +291,16 @@ void CHudDeathNotice::Paint()
 		{
 			float scale = ( (float)ScreenHeight() / 480.0f );	//scale based on 640x480
 			iconWide = (int)( scale * (float)icon->Width() );
-			iconTall = (int)( scale * (float)icon->Height() );
+			iconTall = (int)( scale * (float)icon->Height() - 5);
 		}
 
 		int x = 0;
+		int d = 0;
+		int e = 0;
 		if ( m_bRightJustify )
 		{
-			x =	GetWide();
+			x =	GetWide() - 10;
+			d =	GetWide() - 10;
 			x -= victimNameLen;
 			x -= victimClanLen;
 			x -= iconWide;
@@ -338,19 +343,43 @@ void CHudDeathNotice::Paint()
 			}
 		}
 
-		Color iconColor( 255, 80, 0, 255 );
+		Color iconColor( 230, 230, 230, 255 );
 
 		if (m_DeathNotices[i].bDomination)
 		{
 			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, iconColor );
 			x += iconDominationWide;
+			e += iconDominationWide;
 		}
 		if (m_DeathNotices[i].bRevenge)
 		{
 			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, iconColor );
 			x += iconRevengeWide;
+			e += iconRevengeWide;
 		}
 		
+		if ( m_DeathNotices[i].bBlind )
+		{
+			e += iconBlindWide;
+		}
+
+		if (m_DeathNotices[i].bisvictim)
+		{
+			surface()->DrawSetColor( Color(80,0,0,200) );
+		}
+		else
+		{
+			surface()->DrawSetColor( Color(0,0,0,200) );
+		}
+		surface()->DrawFilledRect(x-3-e, y-3, d+4, y+(iconTall/2.4)+3);
+		// do the border explicitly here
+		if (m_DeathNotices[i].bisplayer || m_DeathNotices[i].bisvictim)
+		{
+			surface()->DrawSetColor( Color(255,0,0,250));
+			surface()->DrawOutlinedRect(x-3-e, y-3, d+4, y+(iconTall/2.4)+3);
+			surface()->DrawOutlinedRect(x-4-e, y-4, d+5, y+(iconTall/2.4)+4);
+			
+		}
 		// Only draw killers name if it wasn't a suicide
 		//if ( !m_DeathNotices[i].bSuicide )
 		{
@@ -378,7 +407,7 @@ void CHudDeathNotice::Paint()
 		if ( m_DeathNotices[i].bAssisted )
 		{
 			// Draw the plus sign in between killer and assister name
-			surface()->DrawSetTextColor( Color( 255, 128, 0, 255 ) );
+			surface()->DrawSetTextColor( Color( 230, 230, 230, 255 ) );
 			//surface()->DrawSetTextColor( iconColor );
 			surface()->DrawSetTextPos( x, y );
 			surface()->DrawSetTextFont( m_hTextFont );
@@ -488,10 +517,26 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	bool noscope = event->GetInt( "noscope" ) > 0;
 	bool blind = event->GetInt( "blind" ) > 0;
 	bool penetrated = event->GetInt( "penetrated" ) > 0;
+	bool isplayer = false;
+	bool isvictim = false;
+	int extratime = 0;
+
+	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 
 	C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iKiller ) );
 	C_CSPlayer* pVictim = ToCSPlayer( ClientEntityList().GetBaseEntity( iVictim ) );
 	C_CSPlayer* pAssister = ToCSPlayer( ClientEntityList().GetBaseEntity( iAssister ) );
+
+	if (pPlayer == pKiller || pPlayer == pAssister)
+	{
+		isplayer = true;
+		extratime = 4;
+	}
+	if (pPlayer == pVictim)
+	{
+		isvictim = true;
+		extratime = 4;
+	}
 
 #if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( pKiller && pKiller->IsControllingBot() )
@@ -592,13 +637,15 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	Q_strncpy( deathMsg.Killer.szName, killer_name, MAX_PLAYER_NAME_LENGTH );
 	Q_strncpy( deathMsg.Victim.szName, victim_name, MAX_PLAYER_NAME_LENGTH );
 	Q_strncpy( deathMsg.Assister.szName, assister_name, MAX_PLAYER_NAME_LENGTH );
-	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat();
+	deathMsg.flDisplayTime = gpGlobals->curtime + hud_deathnotice_time.GetFloat() + extratime;
 	deathMsg.bSuicide = ( !iKiller || iKiller == iVictim );
 	deathMsg.bHeadshot = headshot;
 	deathMsg.bNoScope = noscope;
 	deathMsg.bBlind = blind;
 	deathMsg.bPenetrated = penetrated;
 	deathMsg.bThruSmoke = thrusmoke;
+	deathMsg.bisplayer = isplayer;
+	deathMsg.bisvictim = isvictim;
 	deathMsg.bDomination = event->GetInt( "dominated" ) > 0 || (pKiller != NULL && pKiller->IsPlayerDominated( iVictim ));
 	deathMsg.bRevenge = event->GetInt( "revenge" ) > 0;
 	deathMsg.bAssisted = iAssister > 0;

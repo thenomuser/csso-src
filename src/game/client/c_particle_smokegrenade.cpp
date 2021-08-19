@@ -402,7 +402,7 @@ void C_ParticleSmokeGrenade::ClientThink()
 		float fadeEnd = m_ExpandRadius;
 
 		// The center of the smoke cloud that always gives full fog overlay
-		float flCoreDistance = fadeEnd * 0.3;
+		float flCoreDistance = fadeEnd * 0.6;
 		
 		if(testDist < fadeEnd)
 		{			

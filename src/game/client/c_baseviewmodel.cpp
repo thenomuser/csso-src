@@ -705,6 +705,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 		}
 	}
 
+	m_nSkin = pCSWeapon->m_nSkin;
 
 	// verify stattrak module and add if necessary
 	if ( loadout_stattrak.GetBool() && pCSWeapon->GetCSWpnData().m_szStatTrakModel && pCSWeapon->GetCSWpnData().m_szStatTrakModel[0] )

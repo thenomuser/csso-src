@@ -1501,7 +1501,7 @@ void CC4::PlayArmingBeeps( void )
 				}
 			}
 
-			EmitSound(filter, entindex(), "c4.click");
+			//EmitSound(filter, entindex(), "c4.click");
 			
 			break;
 		}
