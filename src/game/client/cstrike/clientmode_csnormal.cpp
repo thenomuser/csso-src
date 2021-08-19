@@ -1293,7 +1293,7 @@ void UpdateImageEntity(
 			pGlovesModel->InitializeAsClientEntity( pGlovesName, RENDER_GROUP_OPAQUE_ENTITY );
 			pGlovesModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 			pGlovesModel->FollowEntity( pPlayerModel ); // attach to player model
-			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( modelinfo->GetModelName( pLocalPlayer->GetModel() ) )->iSkintoneIndex; // set the corrent skin tone
+			pGlovesModel->m_nSkin = GetPlayerViewmodelArmConfigForPlayerModel( szPlayerModel )->iSkintoneIndex; // set the corrent skin tone
 			pGlovesModel->m_flAnimTime = gpGlobals->curtime;
 
 			g_GlovesModel = pGlovesModel;
