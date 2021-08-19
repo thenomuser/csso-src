@@ -816,7 +816,6 @@ void C_BaseEntity::Interp_RestoreToLastNetworked( VarMapping_t *map )
 
 	Vector oldOrigin = GetLocalOrigin();
 	QAngle oldAngles = GetLocalAngles();
-	Vector oldVel = GetLocalVelocity();
 
 	int c = map->m_Entries.Count();
 	for ( int i = 0; i < c; i++ )
@@ -826,7 +825,7 @@ void C_BaseEntity::Interp_RestoreToLastNetworked( VarMapping_t *map )
 		watcher->RestoreToLastNetworked();
 	}
 
-	BaseInterpolatePart2( oldOrigin, oldAngles, oldVel, 0 );
+	BaseInterpolatePart2( oldOrigin, oldAngles, 0 );
 }
 
 void C_BaseEntity::Interp_UpdateInterpolationAmounts( VarMapping_t *map )
@@ -892,19 +891,12 @@ inline int C_BaseEntity::Interp_Interpolate( VarMapping_t *map, float currentTim
 //-----------------------------------------------------------------------------
 C_BaseEntity::C_BaseEntity() : 
 	m_iv_vecOrigin( "C_BaseEntity::m_iv_vecOrigin" ),
-	m_iv_angRotation( "C_BaseEntity::m_iv_angRotation" ),
-	m_iv_vecVelocity( "C_BaseEntity::m_iv_vecVelocity" )
+	m_iv_angRotation( "C_BaseEntity::m_iv_angRotation" )
 {
 	m_pAttributes = NULL;
 
 	AddVar( &m_vecOrigin, &m_iv_vecOrigin, LATCH_SIMULATION_VAR );
 	AddVar( &m_angRotation, &m_iv_angRotation, LATCH_SIMULATION_VAR );
-	// Removing this until we figure out why velocity introduces view hitching.
-	// One possible fix is removing the player->ResetLatched() call in CGameMovement::FinishDuck(), 
-	// but that re-introduces a third-person hitching bug.  One possible cause is the abrupt change
-	// in player size/position that occurs when ducking, and how prediction tries to work through that.
-	//
-	// AddVar( &m_vecVelocity, &m_iv_vecVelocity, LATCH_SIMULATION_VAR );
 
 	m_DataChangeEventRef = -1;
 	m_EntClientFlags = 0;
@@ -2808,7 +2800,7 @@ void C_BaseEntity::OnLatchInterpolatedVariables( int flags )
 	}
 }
 
-int CBaseEntity::BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QAngle &oldAngles, Vector &oldVel, int &bNoMoreChanges )
+int CBaseEntity::BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QAngle &oldAngles, int &bNoMoreChanges )
 {
 	// Don't mess with the world!!!
 	bNoMoreChanges = 1;
@@ -2836,7 +2828,6 @@ int CBaseEntity::BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QA
 
 	oldOrigin = m_vecOrigin;
 	oldAngles = m_angRotation;
-	oldVel = m_vecVelocity;
 
 	bNoMoreChanges = Interp_Interpolate( GetVarMapping(), currentTime );
 	if ( cl_interp_all.GetInt() || (m_EntClientFlags & ENTCLIENTFLAG_ALWAYS_INTERPOLATE) )
@@ -2849,7 +2840,7 @@ int CBaseEntity::BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QA
 static ConVar cl_watchplayer( "cl_watchplayer", "-1", 0 );
 #endif
 
-void C_BaseEntity::BaseInterpolatePart2( Vector &oldOrigin, QAngle &oldAngles, Vector &oldVel, int nChangeFlags )
+void C_BaseEntity::BaseInterpolatePart2( Vector &oldOrigin, QAngle &oldAngles, int nChangeFlags )
 {
 	if ( m_vecOrigin != oldOrigin )
 	{
@@ -2859,11 +2850,6 @@ void C_BaseEntity::BaseInterpolatePart2( Vector &oldOrigin, QAngle &oldAngles, V
 	if( m_angRotation != oldAngles )
 	{
 		nChangeFlags |= ANGLES_CHANGED;
-	}
-
-	if ( m_vecVelocity != oldVel )
-	{
-		nChangeFlags |= VELOCITY_CHANGED;
 	}
 
 	if ( nChangeFlags != 0 )
@@ -2890,10 +2876,9 @@ bool C_BaseEntity::Interpolate( float currentTime )
 
 	Vector oldOrigin;
 	QAngle oldAngles;
-	Vector oldVel;
 
 	int bNoMoreChanges;
-	int retVal = BaseInterpolatePart1( currentTime, oldOrigin, oldAngles, oldVel, bNoMoreChanges );
+	int retVal = BaseInterpolatePart1( currentTime, oldOrigin, oldAngles, bNoMoreChanges );
 
 	// If all the Interpolate() calls returned that their values aren't going to
 	// change anymore, then get us out of the interpolation list.
@@ -2904,7 +2889,7 @@ bool C_BaseEntity::Interpolate( float currentTime )
 		return true;
 
 	int nChangeFlags = 0;
-	BaseInterpolatePart2( oldOrigin, oldAngles, oldVel, nChangeFlags );
+	BaseInterpolatePart2( oldOrigin, oldAngles, nChangeFlags );
 
 	return true;
 }
@@ -4700,7 +4685,7 @@ bool C_BaseEntity::PostNetworkDataReceived( int commands_acknowledged )
 			original_state_data, PC_DATA_PACKED, 
 			counterrors, reporterrors, copydata );
 		// Suppress debugging output
-		int ecount = errorCheckHelper.TransferData( "", -1, GetPredDescMap() );
+		int ecount = errorCheckHelper.TransferData( "", entindex(), GetPredDescMap() );
 		if ( ecount > 0 )
 		{
 			haderrors = true;
