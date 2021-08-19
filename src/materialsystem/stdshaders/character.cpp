@@ -16,6 +16,8 @@
 
 //#define CHARACTER_LIMIT_LIGHTS_WITH_PHONGWARP 1
 
+ConVar mat_disable_character_shader( "mat_disable_character_shader", "0", FCVAR_ARCHIVE, "Makes Character shader automatically fallback to VertexLitGeneric" );
+
 BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 	BEGIN_SHADER_PARAMS
 
@@ -244,6 +246,9 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 	{
 		// Character shader only works on shader model 3.0
 		if (!g_pHardwareConfig->SupportsShaderModel_3_0())
+			return "VertexLitGeneric";
+
+		if ( mat_disable_character_shader.GetBool() )
 			return "VertexLitGeneric";
 
 		return 0;
