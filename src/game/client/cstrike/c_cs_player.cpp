@@ -1622,6 +1622,15 @@ public:
 
 void C_CSPlayer::CreateAddonModel( int i )
 {
+	if ( m_bUseNewAnimstate )
+	{
+		/** Removed for partner depot **/
+		// PiMoN: haha get that? removed for partner depot LOL!
+		// but yea actually just removing that cuz its broken with new animations
+		// until I figure out why
+		return;
+	}
+
 	COMPILE_TIME_ASSERT( (sizeof( g_AddonInfo ) / sizeof( g_AddonInfo[0] )) == NUM_ADDON_BITS );
 
 	// Create the model entity.
