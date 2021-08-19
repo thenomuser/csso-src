@@ -54,6 +54,7 @@ using namespace vgui;
 #include "vgui_controls/QueryBox.h"
 #include "vgui_controls/ControllerMap.h"
 #include "vgui_controls/KeyRepeat.h"
+#include "vgui_controls/CheckButton.h"
 #include "tier0/icommandline.h"
 #include "tier1/convar.h"
 #include "NewGameDialog.h"
@@ -104,6 +105,8 @@ using namespace vgui;
 #define MAIN_MENU_INDENT_X360 10
 
 ConVar vgui_message_dialog_modal( "vgui_message_dialog_modal", "1", FCVAR_ARCHIVE );
+
+ConVar vgui_character_shader_warning_shown( "vgui_character_shader_warning_shown", "0", FCVAR_ARCHIVE | FCVAR_HIDDEN );
 
 extern vgui::DHANDLE<CLoadingDialog> g_hLoadingDialog;
 static CBaseModPanel	*g_pBasePanel = NULL;
@@ -653,6 +656,49 @@ static CBackgroundMenuButton* CreateMenuButton( CBaseModPanel *parent, const cha
 
 	return pButton;
 }
+
+class CCharacterShaderWarningDialog : public vgui::Frame
+{
+	DECLARE_CLASS_SIMPLE( CCharacterShaderWarningDialog, vgui::Frame );
+public:
+	CCharacterShaderWarningDialog( vgui::Panel *parent, const char *name ) : BaseClass( parent, name )
+	{
+		SetTitle("#GameUI_CharacterShaderWarning_Title", true);
+		SetDeleteSelfOnClose(true);
+		SetSizeable(false);
+
+		m_pNeverShowButton = new CheckButton( this, "NeverShowButton", "#GameUI_NeverShowButton" );
+
+		LoadControlSettings("Resource/CharacterShaderWarningDialog.res");
+		
+		m_pNeverShowButton->SetSelected( false );
+		MoveToCenterOfScreen();
+	}
+
+	void OnKeyCodePressed( KeyCode code )
+	{
+		if ( code == KEY_XBUTTON_B )
+		{
+			Close();
+		}
+		else
+		{
+			BaseClass::OnKeyCodePressed(code);
+		}
+	}
+
+private:
+	virtual void OnClose()
+	{
+		if ( m_pNeverShowButton->IsSelected() )
+		{
+			engine->ClientCmd_Unrestricted( "vgui_character_shader_warning_shown 1\n" );
+		}
+		BaseClass::OnClose();
+	}
+
+	vgui::CheckButton *m_pNeverShowButton;
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -1810,7 +1856,6 @@ void CBaseModPanel::OnGameUIActivated()
 		ShowMessageDialog( MD_LOAD_FAILED_WARNING );
 	}
 
-
 	if ( !m_bEverActivated )
 	{
 		// Layout the first time to avoid focus issues (setting menus visible will grab focus)
@@ -2193,6 +2238,22 @@ void CBaseModPanel::RunMenuCommand(const char *command)
 	else
 	{
 		BaseClass::OnCommand( command);
+	}
+
+	// putting it here cuz otherwise the shit's broken :(
+	static bool bIsCharacterShaderWarningShown = false;
+	if ( !vgui_character_shader_warning_shown.GetBool() && !bIsCharacterShaderWarningShown )
+	{
+		static vgui::DHANDLE<CCharacterShaderWarningDialog> g_CharacterShaderWarningDialog;
+
+		if ( !g_CharacterShaderWarningDialog.Get() )
+		{
+			g_CharacterShaderWarningDialog = new CCharacterShaderWarningDialog( this, "CharacterShaderWarningDialog" );
+		}
+
+		g_CharacterShaderWarningDialog->Activate();
+		g_CharacterShaderWarningDialog->MoveToFront();
+		bIsCharacterShaderWarningShown = false;
 	}
 }
 
