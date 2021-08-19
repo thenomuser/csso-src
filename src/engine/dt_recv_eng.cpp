@@ -144,6 +144,18 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 	
 	return NULL;
 }
+static SendProp* FindSendProp( SendTable *pTable, const char *pName )
+{
+	for ( int i=0; i < pTable->GetNumProps(); i++ )
+	{
+		SendProp *pProp = pTable->GetProp( i );
+
+		if ( stricmp( pProp->GetName(), pName ) == 0 )
+			return pProp;
+	}
+	
+	return NULL;
+}
 
 
 // See if the RecvProp is fit to receive the SendProp's data.
@@ -186,7 +198,7 @@ struct MatchingProp_t
 	}
 };
 
-static bool MatchRecvPropsToSendProps_R( CUtlRBTree< MatchingProp_t, unsigned short >& lookup, char const *sendTableName, SendTable *pSendTable, RecvTable *pRecvTable, bool bAllowMismatches, bool *pAnyMismatches )
+static bool MatchRecvPropsToSendProps_R( CUtlRBTree< MatchingProp_t, unsigned short >& lookup, char const *sendTableName, char const *recvTableName, SendTable *pSendTable, RecvTable *pRecvTable, bool bAllowMismatches, bool *pAnyMismatches )
 {
 	for ( int i=0; i < pSendTable->m_nProps; i++ )
 	{
@@ -231,8 +243,37 @@ static bool MatchRecvPropsToSendProps_R( CUtlRBTree< MatchingProp_t, unsigned sh
 		// Recurse.
 		if ( pSendProp->GetType() == DPT_DataTable )
 		{
-			if ( !MatchRecvPropsToSendProps_R( lookup, sendTableName, pSendProp->GetDataTable(), FindRecvTable( pSendProp->GetDataTable()->m_pNetTableName ), bAllowMismatches, pAnyMismatches ) )
+			if ( !MatchRecvPropsToSendProps_R( lookup, sendTableName, recvTableName, pSendProp->GetDataTable(), FindRecvTable( pSendProp->GetDataTable()->m_pNetTableName ), bAllowMismatches, pAnyMismatches ) )
 				return false;
+		}
+	}
+
+	// PiMoN: idiot catch for me
+	if ( CommandLine()->FindParm( "-sendprop_check" ) )
+	{
+		for ( int i = 0; i < pRecvTable->m_nProps; i++ )
+		{
+			RecvProp *pRecvProp = &pRecvTable->m_pProps[i];
+
+			if ( pRecvProp->IsInsideArray() )
+				continue;
+
+			// Find a SendProp by the same name and type.
+			SendProp *pSendProp = 0;
+			if ( pSendTable )
+				pSendProp = FindSendProp( pSendTable, pRecvProp->GetName() );
+
+			if ( pSendProp )
+			{
+				if ( !CompareRecvPropToSendProp( pRecvProp, pSendProp ) )
+				{
+					Warning( "SendProp type doesn't match client type for %s/%s\n", pRecvTable->GetName(), pRecvProp->GetName() );
+				}
+			}
+			else
+			{
+				Warning( "Missing SendProp for %s - %s/%s\n", recvTableName, pRecvTable->GetName(), pRecvProp->GetName() );
+			}
 		}
 	}
 
@@ -445,7 +486,7 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 		CUtlRBTree< MatchingProp_t, unsigned short >	PropLookup( 0, 0, MatchingProp_t::LessFunc );
 
 		// Now match RecvProp with SendProps.
-		if ( !MatchRecvPropsToSendProps_R( PropLookup, pDecoder->GetSendTable()->m_pNetTableName, pDecoder->GetSendTable(), FindRecvTable( pDecoder->GetSendTable()->m_pNetTableName ), bAllowMismatches, pAnyMismatches ) )
+		if ( !MatchRecvPropsToSendProps_R( PropLookup, pDecoder->GetSendTable()->m_pNetTableName, FindRecvTable( pDecoder->GetSendTable()->m_pNetTableName )->m_pNetTableName, pDecoder->GetSendTable(), FindRecvTable( pDecoder->GetSendTable()->m_pNetTableName ), bAllowMismatches, pAnyMismatches ) )
 			return false;
 	
 		// Now fill out the matching RecvProp array.
