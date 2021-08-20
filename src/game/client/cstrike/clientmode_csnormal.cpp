@@ -1084,6 +1084,58 @@ bool ShouldRecreateImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName
 	return( Q_stricmp( pName, pNewModelName ) != 0 );
 }
 
+extern ConVar skin_p250_ct;
+extern ConVar skin_ssg08_ct;
+extern ConVar skin_xm1014_ct;
+extern ConVar skin_aug;
+extern ConVar skin_elite_ct;
+extern ConVar skin_fiveseven;
+extern ConVar skin_ump45_ct;
+extern ConVar skin_scar20;
+extern ConVar skin_famas;
+extern ConVar skin_usp_silencer;
+extern ConVar skin_awp_ct;
+extern ConVar skin_mp5sd_ct;
+extern ConVar skin_m249_ct;
+extern ConVar skin_nova_ct;
+extern ConVar skin_m4a1;
+extern ConVar skin_mp9;
+extern ConVar skin_deagle_ct;
+extern ConVar skin_p90_ct;
+extern ConVar skin_hkp2000;
+extern ConVar skin_m4a4;
+extern ConVar skin_revolver_ct;
+extern ConVar skin_cz75_ct;
+extern ConVar skin_mag7;
+extern ConVar skin_negev_ct;
+extern ConVar skin_mp7_ct;
+extern ConVar skin_bizon_ct;
+
+extern ConVar skin_p250_t;
+extern ConVar skin_glock;
+extern ConVar skin_ssg08_t;
+extern ConVar skin_xm1014_t;
+extern ConVar skin_mac10;
+extern ConVar skin_elite_t;
+extern ConVar skin_ump45_t;
+extern ConVar skin_galilar;
+extern ConVar skin_awp_t;
+extern ConVar skin_mp5sd_t;
+extern ConVar skin_m249_t;
+extern ConVar skin_nova_t;
+extern ConVar skin_g3sg1;
+extern ConVar skin_deagle_t;
+extern ConVar skin_sg556;
+extern ConVar skin_ak47;
+extern ConVar skin_p90_t;
+extern ConVar skin_tec9;
+extern ConVar skin_revolver_t;
+extern ConVar skin_cz75_t;
+extern ConVar skin_sawedoff;
+extern ConVar skin_negev_t;
+extern ConVar skin_mp7_t;
+extern ConVar skin_bizon_t;
+
 ConVar cl_simple_player_lighting( "cl_simple_player_lighting", "0", FCVAR_ARCHIVE );
 void UpdateImageEntity(
 	const char *szWeaponClassname,
@@ -1102,6 +1154,8 @@ void UpdateImageEntity(
 	MDLCACHE_CRITICAL_SECTION();
 
 	const char* szWeaponModel = NULL;
+	const char *skinClass1 = NULL;
+	const char *skinClass2 = NULL;
 	const char* szWeaponSequence = NULL;
 	int iTeamNumber = pLocalPlayer->GetTeamNumber();
 
@@ -1172,7 +1226,6 @@ void UpdateImageEntity(
 		}
 
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( szWeaponClassname );
-		curskin = CSLoadout()->GetBuySkins(pLocalPlayer, hWpnInfo);
 		if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 		{
 			if ( Q_strcmp( szWeaponClassname, "item_defuser" ) == 0 )
@@ -1256,9 +1309,9 @@ void UpdateImageEntity(
 
 	C_BaseAnimating *pWeaponModel = g_WeaponModel.Get();
 
+	int tempskin1 = 0;
+	int tempskin2 = 0;
 	// Does the entity even exist yet?
-	if ( recreatePlayer || ShouldRecreateImageEntity( pWeaponModel, szWeaponModel ) )
-	{
 		if ( pWeaponModel )
 			pWeaponModel->Remove();
 
@@ -1266,6 +1319,397 @@ void UpdateImageEntity(
 		pWeaponModel->InitializeAsClientEntity( szWeaponModel, RENDER_GROUP_OPAQUE_ENTITY );
 		pWeaponModel->AddEffects( EF_NODRAW ); // don't let the renderer draw the model normally
 		pWeaponModel->FollowEntity( pPlayerModel ); // attach to player model
+
+
+		C_BaseCombatWeapon *pPrimaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+		C_BaseCombatWeapon *pSecondaryWeapon = pLocalPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+
+		if (pPrimaryWeapon)
+		{	
+			skinClass1 = pPrimaryWeapon->GetClassname();
+			tempskin1 = pPrimaryWeapon->m_nSkin;
+		}
+		else if (pSecondaryWeapon && !pPrimaryWeapon)
+		{
+			skinClass2 = pSecondaryWeapon->GetClassname();
+			tempskin2 = pSecondaryWeapon->m_nSkin;
+		}
+
+		if ( V_strcmp( szWeaponClassname, "weapon_p250" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_p250_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_p250" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_p250_t.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_ssg08" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_ssg08_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_ssg08" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_ssg08_t.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_xm1014" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_xm1014_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_xm1014" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_xm1014_t.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_aug" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_aug.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_elite" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_elite_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_elite" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_elite_t.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_fiveseven" ) == 0 )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_fiveseven.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_ump45" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_ump45_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_ump45" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_ump45_t.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_scar20" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_scar20.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_famas" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_famas.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_usp" ) == 0 )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_usp_silencer.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_awp" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_awp_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_awp" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_awp_t.GetInt();
+		}
+		
+		else if ( V_strcmp( szWeaponClassname, "weapon_mp5sd" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mp5sd_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_mp5sd" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mp5sd_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_m249" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_m249_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_m249" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_m249_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_nova" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_nova_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_nova" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_nova_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_m4a1_silencer" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_m4a1.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_mp9" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mp9.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_deagle" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_deagle_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_deagle" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_deagle_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_p90" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_p90_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_p90" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_p90_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_hkp2000" ) == 0 )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_hkp2000.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_m4a4" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_m4a4.GetInt();
+		}
+		
+		else if ( V_strcmp( szWeaponClassname, "weapon_revolver" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_revolver_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_revolver" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_revolver_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_cz75" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_cz75_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_cz75" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_cz75_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_mag7" ) == 0)
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mag7.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_negev" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_negev_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_negev" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_negev_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_mp7" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mp7_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_mp7" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mp7_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_bizon" ) == 0 && iTeamNumber == TEAM_CT )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_bizon_ct.GetInt();
+		}
+		else if ( V_strcmp( szWeaponClassname, "weapon_bizon" ) == 0 && iTeamNumber == TEAM_TERRORIST )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_bizon_t.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_glock" ) == 0 )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_glock.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_mac10" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_mac10.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_galilar" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_galilar.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_g3sg1" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_g3sg1.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_sg556" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_sg556.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_ak47" ) == 0 )
+		{
+			if 	(skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_ak47.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_tec9" ) == 0 )
+		{
+			if (skinClass2 == szWeaponClassname )
+				curskin = tempskin2;
+			else
+				curskin = skin_tec9.GetInt();
+		}
+
+		else if ( V_strcmp( szWeaponClassname, "weapon_sawedoff" ) == 0 )
+		{
+			if (skinClass1 == szWeaponClassname )
+				curskin = tempskin1;
+			else
+				curskin = skin_sawedoff.GetInt();
+		}
+
 		pWeaponModel->m_nSkin = curskin;
 		pWeaponModel->m_flAnimTime = gpGlobals->curtime;
 
@@ -1273,8 +1717,8 @@ void UpdateImageEntity(
 		if ( silencerBodygroup > -1 )
 			pWeaponModel->SetBodygroup( silencerBodygroup, bSilenced ? 0 : 1 );
 		g_WeaponModel = pWeaponModel;
-	}
-	else if ( !szWeaponModel || !szWeaponModel[0] )
+
+	if ( !szWeaponModel || !szWeaponModel[0] )
 	{
 		// so the weapon model is gone when playing a nowep sequence
 		if ( pWeaponModel )
