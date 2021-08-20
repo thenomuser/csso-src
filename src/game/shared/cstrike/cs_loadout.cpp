@@ -185,10 +185,10 @@ int CCSLoadout::GetKnifeForPlayer( CCSPlayer* pPlayer, int team )
 	switch ( team )
 	{
 		case TEAM_CT:
-			value = pPlayer->m_iLoadoutSlotKnifeWeaponCT + 1;
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponCT + 2;
 			break;
 		case TEAM_TERRORIST:
-			value = pPlayer->m_iLoadoutSlotKnifeWeaponT + 1;
+			value = pPlayer->m_iLoadoutSlotKnifeWeaponT + 2;
 			break;
 		default:
 			break;
