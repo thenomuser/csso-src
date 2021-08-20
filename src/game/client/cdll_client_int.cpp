@@ -1297,10 +1297,12 @@ void CHLClient::Shutdown( void )
 	Discord_Shutdown();
 	
 	// This call disconnects the VGui libraries which we rely on later in the shutdown path, so don't do it
+	// PiMoN: commented out the rest of the calls for now cuz the rest of the interfaces must live until
+	// all client.dll vgui stuff is destroyed (imagine how much dumps this shit has created for players!)
 //	DisconnectTier3Libraries( );
-	DisconnectTier2Libraries( );
+//	DisconnectTier2Libraries( );
 	ConVar_Unregister();
-	DisconnectTier1Libraries( );
+//	DisconnectTier1Libraries( );
 
 	gameeventmanager = NULL;
 
