@@ -185,10 +185,6 @@ void CBoneMergeCache::MergeMatchingBones( int boneMask )
 	{
 		// if the parent is a player, respect the incoming bone mask plus attachments,
 		nTempMask = ( boneMask | BONE_USED_BY_ATTACHMENT );
-
-		// but only use the custom blending rule portion
-		if ( m_pFollow->m_nCustomBlendingRuleMask != -1 )
-			nTempMask &= m_pFollow->m_nCustomBlendingRuleMask;
 	}
 	
 	m_pFollow->SetupBones( NULL, -1, nTempMask, gpGlobals->curtime );

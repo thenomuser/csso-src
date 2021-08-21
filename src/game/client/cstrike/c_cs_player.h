@@ -147,7 +147,6 @@ public:
 	virtual void Simulate();
 	virtual	void Spawn( void );
 	virtual void UpdateOnRemove( void );
-	virtual void OnSetDormant( bool bDormant );
 
 	void GiveCarriedHostage( EHANDLE hHostage );
 	void RefreshCarriedHostage( bool bForceCreate );
@@ -230,10 +229,6 @@ public:
 	virtual void BuildTransformations( CStudioHdr *pStudioHdr, Vector *pos, Quaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed );
 
 	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, Vector pos[], Quaternion q[], matrix3x4_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) OVERRIDE;
-
-	virtual bool SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime );
-
-	void ReevauluateAnimLOD( int boneMask = 0 );
 
 	virtual C_BaseAnimating * BecomeRagdollOnClient();
 	virtual IRagdoll* GetRepresentativeRagdoll() const;

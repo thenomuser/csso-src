@@ -687,12 +687,6 @@ C_BaseAnimating::C_BaseAnimating() :
 {
 	m_nLastNonSkippedFrame = 0;
 
-	m_nCustomBlendingRuleMask = -1;
-
-	ClearAnimLODflags();
-	m_nComputedLODframe = 0;
-	m_flDistanceFromCamera = 0;
-
 	m_bMaintainSequenceTransitions = true;
 
 	m_vecForce.Init();
@@ -2948,11 +2942,6 @@ bool C_BaseAnimating::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, i
 			if ( !bSkipThisFrame )
 			{
 				int nTempMask = boneMask;
-
-				if ( m_nCustomBlendingRuleMask != -1 )
-				{
-					nTempMask &= m_nCustomBlendingRuleMask;
-				}
 
 				nTempMask |= BONE_ALWAYS_SETUP; // make sure we always set up these bones
 

@@ -62,44 +62,45 @@ ConVar skin_bizon_ct( "skin_bizon_ct", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "sel
 
 //knifes CT
 ConVar skin_knife_ct_css( "skin_knife_ct_css", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 13);
-ConVar skin_knife_ct_karambit( "skin_knife_ct_karambit", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_flip( "skin_knife_ct_flip", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_bayonet( "skin_knife_ct_bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_m9bayonet( "skin_knife_ct_m9bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_butterfly( "skin_knife_ct_butterfly", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_gut( "skin_knife_ct_gut", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_huntsman( "skin_knife_ct_huntsman", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_falchion( "skin_knife_ct_falchion", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_bowie( "skin_knife_ct_bowie", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_survival( "skin_knife_ct_survival", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_paracord( "skin_knife_ct_paracord", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_navaja( "skin_knife_ct_navaja", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_nomad( "skin_knife_ct_nomad", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_skeleton( "skin_knife_ct_skeleton", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_stiletto( "skin_knife_ct_stiletto", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_ursus( "skin_knife_ct_ursus", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_ct_talon( "skin_knife_ct_talon", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
+ConVar skin_knife_ct_karambit( "skin_knife_ct_karambit", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Karambit Knife Skin", true, 0, true, 34);
+ConVar skin_knife_ct_flip( "skin_knife_ct_flip", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Flip Knife Skin", true, 0, true, 34);
+ConVar skin_knife_ct_bayonet( "skin_knife_ct_bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Bayonet Knife Skin", true, 0, true, 35);
+ConVar skin_knife_ct_m9bayonet( "skin_knife_ct_m9bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select M9 Bayonet Knife Skin", true, 0, true, 35);
+ConVar skin_knife_ct_butterfly( "skin_knife_ct_butterfly", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Butterfly Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_gut( "skin_knife_ct_gut", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Gut Knife Skin", true, 0, true, 34);
+ConVar skin_knife_ct_huntsman( "skin_knife_ct_huntsman", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Huntsman Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_falchion( "skin_knife_ct_falchion", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Falchion Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_bowie( "skin_knife_ct_bowie", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Bowie Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_survival( "skin_knife_ct_survival", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Survival Knife Skin", true, 0, true, 12);
+ConVar skin_knife_ct_paracord( "skin_knife_ct_paracord", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Paracord Knife Skin", true, 0, true, 12);
+ConVar skin_knife_ct_navaja( "skin_knife_ct_navaja", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Navaja Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_nomad( "skin_knife_ct_nomad", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Nomad Knife Skin", true, 0, true, 12);
+ConVar skin_knife_ct_skeleton( "skin_knife_ct_skeleton", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Skeleton Knife Skin", true, 0, true, 12);
+ConVar skin_knife_ct_stiletto( "skin_knife_ct_stiletto", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Stiletto Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_ursus( "skin_knife_ct_ursus", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Ursus Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_talon( "skin_knife_ct_talon", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Talon Knife Skin", true, 0, true, 24);
+ConVar skin_knife_ct_shadowdaggers( "skin_knife_ct_shadowdaggers", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Shadow Daggers Skin", true, 0, true, 24);
 
 //knifes T
 ConVar skin_knife_t_css( "skin_knife_t_css", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 13);
-ConVar skin_knife_t_karambit( "skin_knife_t_karambit", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_flip( "skin_knife_t_flip", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_bayonet( "skin_knife_t_bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_m9bayonet( "skin_knife_t_m9bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_butterfly( "skin_knife_t_butterfly", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_gut( "skin_knife_t_gut", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_huntsman( "skin_knife_t_huntsman", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_falchion( "skin_knife_t_falchion", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_bowie( "skin_knife_t_bowie", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_survival( "skin_knife_t_survival", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_paracord( "skin_knife_t_paracord", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_navaja( "skin_knife_t_navaja", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_nomad( "skin_knife_t_nomad", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_skeleton( "skin_knife_t_skeleton", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_stiletto( "skin_knife_t_stiletto", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_ursus( "skin_knife_t_ursus", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-ConVar skin_knife_t_talon( "skin_knife_t_talon", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Clasic Knife Skin", true, 0, true, 34);
-
+ConVar skin_knife_t_karambit( "skin_knife_t_karambit", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Karambit Knife Skin", true, 0, true, 34);
+ConVar skin_knife_t_flip( "skin_knife_t_flip", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Flip Knife Skin", true, 0, true, 34);
+ConVar skin_knife_t_bayonet( "skin_knife_t_bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Bayonet Knife Skin", true, 0, true, 35);
+ConVar skin_knife_t_m9bayonet( "skin_knife_t_m9bayonet", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select M9 Bayonet Knife Skin", true, 0, true, 35);
+ConVar skin_knife_t_butterfly( "skin_knife_t_butterfly", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Butterfly Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_gut( "skin_knife_t_gut", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Gut Knife Skin", true, 0, true, 34);
+ConVar skin_knife_t_huntsman( "skin_knife_t_huntsman", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Huntsman Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_falchion( "skin_knife_t_falchion", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Falchion Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_bowie( "skin_knife_t_bowie", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Bowie Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_survival( "skin_knife_t_survival", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Survival Knife Skin", true, 0, true, 12);
+ConVar skin_knife_t_paracord( "skin_knife_t_paracord", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Paracord Knife Skin", true, 0, true, 12);
+ConVar skin_knife_t_navaja( "skin_knife_t_navaja", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Navaja Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_nomad( "skin_knife_t_nomad", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Nomad Knife Skin", true, 0, true, 12);
+ConVar skin_knife_t_skeleton( "skin_knife_t_skeleton", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Skeleton Knife Skin", true, 0, true, 12);
+ConVar skin_knife_t_stiletto( "skin_knife_t_stiletto", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Stiletto Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_ursus( "skin_knife_t_ursus", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Ursus Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_talon( "skin_knife_t_talon", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Talon Knife Skin", true, 0, true, 24);
+ConVar skin_knife_t_shadowdaggers( "skin_knife_t_shadowdaggers", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select Shadow Daggers Skin", true, 0, true, 24);
 
 //terrorist
 ConVar skin_p250_t( "skin_p250_t", "0", FCVAR_ARCHIVE | FCVAR_USERINFO, "select p250 skin", true, 0, true, 41);
@@ -318,7 +319,6 @@ int CCSLoadout::GetSkinsForPlayer( CCSPlayer* pPlayer)
 	{
 		switch ( iWeaponId )
 		{
-			//atoi( engine->GetClientConVarValue( engine->IndexOfEdict( pCSPlayer->edict() ), "slot_knife_weapon_t" ) );
 			case WEAPON_P250:
 				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_p250_ct" ));
 				break;
@@ -399,7 +399,65 @@ int CCSLoadout::GetSkinsForPlayer( CCSPlayer* pPlayer)
 				break;
 
 			//knifes
-				
+
+			case WEAPON_KNIFE_CSS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_css" ));
+				break;
+			case WEAPON_KNIFE_KARAMBIT:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_karambit" ));
+				break;
+			case WEAPON_KNIFE_FLIP:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_flip" ));
+				break;
+			case WEAPON_KNIFE_BAYONET:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_bayonet" ));
+				break;
+			case WEAPON_KNIFE_M9_BAYONET:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_m9bayonet" ));
+				break;
+			case WEAPON_KNIFE_BUTTERFLY:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_butterfly" ));
+				break;
+			case WEAPON_KNIFE_GUT:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_gut" ));
+				break;
+			case WEAPON_KNIFE_TACTICAL:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_huntsman" ));
+				break;
+			case WEAPON_KNIFE_FALCHION:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_falchion" ));
+				break;
+			case WEAPON_KNIFE_SURVIVAL_BOWIE:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_bowie" ));
+				break;
+			case WEAPON_KNIFE_CANIS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_survival" ));
+				break;
+			case WEAPON_KNIFE_CORD:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_paracord" ));
+				break;
+			case WEAPON_KNIFE_GYPSY:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_navaja" ));
+				break;
+			case WEAPON_KNIFE_OUTDOOR:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_nomad" ));
+				break;
+			case WEAPON_KNIFE_SKELETON:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_skeleton" ));
+				break;
+			case WEAPON_KNIFE_STILETTO:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_stiletto" ));
+				break;
+			case WEAPON_KNIFE_URSUS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_ursus" ));
+				break;
+			case WEAPON_KNIFE_WIDOWMAKER:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_widowmaker" ));
+				break;
+			case WEAPON_KNIFE_PUSH:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_ct_push" ));
+				break;
+
 			default:
 				value = 0;
 				break;
@@ -481,6 +539,67 @@ int CCSLoadout::GetSkinsForPlayer( CCSPlayer* pPlayer)
 			case WEAPON_BIZON:
 				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_bizon_t" ));
 				break;
+
+			//knifes
+
+			case WEAPON_KNIFE_CSS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_css" ));
+				break;
+			case WEAPON_KNIFE_KARAMBIT:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_karambit" ));
+				break;
+			case WEAPON_KNIFE_FLIP:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_flip" ));
+				break;
+			case WEAPON_KNIFE_BAYONET:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_bayonet" ));
+				break;
+			case WEAPON_KNIFE_M9_BAYONET:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_m9bayonet" ));
+				break;
+			case WEAPON_KNIFE_BUTTERFLY:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_butterfly" ));
+				break;
+			case WEAPON_KNIFE_GUT:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_gut" ));
+				break;
+			case WEAPON_KNIFE_TACTICAL:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_huntsman" ));
+				break;
+			case WEAPON_KNIFE_FALCHION:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_falchion" ));
+				break;
+			case WEAPON_KNIFE_SURVIVAL_BOWIE:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_bowie" ));
+				break;
+			case WEAPON_KNIFE_CANIS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_survival" ));
+				break;
+			case WEAPON_KNIFE_CORD:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_paracord" ));
+				break;
+			case WEAPON_KNIFE_GYPSY:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_navaja" ));
+				break;
+			case WEAPON_KNIFE_OUTDOOR:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_nomad" ));
+				break;
+			case WEAPON_KNIFE_SKELETON:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_skeleton" ));
+				break;
+			case WEAPON_KNIFE_STILETTO:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_stiletto" ));
+				break;
+			case WEAPON_KNIFE_URSUS:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_ursus" ));
+				break;
+			case WEAPON_KNIFE_WIDOWMAKER:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_widowmaker" ));
+				break;
+			case WEAPON_KNIFE_PUSH:
+				value = atoi( engine->GetClientConVarValue( pPlayer->entindex(), "skin_knife_t_push" ));
+				break;
+
 			default:
 				value = 0;
 				break;

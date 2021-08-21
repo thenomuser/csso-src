@@ -1159,14 +1159,14 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		DiscordRichPresence discordPresence;
 		memset( &discordPresence, 0, sizeof( discordPresence ) );
 
-		discordPresence.state = VarArgs( "Version %s", mod_version.GetString() );
-		discordPresence.details = "Main Menu";
+		discordPresence.state = VarArgs( "Custom Version %s", mod_version.GetString() );
+		discordPresence.details = "In Main Menu";
 		discordPresence.startTimestamp = startTimestamp;
 		discordPresence.largeImageKey = "icon_huge_square";
 		Discord_UpdatePresence( &discordPresence );
 	}
 
-	Msg( "\nCounter-Strike: Source Offensive, version %s\nMade by PiMoNFeeD using property of Valve Software\n\n", mod_version.GetString() );
+	Msg( "\n\nCSSO Custom, version %s\nBassed in CSSO Open Source using property of Valve Software\n\n", mod_version.GetString() );
 
 	return true;
 }
