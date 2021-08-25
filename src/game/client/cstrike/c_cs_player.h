@@ -142,6 +142,15 @@ public:
 	C_CSPlayer();
 	~C_CSPlayer();
 
+	float *	GetRenderClipPlane( void );
+	int		m_nLastClipPlaneSetupFrame;
+	int		m_nClipPlaneProximityLimitAttachmentIndex;
+	Vector	m_vecLastClipCameraPos;
+	Vector	m_vecLastClipCameraForward;
+	bool	m_bClipHitStaticWorld;
+	bool	m_bCachedPlaneIsValid;
+	CBaseWeaponWorldModel *m_pClippingWeaponWorldModel;
+
 	virtual void SetSequence( int nSequence ) OVERRIDE;
 
 	virtual void Simulate();

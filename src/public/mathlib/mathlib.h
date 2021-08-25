@@ -295,6 +295,11 @@ struct matrix3x4_t
 
 	inline Vector TransformVector( const Vector &v0 ) const;
 
+	inline Vector GetColumn( MatrixAxisType_t nColumn ) const;
+	inline Vector GetForward() const { return GetColumn( FORWARD_AXIS ); }
+	inline Vector GetLeft() const { return GetColumn( LEFT_AXIS ); }
+	inline Vector GetUp() const { return GetColumn( UP_AXIS ); }
+
 	inline void InverseTR( matrix3x4_t &out ) const;
 	inline matrix3x4_t InverseTR() const;
 
@@ -1836,6 +1841,11 @@ inline float smoothstep_bounds( float edge0, float edge1, float x )
 inline Vector matrix3x4_t::TransformVector( const Vector &v0 ) const
 {
 	return VectorTransform( v0, *this );
+}
+
+inline Vector matrix3x4_t::GetColumn( MatrixAxisType_t nColumn ) const
+{
+	return Vector( m_flMatVal[ 0 ][ nColumn ], m_flMatVal[ 1 ][ nColumn ], m_flMatVal[ 2 ][ nColumn ] );
 }
 
 inline void matrix3x4_t::InverseTR( matrix3x4_t &out ) const

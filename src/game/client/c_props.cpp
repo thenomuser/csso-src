@@ -118,24 +118,6 @@ unsigned int C_DynamicProp::ComputeClientSideAnimationFlags()
 
 // ------------------------------------------------------------------------------------------ //
 // ------------------------------------------------------------------------------------------ //
-class C_BasePropDoor : public C_DynamicProp
-{
-	DECLARE_CLASS( C_BasePropDoor, C_DynamicProp );
-public:
-	DECLARE_CLIENTCLASS();
-
-	// constructor, destructor
-	C_BasePropDoor( void );
-	virtual ~C_BasePropDoor( void );
-
-	virtual void OnDataChanged( DataUpdateType_t type );
-
-	virtual bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
-
-private:
-	C_BasePropDoor( const C_BasePropDoor & );
-};
-
 IMPLEMENT_CLIENTCLASS_DT(C_BasePropDoor, DT_BasePropDoor, CBasePropDoor)
 END_RECV_TABLE()
 

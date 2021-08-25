@@ -7,6 +7,19 @@
 #ifndef _MATH_PFNS_H_
 #define _MATH_PFNS_H_
 
+enum MatrixAxisType_t
+{
+	FORWARD_AXIS = 0,
+	LEFT_AXIS = 1,
+	UP_AXIS = 2,
+
+	X_AXIS = 0,
+	Y_AXIS = 1,
+	Z_AXIS = 2,
+	ORIGIN = 3,
+	PROJECTIVE = 3,
+};
+
 #if defined( _X360 )
 #include <xboxmath.h>
 #endif

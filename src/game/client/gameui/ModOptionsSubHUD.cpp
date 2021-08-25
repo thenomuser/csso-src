@@ -49,8 +49,8 @@ CModOptionsSubHUD::CModOptionsSubHUD( vgui::Panel *parent ): vgui::PropertyPage(
 	m_pAccountStyle = new CLabeledCommandComboBox( this, "AccountStyleComboBox" );
 	m_pSimplePlayerModelLighting = new CLabeledCommandComboBox( this, "SimplePlayerModelLightingComboBox" );
 
-	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 0" );
-	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 1" );
+	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Top", "hud_playercount_pos 0" );
+	m_pPlayerCountPos->AddItem( "#GameUI_HUD_PlayerCount_Bottom", "hud_playercount_pos 1" );
 
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_0", "hud_healtharmor_style 0" );
 	m_pHealthArmorStyle->AddItem( "#GameUI_HUD_HealthArmorStyle_1", "hud_healtharmor_style 1" );

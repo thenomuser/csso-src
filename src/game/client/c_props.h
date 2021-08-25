@@ -42,4 +42,25 @@ private:
 	Vector	m_vecCachedRenderMaxs;
 };
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+class C_BasePropDoor : public C_DynamicProp
+{
+	DECLARE_CLASS( C_BasePropDoor, C_DynamicProp );
+public:
+	DECLARE_CLIENTCLASS();
+
+	// constructor, destructor
+	C_BasePropDoor( void );
+	virtual ~C_BasePropDoor( void );
+
+	virtual void OnDataChanged( DataUpdateType_t type );
+
+	virtual bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
+
+private:
+	C_BasePropDoor( const C_BasePropDoor & );
+};
+
 #endif // C_PROPS_H

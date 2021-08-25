@@ -68,6 +68,8 @@
 
 #include "physpropclientside.h"			// for dropping physics mags
 
+#include "c_props.h"
+
 // [menglish] Adding and externing variables needed for the freezecam
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET);
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET);
@@ -1281,9 +1283,22 @@ C_CSPlayer::C_CSPlayer() :
 	m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].AddSubordinate( &m_boneSnapshots[BONESNAPSHOT_UPPER_BODY] );
 	m_boneSnapshots[BONESNAPSHOT_ENTIRE_BODY].SetWeightListName( "snapshot_weights_all" );
 
+	m_nClipPlaneProximityLimitAttachmentIndex = -1;
+
 	m_flLastSpawnTimeIndex = 0;
 
 	m_vecLastAliveLocalVelocity.Init();
+
+	m_fRenderingClipPlane[0] = 0.0f;
+	m_fRenderingClipPlane[1] = 0.0f;
+	m_fRenderingClipPlane[2] = 0.0f;
+	m_fRenderingClipPlane[3] = 0.0f;
+	m_nLastClipPlaneSetupFrame = 0;
+	m_vecLastClipCameraPos.Init();
+	m_vecLastClipCameraForward.Init();
+	m_bClipHitStaticWorld = false;
+	m_bCachedPlaneIsValid = false;
+	m_pClippingWeaponWorldModel = NULL;
 
 	m_pViewmodelArmConfig = NULL;
 	m_szPlayerDefaultGloves = NULL;
@@ -1332,6 +1347,417 @@ public:
 		return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
 	}
 };
+
+bool UTIL_clipwalls_hitvalid( const trace_t &tr )
+{
+	return ( tr.DidHit() && !tr.m_pEnt->IsPlayer() && !(tr.surface.flags & SURF_TRANS) );
+}
+
+void UTIL_clipwalls_debugline( const trace_t &tr )
+{
+	if ( tr.DidHit() )
+	{
+		debugoverlay->AddLineOverlay( tr.startpos, tr.endpos, 255,0,0, false, 0 );
+	}
+	else
+	{
+		debugoverlay->AddLineOverlay( tr.startpos, tr.endpos, 0,255,0, false, 0 );
+	}
+}
+
+ConVar cl_weapon_clip_thinwalls( "cl_weapon_clip_thinwalls", "1", FCVAR_CHEAT | FCVAR_REPLICATED );
+ConVar cl_weapon_clip_thinwalls_debug( "cl_weapon_clip_thinwalls_debug", "0", FCVAR_CHEAT | FCVAR_REPLICATED );
+ConVar cl_weapon_clip_thinwalls_lock( "cl_weapon_clip_thinwalls_lock", "0", FCVAR_CHEAT | FCVAR_REPLICATED );
+float *	C_CSPlayer::GetRenderClipPlane( void )
+{
+	// Players that are on the other side of thin surfaces like doors poke through.
+	// This experimental solution places a clipping plane at the extent of a player's 
+	// weapon, to try and keep the renderable part of the player behind thin obstacles 
+	// in worst-case situations.
+
+	if ( !m_bUseNewAnimstate || !cl_weapon_clip_thinwalls.GetBool() || IsDormant() || !ShouldDraw() || GetMoveType() == MOVETYPE_LADDER )
+	{
+		m_bCachedPlaneIsValid = false;
+		return NULL;
+	}
+
+	if ( cl_weapon_clip_thinwalls_lock.GetBool() )
+		return m_fRenderingClipPlane;
+
+	if ( m_nLastClipPlaneSetupFrame == gpGlobals->framecount && m_bCachedPlaneIsValid ) // we already computed a plane this frame, it's still good
+		return m_fRenderingClipPlane;
+
+	CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
+	if ( pActiveWeapon )
+	{
+		CBaseWeaponWorldModel *pWeaponWorldModel = pActiveWeapon->GetWeaponWorldModel();
+		if ( pWeaponWorldModel && !pWeaponWorldModel->HasDormantOwner() )
+		{
+
+			if ( !pWeaponWorldModel->IsEffectActive( EF_BONEMERGE ) )
+			{
+				m_bCachedPlaneIsValid = false;
+				return NULL;
+			}
+
+			Vector vecEyePosition = EyePosition();
+
+			Vector vecEyeForward;
+			Vector vecEyeRight;
+			Vector vecEyeUp;
+			AngleVectors( EyeAngles(), &vecEyeForward, &vecEyeRight, &vecEyeUp );
+
+			if ( m_bCachedPlaneIsValid )
+			{
+				// The player is allowed to move a tiny amount relative to the cached plane, so this additional
+				// fallback check is to make sure that the cached plane is still never too close to the center of the player
+				float flDistFromCachedPlane = DotProduct( vecEyePosition, Vector(m_fRenderingClipPlane[0], m_fRenderingClipPlane[1], m_fRenderingClipPlane[2]) ) - m_fRenderingClipPlane[3];
+
+				// if too close for any reason, invalidate it
+				if ( flDistFromCachedPlane < 15 )
+					m_bCachedPlaneIsValid = false;
+			}
+			
+
+			if ( m_bClipHitStaticWorld && // the clipping plane isn't going to change on us, since we built it when we hit the static world, not a door or some other dynamic object
+				 m_bCachedPlaneIsValid && 
+				 m_pClippingWeaponWorldModel && 
+				 m_pClippingWeaponWorldModel == pWeaponWorldModel &&
+				 vecEyePosition.DistToSqr( m_vecLastClipCameraPos ) < 2 && 
+				 vecEyeForward.DistToSqr( m_vecLastClipCameraForward ) < 0.0005f )
+			{
+				return m_fRenderingClipPlane; // the position, angle, and weapon we used to recently compute the plane are still valid and close enough to re-use.
+			}
+
+			m_pClippingWeaponWorldModel = pWeaponWorldModel;
+			m_vecLastClipCameraPos = vecEyePosition;
+			m_vecLastClipCameraForward = vecEyeForward;
+
+
+			CSWeaponType wepType = pActiveWeapon->GetWeaponType();
+
+			QAngle angMuzzleAngle;
+			Vector vecWeaponMuzzle;
+			if ( pWeaponWorldModel->IsVisible() && wepType != WEAPONTYPE_KNIFE && wepType < WEAPONTYPE_C4 )
+			{
+				int iMuzzleBoneIndex = pWeaponWorldModel->GetMuzzleBoneIndex();
+				if ( iMuzzleBoneIndex < 0 )
+				{
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				CStudioHdr *pHdr = pWeaponWorldModel->GetModelPtr();
+				if ( pHdr )
+				{
+					int nRightHandWepBoneIndex = LookupBone( "weapon_hand_R" );
+					if ( nRightHandWepBoneIndex > 0 && isBoneAvailableForRead( nRightHandWepBoneIndex ) )
+					{
+						matrix3x4_t matHand = GetBone( nRightHandWepBoneIndex );
+						vecWeaponMuzzle = VectorTransform( pHdr->pBone(iMuzzleBoneIndex)->pos, matHand );
+						VectorAngles( matHand.GetForward(), angMuzzleAngle );
+					}
+					else
+					{
+						m_bCachedPlaneIsValid = false;
+						return NULL;
+					}
+				}
+				else
+				{
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+			}
+			else
+			{
+				vecWeaponMuzzle = vecEyePosition + (vecEyeForward * 32);
+				VectorAngles( vecEyeForward, angMuzzleAngle );
+			}
+			
+			// It's tempting to bail when the muzzle is simply embedded in solid. But this fails in a rather common case:
+			// When a player behind a thin door points their weapon through the corner of the door in such a way that the 
+			// muzzle would poke into the door frame after having poked through the door.
+			//int nMuzzlePointContents = enginetrace->GetPointContents(vecWeaponMuzzle);
+			//if ( nMuzzlePointContents & CONTENTS_SOLID )
+			//{
+			//	return NULL;
+			//}
+			
+			Vector vecEyeToWorldMuzzle = vecWeaponMuzzle - vecEyePosition;
+			float flEyeToWorldMuzzleLength = vecEyeToWorldMuzzle.Length();
+
+			if ( flEyeToWorldMuzzleLength > 128 )
+			{
+				m_bCachedPlaneIsValid = false;
+				return NULL;
+			}
+
+			// the weapon is pointing away from the flat eye direction, don't clip
+			Vector vecEyeForwardFlat = Vector( vecEyeForward.x, vecEyeForward.y, 0 ).Normalized();
+			float flDotEyeToMuzzleByEyeForward = DotProduct( Vector( vecEyeToWorldMuzzle.x, vecEyeToWorldMuzzle.y, 0 ).Normalized(), vecEyeForwardFlat );
+			if ( flDotEyeToMuzzleByEyeForward < 0 )
+			{
+				m_bCachedPlaneIsValid = false;
+				return NULL;
+			}
+
+			Vector vecWeaponForward;
+			AngleVectors( angMuzzleAngle, &vecWeaponForward );
+			Vector vecWeaponRear = vecWeaponMuzzle - vecWeaponForward * flEyeToWorldMuzzleLength;
+
+			vecWeaponMuzzle += vecWeaponForward; // move the muzzle test point forward by 1 unit
+
+			CTraceFilterOmitPlayers traceFilter;
+			traceFilter.SetPassEntity( this );
+
+			trace_t tr_StockToMuzzle;
+			UTIL_TraceLine( vecWeaponRear, vecWeaponMuzzle, MASK_WEAPONCLIPPING, &traceFilter, &tr_StockToMuzzle );
+
+			if ( UTIL_clipwalls_hitvalid(tr_StockToMuzzle) )
+			{
+				
+				// Something solid, non-player, and non-translucent is in the way of the gun. At this point we check some
+				// edge cases to prevent odd special cases, like preventing the weapon from clipping due to narrow objects
+				// like signposts, railing, or ladder rungs.
+
+				if ( tr_StockToMuzzle.m_pEnt )
+					m_bClipHitStaticWorld = tr_StockToMuzzle.m_pEnt->IsWorld();
+
+				bool bClipHitPropDoor = false;
+				if ( !m_bClipHitStaticWorld )
+				{
+					C_BasePropDoor *pPropDoor = dynamic_cast<C_BasePropDoor*>(tr_StockToMuzzle.m_pEnt);
+					if ( pPropDoor )
+					{
+						bClipHitPropDoor = true;
+					}
+				}
+
+				// Can the player see the muzzle position from their eye position?
+				trace_t tr_EyeToMuzzle;
+				UTIL_TraceLine( vecEyePosition, vecWeaponMuzzle, MASK_WEAPONCLIPPING, &traceFilter, &tr_EyeToMuzzle );
+
+				if ( !UTIL_clipwalls_hitvalid(tr_EyeToMuzzle) )
+				{
+					// The player CAN see the muzzle position from their eye position. Don't clip the weapon.
+					if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+					{
+						UTIL_clipwalls_debugline( tr_StockToMuzzle );
+						UTIL_clipwalls_debugline( tr_EyeToMuzzle );
+					}
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				// if the weapon direction is wildly different from the eye direction, don't clip
+				if ( DotProduct( vecEyeForward, vecWeaponForward ) < 0.3 )
+				{
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				// Can the player see the muzzle position from a point to the left of their eye position?
+				trace_t tr_LeftOfEyeToMuzzle;
+				UTIL_TraceLine( vecEyePosition - (vecEyeRight * 16), vecWeaponMuzzle, MASK_WEAPONCLIPPING, &traceFilter, &tr_LeftOfEyeToMuzzle );
+
+				if ( !UTIL_clipwalls_hitvalid(tr_LeftOfEyeToMuzzle) )
+				{
+					// Yes, don't clip the weapon.
+					if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+					{
+						UTIL_clipwalls_debugline( tr_StockToMuzzle );
+						UTIL_clipwalls_debugline( tr_EyeToMuzzle );
+						UTIL_clipwalls_debugline( tr_LeftOfEyeToMuzzle );
+					}
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				// Can a point to the left of the muzzle see the side of the player's head?
+				trace_t tr_LeftOfMuzzleToEye;
+				UTIL_TraceLine( vecWeaponMuzzle - (vecEyeRight * 16), vecEyePosition - (vecEyeRight * 4), MASK_WEAPONCLIPPING, &traceFilter, &tr_LeftOfMuzzleToEye );
+
+				if ( !UTIL_clipwalls_hitvalid( tr_LeftOfMuzzleToEye ) )
+				{
+					// Yes, don't clip the weapon.
+					if ( cl_weapon_clip_thinwalls_debug.GetBool() )
+					{
+						UTIL_clipwalls_debugline( tr_StockToMuzzle );
+						UTIL_clipwalls_debugline( tr_EyeToMuzzle );
+						UTIL_clipwalls_debugline( tr_LeftOfEyeToMuzzle );
+						UTIL_clipwalls_debugline( tr_LeftOfMuzzleToEye );
+					}
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				// We also want to avoid the situation where a player can see and fire around a corner, but their weapon doesn't appear.
+				// If a point well ahead of the player in-line with where they're looking at can see the muzzle, we shouldn't clip.
+
+				trace_t tr_EyeToTarget;
+				UTIL_TraceLine( vecEyePosition, vecEyePosition + vecEyeForward * 80, MASK_WEAPONCLIPPING, &traceFilter, &tr_EyeToTarget );
+
+				trace_t tr_TargetToMuzzle;
+				UTIL_TraceLine( tr_EyeToTarget.endpos - vecEyeForward, vecWeaponMuzzle, MASK_WEAPONCLIPPING, &traceFilter, &tr_TargetToMuzzle );
+
+				if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+				{
+					UTIL_clipwalls_debugline( tr_StockToMuzzle );
+					UTIL_clipwalls_debugline( tr_EyeToMuzzle );
+					UTIL_clipwalls_debugline( tr_LeftOfEyeToMuzzle );
+					UTIL_clipwalls_debugline( tr_LeftOfMuzzleToEye );
+					UTIL_clipwalls_debugline( tr_EyeToTarget );
+					UTIL_clipwalls_debugline( tr_TargetToMuzzle );
+				}
+
+				if ( !UTIL_clipwalls_hitvalid(tr_TargetToMuzzle) )
+				{
+					// The spot the player is looking at can see the muzzle of the weapon. Don't clip the weapon.
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+				
+
+				// Should be reasonable to clip the weapon now.
+
+
+				if ( m_nClipPlaneProximityLimitAttachmentIndex == -1 )
+				{
+					m_nClipPlaneProximityLimitAttachmentIndex = -2;
+					m_nClipPlaneProximityLimitAttachmentIndex = LookupAttachment( "clip_limit" );
+				}
+				
+				Vector vecEyePosFlat = Vector( vecEyePosition.x, vecEyePosition.y, 0 );
+				Vector vecClipPosFlat = Vector( tr_TargetToMuzzle.endpos.x, tr_TargetToMuzzle.endpos.y, 0 );
+
+				Vector vecClipLimit = vecClipPosFlat;
+				if ( !bClipHitPropDoor && m_nClipPlaneProximityLimitAttachmentIndex >= 0 )
+				{
+					GetAttachment( m_nClipPlaneProximityLimitAttachmentIndex, vecClipLimit );
+
+					if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+						debugoverlay->AddBoxOverlay( vecClipLimit, Vector(-1,-1,-1), Vector(1,1,1), QAngle(0,0,0), 255,0,0, 0, 0 );
+
+					vecClipLimit.z = 0;
+					if ( vecClipLimit.DistToSqr( vecEyePosFlat ) > vecClipPosFlat.DistToSqr( vecEyePosFlat ) )
+					{
+						vecClipPosFlat = vecClipLimit;
+					}
+				}
+
+				Vector vecSurfNormal = tr_StockToMuzzle.plane.normal;
+				Vector vecFallBackNormal = -vecEyeForwardFlat;
+
+				if ( abs(vecSurfNormal.z) >= 1 )
+				{
+					vecSurfNormal = vecFallBackNormal;
+				}
+				else
+				{
+					vecSurfNormal.z = 0;
+					vecSurfNormal.NormalizeInPlaceSafe( vecFallBackNormal );
+				}
+				
+				float flClipPosDistSqr = (vecClipPosFlat - vecEyePosFlat).LengthSqr();
+
+				if ( flClipPosDistSqr < (16*16) )
+				{
+					vecClipPosFlat = vecEyePosFlat + (vecClipPosFlat - vecEyePosFlat).Normalized() * 16.0f;
+				}
+
+				// build a plane around world pos vecClipPosFlat with local normal vecSurfNormal
+
+				matrix3x4_t matTemp;
+				VectorMatrix( vecSurfNormal, matTemp );
+				matTemp.SetOrigin( vecClipPosFlat );
+
+				cplane_t planeClipLocal;
+				planeClipLocal.normal = Vector(1,0,0);
+				planeClipLocal.dist = 0;
+
+				cplane_t planeClipWorld;
+				MatrixTransformPlane( matTemp, planeClipLocal, planeClipWorld );
+
+				float flDistFromPlane = DotProduct( vecEyePosFlat, planeClipWorld.normal ) - planeClipWorld.dist;
+
+				// Something is catastrophically wrong for the plane to be this far away.
+				if ( flDistFromPlane > 128 )
+				{
+					Assert( false );
+					m_bCachedPlaneIsValid = false;
+					return NULL;
+				}
+
+				if ( flDistFromPlane < 16.0f )
+				{
+					planeClipWorld.dist -= (16.0f - flDistFromPlane);
+				}
+
+				float flDistFromLimit = DotProduct( vecClipLimit, planeClipWorld.normal ) - planeClipWorld.dist;
+				if ( flDistFromLimit < 0 )
+				{
+					planeClipWorld.dist += flDistFromLimit;
+				}
+
+				m_fRenderingClipPlane[0] = planeClipWorld.normal.x;
+				m_fRenderingClipPlane[1] = planeClipWorld.normal.y;
+				m_fRenderingClipPlane[2] = planeClipWorld.normal.z;
+				m_fRenderingClipPlane[3] = planeClipWorld.dist;
+
+				if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+				{
+					Vector vecCenter = VPlane( planeClipWorld.normal, planeClipWorld.dist ).SnapPointToPlane( vecEyePosition );
+
+					// draw a grid of the local clip position, projected onto the final clipping plane
+					for ( float nLine=0; nLine<1.05f; nLine += 0.1f )
+					{
+						Vector vecLineStart = Vector( 0, -30, 60 * nLine - 30 );
+						Vector vecLineEnd = Vector( 0, 30, 60 * nLine - 30 );
+
+						Vector vecLineStart2 = Vector( 0, 60 * nLine - 30, -30 );
+						Vector vecLineEnd2 = Vector( 0, 60 * nLine - 30, 30 );
+
+						QAngle angAngle;
+						VectorAngles( planeClipWorld.normal.Normalized(), angAngle );
+
+						VectorRotate( vecLineStart, angAngle, vecLineStart );
+						VectorRotate( vecLineEnd, angAngle, vecLineEnd );
+
+						VectorRotate( vecLineStart2, angAngle, vecLineStart2 );
+						VectorRotate( vecLineEnd2, angAngle, vecLineEnd2 );
+
+						vecLineStart += vecCenter;
+						vecLineEnd += vecCenter;
+
+						vecLineStart2 += vecCenter;
+						vecLineEnd2 += vecCenter;
+
+						debugoverlay->AddLineOverlay( vecLineStart, vecLineEnd, 255, 255, 0, false, 0 );
+						debugoverlay->AddLineOverlay( vecLineStart2, vecLineEnd2, 255, 255, 0, false, 0 );
+					}
+				}
+
+				m_nLastClipPlaneSetupFrame = gpGlobals->framecount;
+
+				m_bCachedPlaneIsValid = true;
+				return m_fRenderingClipPlane;
+
+			}
+			else
+			{
+				if ( cl_weapon_clip_thinwalls_debug.GetBool()  )
+				{
+					UTIL_clipwalls_debugline( tr_StockToMuzzle );
+				}
+				m_bCachedPlaneIsValid = false;
+				return NULL;
+			}
+		}
+	}
+	m_bCachedPlaneIsValid = false;
+	return NULL;
+}
 
 void C_CSPlayer::UpdateOnRemove( void )
 {
