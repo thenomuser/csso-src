@@ -219,6 +219,7 @@ public:
 	virtual void					Activate();
 
 	virtual void					ParseMapData( CEntityMapData *mapData );
+	virtual void					OnParseMapDataFinished();
 	virtual bool					KeyValue( const char *szKeyName, const char *szValue );
 	virtual bool					KeyValue( const char *szKeyName, float flValue );
 	virtual bool					KeyValue( const char *szKeyName, const Vector &vecValue );

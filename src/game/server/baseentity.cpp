@@ -61,6 +61,7 @@
 #include "ModelSoundsCache.h"
 #include "env_debughistory.h"
 #include "tier1/utlstring.h"
+#include "ilagcompensationmanager.h"
 #include "utlhashtable.h"
 #include "sendprop_priorities.h"
 
@@ -1962,6 +1963,8 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	//DEFINE_FIELD( m_DamageModifiers, FIELD_?? ), // can't save?
 	// DEFINE_FIELD( m_fDataObjectTypes, FIELD_INTEGER ),
 
+	DEFINE_KEYFIELD( m_bLagCompensate, FIELD_BOOLEAN, "LagCompensate" ),
+
 #ifdef TF_DLL
 	DEFINE_ARRAY( m_nModelIndexOverrides, FIELD_INTEGER, MAX_VISION_MODES ),
 #endif
@@ -2001,6 +2004,12 @@ void CBaseEntity::UpdateOnRemove( void )
 
 	// Virtual call to shut down any looping sounds.
 	StopLoopingSounds();
+
+	// Remove from lag compensation 'extra' list
+	if ( ShouldLagCompensate() )
+	{
+		lagcompensation->RemoveAdditionalEntity( this );
+	}
 
 	// Notifies entity listeners, etc
 	gEntList.NotifyRemoveEntity( GetRefEHandle() );
@@ -3487,6 +3496,15 @@ void CBaseEntity::Spawn( void )
 {
 }
 
+// Post KeyValues/Map data parsing hook
+void CBaseEntity::OnParseMapDataFinished()
+{
+	// Add to lag compensation list
+	if ( ShouldLagCompensate() )
+	{
+		lagcompensation->AddAdditionalEntity( this );
+	}
+}
 
 CBaseEntity* CBaseEntity::Instance( const CBaseHandle &hEnt )
 {
@@ -7284,6 +7302,12 @@ void CBaseEntity::RecalcHasPlayerChildBit()
 bool CBaseEntity::DoesHavePlayerChild()
 {
 	return IsEFlagSet( EFL_HAS_PLAYER_CHILD );
+}
+
+//------------------------------------------------------------------------------
+bool CBaseEntity::ShouldLagCompensate() const
+{
+	return m_bLagCompensate;
 }
 
 

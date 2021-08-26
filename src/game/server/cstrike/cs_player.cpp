@@ -6061,24 +6061,24 @@ void CCSPlayer::NoteWeaponFired()
 }
 
 
-bool CCSPlayer::WantsLagCompensationOnEntity( const CBasePlayer *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+bool CCSPlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	// No need to lag compensate at all if we're not attacking in this command and
 	// we haven't attacked recently.
-	if ( !( pCmd->buttons & IN_ATTACK ) && (pCmd->command_number - m_iLastWeaponFireUsercmd > 5) )
+	if ( !( pCmd->buttons & IN_ATTACK ) && (pCmd->command_number - m_iLastWeaponFireUsercmd > 5 ) )
 	{
-		if ( ( pCmd->buttons & IN_ATTACK2 ) == 0 )
+		if ( ( pCmd->buttons & (IN_ATTACK2 | IN_ZOOM) ) == 0 )
 			return false;
 
 		CWeaponCSBase *weapon = GetActiveCSWeapon();
 		if ( !weapon )
 			return false;
 
-		if ( CSLoadout()->IsKnife( weapon->GetCSWeaponID() ) )
-			return false;	// IN_ATTACK2 with knife should do lag compensation
+		if ( weapon->GetCSWeaponID() != WEAPON_KNIFE )
+			return false;	// IN_ATTACK2 with WEAPON_KNIFE should do lag compensation
 	}
 
-	return BaseClass::WantsLagCompensationOnEntity( pPlayer, pCmd, pEntityTransmitBits );
+	return BaseClass::WantsLagCompensationOnEntity( entity, pCmd, pEntityTransmitBits );
 }
 
 // Handles the special "radio" alias commands we're creating to accommodate the scripts players use

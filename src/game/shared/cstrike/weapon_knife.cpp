@@ -176,7 +176,7 @@ void CKnife::PrimaryAttack()
 	{
 #if !defined (CLIENT_DLL)
 		// Move other players back to history positions based on local player's lag
-		lagcompensation->StartLagCompensation( pPlayer, pPlayer->GetCurrentCommand() );
+		lagcompensation->StartLagCompensation( pPlayer, LAG_COMPENSATE_HITBOXES_ALONG_RAY, pPlayer->EyePosition(), pPlayer->EyeAngles(), KNIFE_RANGE_LONG );
 #endif
 		SwingOrStab( Primary_Mode );
 #if !defined (CLIENT_DLL)
@@ -192,7 +192,7 @@ void CKnife::SecondaryAttack()
 	{
 #if !defined (CLIENT_DLL)
 		// Move other players back to history positions based on local player's lag
-		lagcompensation->StartLagCompensation( pPlayer, pPlayer->GetCurrentCommand() );
+		lagcompensation->StartLagCompensation( pPlayer, LAG_COMPENSATE_HITBOXES_ALONG_RAY, pPlayer->EyePosition(), pPlayer->EyeAngles(), KNIFE_RANGE_SHORT );
 #endif
 		SwingOrStab( Secondary_Mode );
 #if !defined (CLIENT_DLL)

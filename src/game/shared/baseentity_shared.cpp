@@ -312,6 +312,8 @@ void CBaseEntity::ParseMapData( CEntityMapData *mapData )
 		} 
 		while ( mapData->GetNextKey(keyName, value) );
 	}
+
+	OnParseMapDataFinished();
 }
 
 //-----------------------------------------------------------------------------

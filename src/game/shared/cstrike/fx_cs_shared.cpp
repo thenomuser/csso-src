@@ -248,7 +248,7 @@ void FX_FireBullets(
 
 #if !defined (CLIENT_DLL)
 	// Move other players back to history positions based on local player's lag
-	lagcompensation->StartLagCompensation( pPlayer, pPlayer->GetCurrentCommand() );
+	lagcompensation->StartLagCompensation( pPlayer, LAG_COMPENSATE_HITBOXES_ALONG_RAY, vOrigin, vAngles, flRange );
 #endif
 
 	RandomSeed( iSeed );	// init random system with this seed
