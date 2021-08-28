@@ -84,7 +84,7 @@ private:
 
 	CPanelAnimationVarAliasType( float, m_flLineHeight, "LineHeight", "15", "proportional_float" );
 
-	CPanelAnimationVar( float, m_flMaxDeathNotices, "MaxDeathNotices", "4" );
+	CPanelAnimationVar( float, m_flMaxDeathNotices, "MaxDeathNotices", "5" );
 
 	CPanelAnimationVar( bool, m_bRightJustify, "RightJustify", "1" );
 
@@ -150,7 +150,7 @@ int CHudDeathNotice::SetupHudImageId( const char* fname )
 void CHudDeathNotice::ApplySchemeSettings( IScheme *scheme )
 {
 	BaseClass::ApplySchemeSettings( scheme );
-	SetPaintBackgroundEnabled( false );
+	SetPaintBackgroundEnabled( true );
 
 	// make team color lookups easier
 	memset(m_teamColors, 0, sizeof(m_teamColors));
@@ -295,12 +295,12 @@ void CHudDeathNotice::Paint()
 		}
 
 		int x = 0;
-		int d = 0;
+		int r = 0;
 		int e = 0;
+		r =	GetWide();
 		if ( m_bRightJustify )
 		{
 			x =	GetWide() - 10;
-			d =	GetWide() - 10;
 			x -= victimNameLen;
 			x -= victimClanLen;
 			x -= iconWide;
@@ -343,42 +343,45 @@ void CHudDeathNotice::Paint()
 			}
 		}
 
-		Color iconColor( 230, 230, 230, 255 );
+		Color iconColor( 250, 250, 250, 255 );
 
 		if (m_DeathNotices[i].bDomination)
 		{
 			m_iconD_dominated->DrawSelf( x, y, iconDominationWide, iconDominationTall, iconColor );
 			x += iconDominationWide;
 			e += iconDominationWide;
+			r += iconDominationWide;
 		}
 		if (m_DeathNotices[i].bRevenge)
 		{
 			m_iconD_revenge->DrawSelf( x, y, iconRevengeWide, iconRevengeTall, iconColor );
 			x += iconRevengeWide;
 			e += iconRevengeWide;
+			r += iconRevengeWide;
 		}
 		
-		if ( m_DeathNotices[i].bBlind )
-		{
-			e += iconBlindWide;
-		}
+		// if ( m_DeathNotices[i].bBlind )
+		// {
+		// 	//e += iconBlindWide;
+		// }
+		r -= x;
 
 		if (m_DeathNotices[i].bisvictim)
 		{
-			surface()->DrawSetColor( Color(80,0,0,200) );
+			Panel::DrawBoxFade( x-3-e, y-4, r, iconTall/2+10, Color( 255, 0, 0, 255 ), 1.0f, 150, 180, true, false);
 		}
 		else
 		{
-			surface()->DrawSetColor( Color(0,0,0,200) );
+			Panel::DrawBoxFade( x-3-e, y-4, r, iconTall/2+10, Color( 0, 0, 0, 255 ), 1.0f, 120, 166, true, false);
 		}
-		surface()->DrawFilledRect(x-3-e, y-3, d+4, y+(iconTall/2.4)+3);
-		// do the border explicitly here
-		if (m_DeathNotices[i].bisplayer || m_DeathNotices[i].bisvictim)
+		//SetPaintBackgroundType( 2 );
+		//surface()->DrawFilledRect(x-3-e, y-4, d+4, y+(m_flLineHeight/2)+4);
+		//do the border explicitly here
+		if (m_DeathNotices[i].bisplayer)
 		{
-			surface()->DrawSetColor( Color(255,0,0,250));
-			surface()->DrawOutlinedRect(x-3-e, y-3, d+4, y+(iconTall/2.4)+3);
-			surface()->DrawOutlinedRect(x-4-e, y-4, d+5, y+(iconTall/2.4)+4);
-			
+			Panel::DrawHollowBox( x-4-e, y-5, r+1, iconTall/2+11, Color( 255, 0, 0, 255 ), 1.0f, 3, 3);
+			//surface()->DrawOutlinedRect(x-3-e, y-4, d+6, y+(iconTall/2)+3);
+			//surface()->DrawOutlinedRect(x-4-e, y-5, d+7, y+(iconTall/2)+4);
 		}
 		// Only draw killers name if it wasn't a suicide
 		//if ( !m_DeathNotices[i].bSuicide )
@@ -508,7 +511,7 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 		return;
 
 	// the event should be "player_death"
-	
+	//int iPlayer = engine->GetPlayerForUserID(event->GetInt( "player" ) );
 	int iKiller = engine->GetPlayerForUserID( event->GetInt("attacker") );
 	int iAssister = engine->GetPlayerForUserID( event->GetInt("assister") );
 	int iVictim = engine->GetPlayerForUserID( event->GetInt("userid") );
@@ -521,7 +524,8 @@ void CHudDeathNotice::FireGameEvent( IGameEvent *event )
 	bool isvictim = false;
 	int extratime = 0;
 
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	
+	C_CSPlayer* pPlayer = ToCSPlayer( UTIL_PlayerByIndex( GetLocalPlayerIndex() ) );
 
 	C_CSPlayer* pKiller = ToCSPlayer( ClientEntityList().GetBaseEntity( iKiller ) );
 	C_CSPlayer* pVictim = ToCSPlayer( ClientEntityList().GetBaseEntity( iVictim ) );

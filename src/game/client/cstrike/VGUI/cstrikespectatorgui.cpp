@@ -1972,6 +1972,21 @@ bool CCSMapOverview::DrawIconCS( int textureID, int offscreenTextureID, Vector p
 	pos4Panel.x += adjustment.x;
 	pos4Panel.y += adjustment.y;
 
+
+	// Vector2D panelPoint1  = Vector2D(pos1Panel.x=0.5f	,pos1Panel.y=0.0f);
+	// Vector2D panelPoint2  = Vector2D(pos2Panel.x=1.0f 	,pos2Panel.y=0.5f);
+	// Vector2D panelPoint3  = Vector2D(pos3Panel.x=0.5f	,pos3Panel.y=1.0f);
+	// Vector2D panelPoint4  = Vector2D(pos4Panel.x=1.0f 	,pos4Panel.y*=0.5f);
+
+	// Vertex_t points[4] =
+	// {
+	// 		Vertex_t( panelPoint1, Vector2D(0,0) ),
+	// 		Vertex_t( panelPoint2, Vector2D(1,0) ),
+	// 		Vertex_t( panelPoint3, Vector2D(1,1) ),
+	// 		Vertex_t( panelPoint4, Vector2D(0,1) )
+	// };
+
+
 	Vertex_t points[4] =
 	{
 			Vertex_t( pos1Panel, Vector2D(0,0) ),
