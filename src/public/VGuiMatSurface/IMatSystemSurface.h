@@ -115,6 +115,9 @@ public:
 	// begin and end skin composition painting
 	virtual void BeginSkinCompositionPainting() = 0;
 	virtual void EndSkinCompositionPainting() = 0;
+
+	// same as DrawTexturedPolygon but uses color instead of texture
+	virtual void DrawFilledPolygon( int n, vgui::Vertex_t *pVertices, bool bClipVertices = true ) = 0;
 };
 
 

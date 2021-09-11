@@ -33,10 +33,6 @@
 
 extern CUtlVector< CC4* > g_C4s;
 
-ConVar cl_radartype( "cl_radartype", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE );
-ConVar cl_radaralpha( "cl_radaralpha", "200", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, NULL, true, 0, true, 255 );
-ConVar cl_locationalpha( "cl_locationalpha", "150", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, NULL, true, 0, true, 255 );
-
 DECLARE_HUDELEMENT( CHudRadar );
 DECLARE_HUD_MESSAGE( CHudRadar, UpdateRadar );
 
@@ -483,22 +479,8 @@ bool CHudLocation::ShouldDraw()
 	return false;
 }
 
-void CHudLocation::ApplySchemeSettings(vgui::IScheme *pScheme)
-{
-	BaseClass::ApplySchemeSettings( pScheme );
-
-	m_fgColor = Color( 64, 255, 64, 255 );
-	SetFont( pScheme->GetFont( "ChatFont" ) );
-	SetBorder( NULL );
-	SetBgColor( Color( 0, 0, 0, 0 ) );
-	SetFgColor( m_fgColor );
-}
-
 void CHudLocation::OnTick()
 {
-	m_fgColor[3] = cl_locationalpha.GetInt();
-	SetFgColor( m_fgColor );
-
 	const char *pszLocation = "";
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( pPlayer )
@@ -506,17 +488,4 @@ void CHudLocation::OnTick()
 		pszLocation = pPlayer->GetLastKnownPlaceName();
 	}
 	SetText( g_pVGuiLocalize->Find( pszLocation ) );
-
-	// We have two different locations based on the Overview mode.
-	// So we just position ourselves below, and center our text in their width.
-	if( g_pMapOverview )
-	{
-		int x = 0, y = 0;
-		int width = 0, height = 0;
-		g_pMapOverview->GetAsPanel()->GetPos( x, y );
-		g_pMapOverview->GetAsPanel()->GetSize( width, height );
-		y += g_pMapOverview->GetAsPanel()->GetTall();
-		SetPos( x, y );
-		SetWide( width );
-	}
 }

@@ -193,6 +193,8 @@ public: // IViewPortPanel interface:
 
 protected:
 
+	virtual void	PaintBackground();
+
 	virtual void	DrawCamera();
 	virtual void	DrawMapTexture();
 	virtual void	DrawMapPlayers();
@@ -210,6 +212,7 @@ protected:
 	bool			AdjustPointToPanel(Vector2D *pos);
 	MapPlayer_t*	GetPlayerByEntityID( int entityID );
 	MapPlayer_t*	GetHostageByEntityID( int entityID );
+	virtual void	UpdateFollowEntity();
 	virtual void	UpdatePlayers();
 	void			UpdateHostages();///< Update hostages in the MapPlayer list
 	void			UpdateBomb();
@@ -271,7 +274,8 @@ private:
 	int		m_bombSiteIconA;
 	int		m_bombSiteIconB;
 
-	int	 m_nRadarMapTextureID;	// texture id for radar version of current overview image
+	int m_nRadarMapTextureID;	// texture id for radar version of current overview image
+	int m_nCircleBackgroundTextureID;
 
 	int m_playerPreferredMode; // The mode the player wants to be in for when we aren't being the radar
 
@@ -294,6 +298,8 @@ private:
 	};
 
 	CUtlVector< HudRadarLevelVerticalSection_t > m_vecRadarVerticalSections;
+
+	bool m_bRoundRadar;
 };
 
 #endif // CSSPECTATORGUI_H

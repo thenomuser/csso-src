@@ -9308,9 +9308,9 @@ static ConVar sv_competitive_minspec( "sv_competitive_minspec",
 
 #ifdef CLIENT_DLL
 
-ENABLE_COMPETITIVE_CONVAR( fps_max, 59, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
+ENABLE_COMPETITIVE_CONVAR( fps_max, 32, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
 ENABLE_COMPETITIVE_CONVAR( cl_interp_ratio, 1, 2 );			// force cl_interp_ratio from 1 to 2
-ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.031 );			// force cl_interp from 0.0152 to 0.031
+ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.100 );			// force cl_interp from 0.0152 to 0.031
 ENABLE_COMPETITIVE_CONVAR( cl_updaterate, 10, 150 );		// force cl_updaterate from 10 to 150
 ENABLE_COMPETITIVE_CONVAR( cl_cmdrate, 10, 150 );			// force cl_cmdrate from 10 to 150
 ENABLE_COMPETITIVE_CONVAR( rate, 20480, 786432 );			// force rate above min rate and below max rate

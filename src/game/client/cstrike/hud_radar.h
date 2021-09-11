@@ -83,7 +83,6 @@ public:
 	virtual void LevelInit();
 	virtual bool ShouldDraw();
 
-	virtual void ApplySchemeSettings(vgui::IScheme *pScheme);
 	virtual void OnTick( void );
 
 private:

@@ -300,8 +300,8 @@ C_ParticleSmokeGrenade::C_ParticleSmokeGrenade()
 {
 	memset(m_MaterialHandles, 0, sizeof(m_MaterialHandles));
 
-	m_MinColor.Init(0.5, 0.5, 0.5);
-	m_MaxColor.Init(0.6, 0.6, 0.6 );
+	m_MinColor.Init(0.4, 0.4, 0.4);
+	m_MaxColor.Init(0.5, 0.5, 0.5 );
 
 	m_nActiveLights = 0;
 	m_ExpandRadius = 0;

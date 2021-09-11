@@ -99,6 +99,7 @@ public:
 	virtual void DrawFilledRectArray( IntRect *pRects, int numRects );
 	virtual void DrawFilledRectFastFade( int x0, int y0, int x1, int y1, int fadeStartPt, int fadeEndPt, unsigned int alpha0, unsigned int alpha1, bool bHorizontal );
 	virtual void DrawFilledRectFade( int x0, int y0, int x1, int y1, unsigned int alpha0, unsigned int alpha1, bool bHorizontal );
+	virtual void DrawFilledPolygon( int n, vgui::Vertex_t *pVertices, bool bClipVertices = true );
 	virtual void DrawOutlinedRect(int x0, int y0, int x1, int y1);
 	virtual void DrawOutlinedCircle(int x, int y, int radius, int segments);
 

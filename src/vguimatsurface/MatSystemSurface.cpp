@@ -1370,6 +1370,59 @@ void CMatSystemSurface::DrawFilledRectFade( int x0, int y0, int x1, int y1, unsi
 
 	meshBuilder.End();
 	m_pMesh->Draw();
+}//-----------------------------------------------------------------------------
+// Draws a polygon colored with the current drawcolor
+//		using the white material
+//-----------------------------------------------------------------------------
+void CMatSystemSurface::DrawFilledPolygon( int n, Vertex_t *pVertices, bool bClipVertices /*= true*/ )
+{
+	MAT_FUNC;
+
+	Assert( !m_bIn3DPaintMode );
+
+	Assert( g_bInDrawing );
+
+	// Don't even bother drawing fully transparent junk
+	if( (n == 0) || (m_DrawColor[3]==0) )
+		return;
+
+	InternalSetMaterial();
+	if ( bClipVertices )
+	{
+		int iCount;
+		Vertex_t **ppClippedVerts = NULL;
+		iCount = ClipPolygon( n, pVertices, m_nTranslateX, m_nTranslateY, &ppClippedVerts );
+		if (iCount <= 0)
+			return;
+
+		meshBuilder.Begin( m_pMesh, MATERIAL_POLYGON, iCount );
+
+		for (int i = 0; i < iCount; ++i)
+		{
+			meshBuilder.Position3f( ppClippedVerts[i]->m_Position.x, ppClippedVerts[i]->m_Position.y, m_flZPos );
+			meshBuilder.Color4ubv( m_DrawColor );
+			meshBuilder.TexCoord2fv( 0, ppClippedVerts[i]->m_TexCoord.Base() );
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS | VTX_HAVECOLOR, 1>();
+		}
+
+		meshBuilder.End();
+		m_pMesh->Draw();
+	}
+	else
+	{
+		meshBuilder.Begin( m_pMesh, MATERIAL_POLYGON, n );
+
+		for (int i = 0; i < n; ++i)
+		{
+			meshBuilder.Position3f( pVertices[i].m_Position.x + m_nTranslateX, pVertices[i].m_Position.y + m_nTranslateY, m_flZPos );
+			meshBuilder.Color4ubv( m_DrawColor );
+			meshBuilder.TexCoord2fv( 0, pVertices[i].m_TexCoord.Base() );
+			meshBuilder.AdvanceVertexF<VTX_HAVEPOS | VTX_HAVECOLOR, 1>();
+		}
+
+		meshBuilder.End();
+		m_pMesh->Draw();
+	}
 }
 
 //-----------------------------------------------------------------------------

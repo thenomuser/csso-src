@@ -201,7 +201,7 @@ protected:
 	int				AddIconTexture(const char *filename);
 	Vector2D		MapToPanel( const Vector2D &mappos );
 	int				GetPixelOffset( float height );
-	void			UpdateFollowEntity();
+	virtual void	UpdateFollowEntity();
 	virtual void	UpdatePlayers();
 	void			UpdateObjects(); // objects bound to entities 
 	MapObject_t*	FindObjectByID(int objectID);

@@ -138,8 +138,6 @@ CMapOverview::CMapOverview( const char *pElementName ) : BaseClass( NULL, pEleme
 	SetParent( g_pClientMode->GetViewport()->GetVPanel() );
 
 	SetBounds( 0,0, 256, 256 );
-	SetBgColor( Color( 0,0,0,100 ) );
-	SetPaintBackgroundEnabled( true );
 	ShowPanel( false );
 
 	// Make sure we actually have the font...
@@ -222,9 +220,6 @@ int CMapOverview::AddIconTexture(const char *filename)
 void CMapOverview::ApplySchemeSettings(vgui::IScheme *scheme)
 {
 	BaseClass::ApplySchemeSettings( scheme );
-
-	SetBgColor( Color( 0,0,0,100 ) );
-	SetPaintBackgroundEnabled( true );
 }
 
 CMapOverview::~CMapOverview()
