@@ -163,6 +163,8 @@ extern ConVar ff_damage_reduction_grenade_self;
 extern ConVar ff_damage_reduction_bullets;
 extern ConVar ff_damage_reduction_other;
 
+extern ConVar mp_use_official_map_factions;
+
 
 ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
 ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
@@ -1318,7 +1320,7 @@ void CCSPlayer::Spawn()
 {
 	m_iLoadoutSlotKnifeWeaponCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_ct" ) );
 	m_iLoadoutSlotKnifeWeaponT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_knife_weapon_t" ) );
-	if ( m_bNeedToChangeAgent )
+	if ( m_bNeedToChangeAgent && mp_use_official_map_factions.GetInt() != 3 )
 	{
 		m_iLoadoutSlotAgentCT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_ct" ) );
 		m_iLoadoutSlotAgentT = atoi( engine->GetClientConVarValue( engine->IndexOfEdict( edict() ), "loadout_slot_agent_t" ) );
@@ -11736,6 +11738,9 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 bool CCSPlayer::HasAgentSet( int team )
 {
 	if ( IsBotOrControllingBot() )
+		return false;
+
+	if ( (mp_use_official_map_factions.GetInt() == 3) && (CSGameRules()->GetMapFactionsForThisPlayer(this) > -1) )
 		return false;
 
 	if ( team == TEAM_CT )

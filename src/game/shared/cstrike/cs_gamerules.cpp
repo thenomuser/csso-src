@@ -348,6 +348,14 @@ ConVar mp_do_warmup_period(
 	true, 0,
 	true, 1 );
 
+ConVar mp_maxmoney(
+	"mp_maxmoney",
+	"16000",
+	FCVAR_REPLICATED,
+	"maximum amount of money allowed in a player's account",
+	true, 0,
+	false, 0 );
+
 ConVar mp_respawn_immunitytime("mp_respawn_immunitytime", "4.0", FCVAR_REPLICATED, "How many seconds after respawn immunity lasts." );
 
 ConVar mp_playerid(
@@ -810,14 +818,6 @@ ConVar snd_music_selection(
 		true, 0,
 		false, 0 );
 
-	ConVar mp_maxmoney(
-		"mp_maxmoney",
-		"16000",
-		FCVAR_REPLICATED,
-		"maximum amount of money allowed in a player's account",
-		true, 0,
-		false, 0 );
-
 	ConVar mp_playercashawards(
 		"mp_playercashawards",
 		"1",
@@ -927,7 +927,7 @@ ConVar snd_music_selection(
 		"mp_use_official_map_factions",
 		"0",
 		FCVAR_REPLICATED | FCVAR_NOTIFY,
-		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only" );
+		"Determines wheter to use official factions for the current map or make faction selections free for everyone.\n 0 - Disable\n 1 - Enable for everyone\n 2 - Enable for bots only\n 3 - disable all agents and only use the map factions if exist" );
 
 	ConCommand EndRound( "endround", &CCSGameRules::EndRound, "End the current round.", FCVAR_CHEAT );
 
@@ -7611,6 +7611,9 @@ bool CCSGameRules::UseMapFactionsForThisPlayer( CBasePlayer* pPlayer )
 	if ( mp_use_official_map_factions.GetInt() == 2 )
 		return pPlayer->IsBot();
 
+	if ( mp_use_official_map_factions.GetInt() == 3 )
+		return true;
+
 	return false;
 }
 int CCSGameRules::GetMapFactionsForThisPlayer( CBasePlayer* pPlayer )
@@ -9308,9 +9311,9 @@ static ConVar sv_competitive_minspec( "sv_competitive_minspec",
 
 #ifdef CLIENT_DLL
 
-ENABLE_COMPETITIVE_CONVAR( fps_max, 32, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
+ENABLE_COMPETITIVE_CONVAR( fps_max, 59, FLT_MAX, 1, 0 );	// force fps_max above 59. One additional value (0) works
 ENABLE_COMPETITIVE_CONVAR( cl_interp_ratio, 1, 2 );			// force cl_interp_ratio from 1 to 2
-ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.100 );			// force cl_interp from 0.0152 to 0.031
+ENABLE_COMPETITIVE_CONVAR( cl_interp, 0, 0.031 );			// force cl_interp from 0.0152 to 0.031
 ENABLE_COMPETITIVE_CONVAR( cl_updaterate, 10, 150 );		// force cl_updaterate from 10 to 150
 ENABLE_COMPETITIVE_CONVAR( cl_cmdrate, 10, 150 );			// force cl_cmdrate from 10 to 150
 ENABLE_COMPETITIVE_CONVAR( rate, 20480, 786432 );			// force rate above min rate and below max rate
